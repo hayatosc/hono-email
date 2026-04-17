@@ -26,25 +26,38 @@ import { relocatePreview } from './normalize/preview'
 import { renderFragmentToHtml } from './render/html'
 import { prettyPrintHtml } from './render/pretty'
 export { pixelBasedPreset } from './tailwind'
-import { toPlainText as toPlainTextInternal } from './text'
+import { toPlainText as toPlainTextInternal, type ToPlainTextOptions } from './text'
 import { validateHtml } from './validate/html'
 
-export type RenderOptions = {
+type BaseRenderOptions = {
   doctype?: 'html5' | 'xhtml-transitional' | false
   pretty?: boolean
   strict?: boolean
 }
+
+export type HtmlRenderOptions = BaseRenderOptions & {
+  output?: 'html'
+}
+
+export type TextRenderOptions = BaseRenderOptions & {
+  output: 'text'
+  text?: ToPlainTextOptions
+}
+
+export type RenderOptions = HtmlRenderOptions | TextRenderOptions
 
 export type RenderResult = {
   html: string
   warnings: string[]
 }
 
+export type { BaseRenderOptions, ToPlainTextOptions }
+
 const HTML5_DOCTYPE = '<!DOCTYPE html>'
 const XHTML_TRANSITIONAL_DOCTYPE =
   '<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">'
 
-const resolveDoctype = (doctype: RenderOptions['doctype']): string => {
+const resolveDoctype = (doctype: BaseRenderOptions['doctype']): string => {
   if (doctype === false) {
     return ''
   }
@@ -56,12 +69,7 @@ const resolveDoctype = (doctype: RenderOptions['doctype']): string => {
   return HTML5_DOCTYPE
 }
 
-export async function render(jsx: Child, options: RenderOptions = {}): Promise<string> {
-  const result = await renderWithWarnings(jsx, options)
-  return result.html
-}
-
-export async function renderWithWarnings(jsx: Child, options: RenderOptions = {}): Promise<RenderResult> {
+const renderHtmlWithWarnings = async (jsx: Child, options: BaseRenderOptions = {}): Promise<RenderResult> => {
   const strict = options.strict ?? true
   let html = relocateHeadStyles(relocatePreview(normalizeHtml(await renderFragmentToHtml(jsx))))
   let warnings: string[] = []
@@ -83,10 +91,38 @@ export async function renderWithWarnings(jsx: Child, options: RenderOptions = {}
   return { html, warnings }
 }
 
-export async function renderPretty(jsx: Child, options: RenderOptions = {}): Promise<string> {
-  return render(jsx, { ...options, pretty: true })
+export async function render(jsx: Child, options?: HtmlRenderOptions): Promise<string>
+export async function render(jsx: Child, options: TextRenderOptions): Promise<string>
+export async function render(jsx: Child, options: RenderOptions = {}): Promise<string> {
+  const result = await renderHtmlWithWarnings(jsx, options)
+
+  if (options.output === 'text') {
+    return toPlainTextInternal(result.html, options.text)
+  }
+
+  return result.html
 }
 
-export function toPlainText(html: string): string {
-  return toPlainTextInternal(html)
+export async function renderWithWarnings(jsx: Child, options: BaseRenderOptions = {}): Promise<RenderResult> {
+  return renderHtmlWithWarnings(jsx, options)
+}
+
+export async function renderPretty(jsx: Child, options: BaseRenderOptions = {}): Promise<string> {
+  return render(jsx, { ...options, output: 'html', pretty: true })
+}
+
+export async function renderText(
+  jsx: Child,
+  renderOptions: BaseRenderOptions = {},
+  textOptions: ToPlainTextOptions = {}
+): Promise<string> {
+  return render(jsx, {
+    ...renderOptions,
+    output: 'text',
+    text: textOptions,
+  })
+}
+
+export function toPlainText(html: string, options: ToPlainTextOptions = {}): string {
+  return toPlainTextInternal(html, options)
 }

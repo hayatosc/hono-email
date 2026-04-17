@@ -44,6 +44,7 @@ const text = toPlainText(html)
 ## Output APIs
 ```tsx
 const html = await render(<WelcomeEmail />)
+const text = await render(<WelcomeEmail />, { output: 'text' })
 const prettyHtml = await renderPretty(<WelcomeEmail />)
 
 const result = await renderWithWarnings(<WelcomeEmail />)
@@ -53,11 +54,32 @@ result.warnings
 
 - `render()`
   - string を返す標準 API
+  - `output: 'text'` を指定すると plain text を返す
 - `renderPretty()`
   - 改行とインデントを入れた HTML を返す
+- `renderText()`
+  - `render(..., { output: 'text' })` への互換ラッパー
 - `renderWithWarnings()`
   - `{ html, warnings }` を返す
   - Tier 2 の CSS を警告として受け取りたい場合に使う
+
+## Plain Text
+`toPlainText()` は HTML から text を作る低レベル API です。JSX から直接 plain text を作る場合は `render(..., { output: 'text' })` を使い、text 変換の調整は `text` option に寄せます。
+
+```tsx
+const html = await render(<WelcomeEmail />)
+
+const text = toPlainText(html, {
+  headingStyle: 'preserve',
+  linkFormat: 'text-only',
+  listBullet: '*',
+})
+
+const directText = await render(<WelcomeEmail />, {
+  output: 'text',
+  text: { hrSeparator: '***' },
+})
+```
 
 ## Strict Mode
 `render()` は既定で `strict: true` です。HTML メールで互換性が低い要素を silent に通しません。
@@ -213,7 +235,7 @@ const result = await renderWithWarnings(
 - `prose`, 複雑 selector, `space-*`, component 自体への class 解決は初期非対応です
 
 ## Markdown
-`Markdown` は Markdown 文字列をメール向け HTML に変換します。table と safe raw HTML を扱い、unsafe raw HTML は sanitize で除去します。
+`Markdown` は Markdown 文字列をメール向け HTML に変換します。table と safe raw HTML を扱い、既定では unsafe raw HTML を sanitize で除去します。
 
 ```tsx
 import { Body, Head, Html, Markdown, render } from 'hono-email'
@@ -223,6 +245,7 @@ const html = await render(
     <Head />
     <Body>
       <Markdown
+        sanitize
         markdownContainerStyles={{ padding: '12px', border: '1px solid #111827' }}
         markdownCustomStyles={{
           h1: { color: '#dc2626' },
@@ -245,6 +268,8 @@ const html = await render(
 `Markdown` は次を前提にしています。
 
 - raw HTML は sanitize と validator を通します
+- `sanitize` の既定値は `true` です
+- `sanitize={false}` にすると raw HTML をそのまま通します。この場合の安全性は呼び出し側が担保し、必要なら `render(..., { strict: false })` と組み合わせます
 - safe な `table`, `a`, `img`, `div`, `span` などは残します
 - `script` など unsafe なタグは削除されます
 - `markdownContainerStyles` は外側コンテナへ適用します

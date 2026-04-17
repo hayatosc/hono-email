@@ -340,11 +340,12 @@ export const Tailwind = async ({ children, config }: TailwindProps) => {
   return raw(`${wrapGeneratedHeadCss(transformed.headCss)}${transformed.html}`)
 }
 
-export const Markdown = ({ children, markdownContainerStyles, markdownCustomStyles }: MarkdownProps) =>
+export const Markdown = ({ children, markdownContainerStyles, markdownCustomStyles, sanitize }: MarkdownProps) =>
   raw(
     renderMarkdownHtml(children, {
       markdownContainerStyles,
       markdownCustomStyles,
+      sanitize,
     })
   )
 

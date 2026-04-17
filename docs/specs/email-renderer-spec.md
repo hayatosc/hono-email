@@ -18,6 +18,7 @@
 
 ### Success Criteria
 - `await render(<Email />)` でメール向け HTML が生成できる
+- `await render(<Email />, { output: 'text' })` で plain text が生成できる
 - `await renderWithWarnings(<Email />)` で HTML と warnings が取得できる
 - `toPlainText(html)` で最低限読みやすい text が生成できる
 - 危険または互換性の低い HTML タグや CSS を strict mode で検知できる
@@ -73,10 +74,11 @@ examples/
 ### Core
 ```ts
 const html = await render(<Email />)
+const text = await render(<Email />, { output: 'text' })
 const prettyHtml = await renderPretty(<Email />)
 const result = await renderWithWarnings(<Email />)
 const warnings = result.warnings
-const text = toPlainText(html)
+const plainText = toPlainText(html)
 ```
 
 ### Render Options
@@ -85,6 +87,13 @@ type RenderOptions = {
   strict?: boolean
   doctype?: 'html5' | 'xhtml-transitional' | false
   pretty?: boolean
+  output?: 'html'
+} | {
+  strict?: boolean
+  doctype?: 'html5' | 'xhtml-transitional' | false
+  pretty?: boolean
+  output: 'text'
+  text?: ToPlainTextOptions
 }
 ```
 
@@ -92,6 +101,16 @@ type RenderOptions = {
 type RenderResult = {
   html: string
   warnings: string[]
+}
+```
+
+```ts
+type ToPlainTextOptions = {
+  headingStyle?: 'preserve' | 'uppercase'
+  hrSeparator?: string
+  includeImageAlt?: boolean
+  linkFormat?: 'href-only' | 'text-and-href' | 'text-only'
+  listBullet?: string
 }
 ```
 
@@ -374,8 +393,9 @@ warning の理由:
 
 ## Markdown Rules
 - `Markdown` component は markdown string を受ける
-- markdown から生成された HTML は sanitize と validator を通す
+- markdown から生成された HTML は既定で sanitize と validator を通す
 - safe な raw HTML は許可し、unsafe な raw HTML は除去または error にする
+- `sanitize` option は既定 `true` とし、`false` のときだけ caller responsibility で raw HTML を通す
 - table, list, heading, code, quote, link, image は初期対応する
 - `markdownContainerStyles` は外側コンテナ要素へ適用する
 - `markdownCustomStyles` は要素ごとの default style override に使う
@@ -393,6 +413,7 @@ warning の理由:
 ## Testing Strategy
 - HTML assertion テストを主軸にする
 - plain text 出力テストを行う
+- `render()` の output option と `toPlainText()` の責務分離をテストで固定する
 - strict mode の error / warning テストを行う
 - normalize 対象タグの変換テストを行う
 - snapshot 依存は最小限にする

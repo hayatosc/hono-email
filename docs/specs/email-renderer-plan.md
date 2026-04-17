@@ -1,11 +1,11 @@
 # Implementation Plan: Hono JSX Email Renderer
 
 ## Overview
-`hono/jsx` から HTML メールと plain text を生成するコアライブラリを段階的に実装する。v1 では送信統合を扱わず、`render()` / `renderPretty()` / `renderWithWarnings()` / `toPlainText()` を中心 API とする。加えて、React Email を参考に `Tailwind`, `Markdown`, `Font` を core export として提供し、既存の runtime validator と整合する形で実装する。
+`hono/jsx` から HTML メールと plain text を生成するコアライブラリを段階的に実装する。v1 では送信統合を扱わず、`render()` / `renderPretty()` / `renderWithWarnings()` / `toPlainText()` を中心 API とする。plain text は `render(..., { output: 'text' })` で取得できる形に揃える。加えて、React Email を参考に `Tailwind`, `Markdown`, `Font` を core export として提供し、既存の runtime validator と整合する形で実装する。
 
 ## Architecture Decisions
-- API の中心は `render(jsx)` と `toPlainText(html)`
-  理由: `hono/jsx` に自然で、`react-email` ユーザーにも理解しやすい。
+- API の中心は `render(jsx, options)` と `toPlainText(html)`
+  理由: `hono/jsx` に自然で、HTML / plain text の出力切替も一つの入口に集約できるため。
 - 追加の warnings は `renderWithWarnings()` に分離する
   理由: `render()` の返り値を string のまま保ちつつ、warning 情報も取得できるようにするため。
 - デフォルトは `strict: true`
@@ -165,15 +165,15 @@ Markdown
 ## Task 17: render / plain text option を整理する
 
 **Description:**  
-現在の `toPlainText()` は簡易実装で、`render()` 側にも plain text 関連 option がない。React Email の utility 群を参考に、別関数中心の設計を維持しつつ option の持ち方を整理する。
+現在の `toPlainText()` は簡易実装で、plain text 生成 option の持ち方に整理余地がある。React Email の utility 群を参考に、`render(..., { output: 'text' })` を中心にしつつ `toPlainText()` の責務を整理する。
 
 **Acceptance criteria:**
-- [ ] `toPlainText()` の責務と `render()` options の境界が docs に明文化されている
-- [ ] plain text 生成の拡張余地が API 上で確保されている
-- [ ] 将来 `html-to-text` 相当の option を受けるかどうかの方針が決まっている
+- [x] `toPlainText()` の責務と `render()` options の境界が docs に明文化されている
+- [x] plain text 生成の拡張余地が API 上で確保されている
+- [x] 将来 `html-to-text` 相当の option を受けるかどうかの方針が決まっている
 
 **Verification:**
-- [ ] Review check: text conversion API が spec / README / tests で一致している
+- [x] Review check: text conversion API が spec / README / tests で一致している
 
 **Dependencies:** Task 15
 
@@ -185,17 +185,18 @@ Markdown
 
 **Estimated scope:** Small: 2-3 files
 
-## Task 18: Markdown sanitize policy の option 化を検討する
+## Completed Task 18: Markdown sanitize policy の option 化を実装する
 
 **Description:**  
-現在の Markdown sanitize policy は固定。将来 option 化する場合の API と安全境界を整理する。
+`Markdown` の sanitize policy を option 化し、既定では安全側を維持しつつ opt-out を可能にする。
 
 **Acceptance criteria:**
-- [ ] allow list を option 化するか現状維持するか方針が決まっている
-- [ ] unsafe HTML を通さない境界が docs に明文化されている
+- [x] `sanitize?: boolean` を `Markdown` API で公開している
+- [x] 既定値が `true` であることを docs に明文化している
+- [x] unsafe HTML を通さない境界と opt-out 時の責務が docs に明文化されている
 
 **Verification:**
-- [ ] Review check: sanitize と validator の責務が明確
+- [x] Review check: sanitize と validator の責務が明確
 
 **Dependencies:** Task 12
 

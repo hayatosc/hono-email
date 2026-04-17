@@ -34,6 +34,7 @@ export type MarkdownCustomStyles = Partial<Record<MarkdownStyleKey, JSX.CSSPrope
 export type MarkdownRenderOptions = {
   markdownContainerStyles?: JSX.CSSProperties
   markdownCustomStyles?: MarkdownCustomStyles
+  sanitize?: boolean
 }
 
 const DEFAULT_MARKDOWN_STYLES: Record<MarkdownStyleKey, Record<string, string>> = {
@@ -261,14 +262,17 @@ export const renderMarkdownHtml = (
     gfm: true,
   }) as string
 
-  const sanitizedHtml = sanitizeHtml(renderedMarkdown, {
-    allowedAttributes: SAFE_ATTRIBUTES,
-    allowedSchemes: ['http', 'https', 'mailto', 'tel'],
-    allowedTags: [...SAFE_MARKDOWN_TAGS],
-    disallowedTagsMode: 'discard',
-  })
+  const htmlSource =
+    options.sanitize === false
+      ? renderedMarkdown
+      : sanitizeHtml(renderedMarkdown, {
+          allowedAttributes: SAFE_ATTRIBUTES,
+          allowedSchemes: ['http', 'https', 'mailto', 'tel'],
+          allowedTags: [...SAFE_MARKDOWN_TAGS],
+          disallowedTagsMode: 'discard',
+        })
 
-  const html = parse(`<div>${sanitizedHtml}</div>`, {
+  const html = parse(`<div>${htmlSource}</div>`, {
     lowerCaseTagName: false,
   })
 

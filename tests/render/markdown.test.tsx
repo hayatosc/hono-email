@@ -63,4 +63,22 @@ Paragraph with \`code\`
     expect(html).not.toContain('<script')
     expect(html).not.toContain("alert('xss')")
   })
+
+  test('allows opting out of sanitization', async () => {
+    const html = await render(
+      <Html>
+        <Head />
+        <Body>
+          <Markdown sanitize={false}>{`
+# Unsafe
+
+<script>alert('xss')</script>
+          `}</Markdown>
+        </Body>
+      </Html>,
+      { strict: false }
+    )
+
+    expect(html).toContain('<script>alert(\'xss\')</script>')
+  })
 })
