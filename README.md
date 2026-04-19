@@ -1,6 +1,6 @@
 # hono-email
 
-`hono-email` is an ESM library for rendering HTML email and plain text from `hono/jsx`. It focuses on rendering, normalization, validation, and email-oriented primitives. Transport and provider integrations are intentionally out of scope.
+`hono-email` is an ESM library for rendering HTML email and plain text from `hono/jsx`. It focuses on rendering, normalization, validation, and email-oriented primitives.
 
 ## Features
 
