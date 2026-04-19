@@ -1,4 +1,5 @@
 import type { Child } from 'hono/jsx'
+import { parse } from 'node-html-parser'
 
 export {
   Body,
@@ -19,13 +20,15 @@ export {
   Tailwind,
   Text,
 } from './components'
-export type { FontProps, MarkdownCustomStyles, TailwindConfig } from './components'
+import { TAILWIND_ARTIFACT_REQUIRED_ERROR_MESSAGE, TAILWIND_ARTIFACT_REQUIRED_TAG_NAME } from './components'
+export type { FontProps, MarkdownCustomStyles, TailwindBuildArtifact } from './components'
 import { relocateHeadStyles } from './normalize/head-styles'
 import { normalizeHtml } from './normalize/html'
 import { relocatePreview } from './normalize/preview'
 import { renderFragmentToHtml } from './render/html'
 import { prettyPrintHtml } from './render/pretty'
-export { pixelBasedPreset } from './tailwind'
+export { buildTailwindArtifactFromCss, collectTailwindClassesFromHtml } from './tailwind'
+export type { BuildTailwindArtifactFromCssOptions } from './tailwind'
 import { toPlainText as toPlainTextInternal, type ToPlainTextOptions } from './text'
 import { validateHtml } from './validate/html'
 
@@ -73,6 +76,10 @@ const renderHtmlWithWarnings = async (jsx: Child, options: BaseRenderOptions = {
   const strict = options.strict ?? true
   let html = relocateHeadStyles(relocatePreview(normalizeHtml(await renderFragmentToHtml(jsx))))
   let warnings: string[] = []
+
+  if (parse(html).querySelector(TAILWIND_ARTIFACT_REQUIRED_TAG_NAME)) {
+    throw new Error(TAILWIND_ARTIFACT_REQUIRED_ERROR_MESSAGE)
+  }
 
   if (strict) {
     warnings = validateHtml(html)

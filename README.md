@@ -194,26 +194,32 @@ React Email 互換寄りに `webFont` を直接渡すこともできます。
 ```
 
 ## Tailwind
-React Email の `Tailwind` component に近い使い方で、主要 utility class をメール向け style に変換します。
+推奨導線は `hono-email/vite` です。build-time に artifact import を自動注入するので、email 用 CSS ファイルを別途持たなくて済みます。
 
 ```tsx
-import { Body, Head, Html, Tailwind, Text, pixelBasedPreset, renderWithWarnings } from 'hono-email'
+// vite.config.ts
+import { defineConfig } from 'vite'
+import tailwindcss from '@tailwindcss/vite'
+import honoEmailTailwind from 'hono-email/vite'
+
+export default defineConfig({
+  plugins: [
+    tailwindcss(),
+    honoEmailTailwind({
+      configPath: './tailwind.config.ts',
+      safelist: ['sm:text-blue-500'],
+    }),
+  ],
+})
+```
+
+```tsx
+import { Body, Head, Html, Tailwind, Text, renderWithWarnings } from 'hono-email'
 
 const result = await renderWithWarnings(
   <Html>
     <Head />
-    <Tailwind
-      config={{
-        presets: [pixelBasedPreset],
-        theme: {
-          extend: {
-            colors: {
-              brand: '#0f172a',
-            },
-          },
-        },
-      }}
-    >
+    <Tailwind>
       <Body>
         <Text className='text-brand bg-brand px-4 py-2 sm:text-blue-500'>Hello</Text>
       </Body>
@@ -222,17 +228,34 @@ const result = await renderWithWarnings(
 )
 ```
 
-現在の Tailwind 対応は intentionally limited です。
+ポイント:
 
-- base utility は inline style に落とします
-- responsive utility は `<Head>` 内の `<style>` に寄せます
-- `pixelBasedPreset` を export し、React Email に近い `fontSize` / `spacing` スケールを使えます
-- `config.theme.extend.colors` / `spacing` / `screens` / `fontFamily` / `fontSize` を扱います
-- 現在の主な対応 utility:
-  - spacing: `p-*`, `px-*`, `py-*`, `pt-*`, `pr-*`, `pb-*`, `pl-*`, `m-*`, `mx-*`, `my-*`, `mt-*`, `mr-*`, `mb-*`, `ml-*`
-  - typography: `text-*` color and size, `leading-*`, `tracking-*`, `font-normal`, `font-medium`, `font-semibold`, `font-bold`, `font-sans`, `font-serif`, `font-mono`, `italic`, `not-italic`, `underline`, `no-underline`, `uppercase`, `lowercase`, `capitalize`, `text-left`, `text-center`, `text-right`
-  - box: `w-*`, `h-*`, `min-w-*`, `min-h-*`, `max-w-*`, `max-h-*`, `rounded*`, `border*`, `bg-*`, `bg-transparent`, `block`, `inline`, `inline-block`, `hidden`
-- `prose`, 複雑 selector, `space-*`, component 自体への class 解決は初期非対応です
+- `hono-email/vite` は `<Tailwind>` に artifact import を自動注入します
+- Tailwind の CSS コンパイル自体は `@tailwindcss/vite` など bundler 側の plugin が担当します
+- `configPath` は legacy `tailwind.config.*` を読むための option です
+- `safelist` は動的 class や source 検出外の utility を足すときに使います
+- base utility は inline style に落とし、responsive utility は `<Head>` の `<style>` に寄せます
+- `artifact` prop を明示した場合、plugin は上書きしません
+
+```tsx
+import { Body, Head, Html, Tailwind, Text, buildTailwindArtifactFromCss, render } from 'hono-email'
+import tailwindEmailCss from './styles/email.css?inline'
+
+const artifact = buildTailwindArtifactFromCss({ css: tailwindEmailCss })
+
+const html = await render(
+  <Html>
+    <Head />
+    <Tailwind artifact={artifact}>
+      <Body>
+        <Text className='text-brand px-4 py-2 sm:text-blue-500'>Hello</Text>
+      </Body>
+    </Tailwind>
+  </Html>
+)
+```
+
+低レベル API は引き続き利用できます。bundler plugin を使わない場合は、従来どおり `buildTailwindArtifactFromCss()` で artifact を組み立てて `<Tailwind artifact={...}>` に渡します。
 
 ## Markdown
 `Markdown` は Markdown 文字列をメール向け HTML に変換します。table と safe raw HTML を扱い、既定では unsafe raw HTML を sanitize で除去します。
@@ -279,6 +302,7 @@ const html = await render(
 - [examples/basic/minimal.tsx](./examples/basic/minimal.tsx)
 - [examples/basic/welcome.tsx](./examples/basic/welcome.tsx)
 - [examples/basic/tailwind.tsx](./examples/basic/tailwind.tsx)
+- [examples/cloudflare-vite-tailwind](./examples/cloudflare-vite-tailwind/README.md)
 - [examples/basic/markdown.tsx](./examples/basic/markdown.tsx)
 
 ## Non-Goals for v1

@@ -23,7 +23,7 @@
 - `toPlainText(html)` で最低限読みやすい text が生成できる
 - 危険または互換性の低い HTML タグや CSS を strict mode で検知できる
 - `Html`, `Head`, `Body`, `Container`, `Section`, `Row`, `Column`, `Text`, `Heading`, `Button`, `Link`, `Img`, `Preview`, `Hr`, `Font`, `Tailwind`, `Markdown` を提供できる
-- `Tailwind` が `config` を受け、主要 utility class をメール向け style と `<Head>` 内 CSS に変換できる
+- build step（例: `hono-email/vite`）が生成した artifact を `Tailwind` が受け、utility class をメール向け style と `<Head>` 内 CSS に変換できる
 - `Markdown` が tables と safe な raw HTML を扱え、`markdownCustomStyles` と `markdownContainerStyles` を提供できる
 - `Font` が `unifont` 経由で `@font-face` と fallback font stack を組み立て、`<Head>` 内の `<style>` として安全に出力できる
 
@@ -384,11 +384,15 @@ warning の理由:
 
 ## Tailwind Rules
 - `Tailwind` component は React Email の Tailwind component に近い mental model を持つ
-- `config` prop で Tailwind config を受ける
-- 初期実装では class は最終的な HTML 要素に対してのみ解決する
-- 主要 utility class は inline style へ落とす
-- media query など inline 化できない CSS は `<style>` として生成し、最終的に `<Head>` へ寄せる
+- 推奨導線では `hono-email/vite` が build-time に artifact import を自動注入する
+- plugin は virtual CSS module を生成し、Tailwind の bundler plugin がその CSS を build 時に解決する
+- `Tailwind` component は low-level API として `artifact` prop を受け取り続ける
+- plugin 未使用時は `artifact` prop を caller が明示的に渡す
+- class は最終的な HTML 要素に対してのみ解決する
+- base utility は inline style へ落とし、media query など inline 化できない CSS は `<style>` として生成して `<Head>` へ寄せる
 - `prose`, 複雑 selector, `space-*`, component 自体への class 解決は初期非対応とする
+- plugin v1 は `import { Tailwind } from 'hono-email'` の named import と `<Tailwind>` の直接利用を前提にする
+- plugin v1 は module alias や `Tailwind as EmailTailwind` のような rename import は対象外とする
 - 変換後の CSS / style は既存 validator を通す
 
 ## Markdown Rules

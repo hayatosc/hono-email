@@ -5,7 +5,7 @@ import { renderFontStyleTag, type FontProps } from '../font'
 import { renderMarkdownHtml, type MarkdownCustomStyles, type MarkdownRenderOptions } from '../markdown'
 import { renderFragmentToHtml } from '../render/html'
 import { styleObjectFromUnknown } from '../style'
-import { transformTailwindHtml, type TailwindConfig, wrapGeneratedHeadCss } from '../tailwind'
+import { transformTailwindHtml, type TailwindBuildArtifact, wrapGeneratedHeadCss } from '../tailwind'
 
 type ElementProps<Tag extends keyof JSX.IntrinsicElements> = JSX.IntrinsicElements[Tag]
 
@@ -34,7 +34,7 @@ type LinkProps = PropsWithChildren<Omit<ElementProps<'a'>, 'children' | 'href'> 
 type ImageProps = Omit<ElementProps<'img'>, 'src' | 'alt'> & { src: string; alt: string }
 
 type TailwindProps = PropsWithChildren<{
-  config?: TailwindConfig
+  artifact?: TailwindBuildArtifact
 }>
 
 type MarkdownProps = MarkdownRenderOptions & {
@@ -47,6 +47,10 @@ const PRESENTATION_TABLE_PROPS = {
   cellSpacing: '0',
   role: 'presentation',
 } as const
+
+export const TAILWIND_ARTIFACT_REQUIRED_ERROR_MESSAGE =
+  'Tailwind now requires a build artifact. Use hono-email/vite for build-time injection, or pass one explicitly via <Tailwind artifact={buildTailwindArtifactFromCss(...)}>.'
+export const TAILWIND_ARTIFACT_REQUIRED_TAG_NAME = 'hono-email-internal-tailwind-artifact-required'
 
 const BOX_DIRECTIONS = ['Top', 'Right', 'Bottom', 'Left'] as const
 
@@ -334,9 +338,13 @@ export const Hr: FC<ElementProps<'hr'>> = ({ style, ...props }) => (
 
 export const Font = async (props: FontProps) => renderFontStyleTag(props)
 
-export const Tailwind = async ({ children, config }: TailwindProps) => {
+export const Tailwind = async ({ artifact, children }: TailwindProps) => {
+  if (!artifact) {
+    return raw(`<${TAILWIND_ARTIFACT_REQUIRED_TAG_NAME} hidden=""></${TAILWIND_ARTIFACT_REQUIRED_TAG_NAME}>`)
+  }
+
   const renderedChildren = await renderFragmentToHtml(<>{children}</>)
-  const transformed = transformTailwindHtml(renderedChildren, config)
+  const transformed = transformTailwindHtml(renderedChildren, artifact)
   return raw(`${wrapGeneratedHeadCss(transformed.headCss)}${transformed.html}`)
 }
 
@@ -349,4 +357,4 @@ export const Markdown = ({ children, markdownContainerStyles, markdownCustomStyl
     })
   )
 
-export type { FontProps, MarkdownCustomStyles, TailwindConfig }
+export type { FontProps, MarkdownCustomStyles, TailwindBuildArtifact }

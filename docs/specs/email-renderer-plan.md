@@ -38,6 +38,7 @@
 - `<img alt>` 欠落 warning
 - `Html`, `Head`, `Body`, `Container`, `Section`, `Row`, `Column`, `Text`, `Heading`, `Button`, `Link`, `Img`, `Preview`, `Hr`, `Font`
 - examples と README
+- Tailwind build-time artifact 自動注入用の `hono-email/vite`
 
 ### Not Yet Implemented
 - CSS inlining の高度化
@@ -66,7 +67,7 @@ Font
   └── fallback stack generation
 
 Tailwind
-  ├── Tailwind config resolution
+  ├── build-time artifact generation plugin
   ├── utility extraction
   ├── inline style mapping
   └── head style generation
@@ -115,6 +116,34 @@ Markdown
 2. Tailwind utility coverage を広げる
 3. plain text / render option を整理する
 4. Markdown sanitize policy の将来拡張点を固める
+
+## Completed Task 19: Tailwind artifact の build-time 自動注入を実装する
+
+**Description:**  
+`Tailwind` の low-level API は維持しつつ、通常利用では `artifact` を caller が意識しなくてよいようにする。bundler build 時に virtual module から Tailwind CSS を解決し、artifact import を `<Tailwind>` に自動注入する。
+
+**Acceptance criteria:**
+- [x] `hono-email/vite` を公開し、Vite plugin として読み込める
+- [x] plugin が `<Tailwind>` に artifact prop を自動注入する
+- [x] plugin が virtual CSS module を生成し、Tailwind bundler plugin に CSS 解決を委譲する
+- [x] explicit `artifact` prop を書いた場合は plugin が上書きしない
+- [x] README / spec / tests が新しい推奨導線を説明している
+
+**Verification:**
+- [x] `nr test`
+- [x] `nr typecheck`
+
+**Dependencies:** Task 11
+
+**Files touched:**
+- `src/unplugin.ts`
+- `src/vite.ts`
+- `tests/render/tailwind-plugin.test.ts`
+- `README.md`
+- `docs/specs/email-renderer-spec.md`
+- `docs/specs/email-renderer-plan.md`
+
+**Estimated scope:** Medium: 5-6 files
 
 ## Task 15: Basic primitives の互換性を厚くする
 

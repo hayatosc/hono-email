@@ -1,23 +1,37 @@
 import { describe, expect, test } from 'bun:test'
 
-import { Body, Head, Html, Tailwind, Text, pixelBasedPreset, render, renderWithWarnings } from '../../src'
+import { Body, Head, Html, Tailwind, Text, buildTailwindArtifactFromCss, render, renderWithWarnings } from '../../src'
+
+const PRECOMPILED_TAILWIND_CSS = `
+@layer utilities {
+  .text-brand { color: #0f172a; }
+  .bg-brand { background-color: #0f172a; }
+  .text-slate-900 { color: #0f172a; }
+  .sm\\:text-blue-500 { @media (width >= 40rem) { color: #3b82f6; } }
+  .text-2xl { font-size: 1.5rem; line-height: 2rem; }
+  .font-semibold { font-weight: 600; }
+  .tracking-wide { letter-spacing: 0.025em; }
+  .underline { text-decoration-line: underline; }
+  .border { border-style: solid; border-width: 1px; }
+  .border-slate-300 { border-color: #cbd5e1; }
+  .rounded-lg { border-radius: 0.5rem; }
+  .w-24 { width: 6rem; }
+  .h-10 { height: 2.5rem; }
+  .px-4 { padding-inline: 1rem; }
+  .py-2 { padding-block: 0.5rem; }
+}
+`
 
 describe('Tailwind', () => {
-  test('applies config-driven utilities as inline styles on html elements', async () => {
+  test('applies precompiled utilities as inline styles on html elements', async () => {
+    const artifact = buildTailwindArtifactFromCss({
+      css: PRECOMPILED_TAILWIND_CSS,
+    })
+
     const html = await render(
       <Html>
         <Head />
-        <Tailwind
-          config={{
-            theme: {
-              extend: {
-                colors: {
-                  brand: '#0f172a',
-                },
-              },
-            },
-          }}
-        >
+        <Tailwind artifact={artifact}>
           <Body>
             <Text className='text-brand bg-brand px-4 py-2'>Hello</Text>
           </Body>
@@ -33,11 +47,15 @@ describe('Tailwind', () => {
     expect(html).toContain('padding-bottom:8px')
   })
 
-  test('moves generated media query styles into head and reports warnings when needed', async () => {
+  test('moves precompiled media query styles into head and reports warnings when needed', async () => {
+    const artifact = buildTailwindArtifactFromCss({
+      css: PRECOMPILED_TAILWIND_CSS,
+    })
+
     const result = await renderWithWarnings(
       <Html>
         <Head />
-        <Tailwind>
+        <Tailwind artifact={artifact}>
           <Body>
             <Text className='text-slate-900 sm:text-blue-500'>Hello</Text>
           </Body>
@@ -51,15 +69,15 @@ describe('Tailwind', () => {
     )
   })
 
-  test('supports pixelBasedPreset typography, border, tracking, and sizing utilities', async () => {
+  test('supports typography, border, tracking, and sizing utilities from precompiled css', async () => {
+    const artifact = buildTailwindArtifactFromCss({
+      css: PRECOMPILED_TAILWIND_CSS,
+    })
+
     const html = await render(
       <Html>
         <Head />
-        <Tailwind
-          config={{
-            presets: [pixelBasedPreset],
-          }}
-        >
+        <Tailwind artifact={artifact}>
           <Body>
             <Text className='text-2xl font-semibold tracking-wide underline border border-slate-300 rounded-lg w-24 h-10 px-4 py-2'>
               Hello
@@ -80,5 +98,53 @@ describe('Tailwind', () => {
     expect(html).toContain('border-radius:8px')
     expect(html).toContain('width:96px')
     expect(html).toContain('height:40px')
+  })
+
+  test('throws when artifact is missing', async () => {
+    await expect(
+      render(
+        <Html>
+          <Head />
+          <Tailwind>
+            <Body>
+              <Text className='text-blue-500'>Hello</Text>
+            </Body>
+          </Tailwind>
+        </Html>
+      )
+    ).rejects.toThrow(
+      'Tailwind now requires a build artifact. Use hono-email/vite for build-time injection, or pass one explicitly via <Tailwind artifact={buildTailwindArtifactFromCss(...)}>.'
+    )
+  })
+
+  test('supports Vite-like precompiled Tailwind CSS artifacts', async () => {
+    const artifact = buildTailwindArtifactFromCss({
+      css: `
+@layer utilities {
+  .text-brand { color: #0f172a; }
+  .px-4 { padding-inline: 1rem; }
+  .py-2 { padding-block: 0.5rem; }
+  .sm\\:text-blue-500 { @media (width >= 40rem) { color: #3b82f6; } }
+}
+`,
+    })
+
+    const result = await renderWithWarnings(
+      <Html>
+        <Head />
+        <Tailwind artifact={artifact}>
+          <Body>
+            <Text className='text-brand px-4 py-2 sm:text-blue-500'>Hello</Text>
+          </Body>
+        </Tailwind>
+      </Html>
+    )
+
+    expect(result.html).toContain('color:#0f172a')
+    expect(result.html).toContain('padding-left:16px')
+    expect(result.html).toContain('padding-right:16px')
+    expect(result.html).toContain('padding-top:8px')
+    expect(result.html).toContain('padding-bottom:8px')
+    expect(result.html).toMatch(/<head[^>]*>[\s\S]*<style[^>]*>[\s\S]*@media[\s\S]*<\/style>[\s\S]*<\/head>/i)
   })
 })

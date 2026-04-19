@@ -1,32 +1,17 @@
+import * as csstree from 'css-tree'
 import { parse } from 'node-html-parser'
 
 import { mergeStyleAttributes, serializeStyleAttribute } from '../style'
 
-type TailwindScalar = string | number
-interface TailwindColors {
-  [key: string]: TailwindScalar | TailwindColors
+export type TailwindBuildArtifact = {
+  classes: string[]
+  headCssByClass: Record<string, string>
+  inlineStylesByClass: Record<string, Record<string, string>>
 }
 
-type TailwindTheme = {
-  colors?: TailwindColors
-  fontFamily?: Record<string, string | string[]>
-  fontSize?: Record<string, string | [string, { lineHeight?: string | number }]>
-  screens?: Record<string, string>
-  spacing?: Record<string, string>
-  extend?: TailwindTheme
-}
-
-export type TailwindConfig = {
-  presets?: TailwindConfig[]
-  theme?: TailwindTheme
-}
-
-type ResolvedTheme = {
-  colors: TailwindColors
-  fontFamily: Record<string, string>
-  fontSize: Record<string, { fontSize: string; lineHeight?: string }>
-  screens: Record<string, string>
-  spacing: Record<string, string>
+export type BuildTailwindArtifactFromCssOptions = {
+  css: string
+  classes?: string[]
 }
 
 type TailwindRenderResult = {
@@ -34,620 +19,573 @@ type TailwindRenderResult = {
   headCss: string
 }
 
-const DEFAULT_COLORS: TailwindColors = {
-  black: '#000000',
-  white: '#ffffff',
-  blue: {
-    500: '#3b82f6',
-  },
-  slate: {
-    50: '#f8fafc',
-    100: '#f1f5f9',
-    200: '#e2e8f0',
-    300: '#cbd5e1',
-    400: '#94a3b8',
-    500: '#64748b',
-    600: '#475569',
-    700: '#334155',
-    800: '#1e293b',
-    900: '#0f172a',
-  },
+type CssTreeNode = {
+  type: string
+  name?: string
+  property?: string
+  prelude?: unknown
+  value?: unknown
+  block?: {
+    children?: {
+      toArray?: () => CssTreeNode[]
+    }
+  }
+  children?: {
+    toArray?: () => CssTreeNode[]
+  }
 }
 
-const DEFAULT_FONT_FAMILY = {
-  mono: 'ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace',
-  sans: 'ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif',
-  serif: 'ui-serif,Georgia,Cambria,"Times New Roman",Times,serif',
+const REM_TO_PX_FACTOR = 16
+const MAX_VARIABLE_RESOLUTION_DEPTH = 8
+
+const REM_PATTERN = /(-?\d+(?:\.\d+)?)rem\b/g
+const RGB_PATTERN = /^rgb\(\s*(\d{1,3})\s+(\d{1,3})\s+(\d{1,3})\s*\)$/i
+const RGB_ALPHA_ONE_PATTERN = /^rgb\(\s*(\d{1,3})\s+(\d{1,3})\s+(\d{1,3})\s*\/\s*(1(?:\.0+)?|100%)\s*\)$/i
+const OKLCH_PATTERN =
+  /^oklch\(\s*(-?\d+(?:\.\d+)?)%\s+(-?\d+(?:\.\d+)?)\s+(-?\d+(?:\.\d+)?)(?:\s*\/\s*([^)]+))?\s*\)$/i
+const VAR_FUNCTION_PATTERN = /var\(\s*(--[a-zA-Z0-9-_]+)\s*(?:,\s*([^)]+))?\)/g
+
+const LOGICAL_PROPERTY_EXPANSIONS: Record<string, string[]> = {
+  'border-block': ['border-top', 'border-bottom'],
+  'border-block-end': ['border-bottom'],
+  'border-block-start': ['border-top'],
+  'border-inline': ['border-left', 'border-right'],
+  'border-inline-end': ['border-right'],
+  'border-inline-start': ['border-left'],
+  'margin-block': ['margin-top', 'margin-bottom'],
+  'margin-block-end': ['margin-bottom'],
+  'margin-block-start': ['margin-top'],
+  'margin-inline': ['margin-left', 'margin-right'],
+  'margin-inline-end': ['margin-right'],
+  'margin-inline-start': ['margin-left'],
+  'padding-block': ['padding-top', 'padding-bottom'],
+  'padding-block-end': ['padding-bottom'],
+  'padding-block-start': ['padding-top'],
+  'padding-inline': ['padding-left', 'padding-right'],
+  'padding-inline-end': ['padding-right'],
+  'padding-inline-start': ['padding-left'],
 }
 
-const DEFAULT_FONT_SIZE = {
-  xs: { fontSize: '12px', lineHeight: '16px' },
-  sm: { fontSize: '14px', lineHeight: '20px' },
-  base: { fontSize: '16px', lineHeight: '24px' },
-  lg: { fontSize: '18px', lineHeight: '28px' },
-  xl: { fontSize: '20px', lineHeight: '28px' },
-  '2xl': { fontSize: '24px', lineHeight: '32px' },
-  '3xl': { fontSize: '30px', lineHeight: '36px' },
-  '4xl': { fontSize: '36px', lineHeight: '36px' },
-  '5xl': { fontSize: '48px', lineHeight: '1' },
-  '6xl': { fontSize: '60px', lineHeight: '1' },
-  '7xl': { fontSize: '72px', lineHeight: '1' },
-  '8xl': { fontSize: '96px', lineHeight: '1' },
-  '9xl': { fontSize: '144px', lineHeight: '1' },
+const PROPERTY_ALIASES: Record<string, string[]> = {
+  'text-decoration-line': ['text-decoration'],
 }
 
-const DEFAULT_SCREENS = {
-  sm: '640px',
-  md: '768px',
-  lg: '1024px',
-  xl: '1280px',
-}
+const COLOR_PROPERTIES = new Set([
+  'background-color',
+  'border-color',
+  'color',
+  'outline-color',
+  'text-decoration-color',
+])
 
-const DEFAULT_SPACING = {
-  '0': '0px',
-  '0.5': '2px',
-  '1': '4px',
-  '1.5': '6px',
-  '2': '8px',
-  '2.5': '10px',
-  '3': '12px',
-  '3.5': '14px',
-  '4': '16px',
-  '5': '20px',
-  '6': '24px',
-  '7': '28px',
-  '8': '32px',
-  '9': '36px',
-  '10': '40px',
-  '11': '44px',
-  '12': '48px',
-  '14': '56px',
-  '16': '64px',
-  '20': '80px',
-  '24': '96px',
-  '28': '112px',
-  '32': '128px',
-  '36': '144px',
-  '40': '160px',
-  '44': '176px',
-  '48': '192px',
-  '52': '208px',
-  '56': '224px',
-  '60': '240px',
-  '64': '256px',
-  '72': '288px',
-  '80': '320px',
-  '96': '384px',
-}
+const listToArray = (list: { toArray?: () => CssTreeNode[] } | undefined): CssTreeNode[] =>
+  list?.toArray ? list.toArray() : []
 
-export const pixelBasedPreset: TailwindConfig = {
-  theme: {
-    extend: {
-      fontSize: Object.fromEntries(
-        Object.entries(DEFAULT_FONT_SIZE).map(([key, value]) => [key, [value.fontSize, { lineHeight: value.lineHeight }]])
-      ),
-      spacing: DEFAULT_SPACING,
-    },
-  },
-}
-
-const mergeColors = (base: TailwindColors, extension?: TailwindColors): TailwindColors => {
-  if (!extension) {
-    return { ...base }
+const nodeChildren = (node: CssTreeNode): CssTreeNode[] => {
+  if (node.block?.children) {
+    return listToArray(node.block.children)
   }
 
-  const result: TailwindColors = { ...base }
+  if (node.children) {
+    return listToArray(node.children)
+  }
 
-  for (const [key, value] of Object.entries(extension)) {
-    if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
-      const current = result[key]
-      result[key] = mergeColors(typeof current === 'object' && current !== null ? current : {}, value)
-    } else {
-      result[key] = value
+  return []
+}
+
+const numberToPx = (value: number): string => {
+  const rounded = Number(value.toFixed(4))
+  return `${rounded}px`
+}
+
+const isUnitless = (unit: string): boolean => unit.trim() === ''
+
+const evaluateSimpleCalcExpression = (value: string): string => {
+  const calcMatch = value.match(
+    /^calc\(\s*(-?\d+(?:\.\d+)?)([a-z%]*)\s*([*/])\s*(-?\d+(?:\.\d+)?)([a-z%]*)\s*\)$/i
+  )
+  if (!calcMatch) {
+    return value
+  }
+
+  const [, leftRaw, leftUnitRaw, operator, rightRaw, rightUnitRaw] = calcMatch
+  const left = Number(leftRaw)
+  const right = Number(rightRaw)
+  const leftUnit = leftUnitRaw.toLowerCase()
+  const rightUnit = rightUnitRaw.toLowerCase()
+
+  if (Number.isNaN(left) || Number.isNaN(right)) {
+    return value
+  }
+
+  if (operator === '*') {
+    if (!isUnitless(leftUnit) && !isUnitless(rightUnit)) {
+      return value
+    }
+
+    if (!isUnitless(leftUnit)) {
+      return `${left * right}${leftUnit}`
+    }
+
+    if (!isUnitless(rightUnit)) {
+      return `${left * right}${rightUnit}`
+    }
+
+    return `${left * right}`
+  }
+
+  if (!isUnitless(rightUnit) || right === 0) {
+    return value
+  }
+
+  if (!isUnitless(leftUnit)) {
+    return `${left / right}${leftUnit}`
+  }
+
+  return `${left / right}`
+}
+
+const normalizeCssValue = (value: string): string =>
+  evaluateSimpleCalcExpression(value)
+    .replace(REM_PATTERN, (_, remValue: string) => numberToPx(Number(remValue) * REM_TO_PX_FACTOR))
+    .replace(/\s+/g, ' ')
+    .trim()
+
+const toHex = (component: number): string => component.toString(16).padStart(2, '0')
+
+const rgbToHex = (red: string, green: string, blue: string): string => {
+  const normalize = (component: string): number => {
+    const parsed = Number(component)
+    if (Number.isNaN(parsed)) {
+      return 0
+    }
+
+    return Math.min(255, Math.max(0, parsed))
+  }
+
+  return `#${toHex(normalize(red))}${toHex(normalize(green))}${toHex(normalize(blue))}`
+}
+
+const linearSrgbToSrgb = (value: number): number =>
+  value <= 0.0031308 ? value * 12.92 : 1.055 * value ** (1 / 2.4) - 0.055
+
+const clamp01 = (value: number): number => Math.min(1, Math.max(0, value))
+
+const oklchToHex = (lightnessPercent: string, chromaRaw: string, hueRaw: string): string => {
+  const lightness = Number(lightnessPercent) / 100
+  const chroma = Number(chromaRaw)
+  const hue = (Number(hueRaw) * Math.PI) / 180
+
+  if ([lightness, chroma, hue].some((value) => Number.isNaN(value))) {
+    return `oklch(${lightnessPercent}% ${chromaRaw} ${hueRaw})`
+  }
+
+  const a = chroma * Math.cos(hue)
+  const b = chroma * Math.sin(hue)
+
+  const lPrime = lightness + 0.3963377774 * a + 0.2158037573 * b
+  const mPrime = lightness - 0.1055613458 * a - 0.0638541728 * b
+  const sPrime = lightness - 0.0894841775 * a - 1.291485548 * b
+
+  const l = lPrime ** 3
+  const m = mPrime ** 3
+  const s = sPrime ** 3
+
+  const linearRed = 4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s
+  const linearGreen = -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s
+  const linearBlue = -0.0041960863 * l - 0.7034186147 * m + 1.707614701 * s
+
+  const red = Math.round(clamp01(linearSrgbToSrgb(linearRed)) * 255)
+  const green = Math.round(clamp01(linearSrgbToSrgb(linearGreen)) * 255)
+  const blue = Math.round(clamp01(linearSrgbToSrgb(linearBlue)) * 255)
+
+  return `#${toHex(red)}${toHex(green)}${toHex(blue)}`
+}
+
+const normalizeColorValue = (value: string): string => {
+  const rgbWithAlphaOneMatch = value.match(RGB_ALPHA_ONE_PATTERN)
+  if (rgbWithAlphaOneMatch) {
+    const [, red, green, blue] = rgbWithAlphaOneMatch
+    return rgbToHex(red, green, blue)
+  }
+
+  const rgbMatch = value.match(RGB_PATTERN)
+  if (rgbMatch) {
+    const [, red, green, blue] = rgbMatch
+    return rgbToHex(red, green, blue)
+  }
+
+  const oklchMatch = value.match(OKLCH_PATTERN)
+  if (oklchMatch) {
+    const [, lightness, chroma, hue, alpha] = oklchMatch
+    if (!alpha || alpha.trim() === '1' || alpha.trim() === '100%') {
+      return oklchToHex(lightness, chroma, hue)
     }
   }
 
-  return result
+  return value
 }
 
-const normalizeFontSizeRecord = (
-  record?: Record<string, string | [string, { lineHeight?: string | number }]>
-): Record<string, { fontSize: string; lineHeight?: string }> => {
-  if (!record) {
-    return {}
-  }
+const escapeRegExp = (value: string): string => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 
-  return Object.fromEntries(
-    Object.entries(record).map(([key, value]) => {
-      if (Array.isArray(value)) {
-        return [
-          key,
-          {
-            fontSize: value[0],
-            ...(value[1]?.lineHeight !== undefined ? { lineHeight: `${value[1].lineHeight}` } : {}),
-          },
-        ]
+const resolveCssVariables = (value: string, themeVariables: Record<string, string>): string => {
+  let resolved = value
+
+  for (let depth = 0; depth < MAX_VARIABLE_RESOLUTION_DEPTH; depth += 1) {
+    let changed = false
+    resolved = resolved.replace(VAR_FUNCTION_PATTERN, (match, variableName: string, fallback: string | undefined) => {
+      const mappedValue = themeVariables[variableName]
+      if (mappedValue !== undefined) {
+        changed = true
+        return mappedValue
       }
 
-      return [key, { fontSize: value }]
+      if (fallback !== undefined) {
+        changed = true
+        return fallback.trim()
+      }
+
+      return match
     })
-  )
+
+    if (!changed) {
+      break
+    }
+  }
+
+  return resolved
 }
 
-const mergeTheme = (base: ResolvedTheme, theme?: TailwindTheme): ResolvedTheme => {
-  if (!theme) {
-    return base
+const normalizeMediaQuery = (query: string): string => {
+  const normalized = normalizeCssValue(query)
+  const minWidthMatch = normalized.match(/^\(\s*width\s*>=\s*([^)]+)\)$/i)
+  if (minWidthMatch) {
+    return `(min-width:${minWidthMatch[1].trim()})`
   }
 
-  const extended = theme.extend
-
-  return {
-    colors: mergeColors(mergeColors(base.colors, theme.colors), extended?.colors),
-    fontFamily: {
-      ...base.fontFamily,
-      ...Object.fromEntries(
-        Object.entries({ ...theme.fontFamily, ...extended?.fontFamily }).map(([key, value]) => [
-          key,
-          Array.isArray(value) ? value.join(',') : value,
-        ])
-      ),
-    },
-    fontSize: {
-      ...base.fontSize,
-      ...normalizeFontSizeRecord(theme.fontSize),
-      ...normalizeFontSizeRecord(extended?.fontSize),
-    },
-    screens: {
-      ...base.screens,
-      ...theme.screens,
-      ...extended?.screens,
-    },
-    spacing: {
-      ...base.spacing,
-      ...theme.spacing,
-      ...extended?.spacing,
-    },
+  const maxWidthMatch = normalized.match(/^\(\s*width\s*<=\s*([^)]+)\)$/i)
+  if (maxWidthMatch) {
+    return `(max-width:${maxWidthMatch[1].trim()})`
   }
+
+  return normalized
 }
 
-const resolveTheme = (config?: TailwindConfig): ResolvedTheme => {
-  let theme: ResolvedTheme = {
-    colors: DEFAULT_COLORS,
-    fontFamily: DEFAULT_FONT_FAMILY,
-    fontSize: DEFAULT_FONT_SIZE,
-    screens: DEFAULT_SCREENS,
-    spacing: DEFAULT_SPACING,
+const normalizeDeclarations = (
+  declarations: Record<string, string>,
+  themeVariables: Record<string, string>
+): Record<string, string> => {
+  const normalized: Record<string, string> = {}
+
+  for (const [property, rawValue] of Object.entries(declarations)) {
+    const normalizedProperty = property.trim().toLowerCase()
+    const normalizedValue = normalizeCssValue(resolveCssVariables(rawValue, themeVariables))
+
+    if (normalizedProperty === '' || normalizedValue === '') {
+      continue
+    }
+
+    const expandedProperties = LOGICAL_PROPERTY_EXPANSIONS[normalizedProperty]
+    if (expandedProperties) {
+      for (const expandedProperty of expandedProperties) {
+        normalized[expandedProperty] = normalizedValue
+      }
+      continue
+    }
+
+    const aliasedProperties = PROPERTY_ALIASES[normalizedProperty]
+    if (aliasedProperties) {
+      for (const aliasedProperty of aliasedProperties) {
+        normalized[aliasedProperty] = normalizedValue
+      }
+      continue
+    }
+
+    normalized[normalizedProperty] = normalizedValue
   }
 
-  for (const preset of config?.presets ?? []) {
-    theme = mergeTheme(theme, preset.theme)
+  const localTwVariables = Object.entries(normalized).filter(([property]) => property.startsWith('--tw-'))
+
+  for (const [property, currentValue] of Object.entries(normalized)) {
+    if (property.startsWith('--tw-')) {
+      continue
+    }
+
+    let resolvedValue = currentValue
+    for (const [variableName, variableValue] of localTwVariables) {
+      const variablePattern = new RegExp(`var\\(${escapeRegExp(variableName)}(?:\\s*,\\s*[^)]+)?\\)`, 'g')
+      resolvedValue = resolvedValue.replace(variablePattern, variableValue)
+    }
+
+    normalized[property] = normalizeCssValue(resolvedValue)
   }
 
-  return mergeTheme(theme, config?.theme)
+  for (const property of COLOR_PROPERTIES) {
+    const currentValue = normalized[property]
+    if (!currentValue) {
+      continue
+    }
+
+    normalized[property] = normalizeColorValue(currentValue)
+  }
+
+  for (const [variableName] of localTwVariables) {
+    delete normalized[variableName]
+  }
+
+  const hasBorderWidth =
+    normalized['border-width'] !== undefined ||
+    normalized['border-top-width'] !== undefined ||
+    normalized['border-right-width'] !== undefined ||
+    normalized['border-bottom-width'] !== undefined ||
+    normalized['border-left-width'] !== undefined
+
+  if (hasBorderWidth && normalized['border-style'] === undefined) {
+    normalized['border-style'] = 'solid'
+  }
+
+  return normalized
 }
+
+const decodeEscapedClassToken = (value: string): string => value.replace(/\\(.)/g, '$1')
 
 const escapeSelector = (value: string): string => value.replace(/([^a-zA-Z0-9_-])/g, '\\$1')
 
-const resolveColorValue = (colors: TailwindColors, key: string): string | undefined => {
-  if (key.startsWith('[') && key.endsWith(']')) {
-    return key.slice(1, -1)
-  }
-
-  const path = key.split('-')
-  let current: TailwindScalar | TailwindColors | undefined = colors
-
-  for (const segment of path) {
-    if (typeof current !== 'object' || current === null || Array.isArray(current)) {
-      return undefined
-    }
-    current = current[segment]
-  }
-
-  if (typeof current === 'string' || typeof current === 'number') {
-    return `${current}`
-  }
-
-  return undefined
-}
-
-const resolveSpacingValue = (spacing: Record<string, string>, key: string): string | undefined => {
-  if (key === 'auto') {
-    return 'auto'
-  }
-
-  if (key === 'px') {
-    return '1px'
-  }
-
-  if (key.startsWith('[') && key.endsWith(']')) {
-    return key.slice(1, -1)
-  }
-
-  return spacing[key]
-}
-
-const resolveRadiusValue = (key: string): string | undefined => {
-  if (key === '') {
-    return '4px'
-  }
-
-  if (key === 'none') {
-    return '0px'
-  }
-
-  if (key === 'sm') {
-    return '2px'
-  }
-
-  if (key === 'md') {
-    return '6px'
-  }
-
-  if (key === 'lg') {
-    return '8px'
-  }
-
-  if (key === 'xl') {
-    return '12px'
-  }
-
-  if (key === 'full') {
-    return '9999px'
-  }
-
-  if (key.startsWith('[') && key.endsWith(']')) {
-    return key.slice(1, -1)
-  }
-
-  return undefined
-}
-
-const resolveLineHeightValue = (spacing: Record<string, string>, key: string): string | undefined => {
-  if (key.startsWith('[') && key.endsWith(']')) {
-    return key.slice(1, -1)
-  }
-
-  return spacing[key]
-}
-
-const resolveTrackingValue = (key: string): string | undefined => {
-  const trackingValues: Record<string, string> = {
-    tighter: '-0.05em',
-    tight: '-0.025em',
-    normal: '0em',
-    wide: '0.025em',
-    wider: '0.05em',
-    widest: '0.1em',
-  }
-
-  if (key.startsWith('[') && key.endsWith(']')) {
-    return key.slice(1, -1)
-  }
-
-  return trackingValues[key]
-}
-
-const resolveBorderWidthValue = (key: string): string | undefined => {
-  if (key === '') {
-    return '1px'
-  }
-
-  if (key === '0') {
-    return '0px'
-  }
-
-  if (key === '2') {
-    return '2px'
-  }
-
-  if (key === '4') {
-    return '4px'
-  }
-
-  if (key === '8') {
-    return '8px'
-  }
-
-  if (key.startsWith('[') && key.endsWith(']')) {
-    return key.slice(1, -1)
-  }
-
-  return undefined
-}
-
-const resolveSizeValue = (
-  tokenValue: string,
-  spacing: Record<string, string>,
-  specialValues: Record<string, string> = {}
-): string | undefined => {
-  if (tokenValue in specialValues) {
-    return specialValues[tokenValue]
-  }
-
-  if (tokenValue.startsWith('[') && tokenValue.endsWith(']')) {
-    return tokenValue.slice(1, -1)
-  }
-
-  return spacing[tokenValue]
-}
-
-const resolveUtilityClass = (token: string, theme: ResolvedTheme): Record<string, string> | undefined => {
-  if (token === 'font-normal') {
-    return { 'font-weight': '400' }
-  }
-
-  if (token === 'font-medium') {
-    return { 'font-weight': '500' }
-  }
-
-  if (token === 'font-semibold') {
-    return { 'font-weight': '600' }
-  }
-
-  if (token === 'font-bold') {
-    return { 'font-weight': '700' }
-  }
-
-  if (token === 'font-sans') {
-    return { 'font-family': theme.fontFamily.sans }
-  }
-
-  if (token === 'font-serif') {
-    return { 'font-family': theme.fontFamily.serif }
-  }
-
-  if (token === 'font-mono') {
-    return { 'font-family': theme.fontFamily.mono }
-  }
-
-  if (token === 'text-left' || token === 'text-center' || token === 'text-right') {
-    return { 'text-align': token.replace('text-', '') }
-  }
-
-  if (token === 'italic') {
-    return { 'font-style': 'italic' }
-  }
-
-  if (token === 'not-italic') {
-    return { 'font-style': 'normal' }
-  }
-
-  if (token === 'underline') {
-    return { 'text-decoration': 'underline' }
-  }
-
-  if (token === 'no-underline') {
-    return { 'text-decoration': 'none' }
-  }
-
-  if (token === 'uppercase' || token === 'lowercase' || token === 'capitalize') {
-    return { 'text-transform': token }
-  }
-
-  if (token === 'block' || token === 'inline-block' || token === 'inline') {
-    return { display: token }
-  }
-
-  if (token === 'hidden') {
-    return { display: 'none' }
-  }
-
-  if (token === 'w-full') {
-    return { width: '100%' }
-  }
-
-  if (token === 'h-full') {
-    return { height: '100%' }
-  }
-
-  if (token.startsWith('w-')) {
-    const value = resolveSizeValue(token.slice(2), theme.spacing, { auto: 'auto', full: '100%' })
-    if (value) {
-      return { width: value }
-    }
-  }
-
-  if (token.startsWith('h-')) {
-    const value = resolveSizeValue(token.slice(2), theme.spacing, { auto: 'auto', full: '100%' })
-    if (value) {
-      return { height: value }
-    }
-  }
-
-  if (token.startsWith('min-w-')) {
-    const value = resolveSizeValue(token.slice('min-w-'.length), theme.spacing, { full: '100%' })
-    if (value) {
-      return { 'min-width': value }
-    }
-  }
-
-  if (token.startsWith('min-h-')) {
-    const value = resolveSizeValue(token.slice('min-h-'.length), theme.spacing, { full: '100%' })
-    if (value) {
-      return { 'min-height': value }
-    }
-  }
-
-  if (token.startsWith('max-w-')) {
-    const value = resolveSizeValue(token.slice('max-w-'.length), theme.spacing, {
-      full: '100%',
-      none: 'none',
-    })
-    if (value) {
-      return { 'max-width': value }
-    }
-  }
-
-  if (token.startsWith('max-h-')) {
-    const value = resolveSizeValue(token.slice('max-h-'.length), theme.spacing, {
-      full: '100%',
-      none: 'none',
-    })
-    if (value) {
-      return { 'max-height': value }
-    }
-  }
-
-  if (token.startsWith('leading-')) {
-    const value = resolveLineHeightValue(theme.spacing, token.slice('leading-'.length))
-    if (value) {
-      return { 'line-height': value }
-    }
-  }
-
-  if (token.startsWith('tracking-')) {
-    const value = resolveTrackingValue(token.slice('tracking-'.length))
-    if (value) {
-      return { 'letter-spacing': value }
-    }
-  }
-
-  if (token === 'rounded') {
-    return { 'border-radius': '4px' }
-  }
-
-  if (token.startsWith('rounded-')) {
-    const value = resolveRadiusValue(token.slice('rounded-'.length))
-    if (value) {
-      return { 'border-radius': value }
-    }
-  }
-
-  if (token.startsWith('text-')) {
-    const size = theme.fontSize[token.slice('text-'.length)]
-    if (size) {
-      return {
-        'font-size': size.fontSize,
-        ...(size.lineHeight ? { 'line-height': size.lineHeight } : {}),
-      }
-    }
-
-    const value = resolveColorValue(theme.colors, token.slice('text-'.length))
-    if (value) {
-      return { color: value }
-    }
-  }
-
-  if (token.startsWith('bg-')) {
-    const value = resolveColorValue(theme.colors, token.slice('bg-'.length))
-    if (value) {
-      return { 'background-color': value }
-    }
-  }
-
-  if (token === 'bg-transparent') {
-    return { 'background-color': 'transparent' }
-  }
-
-  if (token === 'border') {
-    return {
-      'border-style': 'solid',
-      'border-width': '1px',
-    }
-  }
-
-  if (token === 'border-solid' || token === 'border-dashed' || token === 'border-dotted') {
-    return { 'border-style': token.slice('border-'.length) }
-  }
-
-  const borderSideMatch = token.match(/^border-([trbl])(?:-(.+))?$/)
-  if (borderSideMatch) {
-    const [, side, rawValue = ''] = borderSideMatch
-    const value = resolveBorderWidthValue(rawValue)
-    if (value) {
-      const property = {
-        t: 'border-top-width',
-        r: 'border-right-width',
-        b: 'border-bottom-width',
-        l: 'border-left-width',
-      }[side]
-
-      if (property) {
-        return {
-          'border-style': 'solid',
-          [property]: value,
-        }
-      }
-    }
-  }
-
-  if (token.startsWith('border-')) {
-    const suffix = token.slice('border-'.length)
-    const width = resolveBorderWidthValue(suffix)
-    if (width) {
-      return {
-        'border-style': 'solid',
-        'border-width': width,
-      }
-    }
-
-    const color = resolveColorValue(theme.colors, suffix)
-    if (color) {
-      return { 'border-color': color }
-    }
-  }
-
-  const spaceMatch = token.match(/^(p|m)([trblxy]?)-(.+)$/)
-  if (spaceMatch) {
-    const [, kind, axis, rawValue] = spaceMatch
-    const value = resolveSpacingValue(theme.spacing, rawValue)
-    if (!value) {
-      return undefined
-    }
-
-    const prefix = kind === 'p' ? 'padding' : 'margin'
-    if (axis === '') {
-      return { [prefix]: value }
-    }
-
-    if (axis === 'x') {
-      return {
-        [`${prefix}-left`]: value,
-        [`${prefix}-right`]: value,
-      }
-    }
-
-    if (axis === 'y') {
-      return {
-        [`${prefix}-top`]: value,
-        [`${prefix}-bottom`]: value,
-      }
-    }
-
-    const propertyByAxis = {
-      t: `${prefix}-top`,
-      r: `${prefix}-right`,
-      b: `${prefix}-bottom`,
-      l: `${prefix}-left`,
-    } as const
-
-    return { [propertyByAxis[axis as keyof typeof propertyByAxis]]: value }
-  }
-
-  return undefined
-}
-
-const buildResponsiveCss = (
-  fullToken: string,
-  variant: string,
-  baseToken: string,
-  theme: ResolvedTheme
-): string | undefined => {
-  const screen = theme.screens[variant]
-  const declarations = resolveUtilityClass(baseToken, theme)
-  if (!screen || !declarations) {
+const extractSimpleClassToken = (selector: string): string | undefined => {
+  const trimmed = selector.trim()
+  if (!trimmed.startsWith('.')) {
     return undefined
   }
 
-  const cssBody = Object.entries(declarations)
-    .map(([property, value]) => `${property}:${value} !important`)
-    .join(';')
+  let token = ''
+  for (let index = 1; index < trimmed.length; index += 1) {
+    const character = trimmed[index]
+    if (!character) {
+      break
+    }
 
-  return `@media (min-width:${screen}){.${escapeSelector(fullToken)}{${cssBody}}}`
+    if (character === '\\') {
+      const escaped = trimmed[index + 1]
+      if (!escaped) {
+        return undefined
+      }
+      token += `${character}${escaped}`
+      index += 1
+      continue
+    }
+
+    if (character === ':' || character === ' ' || character === '>' || character === '+' || character === '~' || character === '[') {
+      return undefined
+    }
+
+    token += character
+  }
+
+  return token === '' ? undefined : decodeEscapedClassToken(token)
 }
 
-export const transformTailwindHtml = (html: string, config?: TailwindConfig): TailwindRenderResult => {
-  const theme = resolveTheme(config)
+const extractDeclarationsFromNodes = (nodes: CssTreeNode[]): Record<string, string> => {
+  const declarations: Record<string, string> = {}
+
+  for (const node of nodes) {
+    if (node.type !== 'Declaration' || !node.property || !node.value) {
+      continue
+    }
+
+    declarations[node.property] = csstree.generate(node.value as never)
+  }
+
+  return declarations
+}
+
+const serializeDeclarations = (declarations: Record<string, string>, important: boolean): string =>
+  Object.entries(declarations)
+    .map(([property, value]) => `${property}:${value}${important ? ' !important' : ''}`)
+    .join(';')
+
+const mergeStylesByClass = (
+  target: Record<string, Record<string, string>>,
+  classToken: string,
+  declarations: Record<string, string>
+): void => {
+  target[classToken] = {
+    ...(target[classToken] ?? {}),
+    ...declarations,
+  }
+}
+
+const appendMediaRuleByClass = (
+  target: Record<string, string>,
+  classToken: string,
+  mediaQuery: string,
+  declarations: Record<string, string>
+): void => {
+  const mediaRule = `@media ${mediaQuery}{.${escapeSelector(classToken)}{${serializeDeclarations(declarations, true)}}}`
+  target[classToken] = `${target[classToken] ?? ''}${mediaRule}`
+}
+
+const collectCssVariables = (nodes: CssTreeNode[]): Record<string, string> => {
+  const cssVariables: Record<string, string> = {}
+
+  const collect = (currentNodes: CssTreeNode[], inThemeLayer: boolean): void => {
+    for (const node of currentNodes) {
+      if (node.type === 'Declaration' && inThemeLayer && node.property?.startsWith('--') && node.value) {
+        cssVariables[node.property] = normalizeCssValue(csstree.generate(node.value as never))
+        continue
+      }
+
+      if (node.type === 'Atrule') {
+        if (node.name?.toLowerCase() === 'property' && node.prelude) {
+          const propertyName = csstree.generate(node.prelude as never).trim()
+          if (propertyName.startsWith('--')) {
+            const initialValueDeclaration = nodeChildren(node).find(
+              (child) => child.type === 'Declaration' && child.property?.toLowerCase() === 'initial-value' && child.value
+            )
+
+            if (initialValueDeclaration?.value) {
+              cssVariables[propertyName] = normalizeCssValue(csstree.generate(initialValueDeclaration.value as never))
+            }
+          }
+        }
+
+        const layerPrelude = node.prelude ? csstree.generate(node.prelude as never) : ''
+        const isThemeLayer =
+          inThemeLayer ||
+          (node.name?.toLowerCase() === 'layer' &&
+            layerPrelude
+              .split(',')
+              .map((part) => part.trim())
+              .includes('theme'))
+
+        const children = nodeChildren(node)
+        if (children.length > 0) {
+          collect(children, isThemeLayer)
+        }
+
+        continue
+      }
+
+      const children = nodeChildren(node)
+      if (children.length > 0) {
+        collect(children, inThemeLayer)
+      }
+    }
+  }
+
+  collect(nodes, false)
+  return cssVariables
+}
+
+const buildArtifactFromCss = (cssText: string, classes?: string[]): TailwindBuildArtifact => {
+  const ast = csstree.parse(cssText) as unknown as CssTreeNode
+  const rootNodes = nodeChildren(ast)
+  const cssVariables = collectCssVariables(rootNodes)
+  const inlineStylesByClass: Record<string, Record<string, string>> = {}
+  const headCssByClass: Record<string, string> = {}
+  const discoveredClasses: string[] = []
+  const discoveredClassSet = new Set<string>()
+
+  const registerClass = (classToken: string): void => {
+    if (!discoveredClassSet.has(classToken)) {
+      discoveredClassSet.add(classToken)
+      discoveredClasses.push(classToken)
+    }
+  }
+
+  const processNodes = (nodes: CssTreeNode[], activeMediaQuery?: string): void => {
+    for (const node of nodes) {
+      if (node.type === 'Atrule') {
+        if (node.name?.toLowerCase() === 'media') {
+          const prelude = node.prelude ? csstree.generate(node.prelude as never) : ''
+          const nextMediaQuery = normalizeMediaQuery(prelude)
+          processNodes(nodeChildren(node), nextMediaQuery)
+        } else {
+          processNodes(nodeChildren(node), activeMediaQuery)
+        }
+        continue
+      }
+
+      if (node.type !== 'Rule' || !node.prelude) {
+        continue
+      }
+
+      const selector = csstree.generate(node.prelude as never)
+      const classToken = extractSimpleClassToken(selector)
+      if (!classToken) {
+        continue
+      }
+
+      registerClass(classToken)
+
+      const directDeclarations: Record<string, string> = {}
+      for (const child of nodeChildren(node)) {
+        if (child.type === 'Declaration' && child.property && child.value) {
+          directDeclarations[child.property] = csstree.generate(child.value as never)
+          continue
+        }
+
+        if (child.type === 'Atrule' && child.name?.toLowerCase() === 'media' && child.prelude) {
+          const nestedMediaQuery = normalizeMediaQuery(csstree.generate(child.prelude as never))
+          const nestedDeclarations = normalizeDeclarations(extractDeclarationsFromNodes(nodeChildren(child)), cssVariables)
+          if (Object.keys(nestedDeclarations).length > 0) {
+            appendMediaRuleByClass(headCssByClass, classToken, nestedMediaQuery, nestedDeclarations)
+          }
+        }
+      }
+
+      const normalizedDirectDeclarations = normalizeDeclarations(directDeclarations, cssVariables)
+      if (Object.keys(normalizedDirectDeclarations).length === 0) {
+        continue
+      }
+
+      if (activeMediaQuery) {
+        appendMediaRuleByClass(headCssByClass, classToken, activeMediaQuery, normalizedDirectDeclarations)
+      } else {
+        mergeStylesByClass(inlineStylesByClass, classToken, normalizedDirectDeclarations)
+      }
+    }
+  }
+
+  processNodes(rootNodes)
+
+  return {
+    classes: classes ?? discoveredClasses,
+    headCssByClass,
+    inlineStylesByClass,
+  }
+}
+
+const uniqueClasses = (classes: string[]): string[] =>
+  Array.from(new Set(classes.map((className) => className.trim()).filter((className) => className !== '')))
+
+export const collectTailwindClassesFromHtml = (html: string): string[] => {
+  const document = parse(html)
+  const classTokens = new Set<string>()
+
+  for (const element of document.querySelectorAll('*')) {
+    const classAttribute = element.getAttribute('class')
+    if (!classAttribute) {
+      continue
+    }
+
+    for (const classToken of classAttribute.split(/\s+/).filter(Boolean)) {
+      classTokens.add(classToken)
+    }
+  }
+
+  return Array.from(classTokens)
+}
+
+export const buildTailwindArtifactFromCss = ({
+  classes,
+  css,
+}: BuildTailwindArtifactFromCssOptions): TailwindBuildArtifact => {
+  const normalizedClasses = classes ? uniqueClasses(classes) : undefined
+  return buildArtifactFromCss(css, normalizedClasses)
+}
+
+export const transformTailwindHtml = (html: string, artifact: TailwindBuildArtifact): TailwindRenderResult => {
+  const knownClasses = new Set(artifact.classes)
   const document = parse(html)
   const responsiveCss = new Set<string>()
 
@@ -661,18 +599,21 @@ export const transformTailwindHtml = (html: string, config?: TailwindConfig): Ta
     const tokens = classAttribute.split(/\s+/).filter(Boolean)
 
     for (const token of tokens) {
-      const separatorIndex = token.indexOf(':')
-      if (separatorIndex !== -1) {
-        const variant = token.slice(0, separatorIndex)
-        const baseToken = token.slice(separatorIndex + 1)
-        const responsiveRule = buildResponsiveCss(token, variant, baseToken, theme)
-        if (responsiveRule) {
-          responsiveCss.add(responsiveRule)
-        }
-        continue
+      if (!knownClasses.has(token)) {
+        throw new Error(
+          `Tailwind class '${token}' is missing from the build artifact. Rebuild the artifact before rendering with <Tailwind>.`
+        )
       }
 
-      Object.assign(mergedInlineStyle, resolveUtilityClass(token, theme))
+      const inlineStyle = artifact.inlineStylesByClass[token]
+      if (inlineStyle) {
+        Object.assign(mergedInlineStyle, inlineStyle)
+      }
+
+      const mediaRule = artifact.headCssByClass[token]
+      if (mediaRule) {
+        responsiveCss.add(mediaRule)
+      }
     }
 
     if (Object.keys(mergedInlineStyle).length > 0) {

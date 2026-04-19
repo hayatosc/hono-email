@@ -8,22 +8,43 @@
     ".": {
       "types": "./src/index.ts",
       "import": "./dist/index.js"
+    },
+    "./unplugin": {
+      "types": "./src/unplugin.ts",
+      "import": "./dist/unplugin.js"
+    },
+    "./vite": {
+      "types": "./src/vite.ts",
+      "import": "./dist/vite.js"
     }
   },
   "scripts": {
-    "build": "bun build ./src/index.ts --outdir dist --format esm",
+    "build": "bun build ./src/index.ts ./src/unplugin.ts ./src/vite.ts --outdir dist --format esm --target node",
+    "build:example:cloudflare": "vite build --config examples/cloudflare-vite-tailwind/vite.config.ts",
+    "deploy:example:cloudflare": "wrangler deploy --config examples/cloudflare-vite-tailwind/wrangler.jsonc",
+    "dev:example:cloudflare": "vite --config examples/cloudflare-vite-tailwind/vite.config.ts",
+    "preview:example:cloudflare": "vite preview --config examples/cloudflare-vite-tailwind/vite.config.ts",
     "test": "bun test",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
+    "@cloudflare/vite-plugin": "^1.32.3",
+    "@tailwindcss/vite": "^4.2.2",
     "@types/bun": "^1.3.12",
+    "@types/css-tree": "^2.3.11",
     "@types/sanitize-html": "^2.16.1",
-    "typescript": "^6.0.3"
+    "tailwindcss": "^4.2.2",
+    "typescript": "^6.0.3",
+    "vite": "^8.0.8",
+    "wrangler": "^4.83.0"
   },
   "dependencies": {
+    "css-tree": "^3.1.0",
+    "hono": "^4.12.14",
     "marked": "^18.0.1",
     "node-html-parser": "^7.1.0",
     "sanitize-html": "^2.17.3",
-    "unifont": "^0.7.4"
+    "unifont": "^0.7.4",
+    "unplugin": "^3.0.0"
   }
 }

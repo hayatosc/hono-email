@@ -1,0 +1,13 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "hono-email-cloudflare-vite-example",
+  "compatibility_date": "2026-04-18",
+  "compatibility_flags": ["nodejs_compat"],
+  "main": "./src/index.tsx",
+
+  // Optional: enable this when you want to send the rendered email.
+  // "send_email": [{ "name": "EMAIL", "destination_address": "recipient@example.com" }],
+  // "vars": {
+  //   "EMAIL_FROM": "welcome@example.com"
+  // }
+}
