@@ -81,4 +81,65 @@ Paragraph with \`code\`
 
     expect(html).toContain('<script>alert(\'xss\')</script>')
   })
+
+  test('sanitizes dangerous attributes, urls, and styles while keeping safe content', async () => {
+    const html = await render(
+      <Html>
+        <Head />
+        <Body>
+          <Markdown>{`
+<div onclick="alert('xss')" style="color: red; background-image: url(https://bad.test/x.png); /*x*/ width: 100%">
+  <custom-tag><a href=" jAvascript:alert(1)" target="_blank" rel="external noopener" title="safe">Click</a></custom-tag>
+  <a href="https://example.com" target="_blank" rel="external nofollow">Safe Link</a>
+  <img src="//evil.example/image.png" onerror="alert(1)" width="100%" height="240" />
+  <table role="presentation" cellpadding="8" cellspacing="4" border="1" align="center"><tr><td colspan="2" rowspan="3">Cell</td></tr></table>
+</div>
+          `}</Markdown>
+        </Body>
+      </Html>
+    )
+
+    expect(html).not.toContain('onclick=')
+    expect(html).not.toContain('onerror=')
+    expect(html).not.toContain('javascript:alert')
+    expect(html).not.toContain('style="color: red; background-image')
+    expect(html).not.toContain('<custom-tag')
+    expect(html).toContain('\n  Click\n')
+    expect(html).toContain('href="https://example.com"')
+    expect(html).toContain('target="_blank"')
+    expect(html).toContain('rel="external nofollow"')
+    expect(html).toContain('<img')
+    expect(html).not.toContain('onerror=')
+    expect(html).toContain('role="presentation"')
+    expect(html).toContain('cellpadding="8"')
+    expect(html).toContain('colspan="2"')
+    expect(html).toContain('Cell')
+  })
+
+  test('drops unsafe attribute values and removes comments', async () => {
+    const html = await render(
+      <Html>
+        <Head />
+        <Body>
+          <Markdown>{`
+<!-- remove me -->
+<a href="?tab=welcome" name="valid-anchor" target="popup" rel="noopener nonsense">Query Link</a>
+<img src="/safe.png" width="100vw" height="auto" />
+<td align="middle" colspan="2.5">Bad values</td>
+<span style="be/**/havior:url(test.htc); color: blue">Styled</span>
+          `}</Markdown>
+        </Body>
+      </Html>
+    )
+
+    expect(html).not.toContain('remove me')
+    expect(html).toContain('href="?tab=welcome"')
+    expect(html).toContain('name="user-content-valid-anchor"')
+    expect(html).toContain('target="popup"')
+    expect(html).toContain('rel="noopener nonsense"')
+    expect(html).toContain('width="100vw"')
+    expect(html).toContain('height="auto"')
+    expect(html).not.toContain('style="be/**/havior:url(test.htc); color: blue"')
+    expect(html).toContain('Styled')
+  })
 })

@@ -1,7 +1,12 @@
 import type { JSX } from 'hono/jsx'
 import { HTMLRewriter } from 'htmlrewriter'
-import { marked } from 'marked'
-import sanitizeHtml from 'sanitize-html'
+import rehypeRaw from 'rehype-raw'
+import rehypeSanitize, { defaultSchema } from 'rehype-sanitize'
+import rehypeStringify from 'rehype-stringify'
+import remarkGfm from 'remark-gfm'
+import remarkParse from 'remark-parse'
+import remarkRehype from 'remark-rehype'
+import { unified } from 'unified'
 
 import { mergeStyleAttributes, normalizeStyleObject } from '../style'
 
@@ -175,33 +180,72 @@ const SAFE_MARKDOWN_TAGS = [
   'ul',
 ] as const
 
-const SAFE_ATTRIBUTES: sanitizeHtml.IOptions['allowedAttributes'] = {
-  '*': ['style', 'align'],
-  a: ['href', 'name', 'target', 'rel', 'title'],
-  img: ['src', 'alt', 'title', 'width', 'height'],
-  table: ['align', 'width', 'cellpadding', 'cellspacing', 'border', 'role'],
-  td: ['align', 'colspan', 'rowspan'],
-  th: ['align', 'colspan', 'rowspan'],
+const unique = <T>(values: readonly T[]): T[] => [...new Set(values)]
+
+const MARKDOWN_SANITIZE_SCHEMA = {
+  ...defaultSchema,
+  tagNames: unique([...(defaultSchema.tagNames ?? []), ...SAFE_MARKDOWN_TAGS]),
+  attributes: {
+    ...defaultSchema.attributes,
+    '*': unique([...(defaultSchema.attributes?.['*'] ?? []), 'align']),
+    a: unique([...(defaultSchema.attributes?.a ?? []), 'name', 'target', 'rel', 'title']),
+    img: unique([...(defaultSchema.attributes?.img ?? []), 'alt', 'title', 'width', 'height']),
+    table: unique([...(defaultSchema.attributes?.table ?? []), 'align', 'width', 'cellpadding', 'cellspacing', 'border', 'role']),
+    td: unique([...(defaultSchema.attributes?.td ?? []), 'align', 'colspan', 'rowspan']),
+    th: unique([...(defaultSchema.attributes?.th ?? []), 'align', 'colspan', 'rowspan']),
+  },
+  protocols: {
+    ...defaultSchema.protocols,
+    href: unique([...(defaultSchema.protocols?.href ?? []), 'tel']),
+  },
 }
+
+const normalizeSanitizedMarkdownHtml = async (html: string): Promise<string> =>
+  new HTMLRewriter()
+    .on('a', {
+      element(el) {
+        if (!el.getAttribute('href')) {
+          el.removeAndKeepContent()
+        }
+      },
+    })
+    .on('img', {
+      element(el) {
+        if (!el.getAttribute('src')) {
+          el.remove()
+        }
+      },
+    })
+    .transform(new Response(html))
+    .text()
 
 export const renderMarkdownHtml = async (
   markdown: string,
   options: MarkdownRenderOptions = {}
 ): Promise<string> => {
-  const renderedMarkdown = marked.parse(markdown, {
-    async: false,
-    gfm: true,
-  }) as string
-
   const htmlSource =
     options.sanitize === false
-      ? renderedMarkdown
-      : sanitizeHtml(renderedMarkdown, {
-          allowedAttributes: SAFE_ATTRIBUTES,
-          allowedSchemes: ['http', 'https', 'mailto', 'tel'],
-          allowedTags: [...SAFE_MARKDOWN_TAGS],
-          disallowedTagsMode: 'discard',
-        })
+      ? String(
+          await unified()
+            .use(remarkParse)
+            .use(remarkGfm)
+            .use(remarkRehype, { allowDangerousHtml: true })
+            .use(rehypeRaw)
+            .use(rehypeStringify)
+            .process(markdown)
+        )
+      : await normalizeSanitizedMarkdownHtml(
+          String(
+            await unified()
+              .use(remarkParse)
+              .use(remarkGfm)
+              .use(remarkRehype, { allowDangerousHtml: true })
+              .use(rehypeRaw)
+              .use(rehypeSanitize, MARKDOWN_SANITIZE_SCHEMA)
+              .use(rehypeStringify)
+              .process(markdown)
+          )
+        )
 
   const s = options.markdownCustomStyles
   const styles: Record<MarkdownStyleKey, Record<string, string>> = {

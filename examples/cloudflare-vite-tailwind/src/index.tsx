@@ -1,6 +1,12 @@
 import { Hono } from 'hono'
 
-import { renderWelcomeEmail, type WelcomeEmailInput } from './emails/welcome'
+import {
+  createWelcomeEmailInput,
+  renderWelcomeEmail,
+  renderWelcomeEmailText,
+  type WelcomeEmailInput,
+  type WelcomeEmailOverrides,
+} from './emails/welcome'
 
 type EmailSendRequest = {
   from: string
@@ -27,109 +33,43 @@ type AppEnv = {
   Bindings: Bindings
 }
 
-type SendWelcomeRequest = {
-  dashboardUrl?: string
-  supportUrl?: string
+type WelcomeSendRequest = WelcomeEmailOverrides & {
   to?: string | string[]
-  userName?: string
 }
 
 const app = new Hono<AppEnv>()
 
-const defaultWelcomeEmailInput = (overrides: SendWelcomeRequest = {}): WelcomeEmailInput => ({
-  dashboardUrl: overrides.dashboardUrl ?? 'https://example.com/dashboard',
-  supportUrl: overrides.supportUrl ?? 'https://example.com/support',
-  userName: overrides.userName ?? 'Taro',
-})
-
-const renderIndexPage = (origin: string): string => `<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>hono-email Cloudflare Example</title>
-    <style>
-      :root {
-        color-scheme: light;
-        font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      }
-      body {
-        margin: 0;
-        background: #f8fafc;
-        color: #0f172a;
-      }
-      main {
-        max-width: 760px;
-        margin: 0 auto;
-        padding: 40px 20px 72px;
-      }
-      .card {
-        background: #ffffff;
-        border: 1px solid #cbd5e1;
-        border-radius: 16px;
-        padding: 24px;
-        box-shadow: 0 12px 40px rgba(15, 23, 42, 0.08);
-      }
-      code,
-      pre {
-        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-      }
-      pre {
-        background: #0f172a;
-        color: #f8fafc;
-        border-radius: 12px;
-        padding: 16px;
-        overflow: auto;
-      }
-      a {
-        color: #0f172a;
-      }
-      ul {
-        padding-left: 20px;
-      }
-    </style>
-  </head>
-  <body>
-    <main>
-      <div class="card">
-        <p>Cloudflare + Vite + Hono + Tailwind</p>
-        <h1>hono-email runnable example</h1>
-        <p>
-          This Worker renders an email preview at request time and uses <code>hono-email/vite</code> to inject the
-          Tailwind artifact at build time.
-        </p>
-        <ul>
-          <li><a href="${origin}/emails/welcome">GET /emails/welcome</a> renders the email HTML.</li>
-          <li><code>POST /api/emails/welcome/send</code> sends the email when an <code>EMAIL</code> binding exists.</li>
-        </ul>
-        <pre>curl -X POST "${origin}/api/emails/welcome/send" \\
-  -H "content-type: application/json" \\
-  -d '{"userName":"Taro","dashboardUrl":"https://example.com/app","to":"recipient@example.com"}'</pre>
-      </div>
-    </main>
-  </body>
-</html>`
-
-const createPlainText = ({ dashboardUrl, supportUrl, userName }: WelcomeEmailInput): string =>
-  [
-    `Welcome, ${userName}`,
-    '',
-    'Your account is ready. Continue from your dashboard and finish the initial setup.',
-    '',
-    `Dashboard: ${dashboardUrl}`,
-    `Support: ${supportUrl}`,
-  ].join('\n')
-
-app.get('/', (c) => c.html(renderIndexPage(new URL(c.req.url).origin)))
+const toWelcomeEmailInput = (overrides: WelcomeEmailOverrides = {}): WelcomeEmailInput => createWelcomeEmailInput(overrides)
 
 app.get('/emails/welcome', async (c) => {
-  const email = defaultWelcomeEmailInput({
-    dashboardUrl: c.req.query('dashboard'),
-    supportUrl: c.req.query('support'),
-    userName: c.req.query('user'),
+  const email = toWelcomeEmailInput({
+    closing: c.req.query('closing'),
+    ctaLabel: c.req.query('ctaLabel'),
+    ctaUrl: c.req.query('ctaUrl'),
+    footerNote: c.req.query('footerNote'),
+    headline: c.req.query('headline'),
+    intro: c.req.query('intro'),
+    preheader: c.req.query('preheader'),
+    serviceName: c.req.query('serviceName'),
+    subject: c.req.query('subject'),
+    supportLabel: c.req.query('supportLabel'),
+    supportUrl: c.req.query('supportUrl'),
   })
 
   return c.html(await renderWelcomeEmail(email))
+})
+
+app.post('/api/emails/welcome/preview', async (c) => {
+  const payload = await c.req.json<WelcomeSendRequest>()
+  const email = toWelcomeEmailInput(payload)
+  const [html, text] = await Promise.all([renderWelcomeEmail(email), renderWelcomeEmailText(email)])
+
+  return c.json({
+    html,
+    input: email,
+    ok: true,
+    text,
+  })
 })
 
 app.post('/api/emails/welcome/send', async (c) => {
@@ -144,8 +84,8 @@ app.post('/api/emails/welcome/send', async (c) => {
     )
   }
 
-  const payload = await c.req.json<SendWelcomeRequest>()
-  const email = defaultWelcomeEmailInput(payload)
+  const payload = await c.req.json<WelcomeSendRequest>()
+  const email = toWelcomeEmailInput(payload)
   const to = payload.to
 
   if (!to) {
@@ -158,12 +98,12 @@ app.post('/api/emails/welcome/send', async (c) => {
     )
   }
 
-  const html = await renderWelcomeEmail(email)
+  const [html, text] = await Promise.all([renderWelcomeEmail(email), renderWelcomeEmailText(email)])
   const result = await c.env.EMAIL.send({
     from: c.env.EMAIL_FROM,
     html,
-    subject: 'Welcome to hono-email',
-    text: createPlainText(email),
+    subject: email.subject,
+    text,
     to,
   })
 
