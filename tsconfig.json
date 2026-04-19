@@ -1,6 +1,5 @@
 {
   "compilerOptions": {
-    "baseUrl": ".",
     "ignoreDeprecations": "6.0",
     "target": "ES2022",
     "module": "ESNext",
@@ -9,12 +8,12 @@
     "jsx": "react-jsx",
     "jsxImportSource": "hono/jsx",
     "paths": {
+      "*": [
+        "./*"
+      ],
       "hono-email": [
         "./src/index.ts"
       ],
-      "hono-email/vite": [
-        "./src/vite.ts"
-      ]
     },
     "verbatimModuleSyntax": true,
     "noEmit": true,

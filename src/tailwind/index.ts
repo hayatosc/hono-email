@@ -397,6 +397,28 @@ const appendMediaRuleByClass = (
   target[classToken] = `${target[classToken] ?? ''}${mediaRule}`
 }
 
+const resolveVarsInString = (str: string, cssVariables: Record<string, string>): string => {
+  let result = str
+  for (let depth = 0; depth < MAX_VARIABLE_RESOLUTION_DEPTH; depth++) {
+    let changed = false
+    result = result.replace(VAR_FUNCTION_PATTERN, (match, variableName: string, fallback: string | undefined) => {
+      const mapped = cssVariables[variableName]
+      if (mapped !== undefined) {
+        changed = true
+        return mapped
+      }
+      if (fallback !== undefined) {
+        changed = true
+        return fallback.trim()
+      }
+      return match
+    })
+    if (!changed) break
+  }
+  VAR_FUNCTION_PATTERN.lastIndex = 0
+  return result
+}
+
 const collectCssVariables = (nodes: csstree.CssNode[]): Record<string, string> => {
   const cssVariables: Record<string, string> = {}
 
@@ -431,6 +453,14 @@ const collectCssVariables = (nodes: csstree.CssNode[]): Record<string, string> =
       }
 
       if (node.type === 'Rule') {
+        const selector = node.prelude ? csstree.generate(node.prelude).trim() : ''
+        if (selector === ':root' || selector.startsWith(':root,') || selector.startsWith(':root ')) {
+          for (const child of childNodes(node)) {
+            if (child.type === 'Declaration' && child.property.startsWith('--')) {
+              cssVariables[child.property] = normalizeCssValue(csstree.generate(child.value))
+            }
+          }
+        }
         collect(childNodes(node), inThemeLayer)
       }
     }
@@ -508,6 +538,12 @@ const buildArtifactFromCss = (cssText: string, classes?: string[]): TailwindBuil
   }
 
   processNodes(rootNodes)
+
+  for (const classToken of Object.keys(headCssByClass)) {
+    if (headCssByClass[classToken].includes('var(')) {
+      headCssByClass[classToken] = resolveVarsInString(headCssByClass[classToken], cssVariables)
+    }
+  }
 
   return {
     classes: classes ?? discoveredClasses,

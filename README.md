@@ -1,36 +1,58 @@
 # hono-email
 
-`hono/jsx` から HTML メールと plain text を生成するための小さなライブラリです。v1 は render 専用で、送信プロバイダー統合は含みません。
+`hono-email` is an ESM library for rendering HTML email and plain text from `hono/jsx`. It focuses on rendering, normalization, validation, and email-oriented primitives. Transport and provider integrations are intentionally out of scope.
 
-## Status
-- Bun で開発
-- 中心 API は `await render(<Email />)`
-- strict mode は既定で有効
-- `Tailwind` と `Markdown` を core export として提供
-- `Font` は `unifont` を使ったフォント解決をサポート
+## Features
 
-## Install
+- Render HTML email from `hono/jsx`
+- Render plain text from the same JSX tree through `render()`
+- Keep strict email validation enabled by default
+- Style markdown content with the `Markdown` component
+- Apply Tailwind utility output through `Tailwind` build artifacts
+- Expose bundler integrations through `hono-email/vite` and `hono-email/unplugin`
+
+## Entry Points
+
+- `hono-email`
+- `hono-email/vite`
+- `hono-email/unplugin`
+
+Note:
+the current `package.json` is marked `"private": true`. This repository is currently maintained as a local library package rather than a published npm package.
+
+## Setup
+
 ```sh
 ni
 ```
 
-## Basic Usage
+## Quick Start
+
 ```tsx
-import { Body, Button, Container, Font, Head, Heading, Html, Preview, Text, render, toPlainText } from 'hono-email'
+import {
+  Body,
+  Button,
+  Container,
+  Head,
+  Heading,
+  Html,
+  Preview,
+  Text,
+  render,
+} from 'hono-email'
 
 function WelcomeEmail() {
   return (
-    <Html lang='ja'>
+    <Html lang='en'>
       <Head>
         <title>Welcome</title>
-        <Font fallbackFontFamily='Arial' fontFamily='Poppins' source={{ subsets: ['latin'], weights: ['400'] }} />
       </Head>
-      <Preview>アカウント登録が完了しました。</Preview>
-      <Body>
-        <Container>
-          <Heading as='h1'>ようこそ</Heading>
-          <Text>登録ありがとうございます。</Text>
-          <Button href='https://example.com/start'>はじめる</Button>
+      <Preview>Your account is ready.</Preview>
+      <Body style={{ backgroundColor: '#f6f9fc', color: '#1f2937' }}>
+        <Container style={{ maxWidth: '560px', margin: '0 auto', padding: '24px' }}>
+          <Heading as='h1'>Welcome</Heading>
+          <Text>Thanks for signing up.</Text>
+          <Button href='https://example.com/start'>Get started</Button>
         </Container>
       </Body>
     </Html>
@@ -38,104 +60,39 @@ function WelcomeEmail() {
 }
 
 const html = await render(<WelcomeEmail />)
-const text = toPlainText(html)
-```
-
-## Output APIs
-```tsx
-const html = await render(<WelcomeEmail />)
-const text = await render(<WelcomeEmail />, { output: 'text' })
-const prettyHtml = await renderPretty(<WelcomeEmail />)
-
-const result = await renderWithWarnings(<WelcomeEmail />)
-result.html
-result.warnings
-```
-
-- `render()`
-  - string を返す標準 API
-  - `output: 'text'` を指定すると plain text を返す
-- `renderPretty()`
-  - 改行とインデントを入れた HTML を返す
-- `renderText()`
-  - `render(..., { output: 'text' })` への互換ラッパー
-- `renderWithWarnings()`
-  - `{ html, warnings }` を返す
-  - Tier 2 の CSS を警告として受け取りたい場合に使う
-
-## Plain Text
-`toPlainText()` は HTML から text を作る低レベル API です。JSX から直接 plain text を作る場合は `render(..., { output: 'text' })` を使い、text 変換の調整は `text` option に寄せます。
-
-```tsx
-const html = await render(<WelcomeEmail />)
-
-const text = toPlainText(html, {
-  headingStyle: 'preserve',
-  linkFormat: 'text-only',
-  listBullet: '*',
-})
-
-const directText = await render(<WelcomeEmail />, {
+const text = await render(<WelcomeEmail />, {
   output: 'text',
-  text: { hrSeparator: '***' },
+  text: {
+    headingStyle: 'preserve',
+    linkFormat: 'text-only',
+  },
 })
 ```
 
-## Strict Mode
-`render()` は既定で `strict: true` です。HTML メールで互換性が低い要素を silent に通しません。
+## `render()`
+
+`render()` is the primary runtime API.
+
+- Returns HTML by default
+- Returns plain text when `output: 'text'` is set
+- Uses `strict: true` by default
+- Accepts `doctype: 'html5' | 'xhtml-transitional' | false`
+- Accepts plain-text options through the `text` field when `output: 'text'`
 
 ```tsx
-await render(
-  <Html>
-    <Body>
-      <div style={{ display: 'grid' }}>Hello</div>
-    </Body>
-  </Html>
-)
-// throws: The CSS property 'display:grid' isn't supported in HTML email strict mode.
+const html = await render(<WelcomeEmail />)
+
+const text = await render(<WelcomeEmail />, {
+  output: 'text',
+  text: {
+    linkFormat: 'text-only',
+    listBullet: '*',
+  },
+})
 ```
 
-現在の strict mode では主に以下を制御します。
+## Components
 
-- 禁止タグ
-  - `form`, `input`, `button`
-    - 代わりに `<Button href="...">` や `<Link href="...">` を使う
-  - `video`, `audio`, `iframe`, `object`, `svg`
-    - 代わりに `<Img>` とリンクを使う
-  - `script`
-    - 代わりに事前にレンダリング済みの HTML とリンクを使う
-- normalize 対象
-  - `main`, `section`, `article`, `header`, `footer`, `nav`, `aside` は `div` に変換
-- 必須属性チェック
-  - `<a>` に `href` がない場合は error
-    - 代わりに `<Link href="...">` や `<Button href="...">` を使う
-  - `<img>` に `alt` がない場合は warning
-    - 意味のある画像には説明文、装飾画像には `alt=""` を付ける
-- 禁止 CSS
-  - `display:grid`
-    - 代わりに `<Section>`, `<Row>`, `<Column>` や table ベースレイアウトを使う
-  - logical properties
-    - `padding-inline`
-    - `margin-inline`
-    - `border-inline`
-    - `padding-block`
-    - `margin-block`
-    - `border-block`
-    - 代わりに `padding-left`, `padding-right`, `margin-top`, `margin-bottom` などの physical properties を使う
-
-Tier 2 の CSS は error ではなく warning として返します。
-
-- warning 対象の例
-  - `display:flex`
-    - 重要なレイアウトでは table ベースへ落とす
-  - `position`
-    - 位置調整より自然な flow と spacing を優先する
-  - `background-image`
-    - 重要な情報は `<Img>` か単色背景へ寄せる
-  - `@media`
-    - media query なしでも読めるベースレイアウトを維持する
-
-## Provided Components
 - `Html`
 - `Head`
 - `Body`
@@ -154,14 +111,37 @@ Tier 2 の CSS は error ではなく warning として返します。
 - `Tailwind`
 - `Markdown`
 
-補足:
-- `Button` と `Link` は既定で `target="_blank"` を付けます
-- `Text` は `font-size: 14px`, `line-height: 24px`, 上下 `16px` margin を既定で持ちます
-- `Hr` は `border-top: 1px solid #eaeaea` の既定 divider style を持ちます
-- `Heading` は `m`, `mx`, `my`, `mt`, `mr`, `mb`, `ml` の margin shorthand を受けます
+Notes:
+
+- `Button` and `Link` default to `target="_blank"`
+- `Preview` renders hidden preview text
+- `Text` defaults to `font-size: 14px`, `line-height: 24px`, and vertical `16px` margins
+- `Hr` defaults to `border-top: 1px solid #eaeaea`
+- `Heading` accepts shorthand margin props such as `m`, `mx`, `my`, `mt`, `mr`, `mb`, and `ml`
+
+## Strict Mode
+
+Strict mode is enabled by default in `render()`. It is meant to fail early on markup and CSS that are risky for HTML email clients.
+
+Representative error cases:
+
+- Interactive or embedded tags such as `form`, `input`, `button`, `select`, `textarea`, `iframe`, `svg`, and `script`
+- `<a>` without `href`
+- `<style>` or stylesheet `<link>` outside `<Head>`
+- `display:grid`, `display:inline-grid`, and `display:inline-flex`
+- Logical properties such as `padding-inline`, `margin-block`, and `border-inline`
+
+Representative compatibility-sensitive cases include:
+
+- `display:flex`
+- `position`
+- `background-image`
+- `@media`
+- `<img>` without `alt`
 
 ## Font
-`Font` は `<Head>` 内で使い、`unifont` 経由で `@font-face` を組み立てます。
+
+`Font` renders `@font-face` and a fallback `font-family` declaration inside `<Head>`. The current API accepts `webFont` directly.
 
 ```tsx
 import { Font, Head, Html, render } from 'hono-email'
@@ -171,11 +151,11 @@ const html = await render(
     <Head>
       <Font
         fallbackFontFamily={['Arial', 'sans-serif']}
-        fontFamily='Poppins'
-        source={{
-          provider: 'google',
-          subsets: ['latin'],
-          weights: ['400', '600'],
+        fontFamily='Inter'
+        fontWeight={400}
+        webFont={{
+          url: 'https://example.com/inter.woff2',
+          format: 'woff2',
         }}
       />
     </Head>
@@ -183,18 +163,54 @@ const html = await render(
 )
 ```
 
-React Email 互換寄りに `webFont` を直接渡すこともできます。
+## Markdown
+
+`Markdown` converts GFM into HTML and applies email-friendly inline styles. Sanitization is enabled by default.
 
 ```tsx
-<Font
-  fallbackFontFamily='Arial'
-  fontFamily='Inter'
-  webFont={{ url: 'https://example.com/inter.woff2', format: 'woff2' }}
-/>
+import { Body, Head, Html, Markdown, render } from 'hono-email'
+
+const html = await render(
+  <Html lang='en'>
+    <Head>
+      <title>Markdown example</title>
+    </Head>
+    <Body>
+      <Markdown
+        markdownContainerStyles={{
+          padding: '12px',
+          border: '1px solid #111827',
+        }}
+        markdownCustomStyles={{
+          h1: { color: '#dc2626' },
+          codeInline: {
+            backgroundColor: '#e5e7eb',
+            padding: '2px 4px',
+          },
+        }}
+      >{`
+# Markdown email
+
+| Name | Role |
+| --- | --- |
+| Taro | Builder |
+      `}</Markdown>
+    </Body>
+  </Html>
+)
 ```
 
 ## Tailwind
-推奨導線は `hono-email/vite` です。build-time に artifact import を自動注入するので、email 用 CSS ファイルを別途持たなくて済みます。
+
+`Tailwind` accepts a build artifact and expands matched utility classes into email-compatible output.
+
+- Inline-capable declarations are merged into element `style` attributes
+- Responsive utilities are emitted into `<Head>`
+- Missing classes in the artifact fail at render time
+
+### Recommended: `hono-email/vite`
+
+With Vite, `hono-email/vite` injects the artifact import for `<Tailwind>` at build time.
 
 ```tsx
 // vite.config.ts
@@ -214,9 +230,9 @@ export default defineConfig({
 ```
 
 ```tsx
-import { Body, Head, Html, Tailwind, Text, renderWithWarnings } from 'hono-email'
+import { Body, Head, Html, Tailwind, Text, render } from 'hono-email'
 
-const result = await renderWithWarnings(
+const html = await render(
   <Html>
     <Head />
     <Tailwind>
@@ -228,95 +244,53 @@ const result = await renderWithWarnings(
 )
 ```
 
-ポイント:
+### Passing an artifact explicitly
 
-- `hono-email/vite` は `<Tailwind>` に artifact import を自動注入します
-- Tailwind の CSS コンパイル自体は `@tailwindcss/vite` など bundler 側の plugin が担当します
-- `configPath` は legacy `tailwind.config.*` を読むための option です
-- `safelist` は動的 class や source 検出外の utility を足すときに使います
-- base utility は inline style に落とし、responsive utility は `<Head>` の `<style>` に寄せます
-- `artifact` prop を明示した場合、plugin は上書きしません
+If you are not using a bundler plugin, use `buildTailwindArtifactFromCss()`.
 
 ```tsx
-import { Body, Head, Html, Tailwind, Text, buildTailwindArtifactFromCss, render } from 'hono-email'
-import tailwindEmailCss from './styles/email.css?inline'
+import {
+  Body,
+  Head,
+  Html,
+  Tailwind,
+  Text,
+  buildTailwindArtifactFromCss,
+  render,
+} from 'hono-email'
 
-const artifact = buildTailwindArtifactFromCss({ css: tailwindEmailCss })
+const artifact = buildTailwindArtifactFromCss({
+  css: `
+    @layer utilities {
+      .bg-brand { background-color: #0f172a; }
+      .text-white { color: #ffffff; }
+      .px-4 { padding-inline: 1rem; }
+      .py-2 { padding-block: 0.5rem; }
+    }
+  `,
+})
 
 const html = await render(
   <Html>
     <Head />
     <Tailwind artifact={artifact}>
       <Body>
-        <Text className='text-brand px-4 py-2 sm:text-blue-500'>Hello</Text>
+        <Text className='bg-brand text-white px-4 py-2'>Hello</Text>
       </Body>
     </Tailwind>
   </Html>
 )
 ```
 
-低レベル API は引き続き利用できます。bundler plugin を使わない場合は、従来どおり `buildTailwindArtifactFromCss()` で artifact を組み立てて `<Tailwind artifact={...}>` に渡します。
-
-## Markdown
-`Markdown` は Markdown 文字列をメール向け HTML に変換します。table と safe raw HTML を扱い、既定では unsafe raw HTML を sanitize で除去します。
-
-```tsx
-import { Body, Head, Html, Markdown, render } from 'hono-email'
-
-const html = await render(
-  <Html>
-    <Head />
-    <Body>
-      <Markdown
-        sanitize
-        markdownContainerStyles={{ padding: '12px', border: '1px solid #111827' }}
-        markdownCustomStyles={{
-          h1: { color: '#dc2626' },
-          codeInline: { backgroundColor: '#e5e7eb', padding: '2px 4px' },
-        }}
-      >{`
-# Hello
-
-| Name | Role |
-| --- | --- |
-| Taro | Builder |
-
-<div><a href="https://example.com">Safe raw link</a></div>
-      `}</Markdown>
-    </Body>
-  </Html>
-)
-```
-
-`Markdown` は次を前提にしています。
-
-- raw HTML は sanitize と validator を通します
-- `sanitize` の既定値は `true` です
-- `sanitize={false}` にすると raw HTML をそのまま通します。この場合の安全性は呼び出し側が担保し、必要なら `render(..., { strict: false })` と組み合わせます
-- safe な `table`, `a`, `img`, `div`, `span` などは残します
-- `script` など unsafe なタグは削除されます
-- `markdownContainerStyles` は外側コンテナへ適用します
-- `markdownCustomStyles` は `h1`, `p`, `table`, `codeInline` など要素ごとの style override に使います
-
-## Examples
-- [examples/basic/minimal.tsx](./examples/basic/minimal.tsx)
-- [examples/basic/welcome.tsx](./examples/basic/welcome.tsx)
-- [examples/basic/tailwind.tsx](./examples/basic/tailwind.tsx)
-- [examples/cloudflare-vite-tailwind](./examples/cloudflare-vite-tailwind/README.md)
-- [examples/basic/markdown.tsx](./examples/basic/markdown.tsx)
-
-## Non-Goals for v1
-- 送信プロバイダー統合
-- CSS inlining
-- Outlook VML 自動生成
-
 ## Development
+
 ```sh
+nr build
 nr test
 nr typecheck
-nr build
 ```
 
-## Docs
-- [Spec](./docs/specs/email-renderer-spec.md)
-- [Plan](./docs/specs/email-renderer-plan.md)
+Runnable examples:
+
+- `examples/basic`
+- `examples/cloudflare-vite-tailwind`

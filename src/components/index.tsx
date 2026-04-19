@@ -49,7 +49,9 @@ const PRESENTATION_TABLE_PROPS = {
 } as const
 
 export const TAILWIND_ARTIFACT_REQUIRED_ERROR_MESSAGE =
-  'Tailwind now requires a build artifact. Use hono-email/vite for build-time injection, or pass one explicitly via <Tailwind artifact={buildTailwindArtifactFromCss(...)}>.'
+  '<Tailwind> requires a build artifact. Either:\n' +
+  '  1. Use the bundler plugin (hono-email/vite or hono-email/unplugin) — it injects the artifact automatically per email file.\n' +
+  '  2. Pass it explicitly: <Tailwind artifact={buildTailwindArtifactFromCss({ css })}>'
 export const TAILWIND_ARTIFACT_REQUIRED_TAG_NAME = 'hono-email-internal-tailwind-artifact-required'
 
 const BOX_DIRECTIONS = ['Top', 'Right', 'Bottom', 'Left'] as const

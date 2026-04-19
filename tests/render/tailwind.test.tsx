@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 
-import { Body, Head, Html, Tailwind, Text, buildTailwindArtifactFromCss, render, renderWithWarnings } from '../../src'
+import { Body, Head, Html, Tailwind, Text, buildTailwindArtifactFromCss, render } from '../../src'
 
 const PRECOMPILED_TAILWIND_CSS = `
 @layer utilities {
@@ -47,12 +47,12 @@ describe('Tailwind', () => {
     expect(html).toContain('padding-bottom:8px')
   })
 
-  test('moves precompiled media query styles into head and reports warnings when needed', async () => {
+  test('moves precompiled media query styles into head', async () => {
     const artifact = buildTailwindArtifactFromCss({
       css: PRECOMPILED_TAILWIND_CSS,
     })
 
-    const result = await renderWithWarnings(
+    const html = await render(
       <Html>
         <Head />
         <Tailwind artifact={artifact}>
@@ -63,10 +63,7 @@ describe('Tailwind', () => {
       </Html>
     )
 
-    expect(result.html).toMatch(/<head[^>]*>[\s\S]*<style[^>]*>[\s\S]*@media[\s\S]*<\/style>[\s\S]*<\/head>/i)
-    expect(result.warnings).toContain(
-      "The CSS at-rule '@media' may not be supported consistently across email clients. Keep the base layout readable without media queries."
-    )
+    expect(html).toMatch(/<head[^>]*>[\s\S]*<style[^>]*>[\s\S]*@media[\s\S]*<\/style>[\s\S]*<\/head>/i)
   })
 
   test('supports typography, border, tracking, and sizing utilities from precompiled css', async () => {
@@ -113,7 +110,7 @@ describe('Tailwind', () => {
         </Html>
       )
     ).rejects.toThrow(
-      'Tailwind now requires a build artifact. Use hono-email/vite for build-time injection, or pass one explicitly via <Tailwind artifact={buildTailwindArtifactFromCss(...)}>.'
+      '<Tailwind> requires a build artifact.'
     )
   })
 
@@ -129,7 +126,7 @@ describe('Tailwind', () => {
 `,
     })
 
-    const result = await renderWithWarnings(
+    const html = await render(
       <Html>
         <Head />
         <Tailwind artifact={artifact}>
@@ -140,11 +137,11 @@ describe('Tailwind', () => {
       </Html>
     )
 
-    expect(result.html).toContain('color:#0f172a')
-    expect(result.html).toContain('padding-left:16px')
-    expect(result.html).toContain('padding-right:16px')
-    expect(result.html).toContain('padding-top:8px')
-    expect(result.html).toContain('padding-bottom:8px')
-    expect(result.html).toMatch(/<head[^>]*>[\s\S]*<style[^>]*>[\s\S]*@media[\s\S]*<\/style>[\s\S]*<\/head>/i)
+    expect(html).toContain('color:#0f172a')
+    expect(html).toContain('padding-left:16px')
+    expect(html).toContain('padding-right:16px')
+    expect(html).toContain('padding-top:8px')
+    expect(html).toContain('padding-bottom:8px')
+    expect(html).toMatch(/<head[^>]*>[\s\S]*<style[^>]*>[\s\S]*@media[\s\S]*<\/style>[\s\S]*<\/head>/i)
   })
 })

@@ -1,11 +1,17 @@
 # Cloudflare + Vite + Hono + Tailwind Example
 
-`hono-email/vite` を使って、`<Tailwind>` の artifact 注入を build-time に自動化する実行可能 example です。
-この example 自体に独立した `package.json` を置き、通常の Tailwind で作った composer page から preview / send まで確認できます。
+This is a runnable example that uses `hono-email/vite` to inject the `<Tailwind>` artifact at build time.
+The example has its own `package.json` and keeps the frontend intentionally minimal: a server-rendered Hono JSX send form.
+Email delivery uses the structured `env.EMAIL.send({...})` API from Cloudflare Email Service.
+
+Frontend and email styling are intentionally separated:
+
+- `src/frontend.css` builds the browser-facing Tailwind CSS for the send form
+- `hono-email/vite` scans `src/emails` only, so the email artifact contains email classes only
 
 ## Commands
 
-example directory で実行します。
+Run these commands inside the example directory.
 
 ```sh
 cd examples/cloudflare-vite-tailwind
@@ -13,14 +19,14 @@ ni
 nr dev
 ```
 
-ビルドとプレビュー:
+Build and preview:
 
 ```sh
 nr build
 nr preview
 ```
 
-Cloudflare Workers へ deploy:
+Deploy to Cloudflare Workers:
 
 ```sh
 nr deploy
@@ -29,45 +35,39 @@ nr deploy
 ## Routes
 
 - `GET /`
-  - 通常の Tailwind で作った welcome email composer page
-- `GET /emails/welcome`
-  - welcome email の HTML preview
-- `POST /api/emails/welcome/preview`
-  - composer が使う preview API
-- `POST /api/emails/welcome/send`
-  - preview と同じ payload で Cloudflare Email binding 経由の送信
+  - minimal send form rendered with Hono JSX
+- `POST /send`
+  - sends the form payload through Cloudflare Email Service
 
-preview 例:
+Send example:
 
 ```sh
-curl "http://127.0.0.1:5173/emails/welcome?headline=セットアップ完了&ctaUrl=https://example.com/app"
-```
-
-preview API 例:
-
-```sh
-curl -X POST "http://127.0.0.1:5173/api/emails/welcome/preview" \
-  -H "content-type: application/json" \
-  -d '{"subject":"セットアップのご案内","headline":"アカウントの準備が完了しました","ctaUrl":"https://example.com/app"}'
-```
-
-send 例:
-
-```sh
-curl -X POST "http://127.0.0.1:5173/api/emails/welcome/send" \
-  -H "content-type: application/json" \
-  -d '{"to":"recipient@example.com","subject":"セットアップのご案内","headline":"アカウントの準備が完了しました","ctaUrl":"https://example.com/app"}'
+curl -X POST "http://127.0.0.1:5173/send" \
+  -H "content-type: application/x-www-form-urlencoded" \
+  --data-urlencode "to=recipient@example.com" \
+  --data-urlencode "subject=テスト送信" \
+  --data-urlencode "message=こんにちは。%0A%0ACloudflare Email Service から送っています。"
 ```
 
 ## Optional Email Binding
 
-`/api/emails/welcome/send` を使う場合だけ `wrangler.jsonc` の `send_email` と `vars` を設定します。
+To send real email, configure `send_email` and `vars` in `wrangler.jsonc`.
+By default, this example keeps the binding local so `nr dev` works without a Cloudflare login.
+If you want real delivery during local development, add `remote: true` to the `send_email` binding and log in to Cloudflare first.
 
 ```jsonc
 {
-  "send_email": [{ "name": "EMAIL", "destination_address": "recipient@example.com" }],
+  "send_email": [{ "name": "EMAIL" }],
   "vars": {
-    "EMAIL_FROM": "welcome@example.com"
+    "EMAIL_FROM": "welcome@example.com",
+    "EMAIL_FROM_NAME": "hono-email"
   }
 }
 ```
+
+Notes:
+
+- Set `EMAIL_FROM` to an address that is allowed by your Cloudflare Email Service configuration.
+- The `to` field supports multiple recipients separated by commas.
+- Actual delivery depends on your Cloudflare Email Service domain setup and permissions.
+- For real delivery in `nr dev`, switch the binding to `{ "name": "EMAIL", "remote": true }` and authenticate with Cloudflare.

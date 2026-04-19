@@ -1,4 +1,4 @@
-export type ToPlainTextOptions = {
+export type PlainTextRenderOptions = {
   headingStyle?: 'preserve' | 'uppercase'
   hrSeparator?: string
   includeImageAlt?: boolean
@@ -6,7 +6,7 @@ export type ToPlainTextOptions = {
   listBullet?: string
 }
 
-const DEFAULT_TO_PLAIN_TEXT_OPTIONS: Required<ToPlainTextOptions> = {
+const DEFAULT_PLAIN_TEXT_RENDER_OPTIONS: Required<PlainTextRenderOptions> = {
   headingStyle: 'uppercase',
   hrSeparator: '---',
   includeImageAlt: true,
@@ -24,7 +24,7 @@ const collapseWhitespace = (text: string): string => {
     .trim()
 }
 
-const formatLink = (label: string, href: string, linkFormat: Required<ToPlainTextOptions>['linkFormat']): string => {
+const formatLink = (label: string, href: string, linkFormat: Required<PlainTextRenderOptions>['linkFormat']): string => {
   const normalizedLabel = label.trim()
 
   if (linkFormat === 'href-only') {
@@ -50,9 +50,9 @@ const formatImage = (
   return altMatch?.[1] ?? ''
 }
 
-export const toPlainText = (html: string, options: ToPlainTextOptions = {}): string => {
+export const renderPlainText = (html: string, options: PlainTextRenderOptions = {}): string => {
   const resolvedOptions = {
-    ...DEFAULT_TO_PLAIN_TEXT_OPTIONS,
+    ...DEFAULT_PLAIN_TEXT_RENDER_OPTIONS,
     ...options,
   }
 

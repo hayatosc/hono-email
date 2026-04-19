@@ -1,11 +1,14 @@
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "hono-email-cloudflare-vite-example",
-  "compatibility_date": "2026-04-18",
+  "compatibility_date": "2026-04-19",
   "main": "./src/index.tsx",
 
+  // Enable `remote: true` only if you want real delivery during `wrangler dev`
+  // and you are logged in to Cloudflare.
   "send_email": [{ "name": "EMAIL" }],
   "vars": {
-    "EMAIL_FROM": "welcome@example.com"
+    "EMAIL_FROM": "welcome@example.com",
+    "EMAIL_FROM_NAME": "hono-email"
   }
 }

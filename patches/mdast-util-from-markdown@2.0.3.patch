@@ -1,0 +1,13 @@
+diff --git a/package.json b/package.json
+index 98291885f91ba36a7d457b75a12ab04f4ee1f5db..c5bfde7bcc7b78bf3c746f772127328b317fbea0 100644
+--- a/package.json
++++ b/package.json
+@@ -38,7 +38,7 @@
+     "xo": "^1.0.0"
+   },
+   "exports": {
+-    "development": "./dev/index.js",
++    "development": "./index.js",
+     "default": "./index.js"
+   },
+   "files": [

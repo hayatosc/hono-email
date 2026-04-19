@@ -1,0 +1,34 @@
+@import 'tailwindcss';
+
+@source not "./emails";
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    margin: 0;
+  }
+
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  textarea {
+    min-height: 120px;
+    resize: vertical;
+  }
+
+  input,
+  textarea {
+    font: inherit;
+  }
+}
+
+@layer components {
+  textarea {
+    @apply w-full rounded-[18px] border border-stone-900/12 bg-white px-4 py-3.5 leading-7 text-stone-900 outline-none transition focus:border-stone-900/30 focus:ring-4 focus:ring-orange-200/60;
+  }
+}

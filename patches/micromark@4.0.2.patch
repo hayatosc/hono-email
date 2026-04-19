@@ -1,0 +1,18 @@
+diff --git a/package.json b/package.json
+index c1c00e880137758d0ba9c2d000182354272366af..88bab898847201843844a2f9f4681ea252bfb418 100644
+--- a/package.json
++++ b/package.json
+@@ -53,11 +53,11 @@
+   ],
+   "exports": {
+     ".": {
+-      "development": "./dev/index.js",
++      "development": "./index.js",
+       "default": "./index.js"
+     },
+     "./stream": {
+-      "development": "./dev/stream.js",
++      "development": "./stream.js",
+       "default": "./stream.js"
+     }
+   },
