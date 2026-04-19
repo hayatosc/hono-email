@@ -1,20 +1,23 @@
-import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, URL } from 'node:url';
 
-import { cloudflare } from "@cloudflare/vite-plugin";
-import tailwindcss from "@tailwindcss/vite";
-import { defineConfig } from "vite";
+import { cloudflare } from '@cloudflare/vite-plugin';
+import tailwindcss from '@tailwindcss/vite';
+import { defineConfig } from 'vite';
 
-import { vitePlugin as EmailTailwind } from "../../src/unplugin";
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const repoRoot = path.resolve(__dirname, "../..");
+import { vitePlugin as EmailTailwind } from '../../src/unplugin';
 
 export default defineConfig({
-  plugins: [cloudflare(), tailwindcss(), EmailTailwind()],
   resolve: {
-    alias: {
-      "hono-email": path.resolve(repoRoot, "src/index.ts"),
-    },
+    alias: [
+      {
+        find: 'hono-email/plugin',
+        replacement: fileURLToPath(new URL('../../src/unplugin.ts', import.meta.url)),
+      },
+      {
+        find: 'hono-email',
+        replacement: fileURLToPath(new URL('../../src/index.ts', import.meta.url)),
+      },
+    ],
   },
+  plugins: [cloudflare(), tailwindcss(), EmailTailwind()],
 });

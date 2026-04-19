@@ -1,7 +1,11 @@
 {
   "extends": "../../tsconfig.json",
   "compilerOptions": {
-    "types": ["bun", "vite/client"]
+    "types": ["bun", "vite/client"],
+    "paths": {
+      "hono-email": ["../../src/index.ts"],
+      "hono-email/plugin": ["../../src/unplugin.ts"]
+    }
   },
   "include": ["src", "vite.config.ts"]
 }
