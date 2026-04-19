@@ -11,18 +11,10 @@
 - Apply Tailwind utility output through `Tailwind` build artifacts
 - Expose bundler integrations through `hono-email/plugin`
 
-## Entry Points
-
-- `hono-email`
-- `hono-email/plugin`
-
-Note:
-the current `package.json` is marked `"private": true`. This repository is currently maintained as a local library package rather than a published npm package.
-
 ## Setup
 
 ```sh
-ni
+npm install hono-email
 ```
 
 ## Quick Start
@@ -134,7 +126,9 @@ Representative compatibility-sensitive cases include:
 
 ## Font
 
-`Font` renders `@font-face` and a fallback `font-family` declaration inside `<Head>`. The current API accepts `webFont` directly.
+`<Font>` renders `@font-face` and a fallback `font-family` declaration inside `<Head>`
+
+Please Note `@font-face` is not avilable for some clients, so it is recommended that setting `fallbackFontFamily`. [see](https://www.caniemail.com/features/css-at-font-face/)
 
 ```tsx
 import { Font, Head, Html, render } from "hono-email";
@@ -158,7 +152,7 @@ const html = await render(
 
 ## Markdown
 
-`Markdown` converts GFM into HTML and applies email-friendly inline styles. Sanitization is enabled by default.
+`<Markdown>` converts GFM into HTML and applies email-friendly inline styles. Sanitization is enabled by default.
 
 ```tsx
 import { Body, Head, Html, Markdown, render } from "hono-email";
@@ -195,32 +189,23 @@ const html = await render(
 
 ## Tailwind
 
-`Tailwind` accepts a build artifact and expands matched utility classes into email-compatible output.
-
-- Inline-capable declarations are merged into element `style` attributes
-- Responsive utilities are emitted into `<Head>`
-- Missing classes in the artifact fail at render time
-
-### Recommended: `hono-email/plugin` with Vite
-
-With Vite, `hono-email/plugin` injects the artifact import for `<Tailwind>` at build time.
+If you are using `<Tailwind>` component, I recommend use any bundlers (Vite, Rolldown, Webpack, Esbuild etc) and `EmailTailwind` plugin.
 
 ```tsx
 // vite.config.ts
 import { defineConfig } from "vite";
 import tailwindcss from "@tailwindcss/vite";
-import { vitePlugin as honoEmailTailwind } from "hono-email/plugin";
+import { vitePlugin as EmailTailwind } from "hono-email/plugin";
 
 export default defineConfig({
   plugins: [
     tailwindcss(),
-    honoEmailTailwind({
-      configPath: "./tailwind.config.ts",
-      safelist: ["sm:text-blue-500"],
-    }),
+    EmailTailwind(),
   ],
 });
 ```
+
+This plugin automatically finds `<Tailwind>` and automatically injects Tailwind styles.
 
 ```tsx
 import { Body, Head, Html, Tailwind, Text, render } from "hono-email";
@@ -235,6 +220,14 @@ const html = await render(
     </Tailwind>
   </Html>,
 );
+```
+
+When using Tailwind for frontend styling, we recommend using @source not to exclude emails.
+
+```css
+@import "tailwindcss";
+
+@source not "./emails";
 ```
 
 ### Passing an artifact explicitly
@@ -270,12 +263,8 @@ const html = await render(
 ## Development
 
 ```sh
+bun i
 bun run build
 bun test
 bun run typecheck
 ```
-
-Runnable examples:
-
-- `examples/basic`
-- `examples/cloudflare-vite-tailwind`
