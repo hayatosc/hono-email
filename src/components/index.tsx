@@ -336,7 +336,7 @@ export const Hr: FC<ElementProps<'hr'>> = ({ style, ...props }) => (
   />
 )
 
-export const Font = async (props: FontProps) => renderFontStyleTag(props)
+export const Font = (props: FontProps) => renderFontStyleTag(props)
 
 export const Tailwind = async ({ artifact, children }: TailwindProps) => {
   if (!artifact) {
@@ -344,13 +344,13 @@ export const Tailwind = async ({ artifact, children }: TailwindProps) => {
   }
 
   const renderedChildren = await renderFragmentToHtml(<>{children}</>)
-  const transformed = transformTailwindHtml(renderedChildren, artifact)
+  const transformed = await transformTailwindHtml(renderedChildren, artifact)
   return raw(`${wrapGeneratedHeadCss(transformed.headCss)}${transformed.html}`)
 }
 
-export const Markdown = ({ children, markdownContainerStyles, markdownCustomStyles, sanitize }: MarkdownProps) =>
+export const Markdown = async ({ children, markdownContainerStyles, markdownCustomStyles, sanitize }: MarkdownProps) =>
   raw(
-    renderMarkdownHtml(children, {
+    await renderMarkdownHtml(children, {
       markdownContainerStyles,
       markdownCustomStyles,
       sanitize,

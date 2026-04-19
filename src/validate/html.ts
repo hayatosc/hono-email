@@ -82,6 +82,7 @@ const WARNING_AT_RULES = new Map([
 ])
 
 const STYLE_ATTRIBUTE_PATTERN = /style="([^"]*)"/gi
+const LINK_STYLESHEET_PATTERN = /<link\b[^>]*rel=["']stylesheet["'][^>]*>/gi
 const STYLE_TAG_PATTERN = /<style\b[^>]*>([\s\S]*?)<\/style>/gi
 const CSS_DECLARATION_PATTERN = /([a-z-]+)\s*:\s*([^;}{]+)/gi
 const ANCHOR_TAG_PATTERN = /<a\b([^>]*)>/gi
@@ -126,11 +127,19 @@ const validateStylePlacement = (html: string): void => {
   const headClose = html.match(HEAD_CLOSE_PATTERN)
 
   for (const match of html.matchAll(STYLE_TAG_PATTERN)) {
-    const styleIndex = match.index ?? -1
-
-    if (!headOpen || !headClose || styleIndex < headOpen.index! || styleIndex > headClose.index!) {
+    const index = match.index ?? -1
+    if (!headOpen || !headClose || index < headOpen.index! || index > headClose.index!) {
       throw new Error(
         'The <style> tag must be placed inside <Head> in HTML email strict mode. Move shared CSS into <Head>, or use inline style props for element-level styling.'
+      )
+    }
+  }
+
+  for (const match of html.matchAll(LINK_STYLESHEET_PATTERN)) {
+    const index = match.index ?? -1
+    if (!headOpen || !headClose || index < headOpen.index! || index > headClose.index!) {
+      throw new Error(
+        'The <link> tag must be placed inside <Head> in HTML email strict mode.'
       )
     }
   }

@@ -1,5 +1,5 @@
+import { HTMLRewriter } from 'htmlrewriter'
 import * as csstree from 'css-tree'
-import { parse } from 'node-html-parser'
 
 import { mergeStyleAttributes, serializeStyleAttribute } from '../style'
 
@@ -17,22 +17,6 @@ export type BuildTailwindArtifactFromCssOptions = {
 type TailwindRenderResult = {
   html: string
   headCss: string
-}
-
-type CssTreeNode = {
-  type: string
-  name?: string
-  property?: string
-  prelude?: unknown
-  value?: unknown
-  block?: {
-    children?: {
-      toArray?: () => CssTreeNode[]
-    }
-  }
-  children?: {
-    toArray?: () => CssTreeNode[]
-  }
 }
 
 const REM_TO_PX_FACTOR = 16
@@ -78,20 +62,11 @@ const COLOR_PROPERTIES = new Set([
   'text-decoration-color',
 ])
 
-const listToArray = (list: { toArray?: () => CssTreeNode[] } | undefined): CssTreeNode[] =>
-  list?.toArray ? list.toArray() : []
+const childNodes = (node: csstree.Atrule | csstree.Rule): csstree.CssNode[] =>
+  node.block ? [...node.block.children] : []
 
-const nodeChildren = (node: CssTreeNode): CssTreeNode[] => {
-  if (node.block?.children) {
-    return listToArray(node.block.children)
-  }
-
-  if (node.children) {
-    return listToArray(node.children)
-  }
-
-  return []
-}
+const getParams = (node: csstree.Atrule): string =>
+  node.prelude ? csstree.generate(node.prelude) : ''
 
 const numberToPx = (value: number): string => {
   const rounded = Number(value.toFixed(4))
@@ -384,15 +359,13 @@ const extractSimpleClassToken = (selector: string): string | undefined => {
   return token === '' ? undefined : decodeEscapedClassToken(token)
 }
 
-const extractDeclarationsFromNodes = (nodes: CssTreeNode[]): Record<string, string> => {
+const extractDeclarationsFromNodes = (nodes: csstree.CssNode[]): Record<string, string> => {
   const declarations: Record<string, string> = {}
 
   for (const node of nodes) {
-    if (node.type !== 'Declaration' || !node.property || !node.value) {
-      continue
+    if (node.type === 'Declaration') {
+      declarations[node.property] = csstree.generate(node.value)
     }
-
-    declarations[node.property] = csstree.generate(node.value as never)
   }
 
   return declarations
@@ -424,50 +397,41 @@ const appendMediaRuleByClass = (
   target[classToken] = `${target[classToken] ?? ''}${mediaRule}`
 }
 
-const collectCssVariables = (nodes: CssTreeNode[]): Record<string, string> => {
+const collectCssVariables = (nodes: csstree.CssNode[]): Record<string, string> => {
   const cssVariables: Record<string, string> = {}
 
-  const collect = (currentNodes: CssTreeNode[], inThemeLayer: boolean): void => {
+  const collect = (currentNodes: csstree.CssNode[], inThemeLayer: boolean): void => {
     for (const node of currentNodes) {
-      if (node.type === 'Declaration' && inThemeLayer && node.property?.startsWith('--') && node.value) {
-        cssVariables[node.property] = normalizeCssValue(csstree.generate(node.value as never))
+      if (node.type === 'Declaration' && inThemeLayer && node.property.startsWith('--')) {
+        cssVariables[node.property] = normalizeCssValue(csstree.generate(node.value))
         continue
       }
 
       if (node.type === 'Atrule') {
-        if (node.name?.toLowerCase() === 'property' && node.prelude) {
-          const propertyName = csstree.generate(node.prelude as never).trim()
+        if (node.name.toLowerCase() === 'property' && node.prelude !== null) {
+          const propertyName = getParams(node).trim()
           if (propertyName.startsWith('--')) {
-            const initialValueDeclaration = nodeChildren(node).find(
-              (child) => child.type === 'Declaration' && child.property?.toLowerCase() === 'initial-value' && child.value
+            const initialValueDecl = childNodes(node).find(
+              (child): child is csstree.Declaration =>
+                child.type === 'Declaration' && child.property.toLowerCase() === 'initial-value'
             )
-
-            if (initialValueDeclaration?.value) {
-              cssVariables[propertyName] = normalizeCssValue(csstree.generate(initialValueDeclaration.value as never))
+            if (initialValueDecl) {
+              cssVariables[propertyName] = normalizeCssValue(csstree.generate(initialValueDecl.value))
             }
           }
         }
 
-        const layerPrelude = node.prelude ? csstree.generate(node.prelude as never) : ''
         const isThemeLayer =
           inThemeLayer ||
-          (node.name?.toLowerCase() === 'layer' &&
-            layerPrelude
-              .split(',')
-              .map((part) => part.trim())
-              .includes('theme'))
+          (node.name.toLowerCase() === 'layer' &&
+            getParams(node).split(',').map((p) => p.trim()).includes('theme'))
 
-        const children = nodeChildren(node)
-        if (children.length > 0) {
-          collect(children, isThemeLayer)
-        }
-
+        collect(childNodes(node), isThemeLayer)
         continue
       }
 
-      const children = nodeChildren(node)
-      if (children.length > 0) {
-        collect(children, inThemeLayer)
+      if (node.type === 'Rule') {
+        collect(childNodes(node), inThemeLayer)
       }
     }
   }
@@ -477,8 +441,8 @@ const collectCssVariables = (nodes: CssTreeNode[]): Record<string, string> => {
 }
 
 const buildArtifactFromCss = (cssText: string, classes?: string[]): TailwindBuildArtifact => {
-  const ast = csstree.parse(cssText) as unknown as CssTreeNode
-  const rootNodes = nodeChildren(ast)
+  const ast = csstree.parse(cssText) as csstree.StyleSheet
+  const rootNodes = [...ast.children]
   const cssVariables = collectCssVariables(rootNodes)
   const inlineStylesByClass: Record<string, Record<string, string>> = {}
   const headCssByClass: Record<string, string> = {}
@@ -492,25 +456,22 @@ const buildArtifactFromCss = (cssText: string, classes?: string[]): TailwindBuil
     }
   }
 
-  const processNodes = (nodes: CssTreeNode[], activeMediaQuery?: string): void => {
+  const processNodes = (nodes: csstree.CssNode[], activeMediaQuery?: string): void => {
     for (const node of nodes) {
       if (node.type === 'Atrule') {
-        if (node.name?.toLowerCase() === 'media') {
-          const prelude = node.prelude ? csstree.generate(node.prelude as never) : ''
-          const nextMediaQuery = normalizeMediaQuery(prelude)
-          processNodes(nodeChildren(node), nextMediaQuery)
+        if (node.name.toLowerCase() === 'media') {
+          processNodes(childNodes(node), normalizeMediaQuery(getParams(node)))
         } else {
-          processNodes(nodeChildren(node), activeMediaQuery)
+          processNodes(childNodes(node), activeMediaQuery)
         }
         continue
       }
 
-      if (node.type !== 'Rule' || !node.prelude) {
+      if (node.type !== 'Rule') {
         continue
       }
 
-      const selector = csstree.generate(node.prelude as never)
-      const classToken = extractSimpleClassToken(selector)
+      const classToken = extractSimpleClassToken(csstree.generate(node.prelude))
       if (!classToken) {
         continue
       }
@@ -518,15 +479,15 @@ const buildArtifactFromCss = (cssText: string, classes?: string[]): TailwindBuil
       registerClass(classToken)
 
       const directDeclarations: Record<string, string> = {}
-      for (const child of nodeChildren(node)) {
-        if (child.type === 'Declaration' && child.property && child.value) {
-          directDeclarations[child.property] = csstree.generate(child.value as never)
+      for (const child of childNodes(node)) {
+        if (child.type === 'Declaration') {
+          directDeclarations[child.property] = csstree.generate(child.value)
           continue
         }
 
-        if (child.type === 'Atrule' && child.name?.toLowerCase() === 'media' && child.prelude) {
-          const nestedMediaQuery = normalizeMediaQuery(csstree.generate(child.prelude as never))
-          const nestedDeclarations = normalizeDeclarations(extractDeclarationsFromNodes(nodeChildren(child)), cssVariables)
+        if (child.type === 'Atrule' && child.name.toLowerCase() === 'media') {
+          const nestedMediaQuery = normalizeMediaQuery(getParams(child))
+          const nestedDeclarations = normalizeDeclarations(extractDeclarationsFromNodes(childNodes(child)), cssVariables)
           if (Object.keys(nestedDeclarations).length > 0) {
             appendMediaRuleByClass(headCssByClass, classToken, nestedMediaQuery, nestedDeclarations)
           }
@@ -558,20 +519,19 @@ const buildArtifactFromCss = (cssText: string, classes?: string[]): TailwindBuil
 const uniqueClasses = (classes: string[]): string[] =>
   Array.from(new Set(classes.map((className) => className.trim()).filter((className) => className !== '')))
 
-export const collectTailwindClassesFromHtml = (html: string): string[] => {
-  const document = parse(html)
+export const collectTailwindClassesFromHtml = async (html: string): Promise<string[]> => {
   const classTokens = new Set<string>()
 
-  for (const element of document.querySelectorAll('*')) {
-    const classAttribute = element.getAttribute('class')
-    if (!classAttribute) {
-      continue
-    }
-
-    for (const classToken of classAttribute.split(/\s+/).filter(Boolean)) {
-      classTokens.add(classToken)
-    }
-  }
+  await new HTMLRewriter()
+    .on('[class]', {
+      element(el) {
+        for (const token of el.getAttribute('class')!.split(/\s+/).filter(Boolean)) {
+          classTokens.add(token)
+        }
+      },
+    })
+    .transform(new Response(html))
+    .text()
 
   return Array.from(classTokens)
 }
@@ -584,45 +544,44 @@ export const buildTailwindArtifactFromCss = ({
   return buildArtifactFromCss(css, normalizedClasses)
 }
 
-export const transformTailwindHtml = (html: string, artifact: TailwindBuildArtifact): TailwindRenderResult => {
+export const transformTailwindHtml = async (html: string, artifact: TailwindBuildArtifact): Promise<TailwindRenderResult> => {
   const knownClasses = new Set(artifact.classes)
-  const document = parse(html)
   const responsiveCss = new Set<string>()
 
-  for (const element of document.querySelectorAll('*')) {
-    const classAttribute = element.getAttribute('class')
-    if (!classAttribute) {
-      continue
-    }
+  const transformed = await new HTMLRewriter()
+    .on('[class]', {
+      element(el) {
+        const tokens = el.getAttribute('class')!.split(/\s+/).filter(Boolean)
+        const mergedInlineStyle: Record<string, string> = {}
 
-    const mergedInlineStyle: Record<string, string> = {}
-    const tokens = classAttribute.split(/\s+/).filter(Boolean)
+        for (const token of tokens) {
+          if (!knownClasses.has(token)) {
+            throw new Error(
+              `Tailwind class '${token}' is missing from the build artifact. Rebuild the artifact before rendering with <Tailwind>.`
+            )
+          }
 
-    for (const token of tokens) {
-      if (!knownClasses.has(token)) {
-        throw new Error(
-          `Tailwind class '${token}' is missing from the build artifact. Rebuild the artifact before rendering with <Tailwind>.`
-        )
-      }
+          const inlineStyle = artifact.inlineStylesByClass[token]
+          if (inlineStyle) {
+            Object.assign(mergedInlineStyle, inlineStyle)
+          }
 
-      const inlineStyle = artifact.inlineStylesByClass[token]
-      if (inlineStyle) {
-        Object.assign(mergedInlineStyle, inlineStyle)
-      }
+          const mediaRule = artifact.headCssByClass[token]
+          if (mediaRule) {
+            responsiveCss.add(mediaRule)
+          }
+        }
 
-      const mediaRule = artifact.headCssByClass[token]
-      if (mediaRule) {
-        responsiveCss.add(mediaRule)
-      }
-    }
-
-    if (Object.keys(mergedInlineStyle).length > 0) {
-      element.setAttribute('style', mergeStyleAttributes(element.getAttribute('style'), mergedInlineStyle))
-    }
-  }
+        if (Object.keys(mergedInlineStyle).length > 0) {
+          el.setAttribute('style', mergeStyleAttributes(el.getAttribute('style') ?? undefined, mergedInlineStyle))
+        }
+      },
+    })
+    .transform(new Response(html))
+    .text()
 
   return {
-    html: document.toString(),
+    html: transformed,
     headCss: Array.from(responsiveCss).join(''),
   }
 }

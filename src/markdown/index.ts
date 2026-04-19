@@ -1,5 +1,5 @@
 import type { JSX } from 'hono/jsx'
-import { parse } from 'node-html-parser'
+import { HTMLRewriter } from 'htmlrewriter'
 import { marked } from 'marked'
 import sanitizeHtml from 'sanitize-html'
 
@@ -184,79 +184,10 @@ const SAFE_ATTRIBUTES: sanitizeHtml.IOptions['allowedAttributes'] = {
   th: ['align', 'colspan', 'rowspan'],
 }
 
-const applyElementStyle = (
-  html: ReturnType<typeof parse>,
-  selector: string,
-  style: Record<string, string>
-) => {
-  for (const element of html.querySelectorAll(selector)) {
-    element.setAttribute('style', mergeStyleAttributes(element.getAttribute('style'), style))
-  }
-}
-
-const applyMarkdownStyles = (
-  html: ReturnType<typeof parse>,
-  markdownCustomStyles?: MarkdownCustomStyles
-) => {
-  const mergedStyleMap: Record<MarkdownStyleKey, Record<string, string>> = {
-    a: { ...DEFAULT_MARKDOWN_STYLES.a, ...normalizeStyleObject(markdownCustomStyles?.a) },
-    blockquote: { ...DEFAULT_MARKDOWN_STYLES.blockquote, ...normalizeStyleObject(markdownCustomStyles?.blockquote) },
-    code: { ...DEFAULT_MARKDOWN_STYLES.code, ...normalizeStyleObject(markdownCustomStyles?.code) },
-    codeInline: { ...DEFAULT_MARKDOWN_STYLES.codeInline, ...normalizeStyleObject(markdownCustomStyles?.codeInline) },
-    h1: { ...DEFAULT_MARKDOWN_STYLES.h1, ...normalizeStyleObject(markdownCustomStyles?.h1) },
-    h2: { ...DEFAULT_MARKDOWN_STYLES.h2, ...normalizeStyleObject(markdownCustomStyles?.h2) },
-    h3: { ...DEFAULT_MARKDOWN_STYLES.h3, ...normalizeStyleObject(markdownCustomStyles?.h3) },
-    h4: { ...DEFAULT_MARKDOWN_STYLES.h4, ...normalizeStyleObject(markdownCustomStyles?.h4) },
-    h5: { ...DEFAULT_MARKDOWN_STYLES.h5, ...normalizeStyleObject(markdownCustomStyles?.h5) },
-    h6: { ...DEFAULT_MARKDOWN_STYLES.h6, ...normalizeStyleObject(markdownCustomStyles?.h6) },
-    img: { ...DEFAULT_MARKDOWN_STYLES.img, ...normalizeStyleObject(markdownCustomStyles?.img) },
-    li: { ...DEFAULT_MARKDOWN_STYLES.li, ...normalizeStyleObject(markdownCustomStyles?.li) },
-    ol: { ...DEFAULT_MARKDOWN_STYLES.ol, ...normalizeStyleObject(markdownCustomStyles?.ol) },
-    p: { ...DEFAULT_MARKDOWN_STYLES.p, ...normalizeStyleObject(markdownCustomStyles?.p) },
-    pre: { ...DEFAULT_MARKDOWN_STYLES.pre, ...normalizeStyleObject(markdownCustomStyles?.pre) },
-    table: { ...DEFAULT_MARKDOWN_STYLES.table, ...normalizeStyleObject(markdownCustomStyles?.table) },
-    tbody: { ...DEFAULT_MARKDOWN_STYLES.tbody, ...normalizeStyleObject(markdownCustomStyles?.tbody) },
-    td: { ...DEFAULT_MARKDOWN_STYLES.td, ...normalizeStyleObject(markdownCustomStyles?.td) },
-    th: { ...DEFAULT_MARKDOWN_STYLES.th, ...normalizeStyleObject(markdownCustomStyles?.th) },
-    thead: { ...DEFAULT_MARKDOWN_STYLES.thead, ...normalizeStyleObject(markdownCustomStyles?.thead) },
-    tr: { ...DEFAULT_MARKDOWN_STYLES.tr, ...normalizeStyleObject(markdownCustomStyles?.tr) },
-    ul: { ...DEFAULT_MARKDOWN_STYLES.ul, ...normalizeStyleObject(markdownCustomStyles?.ul) },
-  }
-
-  applyElementStyle(html, 'a', mergedStyleMap.a)
-  applyElementStyle(html, 'blockquote', mergedStyleMap.blockquote)
-  applyElementStyle(html, 'h1', mergedStyleMap.h1)
-  applyElementStyle(html, 'h2', mergedStyleMap.h2)
-  applyElementStyle(html, 'h3', mergedStyleMap.h3)
-  applyElementStyle(html, 'h4', mergedStyleMap.h4)
-  applyElementStyle(html, 'h5', mergedStyleMap.h5)
-  applyElementStyle(html, 'h6', mergedStyleMap.h6)
-  applyElementStyle(html, 'img', mergedStyleMap.img)
-  applyElementStyle(html, 'li', mergedStyleMap.li)
-  applyElementStyle(html, 'ol', mergedStyleMap.ol)
-  applyElementStyle(html, 'p', mergedStyleMap.p)
-  applyElementStyle(html, 'pre', mergedStyleMap.pre)
-  applyElementStyle(html, 'table', mergedStyleMap.table)
-  applyElementStyle(html, 'tbody', mergedStyleMap.tbody)
-  applyElementStyle(html, 'td', mergedStyleMap.td)
-  applyElementStyle(html, 'th', mergedStyleMap.th)
-  applyElementStyle(html, 'thead', mergedStyleMap.thead)
-  applyElementStyle(html, 'tr', mergedStyleMap.tr)
-  applyElementStyle(html, 'ul', mergedStyleMap.ul)
-
-  for (const codeElement of html.querySelectorAll('code')) {
-    const style = codeElement.parentNode && 'tagName' in codeElement.parentNode && codeElement.parentNode.tagName === 'PRE'
-      ? mergedStyleMap.code
-      : mergedStyleMap.codeInline
-
-    codeElement.setAttribute('style', mergeStyleAttributes(codeElement.getAttribute('style'), style))
-  }
-}
-
-export const renderMarkdownHtml = (
+export const renderMarkdownHtml = async (
   markdown: string,
   options: MarkdownRenderOptions = {}
-): string => {
+): Promise<string> => {
   const renderedMarkdown = marked.parse(markdown, {
     async: false,
     gfm: true,
@@ -272,25 +203,79 @@ export const renderMarkdownHtml = (
           disallowedTagsMode: 'discard',
         })
 
-  const html = parse(`<div>${htmlSource}</div>`, {
-    lowerCaseTagName: false,
-  })
-
-  applyMarkdownStyles(html, options.markdownCustomStyles)
-
-  const container = html.querySelector('div')
-  if (container) {
-    container.setAttribute(
-      'style',
-      mergeStyleAttributes(
-        container.getAttribute('style'),
-        {
-          ...DEFAULT_CONTAINER_STYLE,
-          ...normalizeStyleObject(options.markdownContainerStyles),
-        }
-      )
-    )
+  const s = options.markdownCustomStyles
+  const styles: Record<MarkdownStyleKey, Record<string, string>> = {
+    a: { ...DEFAULT_MARKDOWN_STYLES.a, ...normalizeStyleObject(s?.a) },
+    blockquote: { ...DEFAULT_MARKDOWN_STYLES.blockquote, ...normalizeStyleObject(s?.blockquote) },
+    code: { ...DEFAULT_MARKDOWN_STYLES.code, ...normalizeStyleObject(s?.code) },
+    codeInline: { ...DEFAULT_MARKDOWN_STYLES.codeInline, ...normalizeStyleObject(s?.codeInline) },
+    h1: { ...DEFAULT_MARKDOWN_STYLES.h1, ...normalizeStyleObject(s?.h1) },
+    h2: { ...DEFAULT_MARKDOWN_STYLES.h2, ...normalizeStyleObject(s?.h2) },
+    h3: { ...DEFAULT_MARKDOWN_STYLES.h3, ...normalizeStyleObject(s?.h3) },
+    h4: { ...DEFAULT_MARKDOWN_STYLES.h4, ...normalizeStyleObject(s?.h4) },
+    h5: { ...DEFAULT_MARKDOWN_STYLES.h5, ...normalizeStyleObject(s?.h5) },
+    h6: { ...DEFAULT_MARKDOWN_STYLES.h6, ...normalizeStyleObject(s?.h6) },
+    img: { ...DEFAULT_MARKDOWN_STYLES.img, ...normalizeStyleObject(s?.img) },
+    li: { ...DEFAULT_MARKDOWN_STYLES.li, ...normalizeStyleObject(s?.li) },
+    ol: { ...DEFAULT_MARKDOWN_STYLES.ol, ...normalizeStyleObject(s?.ol) },
+    p: { ...DEFAULT_MARKDOWN_STYLES.p, ...normalizeStyleObject(s?.p) },
+    pre: { ...DEFAULT_MARKDOWN_STYLES.pre, ...normalizeStyleObject(s?.pre) },
+    table: { ...DEFAULT_MARKDOWN_STYLES.table, ...normalizeStyleObject(s?.table) },
+    tbody: { ...DEFAULT_MARKDOWN_STYLES.tbody, ...normalizeStyleObject(s?.tbody) },
+    td: { ...DEFAULT_MARKDOWN_STYLES.td, ...normalizeStyleObject(s?.td) },
+    th: { ...DEFAULT_MARKDOWN_STYLES.th, ...normalizeStyleObject(s?.th) },
+    thead: { ...DEFAULT_MARKDOWN_STYLES.thead, ...normalizeStyleObject(s?.thead) },
+    tr: { ...DEFAULT_MARKDOWN_STYLES.tr, ...normalizeStyleObject(s?.tr) },
+    ul: { ...DEFAULT_MARKDOWN_STYLES.ul, ...normalizeStyleObject(s?.ul) },
   }
 
-  return html.toString()
+  const containerStyle = mergeStyleAttributes(undefined, {
+    ...DEFAULT_CONTAINER_STYLE,
+    ...normalizeStyleObject(options.markdownContainerStyles),
+  })
+
+  const applyStyle = (el: { getAttribute(n: string): string | null; setAttribute(n: string, v: string): void }, style: Record<string, string>) => {
+    el.setAttribute('style', mergeStyleAttributes(el.getAttribute('style') ?? undefined, style))
+  }
+
+  let insidePre = false
+  let divDepth = 0
+
+  return new HTMLRewriter()
+    .on('div', {
+      element(el) {
+        divDepth++
+        if (divDepth === 1) el.setAttribute('style', containerStyle)
+        el.onEndTag(() => { divDepth-- })
+      },
+    })
+    .on('a', { element(el) { applyStyle(el, styles.a) } })
+    .on('blockquote', { element(el) { applyStyle(el, styles.blockquote) } })
+    .on('h1', { element(el) { applyStyle(el, styles.h1) } })
+    .on('h2', { element(el) { applyStyle(el, styles.h2) } })
+    .on('h3', { element(el) { applyStyle(el, styles.h3) } })
+    .on('h4', { element(el) { applyStyle(el, styles.h4) } })
+    .on('h5', { element(el) { applyStyle(el, styles.h5) } })
+    .on('h6', { element(el) { applyStyle(el, styles.h6) } })
+    .on('img', { element(el) { applyStyle(el, styles.img) } })
+    .on('li', { element(el) { applyStyle(el, styles.li) } })
+    .on('ol', { element(el) { applyStyle(el, styles.ol) } })
+    .on('p', { element(el) { applyStyle(el, styles.p) } })
+    .on('pre', {
+      element(el) {
+        applyStyle(el, styles.pre)
+        insidePre = true
+        el.onEndTag(() => { insidePre = false })
+      },
+    })
+    .on('code', { element(el) { applyStyle(el, insidePre ? styles.code : styles.codeInline) } })
+    .on('table', { element(el) { applyStyle(el, styles.table) } })
+    .on('tbody', { element(el) { applyStyle(el, styles.tbody) } })
+    .on('td', { element(el) { applyStyle(el, styles.td) } })
+    .on('th', { element(el) { applyStyle(el, styles.th) } })
+    .on('thead', { element(el) { applyStyle(el, styles.thead) } })
+    .on('tr', { element(el) { applyStyle(el, styles.tr) } })
+    .on('ul', { element(el) { applyStyle(el, styles.ul) } })
+    .transform(new Response(`<div>${htmlSource}</div>`))
+    .text()
 }

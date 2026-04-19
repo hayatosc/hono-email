@@ -1,5 +1,4 @@
 import type { Child } from 'hono/jsx'
-import { parse } from 'node-html-parser'
 
 export {
   Body,
@@ -77,7 +76,7 @@ const renderHtmlWithWarnings = async (jsx: Child, options: BaseRenderOptions = {
   let html = relocateHeadStyles(relocatePreview(normalizeHtml(await renderFragmentToHtml(jsx))))
   let warnings: string[] = []
 
-  if (parse(html).querySelector(TAILWIND_ARTIFACT_REQUIRED_TAG_NAME)) {
+  if (html.includes(`<${TAILWIND_ARTIFACT_REQUIRED_TAG_NAME}`)) {
     throw new Error(TAILWIND_ARTIFACT_REQUIRED_ERROR_MESSAGE)
   }
 

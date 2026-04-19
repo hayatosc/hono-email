@@ -65,11 +65,11 @@ export const transformTailwindComponentSource = (
   const transformedCode = code.replace(
     TAILWIND_COMPONENT_OPEN_TAG_PATTERN,
     (fullMatch, attributes: string, selfClosing: string) => {
-    if (/\bartifact\s*=/.test(attributes)) {
-      return fullMatch
-    }
+      if (/\bartifact\s*=/.test(attributes)) {
+        return fullMatch
+      }
 
-    replaced = true
+      replaced = true
       return `<Tailwind artifact={__honoEmailTailwindArtifact}${attributes}${selfClosing}>`
     }
   )

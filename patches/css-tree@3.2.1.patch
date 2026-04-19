@@ -1,0 +1,47 @@
+diff --git a/node_modules/css-tree/.bun-tag-8dad3db8a49159d7 b/.bun-tag-8dad3db8a49159d7
+new file mode 100644
+index 0000000000000000000000000000000000000000..e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
+diff --git a/node_modules/css-tree/.bun-tag-94e9db803b59a634 b/.bun-tag-94e9db803b59a634
+new file mode 100644
+index 0000000000000000000000000000000000000000..e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
+diff --git a/lib/data-patch.js b/lib/data-patch.js
+index cd49cbec3e7de20dea750e95e007dbdb1488ac96..854ecd25d5ce2940468de6ad8162cb26085fbed5 100644
+--- a/lib/data-patch.js
++++ b/lib/data-patch.js
+@@ -1,6 +1,3 @@
+-import { createRequire } from 'module';
+-
+-const require = createRequire(import.meta.url);
+-const patch = require('../data/patch.json');
++import * as patch from "../data/patch.json"
+ 
+ export default patch;
+diff --git a/lib/data.js b/lib/data.js
+index 162fa2068f45413e415e22ad1fe56f4c372623ad..f72ce2c80504c5efd465ce1067f253cf5b9ef96f 100755
+--- a/lib/data.js
++++ b/lib/data.js
+@@ -1,10 +1,7 @@
+-import { createRequire } from 'module';
+ import patch from './data-patch.js';
+-
+-const require = createRequire(import.meta.url);
+-const mdnAtrules = require('mdn-data/css/at-rules.json');
+-const mdnProperties = require('mdn-data/css/properties.json');
+-const mdnSyntaxes = require('mdn-data/css/syntaxes.json');
++import mdnAtrules from 'mdn-data/css/at-rules.json';
++import mdnProperties from 'mdn-data/css/properties.json';
++import mdnSyntaxes from 'mdn-data/css/syntaxes.json';
+ 
+ const hasOwn = Object.hasOwn || ((object, property) => Object.prototype.hasOwnProperty.call(object, property));
+ const extendSyntax = /^\s*\|\s*/;
+diff --git a/lib/version.js b/lib/version.js
+index dde3a83f43883ecbad6ca0a23afb58c12235148a..92d4efadf731952cc9cdc58ec3559c51ed0e4618 100644
+--- a/lib/version.js
++++ b/lib/version.js
+@@ -1,5 +1 @@
+-import { createRequire } from 'module';
+-
+-const require = createRequire(import.meta.url);
+-
+-export const { version } = require('../package.json');
++export { version } from "../package.json"

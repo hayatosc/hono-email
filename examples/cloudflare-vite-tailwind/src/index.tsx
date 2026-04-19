@@ -168,7 +168,7 @@ app.post('/api/emails/welcome/send', async (c) => {
   })
 
   return c.json({
-    messageId: result.messageId,
+    messageId: result?.messageId ?? null,
     ok: true,
   })
 })
