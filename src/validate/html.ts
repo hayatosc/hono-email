@@ -24,6 +24,8 @@ const DISALLOWED_CSS_DECLARATIONS = new Map([
   ['display:grid', "The CSS property 'display:grid' isn't supported in HTML email strict mode. Use <Section>, <Row>, <Column>, or table-based layout instead."],
   ['display:inline-grid', "The CSS property 'display:inline-grid' isn't supported in HTML email strict mode. Use inline-block or table-based layout instead."],
   ['display:inline-flex', "The CSS property 'display:inline-flex' isn't supported in HTML email strict mode. Use inline-block or table-based layout instead."],
+  ['position:fixed', "The CSS property 'position:fixed' isn't supported in HTML email strict mode."],
+  ['position:sticky', "The CSS property 'position:sticky' isn't supported in HTML email strict mode."],
 ])
 
 const DISALLOWED_CSS_PROPERTIES = new Set([
@@ -45,6 +47,24 @@ const DISALLOWED_CSS_PROPERTIES = new Set([
   'border-block',
   'border-block-start',
   'border-block-end',
+  'filter',
+  'object-fit',
+  'object-position',
+  'pointer-events',
+  'user-select',
+  'aspect-ratio',
+  'transform',
+  'transition',
+  'animation',
+  'mask-image',
+  'clip-path',
+  'background-attachment',
+  'background-blend-mode',
+  'background-clip',
+  'backdrop-filter',
+  'mix-blend-mode',
+  'contain',
+  'will-change',
 ])
 
 const DISALLOWED_CSS_PROPERTY_MESSAGES = new Map([
@@ -66,6 +86,24 @@ const DISALLOWED_CSS_PROPERTY_MESSAGES = new Map([
   ['border-block', "The CSS property 'border-block' isn't supported in HTML email strict mode. Use border-top and border-bottom instead."],
   ['border-block-start', "The CSS property 'border-block-start' isn't supported in HTML email strict mode. Use border-top instead."],
   ['border-block-end', "The CSS property 'border-block-end' isn't supported in HTML email strict mode. Use border-bottom instead."],
+  ['filter', "The CSS property 'filter' isn't supported in HTML email strict mode."],
+  ['object-fit', "The CSS property 'object-fit' isn't supported in HTML email strict mode."],
+  ['object-position', "The CSS property 'object-position' isn't supported in HTML email strict mode."],
+  ['pointer-events', "The CSS property 'pointer-events' isn't supported in HTML email strict mode."],
+  ['user-select', "The CSS property 'user-select' isn't supported in HTML email strict mode."],
+  ['aspect-ratio', "The CSS property 'aspect-ratio' isn't supported in HTML email strict mode."],
+  ['transform', "The CSS property 'transform' isn't supported in HTML email strict mode."],
+  ['transition', "The CSS property 'transition' isn't supported in HTML email strict mode."],
+  ['animation', "The CSS property 'animation' isn't supported in HTML email strict mode."],
+  ['mask-image', "The CSS property 'mask-image' isn't supported in HTML email strict mode."],
+  ['clip-path', "The CSS property 'clip-path' isn't supported in HTML email strict mode."],
+  ['background-attachment', "The CSS property 'background-attachment' isn't supported in HTML email strict mode."],
+  ['background-blend-mode', "The CSS property 'background-blend-mode' isn't supported in HTML email strict mode."],
+  ['background-clip', "The CSS property 'background-clip' isn't supported in HTML email strict mode."],
+  ['backdrop-filter', "The CSS property 'backdrop-filter' isn't supported in HTML email strict mode."],
+  ['mix-blend-mode', "The CSS property 'mix-blend-mode' isn't supported in HTML email strict mode."],
+  ['contain', "The CSS property 'contain' isn't supported in HTML email strict mode."],
+  ['will-change', "The CSS property 'will-change' isn't supported in HTML email strict mode."],
 ])
 
 const WARNING_CSS_DECLARATIONS = new Map([
@@ -75,16 +113,26 @@ const WARNING_CSS_DECLARATIONS = new Map([
 const WARNING_CSS_PROPERTIES = new Map([
   ['position', "The CSS property 'position' may not be supported consistently across email clients. Prefer table structure, spacing, and natural document flow instead of positional offsets."],
   ['background-image', "The CSS property 'background-image' may not be supported consistently across email clients. Prefer <Img> or a solid background color for essential content."],
+  ['box-shadow', "The CSS property 'box-shadow' may not be supported consistently across email clients, especially in Outlook and some Gmail versions."],
+  ['z-index', "The CSS property 'z-index' has limited support in email clients as it depends on positioning."],
+  ['opacity', "The CSS property 'opacity' may not be supported consistently across all email clients."],
+  ['border-radius', "The CSS property 'border-radius' isn't supported in Outlook (Windows). It may be ignored or cause rendering issues."],
+  ['overflow', "The CSS property 'overflow' has limited support and is often ignored in email clients like Gmail and Outlook."],
+  ['text-shadow', "The CSS property 'text-shadow' isn't supported in Outlook and has inconsistent support in other clients."],
+  ['gap', "The CSS property 'gap' isn't supported in many email clients. Use margin on child elements for consistent spacing in layouts."],
+  ['float', "The CSS property 'float' has inconsistent support, particularly in Outlook (Windows). Prefer table-based layout instead."],
+  ['clear', "The CSS property 'clear' has inconsistent support, particularly in Outlook (Windows)."],
 ])
 
 const WARNING_AT_RULES = new Map([
   ['@media', "The CSS at-rule '@media' may not be supported consistently across email clients. Keep the base layout readable without media queries."],
+  ['@import', "The CSS at-rule '@import' is poorly supported in email clients. Prefer linking to fonts via <Font> or using system fonts."],
 ])
 
 const STYLE_ATTRIBUTE_PATTERN = /style="([^"]*)"/gi
 const LINK_STYLESHEET_PATTERN = /<link\b[^>]*rel=["']stylesheet["'][^>]*>/gi
 const STYLE_TAG_PATTERN = /<style\b[^>]*>([\s\S]*?)<\/style>/gi
-const CSS_DECLARATION_PATTERN = /([a-z-]+)\s*:\s*([^;}{]+)/gi
+const CSS_DECLARATION_PATTERN = /([a-z0-9-]+)\s*:\s*([^;}{]+)/gi
 const ANCHOR_TAG_PATTERN = /<a\b([^>]*)>/gi
 const IMAGE_TAG_PATTERN = /<img\b([^>]*)>/gi
 const HEAD_OPEN_PATTERN = /<head\b[^>]*>/i
@@ -162,6 +210,22 @@ const validateCssDeclarations = (cssText: string, warnings: Set<string>): void =
 
     if (!property || !value) {
       continue
+    }
+
+    if (property.startsWith('--')) {
+      throw new Error(`CSS variables ('${property}') aren't supported in HTML email strict mode.`)
+    }
+
+    if (value.includes('var(')) {
+      throw new Error(`The 'var()' function isn't supported in HTML email strict mode. Use static values instead.`)
+    }
+
+    if (value.includes('calc(')) {
+      warnings.add("The CSS function 'calc()' may not be supported consistently across email clients, especially in Outlook (Windows).")
+    }
+
+    if (/\b\d+(\.\d+)?(rem|em)\b/.test(value)) {
+      warnings.add("The CSS units 'rem' and 'em' may not be supported consistently. Use 'px' for more reliable rendering across email clients.")
     }
 
     const declarationKey = `${property}:${value}`

@@ -75,7 +75,10 @@ const renderHtml = async (jsx: Child, options: BaseRenderOptions = {}): Promise<
   }
 
   if (strict) {
-    validateHtml(html)
+    const warnings = validateHtml(html)
+    for (const warning of warnings) {
+      console.warn(`[hono-email] ${warning}`)
+    }
   }
 
   const doctype = resolveDoctype(options.doctype)
