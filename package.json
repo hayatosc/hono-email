@@ -1,14 +1,36 @@
 {
   "name": "hono-email",
   "version": "0.1.0",
+  "description": "A lightweight, type-safe email template engine for Hono, powered by Hono JSX.",
   "type": "module",
+  "author": "Hayato Shiozaki <hayato@shiozaki.io>",
+  "license": "MIT",
+  "homepage": "https://github.com/hayatosc/hono-email#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hayatosc/hono-email.git"
+  },
+  "bugs": {
+    "url": "https://github.com/hayatosc/hono-email/issues"
+  },
+  "keywords": [
+    "hono",
+    "email",
+    "template",
+    "jsx",
+    "react",
+    "tailwind"
+  ],
+  "files": [
+    "dist"
+  ],
   "exports": {
     ".": {
-      "types": "./src/index.ts",
+      "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
     },
     "./plugin": {
-      "types": "./src/unplugin.ts",
+      "types": "./dist/unplugin.d.ts",
       "import": "./dist/unplugin.js"
     }
   },
@@ -21,7 +43,6 @@
   },
   "dependencies": {
     "css-tree": "^3.1.0",
-    "hono": "^4.12.14",
     "htmlrewriter": "^0.0.13",
     "rehype-raw": "^7.0.0",
     "rehype-sanitize": "^6.0.0",
@@ -37,9 +58,16 @@
     "@types/css-tree": "^2.3.11",
     "@typescript/native-preview": "^7.0.0-dev.20260419.1",
     "bun-plugin-dts": "^0.4.0",
+    "hono": "^4.12.14",
     "oxfmt": "^0.45.0",
     "oxlint": "^1.60.0",
     "typescript": "^6.0.3"
+  },
+  "peerDependencies": {
+    "hono": "^4.0.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
   },
   "packageManager": "bun@1.3.12",
   "patchedDependencies": {

@@ -3,6 +3,7 @@
 This is a runnable example that uses `hono-email/vite` to inject the `<Tailwind>` artifact at build time.
 The example has its own `package.json` and keeps the frontend intentionally minimal: a server-rendered Hono JSX send form.
 Email delivery uses the structured `env.EMAIL.send({...})` API from Cloudflare Email Service.
+Inside this repository, the example resolves `hono-email` to `../../src` via local aliasing, so `ni` does not need a linked package install.
 
 Frontend and email styling are intentionally separated:
 
