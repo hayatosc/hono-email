@@ -2,7 +2,6 @@
   "name": "hono-email",
   "version": "0.0.0",
   "private": true,
-  "packageManager": "bun@1.3.12",
   "type": "module",
   "exports": {
     ".": {
@@ -16,6 +15,8 @@
   },
   "scripts": {
     "build": "bun run build.ts",
+    "format": "oxfmt --write .",
+    "lint": "oxlint --deny-warnings .",
     "test": "bun test",
     "typecheck": "tsgo --noEmit"
   },
@@ -37,8 +38,11 @@
     "@types/css-tree": "^2.3.11",
     "@typescript/native-preview": "^7.0.0-dev.20260419.1",
     "bun-plugin-dts": "^0.4.0",
+    "oxfmt": "^0.45.0",
+    "oxlint": "^1.60.0",
     "typescript": "^6.0.3"
   },
+  "packageManager": "bun@1.3.12",
   "patchedDependencies": {
     "css-tree@3.2.1": "patches/css-tree@3.2.1.patch",
     "mdast-util-from-markdown@2.0.3": "patches/mdast-util-from-markdown@2.0.3.patch",

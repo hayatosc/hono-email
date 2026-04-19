@@ -1,75 +1,78 @@
-import type { JSX } from 'hono/jsx'
+import type { JSX } from "hono/jsx";
 
-export type StyleValue = string | number
-export type StyleRecord = Record<string, StyleValue>
+export type StyleValue = string | number;
+export type StyleRecord = Record<string, StyleValue>;
 
-const kebabCasePattern = /[A-Z]/g
+const kebabCasePattern = /[A-Z]/g;
 
-const toKebabCase = (value: string): string => value.replace(kebabCasePattern, (match) => `-${match.toLowerCase()}`)
+const toKebabCase = (value: string): string =>
+  value.replace(kebabCasePattern, (match) => `-${match.toLowerCase()}`);
 
 export const styleObjectFromUnknown = (style: unknown): StyleRecord | undefined => {
-  if (typeof style === 'object' && style !== null && !Array.isArray(style)) {
-    return style as StyleRecord
+  if (typeof style === "object" && style !== null && !Array.isArray(style)) {
+    return style as StyleRecord;
   }
 
-  return undefined
-}
+  return undefined;
+};
 
-export const normalizeStyleObject = (style?: JSX.CSSProperties | StyleRecord): Record<string, string> => {
+export const normalizeStyleObject = (
+  style?: JSX.CSSProperties | StyleRecord,
+): Record<string, string> => {
   if (!style) {
-    return {}
+    return {};
   }
 
-  const normalized: Record<string, string> = {}
+  const normalized: Record<string, string> = {};
 
   for (const [key, value] of Object.entries(style)) {
     if (value === undefined || value === null) {
-      continue
+      continue;
     }
 
-    normalized[toKebabCase(key)] = typeof value === 'number' ? `${value}` : `${value}`
+    normalized[toKebabCase(key)] = typeof value === "number" ? `${value}` : `${value}`;
   }
 
-  return normalized
-}
+  return normalized;
+};
 
 export const parseStyleAttribute = (style?: string): Record<string, string> => {
   if (!style) {
-    return {}
+    return {};
   }
 
   return style
-    .split(';')
+    .split(";")
     .map((declaration) => declaration.trim())
     .filter(Boolean)
     .reduce<Record<string, string>>((accumulator, declaration) => {
-      const separatorIndex = declaration.indexOf(':')
+      const separatorIndex = declaration.indexOf(":");
       if (separatorIndex === -1) {
-        return accumulator
+        return accumulator;
       }
 
-      const property = declaration.slice(0, separatorIndex).trim()
-      const value = declaration.slice(separatorIndex + 1).trim()
-      if (property !== '' && value !== '') {
-        accumulator[property] = value
+      const property = declaration.slice(0, separatorIndex).trim();
+      const value = declaration.slice(separatorIndex + 1).trim();
+      if (property !== "" && value !== "") {
+        accumulator[property] = value;
       }
-      return accumulator
-    }, {})
-}
+      return accumulator;
+    }, {});
+};
 
 export const serializeStyleAttribute = (style: Record<string, string>): string =>
   Object.entries(style)
     .map(([property, value]) => `${property}:${value}`)
-    .join(';')
+    .join(";");
 
 export const mergeStyleAttributes = (
   existingStyle: string | undefined,
-  additionalStyle: Record<string, string>
+  additionalStyle: Record<string, string>,
 ): string => {
   const merged = {
     ...parseStyleAttribute(existingStyle),
     ...additionalStyle,
-  }
+  };
 
-  return serializeStyleAttribute(merged)
-}
+  return serializeStyleAttribute(merged);
+};

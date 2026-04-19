@@ -60,8 +60,8 @@ If you want real delivery during local development, add `remote: true` to the `s
   "send_email": [{ "name": "EMAIL" }],
   "vars": {
     "EMAIL_FROM": "welcome@example.com",
-    "EMAIL_FROM_NAME": "hono-email"
-  }
+    "EMAIL_FROM_NAME": "hono-email",
+  },
 }
 ```
 

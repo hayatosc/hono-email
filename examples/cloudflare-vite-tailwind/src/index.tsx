@@ -1,4 +1,4 @@
-import { Hono } from 'hono';
+import { Hono } from "hono";
 
 import {
   createWelcomeEmailInput,
@@ -6,7 +6,7 @@ import {
   renderWelcomeEmail,
   renderWelcomeEmailText,
   type WelcomeEmailOverrides,
-} from './emails/welcome';
+} from "./emails/welcome";
 
 type Recipient = string | string[];
 
@@ -49,14 +49,14 @@ type ComposerPageData = {
   form: WelcomeFormState;
   status?: {
     message: string;
-    tone: 'default' | 'error' | 'success';
+    tone: "default" | "error" | "success";
   };
 };
 
 const app = new Hono<AppEnv>();
 
 const splitRecipients = (value: string | undefined): string[] =>
-  (value ?? '')
+  (value ?? "")
     .split(/[,\n]/)
     .map((item) => item.trim())
     .filter((item) => item.length > 0);
@@ -80,24 +80,24 @@ const toWelcomeFormState = (overrides: Partial<WelcomeFormState> = {}): WelcomeF
   return {
     message: overrides.message ?? defaults.message,
     subject: overrides.subject ?? defaults.subject,
-    to: overrides.to ?? 'recipient@example.com',
+    to: overrides.to ?? "recipient@example.com",
   };
 };
 
 const formDataToWelcomeFormState = (formData: FormData): WelcomeFormState =>
   toWelcomeFormState({
-    message: String(formData.get('message') ?? ''),
-    subject: String(formData.get('subject') ?? ''),
-    to: String(formData.get('to') ?? ''),
+    message: String(formData.get("message") ?? ""),
+    subject: String(formData.get("subject") ?? ""),
+    to: String(formData.get("to") ?? ""),
   });
 
 const renderComposerPage = ({ form, status }: ComposerPageData) => {
   const statusClass =
-    status?.tone === 'error'
-      ? 'text-sm leading-6 font-medium text-red-700'
-      : status?.tone === 'success'
-        ? 'text-sm leading-6 font-medium text-emerald-700'
-        : 'text-sm leading-6 text-stone-600';
+    status?.tone === "error"
+      ? "text-sm leading-6 font-medium text-red-700"
+      : status?.tone === "success"
+        ? "text-sm leading-6 font-medium text-emerald-700"
+        : "text-sm leading-6 text-stone-600";
 
   return (
     <html lang="en">
@@ -111,11 +111,15 @@ const renderComposerPage = ({ form, status }: ComposerPageData) => {
         <main class="mx-auto w-[min(720px,calc(100vw-32px))] py-6 pb-10">
           <section class="rounded-[32px] border border-white/10 bg-white/6 p-6 backdrop-blur-[20px]">
             <div class="space-y-3">
-              <p class="m-0 text-[12px] uppercase tracking-[0.4em] text-stone-200/70">Cloudflare + Vite + Hono + Tailwind</p>
+              <p class="m-0 text-[12px] uppercase tracking-[0.4em] text-stone-200/70">
+                Cloudflare + Vite + Hono + Tailwind
+              </p>
               <h1 class="m-0 text-[clamp(2rem,4vw,2.8rem)] leading-[1.15] font-[Iowan_Old_Style,Palatino_Linotype,Hiragino_Mincho_ProN,serif]">
                 Minimal send form
               </h1>
-              <p class="m-0 leading-8 text-stone-200/70">Send an email through Cloudflare Email Service directly from a Hono JSX form.</p>
+              <p class="m-0 leading-8 text-stone-200/70">
+                Send an email through Cloudflare Email Service directly from a Hono JSX form.
+              </p>
             </div>
           </section>
 
@@ -123,7 +127,9 @@ const renderComposerPage = ({ form, status }: ComposerPageData) => {
             <div class="mb-6 flex flex-wrap items-center justify-between gap-4">
               <div class="space-y-2">
                 <p class="m-0 text-[12px] uppercase tracking-[0.4em] text-stone-500">Send</p>
-                <h2 class="m-0 font-[Iowan_Old_Style,Palatino_Linotype,Hiragino_Mincho_ProN,serif] text-3xl leading-tight">Email Form</h2>
+                <h2 class="m-0 font-[Iowan_Old_Style,Palatino_Linotype,Hiragino_Mincho_ProN,serif] text-3xl leading-tight">
+                  Email Form
+                </h2>
               </div>
               <div class="rounded-full border border-stone-900/10 bg-white px-3 py-1.5 text-[12px] uppercase tracking-[0.24em] text-stone-600">
                 server rendered
@@ -141,7 +147,9 @@ const renderComposerPage = ({ form, status }: ComposerPageData) => {
                   name="to"
                   value={form.to}
                 />
-                <p class="m-0 text-sm leading-7 text-stone-500">Use commas to send to multiple recipients.</p>
+                <p class="m-0 text-sm leading-7 text-stone-500">
+                  Use commas to send to multiple recipients.
+                </p>
               </div>
 
               <div class="grid gap-2">
@@ -178,7 +186,9 @@ const renderComposerPage = ({ form, status }: ComposerPageData) => {
                 >
                   Reset
                 </a>
-                <span class={statusClass}>{status?.message ?? 'Set EMAIL_FROM and the EMAIL binding, then submit the form.'}</span>
+                <span class={statusClass}>
+                  {status?.message ?? "Set EMAIL_FROM and the EMAIL binding, then submit the form."}
+                </span>
               </div>
             </form>
           </section>
@@ -188,9 +198,9 @@ const renderComposerPage = ({ form, status }: ComposerPageData) => {
   );
 };
 
-app.get('/', async (c) => c.html(renderComposerPage({ form: toWelcomeFormState() })));
+app.get("/", async (c) => c.html(renderComposerPage({ form: toWelcomeFormState() })));
 
-app.post('/send', async (c) => {
+app.post("/send", async (c) => {
   const form = formDataToWelcomeFormState(await c.req.formData());
 
   if (!c.env.EMAIL || !c.env.EMAIL_FROM) {
@@ -198,8 +208,9 @@ app.post('/send', async (c) => {
       renderComposerPage({
         form,
         status: {
-          message: 'EMAIL binding or EMAIL_FROM is missing. Update examples/cloudflare-vite-tailwind/wrangler.jsonc.',
-          tone: 'error',
+          message:
+            "EMAIL binding or EMAIL_FROM is missing. Update examples/cloudflare-vite-tailwind/wrangler.jsonc.",
+          tone: "error",
         },
       }),
       501,
@@ -213,8 +224,8 @@ app.post('/send', async (c) => {
       renderComposerPage({
         form,
         status: {
-          message: '`to` is required. You can pass multiple recipients separated by commas.',
-          tone: 'error',
+          message: "`to` is required. You can pass multiple recipients separated by commas.",
+          tone: "error",
         },
       }),
       400,
@@ -222,8 +233,11 @@ app.post('/send', async (c) => {
   }
 
   const email = createWelcomeEmailInput(form);
-  const [html, text] = await Promise.all([renderWelcomeEmail(email), renderWelcomeEmailText(email)]);
-  const result = await c.env.EMAIL.send({
+  const [html, text] = await Promise.all([
+    renderWelcomeEmail(email),
+    renderWelcomeEmailText(email),
+  ]);
+  await c.env.EMAIL.send({
     from: toFromAddress(c.env.EMAIL_FROM, c.env.EMAIL_FROM_NAME),
     html,
     subject: email.subject,
@@ -236,7 +250,7 @@ app.post('/send', async (c) => {
       form,
       status: {
         message: `Sent successfully.`,
-        tone: 'success',
+        tone: "success",
       },
     }),
   );

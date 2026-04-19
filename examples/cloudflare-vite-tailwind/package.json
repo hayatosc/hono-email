@@ -2,7 +2,6 @@
   "name": "hono-email-cloudflare-vite-tailwind-example",
   "private": true,
   "type": "module",
-  "packageManager": "bun@1.3.12",
   "scripts": {
     "build": "vite build",
     "deploy": "wrangler deploy --config wrangler.jsonc",
@@ -20,5 +19,6 @@
     "typescript": "^6.0.3",
     "vite": "^8.0.8",
     "wrangler": "^4.83.0"
-  }
+  },
+  "packageManager": "bun@1.3.12"
 }

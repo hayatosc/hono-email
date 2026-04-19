@@ -9,6 +9,6 @@
   "send_email": [{ "name": "EMAIL" }],
   "vars": {
     "EMAIL_FROM": "welcome@example.com",
-    "EMAIL_FROM_NAME": "hono-email"
-  }
+    "EMAIL_FROM_NAME": "hono-email",
+  },
 }
