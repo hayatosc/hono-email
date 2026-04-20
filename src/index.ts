@@ -23,10 +23,20 @@ import {
   TAILWIND_ARTIFACT_REQUIRED_ERROR_MESSAGE,
   TAILWIND_ARTIFACT_REQUIRED_TAG_NAME,
 } from "./components";
-export type { FontProps, MarkdownCustomStyles, TailwindBuildArtifact } from "./components";
+export type {
+  FontProps,
+  MarkdownCustomClassNames,
+  MarkdownCustomStyles,
+  MarkdownStyleMode,
+  TailwindBuildArtifact,
+} from "./components";
 import { relocateHeadStyles } from "./normalize/head-styles";
 import { normalizeHtml } from "./normalize/html";
 import { relocatePreview } from "./normalize/preview";
+import {
+  MARKDOWN_TAILWIND_PARENT_REQUIRED_ATTRIBUTE_NAME,
+  MARKDOWN_TAILWIND_PARENT_REQUIRED_ERROR_MESSAGE,
+} from "./markdown";
 import { renderFragmentToHtml } from "./render/html";
 import { prettyPrintHtml } from "./render/pretty";
 export { buildTailwindArtifactFromCss, collectTailwindClassesFromHtml } from "./tailwind";
@@ -72,6 +82,10 @@ const resolveDoctype = (doctype: BaseRenderOptions["doctype"]): string => {
 const renderHtml = async (jsx: Child, options: BaseRenderOptions = {}): Promise<string> => {
   const strict = options.strict ?? true;
   let html = relocateHeadStyles(relocatePreview(normalizeHtml(await renderFragmentToHtml(jsx))));
+
+  if (html.includes(MARKDOWN_TAILWIND_PARENT_REQUIRED_ATTRIBUTE_NAME)) {
+    throw new Error(MARKDOWN_TAILWIND_PARENT_REQUIRED_ERROR_MESSAGE);
+  }
 
   if (html.includes(`<${TAILWIND_ARTIFACT_REQUIRED_TAG_NAME}`)) {
     throw new Error(TAILWIND_ARTIFACT_REQUIRED_ERROR_MESSAGE);

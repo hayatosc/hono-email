@@ -152,7 +152,7 @@ const html = await render(
 
 ## Markdown
 
-`<Markdown>` converts GFM into HTML and applies email-friendly inline styles. Sanitization is enabled by default.
+`<Markdown>` converts GFM into HTML and applies email-friendly inline styles by default. Sanitization is enabled by default.
 
 ```tsx
 import { Body, Head, Html, Markdown, render } from "hono-email";
@@ -186,6 +186,40 @@ const html = await render(
   </Html>,
 );
 ```
+
+### Markdown with Tailwind classes
+
+When you render Markdown inside `<Tailwind>`, you can switch Markdown to class-based mode so Tailwind utilities control the styling.
+`markdownStyleMode="tailwind"` is only supported inside `<Tailwind>` and throws otherwise.
+
+```tsx
+import { Body, Head, Html, Markdown, Tailwind, render } from "hono-email";
+
+const html = await render(
+  <Html lang="en">
+    <Head />
+    <Tailwind>
+      <Body>
+        <Markdown
+          markdownStyleMode="tailwind"
+          markdownContainerClassName="prose text-slate-900"
+          markdownCustomClassNames={{
+            h1: "text-2xl font-semibold",
+            p: "mb-3",
+            codeInline: "bg-slate-100 px-1 rounded",
+          }}
+        >{`
+# Markdown email
+
+Paragraph with \`code\`
+        `}</Markdown>
+      </Body>
+    </Tailwind>
+  </Html>,
+);
+```
+
+`markdownCustomStyles` and `markdownContainerStyles` are still available in this mode if you want to mix class-based and inline overrides.
 
 ## Tailwind
 

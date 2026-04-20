@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { Body, Head, Html, Markdown, render } from "../../src";
+import { Body, Head, Html, Markdown, Tailwind, buildTailwindArtifactFromCss, render } from "../../src";
 
 describe("Markdown", () => {
   test("renders markdown tables and safe raw html", async () => {
@@ -80,6 +80,65 @@ Paragraph with \`code\`
     );
 
     expect(html).toContain("<script>alert('xss')</script>");
+  });
+
+  test("supports class-based markdown styling mode without default inline styles", async () => {
+    const artifact = buildTailwindArtifactFromCss({
+      css: `
+@layer utilities {
+  .md-root { color: #0f172a; }
+  .md-h1 { font-size: 1.25rem; line-height: 1.75rem; }
+  .md-p { margin-bottom: 0.75rem; }
+  .md-code { background-color: #e2e8f0; padding: 2px 4px; }
+}
+`,
+    });
+
+    const html = await render(
+      <Html>
+        <Head />
+        <Tailwind artifact={artifact}>
+          <Body>
+            <Markdown
+              markdownStyleMode="tailwind"
+              markdownContainerClassName="md-root"
+              markdownCustomClassNames={{
+                h1: "md-h1",
+                p: "md-p",
+                codeInline: "md-code",
+              }}
+            >{`
+# Class based
+
+Paragraph with \`code\`
+            `}</Markdown>
+          </Body>
+        </Tailwind>
+      </Html>,
+    );
+
+    expect(html).toContain('class="md-root"');
+    expect(html).toContain('class="md-h1"');
+    expect(html).toContain('class="md-p"');
+    expect(html).toContain('class="md-code"');
+    expect(html).not.toContain("font-size:30px");
+    expect(html).not.toContain("line-height:36px");
+    expect(html).not.toContain("background-color:#f1f5f9");
+  });
+
+  test("throws when tailwind markdown mode is used without a Tailwind parent", async () => {
+    await expect(
+      render(
+        <Html>
+          <Head />
+          <Body>
+            <Markdown markdownStyleMode="tailwind">{`
+# Tailwind mode
+            `}</Markdown>
+          </Body>
+        </Html>,
+      ),
+    ).rejects.toThrow('<Markdown markdownStyleMode="tailwind"> requires a <Tailwind> parent.');
   });
 
   test("sanitizes dangerous attributes, urls, and styles while keeping safe content", async () => {

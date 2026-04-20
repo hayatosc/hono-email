@@ -4,8 +4,10 @@ import { raw } from "hono/html";
 import { renderFontStyleTag, type FontProps } from "../font";
 import {
   renderMarkdownHtml,
+  type MarkdownCustomClassNames,
   type MarkdownCustomStyles,
   type MarkdownRenderOptions,
+  type MarkdownStyleMode,
 } from "../markdown";
 import { renderFragmentToHtml } from "../render/html";
 import { styleObjectFromUnknown } from "../style";
@@ -375,16 +377,28 @@ export const Tailwind = async ({ artifact, children }: TailwindProps) => {
 
 export const Markdown = async ({
   children,
+  markdownContainerClassName,
   markdownContainerStyles,
+  markdownCustomClassNames,
   markdownCustomStyles,
+  markdownStyleMode,
   sanitize,
 }: MarkdownProps) =>
   raw(
     await renderMarkdownHtml(children, {
+      markdownContainerClassName,
       markdownContainerStyles,
+      markdownCustomClassNames,
       markdownCustomStyles,
+      markdownStyleMode,
       sanitize,
     }),
   );
 
-export type { FontProps, MarkdownCustomStyles, TailwindBuildArtifact };
+export type {
+  FontProps,
+  MarkdownCustomClassNames,
+  MarkdownCustomStyles,
+  MarkdownStyleMode,
+  TailwindBuildArtifact,
+};

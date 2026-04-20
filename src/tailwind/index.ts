@@ -1,6 +1,7 @@
 import { HTMLRewriter } from "htmlrewriter";
 import * as csstree from "css-tree";
 
+import { MARKDOWN_TAILWIND_PARENT_REQUIRED_ATTRIBUTE_NAME } from "../markdown";
 import { mergeStyleAttributes, serializeStyleAttribute } from "../style";
 
 export type TailwindBuildArtifact = {
@@ -631,6 +632,11 @@ export const transformTailwindHtml = async (
   const responsiveCss = new Set<string>();
 
   const transformed = await new HTMLRewriter()
+    .on(`[${MARKDOWN_TAILWIND_PARENT_REQUIRED_ATTRIBUTE_NAME}]`, {
+      element(el) {
+        el.removeAttribute(MARKDOWN_TAILWIND_PARENT_REQUIRED_ATTRIBUTE_NAME);
+      },
+    })
     .on("[class]", {
       element(el) {
         const tokens = el.getAttribute("class")!.split(/\s+/).filter(Boolean);
