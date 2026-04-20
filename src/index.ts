@@ -80,6 +80,10 @@ const HONO_CSS_RUNTIME_SCRIPT_PATTERN = new RegExp(
   `<script\\b[^>]*>[\\s\\S]*?document\\.querySelector\\((["'])#${HONO_CSS_STYLE_ID}\\1\\)\\.textContent\\+=`,
   "i",
 );
+const HONO_CSS_RUNTIME_SCRIPT_TAG_PATTERN = new RegExp(
+  `<script\\b[^>]*>[\\s\\S]*?document\\.querySelector\\((["'])#${HONO_CSS_STYLE_ID}\\1\\)\\.textContent\\+=(["'])([\\s\\S]*?)\\2;?[\\s\\S]*?<\\/script>`,
+  "gi",
+);
 const HONO_CSS_STYLE_REQUIRED_ERROR_MESSAGE =
   'hono/css styles require <Head><Style /></Head> in hono-email. Import Style from "hono/css" and place it inside <Head>.';
 const HONO_CSS_STYLE_HEAD_REQUIRED_ERROR_MESSAGE =
@@ -106,9 +110,19 @@ const extractHeadBounds = (html: string): { headOpen: number; headClose: number 
   };
 };
 
-const extractHonoCssFromHtml = (html: string): { css: string; html: string } => {
+const decodeHonoCssRuntimeString = (rawCss: string): string =>
+  rawCss
+    .replace(/\\\\/g, "\\")
+    .replace(/\\n/g, "\n")
+    .replace(/\\r/g, "\r")
+    .replace(/\\t/g, "\t")
+    .replace(/\\"/g, '"')
+    .replace(/\\'/g, "'");
+
+const extractHonoCssFromHtml = (html: string): { css: string; foundStyleTag: boolean; html: string } => {
   const { headClose, headOpen } = extractHeadBounds(html);
   const cssChunks: string[] = [];
+  let foundStyleTag = false;
 
   const stripped = html.replace(
     HONO_CSS_STYLE_TAG_PATTERN,
@@ -117,6 +131,7 @@ const extractHonoCssFromHtml = (html: string): { css: string; html: string } => 
       if (!insideHead) {
         throw new Error(HONO_CSS_STYLE_HEAD_REQUIRED_ERROR_MESSAGE);
       }
+      foundStyleTag = true;
       cssChunks.push(cssText);
       return "";
     },
@@ -124,22 +139,52 @@ const extractHonoCssFromHtml = (html: string): { css: string; html: string } => 
 
   return {
     css: cssChunks.join("\n").trim(),
+    foundStyleTag,
+    html: stripped,
+  };
+};
+
+const extractHonoCssRuntimeScripts = (
+  html: string,
+): { css: string; foundScript: boolean; html: string } => {
+  const cssChunks: string[] = [];
+  let foundScript = false;
+
+  const stripped = html.replace(
+    HONO_CSS_RUNTIME_SCRIPT_TAG_PATTERN,
+    (_fullMatch: string, _selectorQuote: string, _cssQuote: string, rawCssText: string) => {
+      foundScript = true;
+      cssChunks.push(decodeHonoCssRuntimeString(rawCssText));
+      return "";
+    },
+  );
+
+  return {
+    css: cssChunks.join("\n").trim(),
+    foundScript,
     html: stripped,
   };
 };
 
 const transformHonoCssOutput = async (html: string): Promise<string> => {
-  if (HONO_CSS_RUNTIME_SCRIPT_PATTERN.test(html)) {
+  const extracted = extractHonoCssFromHtml(html);
+  const runtimeExtracted = extractHonoCssRuntimeScripts(extracted.html);
+
+  if (runtimeExtracted.foundScript && !extracted.foundStyleTag) {
     throw new Error(HONO_CSS_STYLE_REQUIRED_ERROR_MESSAGE);
   }
 
-  const extracted = extractHonoCssFromHtml(html);
-  if (extracted.css === "") {
-    return html;
+  const css = [extracted.css, runtimeExtracted.css].filter((chunk) => chunk !== "").join("\n").trim();
+  if (css === "") {
+    if (HONO_CSS_RUNTIME_SCRIPT_PATTERN.test(html)) {
+      throw new Error(HONO_CSS_STYLE_REQUIRED_ERROR_MESSAGE);
+    }
+    return runtimeExtracted.html;
   }
 
-  const artifact = buildTailwindArtifactFromCss({ css: extracted.css });
-  const transformed = await transformTailwindHtml(extracted.html, artifact, {
+  const artifact = buildTailwindArtifactFromCss({ css });
+  const transformed = await transformTailwindHtml(runtimeExtracted.html, artifact, {
+    preserveMarkdownTailwindParentRequiredAttribute: true,
     throwOnMissingClass: false,
   });
 

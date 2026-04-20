@@ -371,7 +371,9 @@ export const Tailwind = async ({ artifact, children }: TailwindProps) => {
   }
 
   const renderedChildren = await renderFragmentToHtml(<>{children}</>);
-  const transformed = await transformTailwindHtml(renderedChildren, artifact);
+  const transformed = await transformTailwindHtml(renderedChildren, artifact, {
+    ignoreMissingClass: (className) => className.startsWith("css-"),
+  });
   return raw(`${wrapGeneratedHeadCss(transformed.headCss)}${transformed.html}`);
 };
 

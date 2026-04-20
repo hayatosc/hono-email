@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { Style, css, cx } from "hono/css";
 
-import { Body, Head, Html, Text, render } from "../../src";
+import { Body, Head, Html, Markdown, Tailwind, Text, buildTailwindArtifactFromCss, render } from "../../src";
 
 const StyledEmail = ({ includeStyle = true }: { includeStyle?: boolean } = {}) => {
   const titleClassName = css`
@@ -79,5 +79,62 @@ describe("hono/css integration", () => {
         </Html>,
       ),
     ).rejects.toThrow("must be inside <Head>");
+  });
+
+  test("coexists with Tailwind when hono/css classes are used inside <Tailwind>", async () => {
+    const artifact = buildTailwindArtifactFromCss({
+      css: `
+@layer utilities {
+  .text-brand { color: #0f172a; }
+  .px-4 { padding-inline: 1rem; }
+}
+`,
+    });
+    const className = cx(
+      css`
+        background-color: #e2e8f0;
+      `,
+      "text-brand px-4",
+    );
+
+    const html = await render(
+      <Html>
+        <Head>
+          <Style />
+        </Head>
+        <Tailwind artifact={artifact}>
+          <Body>
+            <Text className={className}>Mixed Tailwind and hono/css</Text>
+          </Body>
+        </Tailwind>
+      </Html>,
+    );
+
+    expect(html).toContain("color:#0f172a");
+    expect(html).toContain("padding-left:16px");
+    expect(html).toContain("padding-right:16px");
+    expect(html).toContain("background-color:#e2e8f0");
+  });
+
+  test("keeps markdown tailwind parent guard active while processing hono/css styles", async () => {
+    const className = css`
+      color: #0f172a;
+    `;
+
+    await expect(
+      render(
+        <Html>
+          <Head>
+            <Style />
+          </Head>
+          <Body>
+            <Text className={className}>Styled</Text>
+            <Markdown markdownStyleMode="tailwind">{`
+# Tailwind mode
+            `}</Markdown>
+          </Body>
+        </Html>,
+      ),
+    ).rejects.toThrow('<Markdown markdownStyleMode="tailwind"> requires a <Tailwind> parent.');
   });
 });

@@ -22,6 +22,8 @@ type TailwindRenderResult = {
 
 export type TransformTailwindHtmlOptions = {
   throwOnMissingClass?: boolean;
+  ignoreMissingClass?: (className: string) => boolean;
+  preserveMarkdownTailwindParentRequiredAttribute?: boolean;
 };
 
 const REM_TO_PX_FACTOR = 16;
@@ -635,14 +637,22 @@ export const transformTailwindHtml = async (
 ): Promise<TailwindRenderResult> => {
   const knownClasses = new Set(artifact.classes);
   const throwOnMissingClass = options.throwOnMissingClass ?? true;
+  const ignoreMissingClass = options.ignoreMissingClass;
+  const preserveMarkdownTailwindParentRequiredAttribute =
+    options.preserveMarkdownTailwindParentRequiredAttribute ?? false;
   const responsiveCss = new Set<string>();
 
-  const transformed = await new HTMLRewriter()
-    .on(`[${MARKDOWN_TAILWIND_PARENT_REQUIRED_ATTRIBUTE_NAME}]`, {
+  let rewriter = new HTMLRewriter();
+
+  if (!preserveMarkdownTailwindParentRequiredAttribute) {
+    rewriter = rewriter.on(`[${MARKDOWN_TAILWIND_PARENT_REQUIRED_ATTRIBUTE_NAME}]`, {
       element(el) {
         el.removeAttribute(MARKDOWN_TAILWIND_PARENT_REQUIRED_ATTRIBUTE_NAME);
       },
-    })
+    });
+  }
+
+  const transformed = await rewriter
     .on("[class]", {
       element(el) {
         const tokens = el.getAttribute("class")!.split(/\s+/).filter(Boolean);
@@ -650,6 +660,9 @@ export const transformTailwindHtml = async (
 
         for (const token of tokens) {
           if (!knownClasses.has(token)) {
+            if (ignoreMissingClass?.(token)) {
+              continue;
+            }
             if (throwOnMissingClass) {
               throw new Error(
                 `Tailwind class '${token}' is missing from the build artifact. Rebuild the artifact before rendering with <Tailwind>.`,
