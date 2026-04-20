@@ -29,6 +29,11 @@ type LinkProps = PropsWithChildren<Omit<ElementProps<"a">, "children" | "href"> 
 
 type ImageProps = Omit<ElementProps<"img">, "src" | "alt"> & { src: string; alt: string };
 
+type OutlookCssProperties = JSX.CSSProperties & {
+  msoPaddingAlt?: string;
+  msoTextRaise?: string;
+};
+
 const BOX_DIRECTIONS = ["Top", "Right", "Bottom", "Left"] as const;
 
 const isNumericString = (value: string): boolean => /^-?\d+(\.\d+)?$/.test(value.trim());
@@ -210,42 +215,34 @@ export const Button: FC<LinkProps> = ({ children, style, target = "_blank", ...p
   const innerTextRaise = pxToPt(paddingBottom);
   const [leftFontWidth, leftSpaceCount] = computeFontWidthAndSpaceCount(paddingLeft);
   const [rightFontWidth, rightSpaceCount] = computeFontWidthAndSpaceCount(paddingRight);
+  const buttonStyle: OutlookCssProperties = {
+    lineHeight: "100%",
+    textDecoration: "none",
+    display: "inline-block",
+    maxWidth: "100%",
+    msoPaddingAlt: "0px",
+    ...styleObject,
+    ...(padding.Top ? { paddingTop: padding.Top } : {}),
+    ...(padding.Right ? { paddingRight: padding.Right } : {}),
+    ...(padding.Bottom ? { paddingBottom: padding.Bottom } : {}),
+    ...(padding.Left ? { paddingLeft: padding.Left } : {}),
+  };
+  const innerTextStyle: OutlookCssProperties = {
+    maxWidth: "100%",
+    display: "inline-block",
+    lineHeight: "120%",
+    msoPaddingAlt: "0px",
+    ...(paddingBottom > 0 ? { msoTextRaise: innerTextRaise } : {}),
+  };
 
   return (
-    <a
-      {...props}
-      style={
-        {
-          lineHeight: "100%",
-          textDecoration: "none",
-          display: "inline-block",
-          maxWidth: "100%",
-          msoPaddingAlt: "0px",
-          ...styleObject,
-          ...(padding.Top ? { paddingTop: padding.Top } : {}),
-          ...(padding.Right ? { paddingRight: padding.Right } : {}),
-          ...(padding.Bottom ? { paddingBottom: padding.Bottom } : {}),
-          ...(padding.Left ? { paddingLeft: padding.Left } : {}),
-        } as unknown as JSX.CSSProperties
-      }
-      target={target}
-    >
+    <a {...props} style={buttonStyle} target={target}>
       <span>
         {raw(
           `<!--[if mso]><i style="mso-font-width:${leftFontWidth * 100}%;mso-text-raise:${textRaise}" hidden>${"&#8202;".repeat(leftSpaceCount)}</i><![endif]-->`,
         )}
       </span>
-      <span
-        style={
-          {
-            maxWidth: "100%",
-            display: "inline-block",
-            lineHeight: "120%",
-            msoPaddingAlt: "0px",
-            ...(paddingBottom > 0 ? { msoTextRaise: innerTextRaise } : {}),
-          } as unknown as JSX.CSSProperties
-        }
-      >
+      <span style={innerTextStyle}>
         {children}
       </span>
       <span>

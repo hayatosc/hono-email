@@ -76,6 +76,41 @@ const text = await render(<WelcomeEmail />, {
 });
 ```
 
+## Type-safe template helpers
+
+`defineEmail()` and `renderTemplate()` let you keep email props strongly typed without manually writing JSX at each call site.
+
+```tsx
+import { defineEmail, renderTemplate } from "hono-email";
+
+type WelcomeEmailProps = {
+  name: string;
+  inviteUrl: string;
+};
+
+const WelcomeEmail = ({ name, inviteUrl }: WelcomeEmailProps) => (
+  <Html>
+    <Body>
+      <Text>Hello {name}</Text>
+      <Button href={inviteUrl}>Open invitation</Button>
+    </Body>
+  </Html>
+);
+
+const welcomeEmail = defineEmail(WelcomeEmail);
+
+const html = await welcomeEmail.render({
+  name: "Hayato",
+  inviteUrl: "https://example.com/invite",
+});
+
+const text = await renderTemplate(
+  WelcomeEmail,
+  { name: "Hayato", inviteUrl: "https://example.com/invite" },
+  { output: "text" },
+);
+```
+
 ## Components
 
 - `Html`

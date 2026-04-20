@@ -10,7 +10,21 @@ const toKebabCase = (value: string): string =>
 
 export const styleObjectFromUnknown = (style: unknown): StyleRecord | undefined => {
   if (typeof style === "object" && style !== null && !Array.isArray(style)) {
-    return style as StyleRecord;
+    const normalized: StyleRecord = {};
+
+    for (const [key, value] of Object.entries(style)) {
+      if (value === undefined || value === null) {
+        continue;
+      }
+
+      if (typeof value !== "string" && typeof value !== "number") {
+        return undefined;
+      }
+
+      normalized[key] = value;
+    }
+
+    return normalized;
   }
 
   return undefined;

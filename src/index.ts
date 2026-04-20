@@ -55,6 +55,8 @@ type BaseRenderOptions = {
   strict?: boolean;
 };
 
+type Awaitable<T> = T | Promise<T>;
+
 export type HtmlRenderOptions = BaseRenderOptions & {
   output?: "html";
 };
@@ -65,6 +67,19 @@ export type TextRenderOptions = BaseRenderOptions & {
 };
 
 export type RenderOptions = HtmlRenderOptions | TextRenderOptions;
+export type EmailTemplate<Props extends Record<string, unknown> = Record<string, never>> = (
+  props: Props,
+) => Awaitable<Child>;
+export type EmailRenderer<Props extends Record<string, unknown>> = {
+  (props: Props, options?: HtmlRenderOptions): Promise<string>;
+  (props: Props, options: TextRenderOptions): Promise<string>;
+};
+export type DefinedEmail<Props extends Record<string, unknown>> = {
+  readonly template: EmailTemplate<Props>;
+  readonly render: EmailRenderer<Props>;
+};
+export type InferEmailProps<Template> =
+  Template extends EmailTemplate<infer Props> ? Props : never;
 
 export type { BaseRenderOptions };
 
@@ -226,6 +241,7 @@ const renderHtml = async (jsx: Child, options: BaseRenderOptions = {}): Promise<
 
 export async function render(jsx: Child, options?: HtmlRenderOptions): Promise<string>;
 export async function render(jsx: Child, options: TextRenderOptions): Promise<string>;
+export async function render(jsx: Child, options: RenderOptions): Promise<string>;
 export async function render(jsx: Child, options: RenderOptions = {}): Promise<string> {
   const html = await renderHtml(jsx, options);
 
@@ -235,3 +251,42 @@ export async function render(jsx: Child, options: RenderOptions = {}): Promise<s
 
   return html;
 }
+
+export async function renderTemplate<Props extends Record<string, unknown>>(
+  template: EmailTemplate<Props>,
+  props: Props,
+  options?: HtmlRenderOptions,
+): Promise<string>;
+export async function renderTemplate<Props extends Record<string, unknown>>(
+  template: EmailTemplate<Props>,
+  props: Props,
+  options: TextRenderOptions,
+): Promise<string>;
+export async function renderTemplate<Props extends Record<string, unknown>>(
+  template: EmailTemplate<Props>,
+  props: Props,
+  options: RenderOptions,
+): Promise<string>;
+export async function renderTemplate<Props extends Record<string, unknown>>(
+  template: EmailTemplate<Props>,
+  props: Props,
+  options: RenderOptions = {},
+): Promise<string> {
+  const jsx = await template(props);
+  return render(jsx, options);
+}
+
+export const defineEmail = <Props extends Record<string, unknown>>(
+  template: EmailTemplate<Props>,
+): DefinedEmail<Props> => {
+  async function renderDefined(props: Props, options?: HtmlRenderOptions): Promise<string>;
+  async function renderDefined(props: Props, options: TextRenderOptions): Promise<string>;
+  async function renderDefined(props: Props, options: RenderOptions = {}): Promise<string> {
+    return renderTemplate(template, props, options);
+  }
+
+  return {
+    template,
+    render: renderDefined,
+  };
+};
