@@ -63,12 +63,13 @@ const splitRecipients = (value: string | undefined): string[] =>
 
 const toRecipient = (value: string | undefined): Recipient | null => {
   const recipients = splitRecipients(value)
+  const first = recipients[0]
 
-  if (recipients.length === 0) {
+  if (recipients.length === 0 || first === undefined) {
     return null
   }
 
-  return recipients.length === 1 ? recipients[0] : recipients
+  return recipients.length === 1 ? first : recipients
 }
 
 const toFromAddress = (email: string, name: string | undefined): string | EmailAddress =>
