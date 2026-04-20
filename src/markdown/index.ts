@@ -284,73 +284,14 @@ export const renderMarkdownHtml = async (
         );
 
   const s = options.markdownCustomStyles;
-  const c = options.markdownCustomClassNames;
-  const styles: Record<MarkdownStyleKey, Record<string, string>> = {
-    a: { ...(styleMode === "inline" ? DEFAULT_MARKDOWN_STYLES.a : {}), ...normalizeStyleObject(s?.a) },
-    blockquote: {
-      ...(styleMode === "inline" ? DEFAULT_MARKDOWN_STYLES.blockquote : {}),
-      ...normalizeStyleObject(s?.blockquote),
-    },
-    code: {
-      ...(styleMode === "inline" ? DEFAULT_MARKDOWN_STYLES.code : {}),
-      ...normalizeStyleObject(s?.code),
-    },
-    codeInline: {
-      ...(styleMode === "inline" ? DEFAULT_MARKDOWN_STYLES.codeInline : {}),
-      ...normalizeStyleObject(s?.codeInline),
-    },
-    h1: { ...(styleMode === "inline" ? DEFAULT_MARKDOWN_STYLES.h1 : {}), ...normalizeStyleObject(s?.h1) },
-    h2: { ...(styleMode === "inline" ? DEFAULT_MARKDOWN_STYLES.h2 : {}), ...normalizeStyleObject(s?.h2) },
-    h3: { ...(styleMode === "inline" ? DEFAULT_MARKDOWN_STYLES.h3 : {}), ...normalizeStyleObject(s?.h3) },
-    h4: { ...(styleMode === "inline" ? DEFAULT_MARKDOWN_STYLES.h4 : {}), ...normalizeStyleObject(s?.h4) },
-    h5: { ...(styleMode === "inline" ? DEFAULT_MARKDOWN_STYLES.h5 : {}), ...normalizeStyleObject(s?.h5) },
-    h6: { ...(styleMode === "inline" ? DEFAULT_MARKDOWN_STYLES.h6 : {}), ...normalizeStyleObject(s?.h6) },
-    img: { ...(styleMode === "inline" ? DEFAULT_MARKDOWN_STYLES.img : {}), ...normalizeStyleObject(s?.img) },
-    li: { ...(styleMode === "inline" ? DEFAULT_MARKDOWN_STYLES.li : {}), ...normalizeStyleObject(s?.li) },
-    ol: { ...(styleMode === "inline" ? DEFAULT_MARKDOWN_STYLES.ol : {}), ...normalizeStyleObject(s?.ol) },
-    p: { ...(styleMode === "inline" ? DEFAULT_MARKDOWN_STYLES.p : {}), ...normalizeStyleObject(s?.p) },
-    pre: { ...(styleMode === "inline" ? DEFAULT_MARKDOWN_STYLES.pre : {}), ...normalizeStyleObject(s?.pre) },
-    table: {
-      ...(styleMode === "inline" ? DEFAULT_MARKDOWN_STYLES.table : {}),
-      ...normalizeStyleObject(s?.table),
-    },
-    tbody: {
-      ...(styleMode === "inline" ? DEFAULT_MARKDOWN_STYLES.tbody : {}),
-      ...normalizeStyleObject(s?.tbody),
-    },
-    td: { ...(styleMode === "inline" ? DEFAULT_MARKDOWN_STYLES.td : {}), ...normalizeStyleObject(s?.td) },
-    th: { ...(styleMode === "inline" ? DEFAULT_MARKDOWN_STYLES.th : {}), ...normalizeStyleObject(s?.th) },
-    thead: {
-      ...(styleMode === "inline" ? DEFAULT_MARKDOWN_STYLES.thead : {}),
-      ...normalizeStyleObject(s?.thead),
-    },
-    tr: { ...(styleMode === "inline" ? DEFAULT_MARKDOWN_STYLES.tr : {}), ...normalizeStyleObject(s?.tr) },
-    ul: { ...(styleMode === "inline" ? DEFAULT_MARKDOWN_STYLES.ul : {}), ...normalizeStyleObject(s?.ul) },
-  };
-  const classNames: Record<MarkdownStyleKey, string | undefined> = {
-    a: c?.a,
-    blockquote: c?.blockquote,
-    code: c?.code,
-    codeInline: c?.codeInline,
-    h1: c?.h1,
-    h2: c?.h2,
-    h3: c?.h3,
-    h4: c?.h4,
-    h5: c?.h5,
-    h6: c?.h6,
-    img: c?.img,
-    li: c?.li,
-    ol: c?.ol,
-    p: c?.p,
-    pre: c?.pre,
-    table: c?.table,
-    tbody: c?.tbody,
-    td: c?.td,
-    th: c?.th,
-    thead: c?.thead,
-    tr: c?.tr,
-    ul: c?.ul,
-  };
+  const classNames = options.markdownCustomClassNames ?? {};
+  const mergeStyle = (key: MarkdownStyleKey): Record<string, string> => ({
+    ...(styleMode === "inline" ? DEFAULT_MARKDOWN_STYLES[key] : {}),
+    ...normalizeStyleObject(s?.[key]),
+  });
+  const styles = Object.fromEntries(
+    (Object.keys(DEFAULT_MARKDOWN_STYLES) as MarkdownStyleKey[]).map((key) => [key, mergeStyle(key)]),
+  ) as Record<MarkdownStyleKey, Record<string, string>>;
 
   const containerStyle = mergeStyleAttributes(undefined, {
     ...(styleMode === "inline" ? DEFAULT_CONTAINER_STYLE : {}),
