@@ -1,0 +1,122 @@
+name: Create Release PR
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  create-release-pr:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check if version changed
+        id: version
+        run: |
+          NEW_VERSION=$(node -p "require('./package.json').version")
+
+          # Get the previous commit's version
+          OLD_VERSION=$(git show HEAD~1:package.json 2>/dev/null \
+            | node -e "let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>console.log(JSON.parse(d).version))" \
+            || echo "")
+
+          echo "new_version=$NEW_VERSION" >> "$GITHUB_OUTPUT"
+          echo "old_version=$OLD_VERSION" >> "$GITHUB_OUTPUT"
+
+          if [ "$NEW_VERSION" != "$OLD_VERSION" ] && [ -n "$OLD_VERSION" ]; then
+            echo "version_changed=true" >> "$GITHUB_OUTPUT"
+            echo "Version changed: $OLD_VERSION -> $NEW_VERSION"
+          else
+            echo "version_changed=false" >> "$GITHUB_OUTPUT"
+            echo "Version not changed (new: $NEW_VERSION, old: $OLD_VERSION)"
+          fi
+
+      - name: Generate CHANGELOG entry
+        if: steps.version.outputs.version_changed == 'true'
+        run: |
+          VERSION="${{ steps.version.outputs.new_version }}"
+          DATE=$(date -u +%Y-%m-%d)
+
+          # Collect commits since the last tag (or all commits if no tag exists)
+          LAST_TAG=$(git tag --sort=-version:refname | head -1)
+          if [ -n "$LAST_TAG" ]; then
+            COMMITS=$(git log "${LAST_TAG}..HEAD" --pretty=format:"- %s" --no-merges)
+          else
+            COMMITS=$(git log HEAD --pretty=format:"- %s" --no-merges)
+          fi
+
+          if [ -z "$COMMITS" ]; then
+            COMMITS="- Version bump to ${VERSION}"
+          fi
+
+          # Build the new entry
+          {
+            echo "## [${VERSION}] - ${DATE}"
+            echo ""
+            echo "${COMMITS}"
+            echo ""
+          } > /tmp/new_entry.md
+
+          # Prepend to CHANGELOG.md (create it if it does not exist)
+          if [ -f CHANGELOG.md ]; then
+            if head -1 CHANGELOG.md | grep -q "^#"; then
+              head -1 CHANGELOG.md > /tmp/new_changelog.md
+              echo "" >> /tmp/new_changelog.md
+              cat /tmp/new_entry.md >> /tmp/new_changelog.md
+              tail -n +2 CHANGELOG.md >> /tmp/new_changelog.md
+            else
+              cat /tmp/new_entry.md CHANGELOG.md > /tmp/new_changelog.md
+            fi
+          else
+            {
+              echo "# Changelog"
+              echo ""
+              cat /tmp/new_entry.md
+            } > /tmp/new_changelog.md
+          fi
+
+          cp /tmp/new_changelog.md CHANGELOG.md
+
+      - name: Create release branch and open PR
+        if: steps.version.outputs.version_changed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION="${{ steps.version.outputs.new_version }}"
+          BRANCH="release/v${VERSION}"
+
+          # Skip if branch already exists (e.g. re-push with the same version)
+          if git ls-remote --exit-code --heads origin "$BRANCH" >/dev/null 2>&1; then
+            echo "Branch $BRANCH already exists, skipping."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git checkout -b "$BRANCH"
+          git add CHANGELOG.md
+          git commit -m "chore: update CHANGELOG.md for v${VERSION}"
+          git push origin "$BRANCH"
+
+          # Extract the new entry from CHANGELOG.md for the PR body
+          NOTES=$(awk "/^## \[${VERSION}\]/{found=1; next} found && /^## \[/{exit} found{print}" CHANGELOG.md | sed '/^[[:space:]]*$/d')
+
+          gh pr create \
+            --title "Release v${VERSION}" \
+            --body "## Release v${VERSION}
+
+This PR adds the CHANGELOG.md entry for version \`${VERSION}\`.
+Merging this PR will trigger an npm publish and a GitHub Release.
+
+### Changes
+
+${NOTES}" \
+            --base main \
+            --head "$BRANCH"
