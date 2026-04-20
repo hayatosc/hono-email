@@ -7,7 +7,7 @@
   "categories": {
     "correctness": "error"
   },
-  "ignorePatterns": ["dist/**", "node_modules/**", "examples/**/node_modules/**"],
+  "ignorePatterns": ["dist/**", "node_modules/**", "examples/**"],
   "rules": {
     "typescript/no-explicit-any": "error",
     "typescript/no-unsafe-type-assertion": "error",
