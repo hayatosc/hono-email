@@ -1,4 +1,4 @@
-import type { Child } from "hono/jsx";
+import type { Child } from 'hono/jsx'
 
 export {
   Body,
@@ -18,280 +18,280 @@ export {
   Section,
   Tailwind,
   Text,
-} from "./components";
+} from './components'
 import {
   TAILWIND_ARTIFACT_REQUIRED_ERROR_MESSAGE,
   TAILWIND_ARTIFACT_REQUIRED_TAG_NAME,
-} from "./components";
+} from './components'
 export type {
   FontProps,
   MarkdownCustomClassNames,
   MarkdownCustomStyles,
   MarkdownStyleMode,
   TailwindBuildArtifact,
-} from "./components";
-import { relocateHeadStyles } from "./normalize/head-styles";
-import { normalizeHtml } from "./normalize/html";
-import { relocatePreview } from "./normalize/preview";
+} from './components'
+import { relocateHeadStyles } from './normalize/head-styles'
+import { normalizeHtml } from './normalize/html'
+import { relocatePreview } from './normalize/preview'
 import {
   MARKDOWN_TAILWIND_PARENT_REQUIRED_ATTRIBUTE_NAME,
   MARKDOWN_TAILWIND_PARENT_REQUIRED_ERROR_MESSAGE,
-} from "./markdown";
-import { renderFragmentToHtml } from "./render/html";
-import { prettyPrintHtml } from "./render/pretty";
+} from './markdown'
+import { renderFragmentToHtml } from './render/html'
+import { prettyPrintHtml } from './render/pretty'
 import {
   buildTailwindArtifactFromCss,
   transformTailwindHtml,
   wrapGeneratedHeadCss,
-} from "./tailwind";
-export { buildTailwindArtifactFromCss, collectTailwindClassesFromHtml } from "./tailwind";
-export type { BuildTailwindArtifactFromCssOptions } from "./tailwind";
-import { renderPlainText, type PlainTextRenderOptions } from "./text";
-import { validateHtml } from "./validate/html";
+} from './tailwind'
+export { buildTailwindArtifactFromCss, collectTailwindClassesFromHtml } from './tailwind'
+export type { BuildTailwindArtifactFromCssOptions } from './tailwind'
+import { renderPlainText, type PlainTextRenderOptions } from './text'
+import { validateHtml } from './validate/html'
 
 type BaseRenderOptions = {
-  doctype?: "html5" | "xhtml-transitional" | false;
-  pretty?: boolean;
-  strict?: boolean;
-};
+  doctype?: 'html5' | 'xhtml-transitional' | false
+  pretty?: boolean
+  strict?: boolean
+}
 
-type Awaitable<T> = T | Promise<T>;
+type Awaitable<T> = T | Promise<T>
 
 export type HtmlRenderOptions = BaseRenderOptions & {
-  output?: "html";
-};
+  output?: 'html'
+}
 
 export type TextRenderOptions = BaseRenderOptions & {
-  output: "text";
-  text?: PlainTextRenderOptions;
-};
+  output: 'text'
+  text?: PlainTextRenderOptions
+}
 
-export type RenderOptions = HtmlRenderOptions | TextRenderOptions;
+export type RenderOptions = HtmlRenderOptions | TextRenderOptions
 export type EmailTemplate<Props extends Record<string, unknown> = Record<string, never>> = (
   props: Props,
-) => Awaitable<Child>;
+) => Awaitable<Child>
 export type EmailRenderer<Props extends Record<string, unknown>> = {
-  (props: Props, options?: HtmlRenderOptions): Promise<string>;
-  (props: Props, options: TextRenderOptions): Promise<string>;
-};
+  (props: Props, options?: HtmlRenderOptions): Promise<string>
+  (props: Props, options: TextRenderOptions): Promise<string>
+}
 export type DefinedEmail<Props extends Record<string, unknown>> = {
-  readonly template: EmailTemplate<Props>;
-  readonly render: EmailRenderer<Props>;
-};
-export type InferEmailProps<Template> = Template extends EmailTemplate<infer Props> ? Props : never;
+  readonly template: EmailTemplate<Props>
+  readonly render: EmailRenderer<Props>
+}
+export type InferEmailProps<Template> = Template extends EmailTemplate<infer Props> ? Props : never
 
-export type { BaseRenderOptions };
+export type { BaseRenderOptions }
 
-const HTML5_DOCTYPE = "<!DOCTYPE html>";
+const HTML5_DOCTYPE = '<!DOCTYPE html>'
 const XHTML_TRANSITIONAL_DOCTYPE =
-  '<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">';
-const HONO_CSS_STYLE_ID = "hono-css";
+  '<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">'
+const HONO_CSS_STYLE_ID = 'hono-css'
 const HONO_CSS_STYLE_TAG_PATTERN = new RegExp(
   `<style\\b(?=[^>]*\\bid=(["'])${HONO_CSS_STYLE_ID}\\1)[^>]*>([\\s\\S]*?)<\\/style>`,
-  "gi",
-);
+  'gi',
+)
 const HONO_CSS_RUNTIME_SCRIPT_PATTERN = new RegExp(
   `<script\\b[^>]*>[\\s\\S]*?document\\.querySelector\\((["'])#${HONO_CSS_STYLE_ID}\\1\\)\\.textContent\\+=`,
-  "i",
-);
+  'i',
+)
 const HONO_CSS_RUNTIME_SCRIPT_TAG_PATTERN = new RegExp(
   `<script\\b[^>]*>[\\s\\S]*?document\\.querySelector\\((["'])#${HONO_CSS_STYLE_ID}\\1\\)\\.textContent\\+=(["'])([\\s\\S]*?)\\2;?[\\s\\S]*?<\\/script>`,
-  "gi",
-);
+  'gi',
+)
 const HONO_CSS_STYLE_REQUIRED_ERROR_MESSAGE =
-  'hono/css styles require <Head><Style /></Head> in hono-email. Import Style from "hono/css" and place it inside <Head>.';
+  'hono/css styles require <Head><Style /></Head> in hono-email. Import Style from "hono/css" and place it inside <Head>.'
 const HONO_CSS_STYLE_HEAD_REQUIRED_ERROR_MESSAGE =
-  "The hono/css <Style /> tag must be inside <Head> when rendering with hono-email.";
+  'The hono/css <Style /> tag must be inside <Head> when rendering with hono-email.'
 
-const resolveDoctype = (doctype: BaseRenderOptions["doctype"]): string => {
+const resolveDoctype = (doctype: BaseRenderOptions['doctype']): string => {
   if (doctype === false) {
-    return "";
+    return ''
   }
 
-  if (doctype === "xhtml-transitional") {
-    return XHTML_TRANSITIONAL_DOCTYPE;
+  if (doctype === 'xhtml-transitional') {
+    return XHTML_TRANSITIONAL_DOCTYPE
   }
 
-  return HTML5_DOCTYPE;
-};
+  return HTML5_DOCTYPE
+}
 
 const extractHeadBounds = (html: string): { headOpen: number; headClose: number } => {
-  const headOpenMatch = html.match(/<head\b[^>]*>/i);
-  const headCloseMatch = html.match(/<\/head>/i);
+  const headOpenMatch = html.match(/<head\b[^>]*>/i)
+  const headCloseMatch = html.match(/<\/head>/i)
   return {
     headOpen: headOpenMatch?.index ?? -1,
     headClose: headCloseMatch?.index ?? -1,
-  };
-};
+  }
+}
 
 const decodeHonoCssRuntimeString = (rawCss: string): string =>
   rawCss
-    .replace(/\\\\/g, "\\")
-    .replace(/\\n/g, "\n")
-    .replace(/\\r/g, "\r")
-    .replace(/\\t/g, "\t")
+    .replace(/\\\\/g, '\\')
+    .replace(/\\n/g, '\n')
+    .replace(/\\r/g, '\r')
+    .replace(/\\t/g, '\t')
     .replace(/\\"/g, '"')
-    .replace(/\\'/g, "'");
+    .replace(/\\'/g, "'")
 
 const extractHonoCssFromHtml = (
   html: string,
 ): { css: string; foundStyleTag: boolean; html: string } => {
-  const { headClose, headOpen } = extractHeadBounds(html);
-  const cssChunks: string[] = [];
-  let foundStyleTag = false;
+  const { headClose, headOpen } = extractHeadBounds(html)
+  const cssChunks: string[] = []
+  let foundStyleTag = false
 
   const stripped = html.replace(
     HONO_CSS_STYLE_TAG_PATTERN,
     (_fullMatch: string, _quote: string, cssText: string, offset: number) => {
       const insideHead =
-        headOpen >= 0 && headClose >= 0 && offset >= headOpen && offset <= headClose;
+        headOpen >= 0 && headClose >= 0 && offset >= headOpen && offset <= headClose
       if (!insideHead) {
-        throw new Error(HONO_CSS_STYLE_HEAD_REQUIRED_ERROR_MESSAGE);
+        throw new Error(HONO_CSS_STYLE_HEAD_REQUIRED_ERROR_MESSAGE)
       }
-      foundStyleTag = true;
-      cssChunks.push(cssText);
-      return "";
+      foundStyleTag = true
+      cssChunks.push(cssText)
+      return ''
     },
-  );
+  )
 
   return {
-    css: cssChunks.join("\n").trim(),
+    css: cssChunks.join('\n').trim(),
     foundStyleTag,
     html: stripped,
-  };
-};
+  }
+}
 
 const extractHonoCssRuntimeScripts = (
   html: string,
 ): { css: string; foundScript: boolean; html: string } => {
-  const cssChunks: string[] = [];
-  let foundScript = false;
+  const cssChunks: string[] = []
+  let foundScript = false
 
   const stripped = html.replace(
     HONO_CSS_RUNTIME_SCRIPT_TAG_PATTERN,
     (_fullMatch: string, _selectorQuote: string, _cssQuote: string, rawCssText: string) => {
-      foundScript = true;
-      cssChunks.push(decodeHonoCssRuntimeString(rawCssText));
-      return "";
+      foundScript = true
+      cssChunks.push(decodeHonoCssRuntimeString(rawCssText))
+      return ''
     },
-  );
+  )
 
   return {
-    css: cssChunks.join("\n").trim(),
+    css: cssChunks.join('\n').trim(),
     foundScript,
     html: stripped,
-  };
-};
+  }
+}
 
 const transformHonoCssOutput = async (html: string): Promise<string> => {
-  const extracted = extractHonoCssFromHtml(html);
-  const runtimeExtracted = extractHonoCssRuntimeScripts(extracted.html);
+  const extracted = extractHonoCssFromHtml(html)
+  const runtimeExtracted = extractHonoCssRuntimeScripts(extracted.html)
 
   if (runtimeExtracted.foundScript && !extracted.foundStyleTag) {
-    throw new Error(HONO_CSS_STYLE_REQUIRED_ERROR_MESSAGE);
+    throw new Error(HONO_CSS_STYLE_REQUIRED_ERROR_MESSAGE)
   }
 
   const css = [extracted.css, runtimeExtracted.css]
-    .filter((chunk) => chunk !== "")
-    .join("\n")
-    .trim();
-  if (css === "") {
+    .filter((chunk) => chunk !== '')
+    .join('\n')
+    .trim()
+  if (css === '') {
     if (HONO_CSS_RUNTIME_SCRIPT_PATTERN.test(html)) {
-      throw new Error(HONO_CSS_STYLE_REQUIRED_ERROR_MESSAGE);
+      throw new Error(HONO_CSS_STYLE_REQUIRED_ERROR_MESSAGE)
     }
-    return runtimeExtracted.html;
+    return runtimeExtracted.html
   }
 
-  const artifact = buildTailwindArtifactFromCss({ css });
+  const artifact = buildTailwindArtifactFromCss({ css })
   const transformed = await transformTailwindHtml(runtimeExtracted.html, artifact, {
     preserveMarkdownTailwindParentRequiredAttribute: true,
     throwOnMissingClass: false,
-  });
+  })
 
-  return `${wrapGeneratedHeadCss(transformed.headCss)}${transformed.html}`;
-};
+  return `${wrapGeneratedHeadCss(transformed.headCss)}${transformed.html}`
+}
 
 const renderHtml = async (jsx: Child, options: BaseRenderOptions = {}): Promise<string> => {
-  const strict = options.strict ?? true;
-  let html = relocateHeadStyles(relocatePreview(normalizeHtml(await renderFragmentToHtml(jsx))));
-  html = relocateHeadStyles(await transformHonoCssOutput(html));
+  const strict = options.strict ?? true
+  let html = relocateHeadStyles(relocatePreview(normalizeHtml(await renderFragmentToHtml(jsx))))
+  html = relocateHeadStyles(await transformHonoCssOutput(html))
 
   if (html.includes(MARKDOWN_TAILWIND_PARENT_REQUIRED_ATTRIBUTE_NAME)) {
-    throw new Error(MARKDOWN_TAILWIND_PARENT_REQUIRED_ERROR_MESSAGE);
+    throw new Error(MARKDOWN_TAILWIND_PARENT_REQUIRED_ERROR_MESSAGE)
   }
 
   if (html.includes(`<${TAILWIND_ARTIFACT_REQUIRED_TAG_NAME}`)) {
-    throw new Error(TAILWIND_ARTIFACT_REQUIRED_ERROR_MESSAGE);
+    throw new Error(TAILWIND_ARTIFACT_REQUIRED_ERROR_MESSAGE)
   }
 
   if (strict) {
-    const warnings = validateHtml(html);
+    const warnings = validateHtml(html)
     for (const warning of warnings) {
-      console.warn(`[hono-email] ${warning}`);
+      console.warn(`[hono-email] ${warning}`)
     }
   }
 
-  const doctype = resolveDoctype(options.doctype);
+  const doctype = resolveDoctype(options.doctype)
 
-  if (doctype !== "") {
-    html = `${doctype}${html}`;
+  if (doctype !== '') {
+    html = `${doctype}${html}`
   }
 
   if (options.pretty) {
-    html = prettyPrintHtml(html);
+    html = prettyPrintHtml(html)
   }
 
-  return html;
-};
+  return html
+}
 
-export async function render(jsx: Child, options?: HtmlRenderOptions): Promise<string>;
-export async function render(jsx: Child, options: TextRenderOptions): Promise<string>;
-export async function render(jsx: Child, options: RenderOptions): Promise<string>;
+export async function render(jsx: Child, options?: HtmlRenderOptions): Promise<string>
+export async function render(jsx: Child, options: TextRenderOptions): Promise<string>
+export async function render(jsx: Child, options: RenderOptions): Promise<string>
 export async function render(jsx: Child, options: RenderOptions = {}): Promise<string> {
-  const html = await renderHtml(jsx, options);
+  const html = await renderHtml(jsx, options)
 
-  if (options.output === "text") {
-    return renderPlainText(html, options.text);
+  if (options.output === 'text') {
+    return renderPlainText(html, options.text)
   }
 
-  return html;
+  return html
 }
 
 export async function renderTemplate<Props extends Record<string, unknown>>(
   template: EmailTemplate<Props>,
   props: Props,
   options?: HtmlRenderOptions,
-): Promise<string>;
+): Promise<string>
 export async function renderTemplate<Props extends Record<string, unknown>>(
   template: EmailTemplate<Props>,
   props: Props,
   options: TextRenderOptions,
-): Promise<string>;
+): Promise<string>
 export async function renderTemplate<Props extends Record<string, unknown>>(
   template: EmailTemplate<Props>,
   props: Props,
   options: RenderOptions,
-): Promise<string>;
+): Promise<string>
 export async function renderTemplate<Props extends Record<string, unknown>>(
   template: EmailTemplate<Props>,
   props: Props,
   options: RenderOptions = {},
 ): Promise<string> {
-  const jsx = await template(props);
-  return render(jsx, options);
+  const jsx = await template(props)
+  return render(jsx, options)
 }
 
 export const defineEmail = <Props extends Record<string, unknown>>(
   template: EmailTemplate<Props>,
 ): DefinedEmail<Props> => {
-  async function renderDefined(props: Props, options?: HtmlRenderOptions): Promise<string>;
-  async function renderDefined(props: Props, options: TextRenderOptions): Promise<string>;
+  async function renderDefined(props: Props, options?: HtmlRenderOptions): Promise<string>
+  async function renderDefined(props: Props, options: TextRenderOptions): Promise<string>
   async function renderDefined(props: Props, options: RenderOptions = {}): Promise<string> {
-    return renderTemplate(template, props, options);
+    return renderTemplate(template, props, options)
   }
 
   return {
     template,
     render: renderDefined,
-  };
-};
+  }
+}

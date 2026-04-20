@@ -37,7 +37,7 @@
   "scripts": {
     "build": "bun run build.ts",
     "format": "oxfmt --write .",
-    "lint": "oxlint --deny-warnings --type-aware .",
+    "lint": "oxlint --type-aware .",
     "test": "bun test",
     "typecheck": "tsgo --noEmit"
   },

@@ -1,9 +1,9 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, test } from 'bun:test'
 
-import { Body, Html, render } from "../../src";
+import { Body, Html, render } from '../../src'
 
-describe("render output", () => {
-  test("supports plain text output via render options", async () => {
+describe('render output', () => {
+  test('supports plain text output via render options', async () => {
     const text = await render(
       <Html>
         <Body>
@@ -15,17 +15,17 @@ describe("render output", () => {
       </Html>,
       {
         doctype: false,
-        output: "text",
-        text: { headingStyle: "preserve", linkFormat: "text-only" },
+        output: 'text',
+        text: { headingStyle: 'preserve', linkFormat: 'text-only' },
       },
-    );
+    )
 
-    expect(text).toContain("Welcome");
-    expect(text).toContain("Hello world");
-    expect(text).not.toContain("https://example.com");
-  });
+    expect(text).toContain('Welcome')
+    expect(text).toContain('Hello world')
+    expect(text).not.toContain('https://example.com')
+  })
 
-  test("supports plain text formatting options", async () => {
+  test('supports plain text formatting options', async () => {
     const text = await render(
       <Html>
         <Body>
@@ -42,21 +42,21 @@ describe("render output", () => {
       </Html>,
       {
         doctype: false,
-        output: "text",
+        output: 'text',
         text: {
-          headingStyle: "preserve",
-          hrSeparator: "***",
-          linkFormat: "href-only",
-          listBullet: "*",
+          headingStyle: 'preserve',
+          hrSeparator: '***',
+          linkFormat: 'href-only',
+          listBullet: '*',
         },
       },
-    );
+    )
 
-    expect(text).toContain("Welcome");
-    expect(text).not.toContain("WELCOME");
-    expect(text).toContain("Hello https://example.com");
-    expect(text).toContain("Hero image");
-    expect(text).toContain("* One");
-    expect(text).toContain("***");
-  });
-});
+    expect(text).toContain('Welcome')
+    expect(text).not.toContain('WELCOME')
+    expect(text).toContain('Hello https://example.com')
+    expect(text).toContain('Hero image')
+    expect(text).toContain('* One')
+    expect(text).toContain('***')
+  })
+})

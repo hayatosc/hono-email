@@ -1,4 +1,4 @@
-import { Hono } from "hono";
+import { Hono } from 'hono'
 
 import {
   createWelcomeEmailInput,
@@ -6,103 +6,103 @@ import {
   renderWelcomeEmail,
   renderWelcomeEmailText,
   type WelcomeEmailOverrides,
-} from "./emails/welcome";
+} from './emails/welcome'
 
-type Recipient = string | string[];
+type Recipient = string | string[]
 
 type EmailAddress = {
-  email: string;
-  name?: string;
-};
+  email: string
+  name?: string
+}
 
 type SendEmailRequest = {
-  from: string | EmailAddress;
-  html: string;
-  subject: string;
-  text: string;
-  to: Recipient;
-};
+  from: string | EmailAddress
+  html: string
+  subject: string
+  text: string
+  to: Recipient
+}
 
 type SendEmailResult = {
-  messageId?: string;
-};
+  messageId?: string
+}
 
 type SendEmailBinding = {
-  send(message: SendEmailRequest): Promise<SendEmailResult>;
-};
+  send(message: SendEmailRequest): Promise<SendEmailResult>
+}
 
 type Bindings = {
-  EMAIL?: SendEmailBinding;
-  EMAIL_FROM?: string;
-  EMAIL_FROM_NAME?: string;
-};
+  EMAIL?: SendEmailBinding
+  EMAIL_FROM?: string
+  EMAIL_FROM_NAME?: string
+}
 
 type AppEnv = {
-  Bindings: Bindings;
-};
+  Bindings: Bindings
+}
 
 type WelcomeFormState = WelcomeEmailOverrides & {
-  to: string;
-};
+  to: string
+}
 
 type ComposerPageData = {
-  form: WelcomeFormState;
+  form: WelcomeFormState
   status?: {
-    message: string;
-    tone: "default" | "error" | "success";
-  };
-};
+    message: string
+    tone: 'default' | 'error' | 'success'
+  }
+}
 
-const app = new Hono<AppEnv>();
+const app = new Hono<AppEnv>()
 
 const splitRecipients = (value: string | undefined): string[] =>
-  (value ?? "")
+  (value ?? '')
     .split(/[,\n]/)
     .map((item) => item.trim())
-    .filter((item) => item.length > 0);
+    .filter((item) => item.length > 0)
 
 const toRecipient = (value: string | undefined): Recipient | null => {
-  const recipients = splitRecipients(value);
+  const recipients = splitRecipients(value)
 
   if (recipients.length === 0) {
-    return null;
+    return null
   }
 
-  return recipients.length === 1 ? recipients[0] : recipients;
-};
+  return recipients.length === 1 ? recipients[0] : recipients
+}
 
 const toFromAddress = (email: string, name: string | undefined): string | EmailAddress =>
-  name && name.trim().length > 0 ? { email, name: name.trim() } : email;
+  name && name.trim().length > 0 ? { email, name: name.trim() } : email
 
 const toWelcomeFormState = (overrides: Partial<WelcomeFormState> = {}): WelcomeFormState => {
-  const defaults = defaultWelcomeEmailInput();
+  const defaults = defaultWelcomeEmailInput()
 
   return {
     message: overrides.message ?? defaults.message,
     subject: overrides.subject ?? defaults.subject,
-    to: overrides.to ?? "recipient@example.com",
-  };
-};
+    to: overrides.to ?? 'recipient@example.com',
+  }
+}
 
 const formDataString = (formData: FormData, key: string): string => {
-  const value = formData.get(key);
-  return typeof value === "string" ? value : "";
-};
+  const value = formData.get(key)
+  return typeof value === 'string' ? value : ''
+}
 
 const formDataToWelcomeFormState = (formData: FormData): WelcomeFormState =>
   toWelcomeFormState({
-    message: formDataString(formData, "message"),
-    subject: formDataString(formData, "subject"),
-    to: formDataString(formData, "to"),
-  });
+    message: formDataString(formData, 'message'),
+    subject: formDataString(formData, 'subject'),
+    to: formDataString(formData, 'to'),
+  })
 
 const renderComposerPage = ({ form, status }: ComposerPageData) => {
   const statusClass =
-    status?.tone === "error"
-      ? "text-sm leading-6 font-medium text-red-700"
-      : status?.tone === "success"
-        ? "text-sm leading-6 font-medium text-emerald-700"
-        : "text-sm leading-6 text-stone-600";
+    status?.tone === 'error'
+      ? 'text-sm leading-6 font-medium text-red-700'
+      : status?.tone === 'success'
+        ? 'text-sm leading-6 font-medium text-emerald-700'
+        : 'text-sm leading-6 text-stone-600'
 
   return (
     <html lang="en">
@@ -192,7 +192,7 @@ const renderComposerPage = ({ form, status }: ComposerPageData) => {
                   Reset
                 </a>
                 <span class={statusClass}>
-                  {status?.message ?? "Set EMAIL_FROM and the EMAIL binding, then submit the form."}
+                  {status?.message ?? 'Set EMAIL_FROM and the EMAIL binding, then submit the form.'}
                 </span>
               </div>
             </form>
@@ -200,13 +200,13 @@ const renderComposerPage = ({ form, status }: ComposerPageData) => {
         </main>
       </body>
     </html>
-  );
-};
+  )
+}
 
-app.get("/", async (c) => c.html(renderComposerPage({ form: toWelcomeFormState() })));
+app.get('/', async (c) => c.html(renderComposerPage({ form: toWelcomeFormState() })))
 
-app.post("/send", async (c) => {
-  const form = formDataToWelcomeFormState(await c.req.formData());
+app.post('/send', async (c) => {
+  const form = formDataToWelcomeFormState(await c.req.formData())
 
   if (!c.env.EMAIL || !c.env.EMAIL_FROM) {
     return c.html(
@@ -214,51 +214,48 @@ app.post("/send", async (c) => {
         form,
         status: {
           message:
-            "EMAIL binding or EMAIL_FROM is missing. Update examples/cloudflare-vite-tailwind/wrangler.jsonc.",
-          tone: "error",
+            'EMAIL binding or EMAIL_FROM is missing. Update examples/cloudflare-vite-tailwind/wrangler.jsonc.',
+          tone: 'error',
         },
       }),
       501,
-    );
+    )
   }
 
-  const to = toRecipient(form.to);
+  const to = toRecipient(form.to)
 
   if (!to) {
     return c.html(
       renderComposerPage({
         form,
         status: {
-          message: "`to` is required. You can pass multiple recipients separated by commas.",
-          tone: "error",
+          message: '`to` is required. You can pass multiple recipients separated by commas.',
+          tone: 'error',
         },
       }),
       400,
-    );
+    )
   }
 
-  const email = createWelcomeEmailInput(form);
-  const [html, text] = await Promise.all([
-    renderWelcomeEmail(email),
-    renderWelcomeEmailText(email),
-  ]);
+  const email = createWelcomeEmailInput(form)
+  const [html, text] = await Promise.all([renderWelcomeEmail(email), renderWelcomeEmailText(email)])
   await c.env.EMAIL.send({
     from: toFromAddress(c.env.EMAIL_FROM, c.env.EMAIL_FROM_NAME),
     html,
     subject: email.subject,
     text,
     to,
-  });
+  })
 
   return c.html(
     renderComposerPage({
       form,
       status: {
         message: `Sent successfully.`,
-        tone: "success",
+        tone: 'success',
       },
     }),
-  );
-});
+  )
+})
 
-export default app;
+export default app

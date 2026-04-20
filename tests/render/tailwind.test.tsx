@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, test } from 'bun:test'
 
 import {
   Body,
@@ -9,7 +9,7 @@ import {
   Text,
   buildTailwindArtifactFromCss,
   render,
-} from "../../src";
+} from '../../src'
 
 const PRECOMPILED_TAILWIND_CSS = `
 @layer utilities {
@@ -29,13 +29,13 @@ const PRECOMPILED_TAILWIND_CSS = `
   .px-4 { padding-inline: 1rem; }
   .py-2 { padding-block: 0.5rem; }
 }
-`;
+`
 
-describe("Tailwind", () => {
-  test("applies precompiled utilities as inline styles on html elements", async () => {
+describe('Tailwind', () => {
+  test('applies precompiled utilities as inline styles on html elements', async () => {
     const artifact = buildTailwindArtifactFromCss({
       css: PRECOMPILED_TAILWIND_CSS,
-    });
+    })
 
     const html = await render(
       <Html>
@@ -46,20 +46,20 @@ describe("Tailwind", () => {
           </Body>
         </Tailwind>
       </Html>,
-    );
+    )
 
-    expect(html).toContain("color:#0f172a");
-    expect(html).toContain("background-color:#0f172a");
-    expect(html).toContain("padding-left:16px");
-    expect(html).toContain("padding-right:16px");
-    expect(html).toContain("padding-top:8px");
-    expect(html).toContain("padding-bottom:8px");
-  });
+    expect(html).toContain('color:#0f172a')
+    expect(html).toContain('background-color:#0f172a')
+    expect(html).toContain('padding-left:16px')
+    expect(html).toContain('padding-right:16px')
+    expect(html).toContain('padding-top:8px')
+    expect(html).toContain('padding-bottom:8px')
+  })
 
-  test("moves precompiled media query styles into head", async () => {
+  test('moves precompiled media query styles into head', async () => {
     const artifact = buildTailwindArtifactFromCss({
       css: PRECOMPILED_TAILWIND_CSS,
-    });
+    })
 
     const html = await render(
       <Html>
@@ -70,17 +70,17 @@ describe("Tailwind", () => {
           </Body>
         </Tailwind>
       </Html>,
-    );
+    )
 
     expect(html).toMatch(
       /<head[^>]*>[\s\S]*<style[^>]*>[\s\S]*@media[\s\S]*<\/style>[\s\S]*<\/head>/i,
-    );
-  });
+    )
+  })
 
-  test("supports typography, border, tracking, and sizing utilities from precompiled css", async () => {
+  test('supports typography, border, tracking, and sizing utilities from precompiled css', async () => {
     const artifact = buildTailwindArtifactFromCss({
       css: PRECOMPILED_TAILWIND_CSS,
-    });
+    })
 
     const html = await render(
       <Html>
@@ -93,22 +93,22 @@ describe("Tailwind", () => {
           </Body>
         </Tailwind>
       </Html>,
-    );
+    )
 
-    expect(html).toContain("font-size:24px");
-    expect(html).toContain("line-height:32px");
-    expect(html).toContain("font-weight:600");
-    expect(html).toContain("letter-spacing:0.025em");
-    expect(html).toContain("text-decoration:underline");
-    expect(html).toContain("border-style:solid");
-    expect(html).toContain("border-width:1px");
-    expect(html).toContain("border-color:#cbd5e1");
-    expect(html).toContain("border-radius:8px");
-    expect(html).toContain("width:96px");
-    expect(html).toContain("height:40px");
-  });
+    expect(html).toContain('font-size:24px')
+    expect(html).toContain('line-height:32px')
+    expect(html).toContain('font-weight:600')
+    expect(html).toContain('letter-spacing:0.025em')
+    expect(html).toContain('text-decoration:underline')
+    expect(html).toContain('border-style:solid')
+    expect(html).toContain('border-width:1px')
+    expect(html).toContain('border-color:#cbd5e1')
+    expect(html).toContain('border-radius:8px')
+    expect(html).toContain('width:96px')
+    expect(html).toContain('height:40px')
+  })
 
-  test("throws when artifact is missing", async () => {
+  test('throws when artifact is missing', async () => {
     await expect(
       render(
         <Html>
@@ -120,10 +120,10 @@ describe("Tailwind", () => {
           </Tailwind>
         </Html>,
       ),
-    ).rejects.toThrow("<Tailwind> requires a build artifact.");
-  });
+    ).rejects.toThrow('<Tailwind> requires a build artifact.')
+  })
 
-  test("supports Vite-like precompiled Tailwind CSS artifacts", async () => {
+  test('supports Vite-like precompiled Tailwind CSS artifacts', async () => {
     const artifact = buildTailwindArtifactFromCss({
       css: `
 @layer utilities {
@@ -133,7 +133,7 @@ describe("Tailwind", () => {
   .sm\\:text-blue-500 { @media (width >= 40rem) { color: #3b82f6; } }
 }
 `,
-    });
+    })
 
     const html = await render(
       <Html>
@@ -144,19 +144,19 @@ describe("Tailwind", () => {
           </Body>
         </Tailwind>
       </Html>,
-    );
+    )
 
-    expect(html).toContain("color:#0f172a");
-    expect(html).toContain("padding-left:16px");
-    expect(html).toContain("padding-right:16px");
-    expect(html).toContain("padding-top:8px");
-    expect(html).toContain("padding-bottom:8px");
+    expect(html).toContain('color:#0f172a')
+    expect(html).toContain('padding-left:16px')
+    expect(html).toContain('padding-right:16px')
+    expect(html).toContain('padding-top:8px')
+    expect(html).toContain('padding-bottom:8px')
     expect(html).toMatch(
       /<head[^>]*>[\s\S]*<style[^>]*>[\s\S]*@media[\s\S]*<\/style>[\s\S]*<\/head>/i,
-    );
-  });
+    )
+  })
 
-  test("applies Tailwind classes generated by Markdown in tailwind mode", async () => {
+  test('applies Tailwind classes generated by Markdown in tailwind mode', async () => {
     const artifact = buildTailwindArtifactFromCss({
       css: `
 @layer utilities {
@@ -166,7 +166,7 @@ describe("Tailwind", () => {
   .markdown-code-inline { background-color: #e2e8f0; padding: 2px 4px; }
 }
 `,
-    });
+    })
 
     const html = await render(
       <Html>
@@ -177,9 +177,9 @@ describe("Tailwind", () => {
               markdownStyleMode="tailwind"
               markdownContainerClassName="markdown-container"
               markdownCustomClassNames={{
-                h1: "markdown-h1",
-                p: "markdown-p",
-                codeInline: "markdown-code-inline",
+                h1: 'markdown-h1',
+                p: 'markdown-p',
+                codeInline: 'markdown-code-inline',
               }}
             >{`
 # Tailwind Markdown
@@ -189,14 +189,14 @@ Paragraph with \`code\`
           </Body>
         </Tailwind>
       </Html>,
-    );
+    )
 
-    expect(html).toContain("color:#0f172a");
-    expect(html).toContain("font-size:24px");
-    expect(html).toContain("line-height:32px");
-    expect(html).toContain("font-weight:600");
-    expect(html).toContain("background-color:#e2e8f0");
-    expect(html).not.toContain("font-size:30px");
-    expect(html).not.toContain("line-height:36px");
-  });
-});
+    expect(html).toContain('color:#0f172a')
+    expect(html).toContain('font-size:24px')
+    expect(html).toContain('line-height:32px')
+    expect(html).toContain('font-weight:600')
+    expect(html).toContain('background-color:#e2e8f0')
+    expect(html).not.toContain('font-size:30px')
+    expect(html).not.toContain('line-height:36px')
+  })
+})
