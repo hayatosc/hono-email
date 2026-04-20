@@ -32,13 +32,17 @@ const normalizePathForCss = (value: string): string => value.replace(/\\/g, '/')
 
 const resolveOptionalPath = (value: string | undefined): string | undefined => (value ? normalizePathForCss(path.resolve(value)) : undefined);
 
-const resolvePluginOptions = (options: EmailTailwindPluginOptions = {}): ResolvedPluginOptions => ({
-  configPath: resolveOptionalPath(options.configPath),
-  css: options.css?.trim(),
-  packageNames: options.packageNames?.length ? [...new Set(options.packageNames)] : [...DEFAULT_PACKAGE_NAMES],
-  runtimeModuleSpecifier: options.runtimeModuleSpecifier?.trim() || options.packageNames?.[0] || DEFAULT_PACKAGE_NAMES[0],
-  safelist: options.safelist?.length ? [...new Set(options.safelist)] : [],
-});
+const resolvePluginOptions = (options: EmailTailwindPluginOptions = {}): ResolvedPluginOptions => {
+  const configPath = resolveOptionalPath(options.configPath);
+  const css = options.css?.trim();
+  return {
+    ...(configPath !== undefined ? { configPath } : {}),
+    ...(css !== undefined ? { css } : {}),
+    packageNames: options.packageNames?.length ? [...new Set(options.packageNames)] : [...DEFAULT_PACKAGE_NAMES],
+    runtimeModuleSpecifier: options.runtimeModuleSpecifier?.trim() || options.packageNames?.[0] || DEFAULT_PACKAGE_NAMES[0],
+    safelist: options.safelist?.length ? [...new Set(options.safelist)] : [],
+  };
+};
 
 const escapeForRegExp = (value: string): string => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 

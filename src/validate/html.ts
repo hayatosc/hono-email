@@ -494,7 +494,7 @@ const validateStylePlacement = (html: string, openingTags: OpeningTag[]): void =
       continue;
     }
 
-    if (!headOpen || !headClose || tag.index < headOpen.index || tag.index > headClose.index!) {
+    if (!headOpen || !headClose || headClose.index === undefined || tag.index < headOpen.index || tag.index > headClose.index) {
       throw new Error(
         "The <style> tag must be placed inside <Head> in HTML email strict mode. Move shared CSS into <Head>, or use inline style props for element-level styling.",
       );

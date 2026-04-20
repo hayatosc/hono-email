@@ -85,7 +85,7 @@ describe("render strict mode", () => {
       render(
         <html>
           <body>
-            <div style={"display: grid !important" as any}>Hello</div>
+            <div style={"display: grid !important"}>Hello</div>
           </body>
         </html>,
       ),
@@ -113,7 +113,7 @@ describe("render strict mode", () => {
       render(
         <html>
           <body>
-            <div style={{ "--color": "red" } as any}>Hello</div>
+            <div style={"--color:red"}>Hello</div>
           </body>
         </html>,
       ),

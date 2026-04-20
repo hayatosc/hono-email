@@ -94,8 +94,8 @@ const evaluateSimpleCalcExpression = (value: string): string => {
   const [, leftRaw, leftUnitRaw, operator, rightRaw, rightUnitRaw] = calcMatch;
   const left = Number(leftRaw);
   const right = Number(rightRaw);
-  const leftUnit = leftUnitRaw.toLowerCase();
-  const rightUnit = rightUnitRaw.toLowerCase();
+  const leftUnit = (leftUnitRaw ?? "").toLowerCase();
+  const rightUnit = (rightUnitRaw ?? "").toLowerCase();
 
   if (Number.isNaN(left) || Number.isNaN(right)) {
     return value;
@@ -189,20 +189,20 @@ const normalizeColorValue = (value: string): string => {
   const rgbWithAlphaOneMatch = value.match(RGB_ALPHA_ONE_PATTERN);
   if (rgbWithAlphaOneMatch) {
     const [, red, green, blue] = rgbWithAlphaOneMatch;
-    return rgbToHex(red, green, blue);
+    return rgbToHex(red ?? "", green ?? "", blue ?? "");
   }
 
   const rgbMatch = value.match(RGB_PATTERN);
   if (rgbMatch) {
     const [, red, green, blue] = rgbMatch;
-    return rgbToHex(red, green, blue);
+    return rgbToHex(red ?? "", green ?? "", blue ?? "");
   }
 
   const oklchMatch = value.match(OKLCH_PATTERN);
   if (oklchMatch) {
     const [, lightness, chroma, hue, alpha] = oklchMatch;
     if (!alpha || alpha.trim() === "1" || alpha.trim() === "100%") {
-      return oklchToHex(lightness, chroma, hue);
+      return oklchToHex(lightness ?? "", chroma ?? "", hue ?? "");
     }
   }
 
@@ -246,12 +246,12 @@ const normalizeMediaQuery = (query: string): string => {
   const normalized = normalizeCssValue(query);
   const minWidthMatch = normalized.match(/^\(\s*width\s*>=\s*([^)]+)\)$/i);
   if (minWidthMatch) {
-    return `(min-width:${minWidthMatch[1].trim()})`;
+    return `(min-width:${(minWidthMatch[1] ?? "").trim()})`;
   }
 
   const maxWidthMatch = normalized.match(/^\(\s*width\s*<=\s*([^)]+)\)$/i);
   if (maxWidthMatch) {
-    return `(max-width:${maxWidthMatch[1].trim()})`;
+    return `(max-width:${(maxWidthMatch[1] ?? "").trim()})`;
   }
 
   return normalized;
@@ -481,9 +481,16 @@ const collectCssVariables = (nodes: csstree.CssNode[]): Record<string, string> =
   return cssVariables;
 };
 
+function assertStyleSheet(node: csstree.CssNode): asserts node is csstree.StyleSheet {
+  if (node.type !== "StyleSheet") {
+    throw new TypeError(`css-tree: expected StyleSheet, got ${node.type}`);
+  }
+}
+
 const buildArtifactFromCss = (cssText: string, classes?: string[]): TailwindBuildArtifact => {
-  const ast = csstree.parse(cssText) as csstree.StyleSheet;
-  const rootNodes = [...ast.children];
+  const parsed = csstree.parse(cssText);
+  assertStyleSheet(parsed);
+  const rootNodes = [...parsed.children];
   const cssVariables = collectCssVariables(rootNodes);
   const inlineStylesByClass: Record<string, Record<string, string>> = {};
   const headCssByClass: Record<string, string> = {};
@@ -564,8 +571,9 @@ const buildArtifactFromCss = (cssText: string, classes?: string[]): TailwindBuil
   processNodes(rootNodes);
 
   for (const classToken of Object.keys(headCssByClass)) {
-    if (headCssByClass[classToken].includes("var(")) {
-      headCssByClass[classToken] = resolveCssVariables(headCssByClass[classToken], cssVariables);
+    const existingCss = headCssByClass[classToken];
+    if (existingCss?.includes("var(")) {
+      headCssByClass[classToken] = resolveCssVariables(existingCss, cssVariables);
     }
   }
 
@@ -587,7 +595,7 @@ export const collectTailwindClassesFromHtml = async (html: string): Promise<stri
   await new HTMLRewriter()
     .on("[class]", {
       element(el) {
-        for (const token of el.getAttribute("class")!.split(/\s+/).filter(Boolean)) {
+        for (const token of (el.getAttribute("class") ?? "").split(/\s+/).filter(Boolean)) {
           classTokens.add(token);
         }
       },
@@ -631,7 +639,7 @@ export const transformTailwindHtml = async (
   const transformed = await rewriter
     .on("[class]", {
       element(el) {
-        const tokens = el.getAttribute("class")!.split(/\s+/).filter(Boolean);
+        const tokens = (el.getAttribute("class") ?? "").split(/\s+/).filter(Boolean);
         const mergedInlineStyle: Record<string, string> = {};
 
         for (const token of tokens) {
