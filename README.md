@@ -132,7 +132,7 @@ Representative compatibility-sensitive cases include:
 
 `<Font>` renders `@font-face` and a fallback `font-family` declaration inside `<Head>`
 
-Please note `@font-face` is not avilable for some clients, so it is recommended that setting `fallbackFontFamily`. [see](https://www.caniemail.com/features/css-at-font-face/)
+Please note `@font-face` is not available for some clients, so it is recommended to set `fallbackFontFamily`. [see](https://www.caniemail.com/features/css-at-font-face/)
 
 ```tsx
 import { Font, Head, Html, render } from "hono-email";
@@ -156,7 +156,7 @@ const html = await render(
 
 ## Styling
 
-`hono-email` provides multiple type of styling.
+`hono-email` provides multiple types of styling.
 
 ### Basic
 
@@ -188,11 +188,9 @@ import { Body, Head, Html, Text, render } from "hono-email";
 
 const titleClass = css`
   color: #0f172a;
-  padding-inline: 1rem;
-
-  @media (width >= 40rem) {
-    color: #3b82f6;
-  }
+  padding-left: 1rem;
+  padding-right: 1rem;
+  font-weight: bold;
 `;
 
 const html = await render(
@@ -209,7 +207,7 @@ const html = await render(
 
 ### Tailwind
 
-If you are using `<Tailwind>` component, I recommend use any bundlers (Vite, Rolldown, Webpack, Esbuild etc) and `EmailTailwind` plugin.
+If you are using `<Tailwind>` component, we recommend using a bundler (Vite, Rolldown, Webpack, Esbuild etc) and the `EmailTailwind` plugin.
 
 ```tsx
 // vite.config.ts
@@ -235,14 +233,14 @@ const html = await render(
     <Head />
     <Tailwind>
       <Body>
-        <Text className="text-brand bg-brand px-4 py-2 sm:text-blue-500">Hello</Text>
+        <Text className="text-brand bg-brand px-4 py-2">Hello</Text>
       </Body>
     </Tailwind>
   </Html>,
 );
 ```
 
-When using Tailwind for frontend styling, we recommend using @source not to exclude emails.
+When using Tailwind for frontend styling, we recommend using `@source` with `not` to exclude emails from being scanned by the frontend Tailwind build.
 
 ```css
 @import "tailwindcss";
@@ -262,8 +260,8 @@ const artifact = buildTailwindArtifactFromCss({
     @layer utilities {
       .bg-brand { background-color: #0f172a; }
       .text-white { color: #ffffff; }
-      .px-4 { padding-inline: 1rem; }
-      .py-2 { padding-block: 0.5rem; }
+      .px-4 { padding-left: 1rem; padding-right: 1rem; }
+      .py-2 { padding-top: 0.5rem; padding-bottom: 0.5rem; }
     }
   `,
 });
