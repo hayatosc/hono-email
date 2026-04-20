@@ -5,7 +5,11 @@
     "correctness": "error"
   },
   "ignorePatterns": ["dist/**", "node_modules/**", "examples/**/node_modules/**"],
-  "rules": {},
+  "rules": {
+    "typescript/no-explicit-any": "error",
+    "typescript/consistent-type-assertions": "warn",
+    "typescript/no-non-null-assertion": "warn"
+  },
   "env": {
     "builtin": true
   }

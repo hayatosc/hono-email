@@ -55,11 +55,11 @@ export const Markdown = async ({
 }: MarkdownProps) =>
   raw(
     await renderMarkdownHtml(children, {
-      markdownContainerClassName,
-      markdownContainerStyles,
-      markdownCustomClassNames,
-      markdownCustomStyles,
-      markdownStyleMode,
-      sanitize,
+      ...(markdownContainerClassName !== undefined ? { markdownContainerClassName } : {}),
+      ...(markdownContainerStyles !== undefined ? { markdownContainerStyles } : {}),
+      ...(markdownCustomClassNames !== undefined ? { markdownCustomClassNames } : {}),
+      ...(markdownCustomStyles !== undefined ? { markdownCustomStyles } : {}),
+      ...(markdownStyleMode !== undefined ? { markdownStyleMode } : {}),
+      ...(sanitize !== undefined ? { sanitize } : {}),
     }),
   );

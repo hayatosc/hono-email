@@ -64,11 +64,13 @@ const expandBoxValues = (
 
   if (shorthandValue) {
     const parts = shorthandValue.split(/\s+/);
-    const [top, right = top, bottom = top, left = right] = parts;
-    expanded.Top = top;
-    expanded.Right = right;
-    expanded.Bottom = bottom;
-    expanded.Left = left;
+    const [top, right, bottom, left] = parts;
+    if (top !== undefined) {
+      expanded.Top = top;
+      expanded.Right = right ?? top;
+      expanded.Bottom = bottom ?? top;
+      expanded.Left = left ?? (right ?? top);
+    }
   }
 
   for (const direction of BOX_DIRECTIONS) {
