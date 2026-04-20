@@ -112,11 +112,11 @@ jobs:
             --title "Release v${VERSION}" \
             --body "## Release v${VERSION}
 
-This PR adds the CHANGELOG.md entry for version \`${VERSION}\`.
-Merging this PR will trigger an npm publish and a GitHub Release.
+          This PR adds the CHANGELOG.md entry for version \`${VERSION}\`.
+          Merging this PR will trigger an npm publish and a GitHub Release.
 
-### Changes
+          ### Changes
 
-${NOTES}" \
+          ${NOTES}" \
             --base main \
             --head "$BRANCH"
