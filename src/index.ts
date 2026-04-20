@@ -78,8 +78,7 @@ export type DefinedEmail<Props extends Record<string, unknown>> = {
   readonly template: EmailTemplate<Props>;
   readonly render: EmailRenderer<Props>;
 };
-export type InferEmailProps<Template> =
-  Template extends EmailTemplate<infer Props> ? Props : never;
+export type InferEmailProps<Template> = Template extends EmailTemplate<infer Props> ? Props : never;
 
 export type { BaseRenderOptions };
 
@@ -102,7 +101,7 @@ const HONO_CSS_RUNTIME_SCRIPT_TAG_PATTERN = new RegExp(
 const HONO_CSS_STYLE_REQUIRED_ERROR_MESSAGE =
   'hono/css styles require <Head><Style /></Head> in hono-email. Import Style from "hono/css" and place it inside <Head>.';
 const HONO_CSS_STYLE_HEAD_REQUIRED_ERROR_MESSAGE =
-  'The hono/css <Style /> tag must be inside <Head> when rendering with hono-email.';
+  "The hono/css <Style /> tag must be inside <Head> when rendering with hono-email.";
 
 const resolveDoctype = (doctype: BaseRenderOptions["doctype"]): string => {
   if (doctype === false) {
@@ -134,7 +133,9 @@ const decodeHonoCssRuntimeString = (rawCss: string): string =>
     .replace(/\\"/g, '"')
     .replace(/\\'/g, "'");
 
-const extractHonoCssFromHtml = (html: string): { css: string; foundStyleTag: boolean; html: string } => {
+const extractHonoCssFromHtml = (
+  html: string,
+): { css: string; foundStyleTag: boolean; html: string } => {
   const { headClose, headOpen } = extractHeadBounds(html);
   const cssChunks: string[] = [];
   let foundStyleTag = false;
@@ -142,7 +143,8 @@ const extractHonoCssFromHtml = (html: string): { css: string; foundStyleTag: boo
   const stripped = html.replace(
     HONO_CSS_STYLE_TAG_PATTERN,
     (_fullMatch: string, _quote: string, cssText: string, offset: number) => {
-      const insideHead = headOpen >= 0 && headClose >= 0 && offset >= headOpen && offset <= headClose;
+      const insideHead =
+        headOpen >= 0 && headClose >= 0 && offset >= headOpen && offset <= headClose;
       if (!insideHead) {
         throw new Error(HONO_CSS_STYLE_HEAD_REQUIRED_ERROR_MESSAGE);
       }
@@ -189,7 +191,10 @@ const transformHonoCssOutput = async (html: string): Promise<string> => {
     throw new Error(HONO_CSS_STYLE_REQUIRED_ERROR_MESSAGE);
   }
 
-  const css = [extracted.css, runtimeExtracted.css].filter((chunk) => chunk !== "").join("\n").trim();
+  const css = [extracted.css, runtimeExtracted.css]
+    .filter((chunk) => chunk !== "")
+    .join("\n")
+    .trim();
   if (css === "") {
     if (HONO_CSS_RUNTIME_SCRIPT_PATTERN.test(html)) {
       throw new Error(HONO_CSS_STYLE_REQUIRED_ERROR_MESSAGE);

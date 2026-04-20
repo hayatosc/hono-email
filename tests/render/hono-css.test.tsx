@@ -1,7 +1,16 @@
 import { describe, expect, test } from "bun:test";
 import { Style, css, cx } from "hono/css";
 
-import { Body, Head, Html, Markdown, Tailwind, Text, buildTailwindArtifactFromCss, render } from "../../src";
+import {
+  Body,
+  Head,
+  Html,
+  Markdown,
+  Tailwind,
+  Text,
+  buildTailwindArtifactFromCss,
+  render,
+} from "../../src";
 
 const StyledEmail = ({ includeStyle = true }: { includeStyle?: boolean } = {}) => {
   const titleClassName = css`
@@ -37,15 +46,15 @@ describe("hono/css integration", () => {
 
   test("throws a clear error when hono/css is used without <Head><Style /></Head>", async () => {
     await expect(render(<StyledEmail includeStyle={false} />)).rejects.toThrow(
-      'hono/css styles require <Head><Style /></Head> in hono-email.',
+      "hono/css styles require <Head><Style /></Head> in hono-email.",
     );
   });
 
   test("accepts non-hono-css class names while applying hono/css inline styles", async () => {
     const className = cx(
       css`
-      color: #111827;
-    `,
+        color: #111827;
+      `,
       "custom-class",
     );
 

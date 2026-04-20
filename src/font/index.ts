@@ -59,4 +59,3 @@ export const renderFontStyleTag = ({
 
   return raw(`<style>${fontFaceCss}* { font-family: ${familyList}; }</style>`);
 };
-

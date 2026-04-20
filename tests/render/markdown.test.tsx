@@ -1,6 +1,14 @@
 import { describe, expect, test } from "bun:test";
 
-import { Body, Head, Html, Markdown, Tailwind, buildTailwindArtifactFromCss, render } from "../../src";
+import {
+  Body,
+  Head,
+  Html,
+  Markdown,
+  Tailwind,
+  buildTailwindArtifactFromCss,
+  render,
+} from "../../src";
 
 describe("Markdown", () => {
   test("renders markdown tables and safe raw html", async () => {

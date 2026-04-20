@@ -289,9 +289,30 @@ export const renderMarkdownHtml = async (
     ...(styleMode === "inline" ? DEFAULT_MARKDOWN_STYLES[key] : {}),
     ...normalizeStyleObject(s?.[key]),
   });
-  const styles = Object.fromEntries(
-    (Object.keys(DEFAULT_MARKDOWN_STYLES) as MarkdownStyleKey[]).map((key) => [key, mergeStyle(key)]),
-  ) as Record<MarkdownStyleKey, Record<string, string>>;
+  const styles: Record<MarkdownStyleKey, Record<string, string>> = {
+    a: mergeStyle("a"),
+    blockquote: mergeStyle("blockquote"),
+    code: mergeStyle("code"),
+    codeInline: mergeStyle("codeInline"),
+    h1: mergeStyle("h1"),
+    h2: mergeStyle("h2"),
+    h3: mergeStyle("h3"),
+    h4: mergeStyle("h4"),
+    h5: mergeStyle("h5"),
+    h6: mergeStyle("h6"),
+    img: mergeStyle("img"),
+    li: mergeStyle("li"),
+    ol: mergeStyle("ol"),
+    p: mergeStyle("p"),
+    pre: mergeStyle("pre"),
+    table: mergeStyle("table"),
+    tbody: mergeStyle("tbody"),
+    td: mergeStyle("td"),
+    th: mergeStyle("th"),
+    thead: mergeStyle("thead"),
+    tr: mergeStyle("tr"),
+    ul: mergeStyle("ul"),
+  };
 
   const containerStyle = mergeStyleAttributes(undefined, {
     ...(styleMode === "inline" ? DEFAULT_CONTAINER_STYLE : {}),

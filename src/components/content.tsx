@@ -74,7 +74,7 @@ const expandBoxValues = (
       expanded.Top = top;
       expanded.Right = right ?? top;
       expanded.Bottom = bottom ?? top;
-      expanded.Left = left ?? (right ?? top);
+      expanded.Left = left ?? right ?? top;
     }
   }
 
@@ -242,9 +242,7 @@ export const Button: FC<LinkProps> = ({ children, style, target = "_blank", ...p
           `<!--[if mso]><i style="mso-font-width:${leftFontWidth * 100}%;mso-text-raise:${textRaise}" hidden>${"&#8202;".repeat(leftSpaceCount)}</i><![endif]-->`,
         )}
       </span>
-      <span style={innerTextStyle}>
-        {children}
-      </span>
+      <span style={innerTextStyle}>{children}</span>
       <span>
         {raw(
           `<!--[if mso]><i style="mso-font-width:${rightFontWidth * 100}%" hidden>${"&#8202;".repeat(rightSpaceCount)}&#8203;</i><![endif]-->`,

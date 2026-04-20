@@ -84,11 +84,16 @@ const toWelcomeFormState = (overrides: Partial<WelcomeFormState> = {}): WelcomeF
   };
 };
 
+const formDataString = (formData: FormData, key: string): string => {
+  const value = formData.get(key);
+  return typeof value === "string" ? value : "";
+};
+
 const formDataToWelcomeFormState = (formData: FormData): WelcomeFormState =>
   toWelcomeFormState({
-    message: String(formData.get("message") ?? ""),
-    subject: String(formData.get("subject") ?? ""),
-    to: String(formData.get("to") ?? ""),
+    message: formDataString(formData, "message"),
+    subject: formDataString(formData, "subject"),
+    to: formDataString(formData, "to"),
   });
 
 const renderComposerPage = ({ form, status }: ComposerPageData) => {

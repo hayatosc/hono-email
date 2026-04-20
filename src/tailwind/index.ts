@@ -420,7 +420,6 @@ const appendMediaRuleByClass = (
   target[classToken] = `${target[classToken] ?? ""}${mediaRule}`;
 };
 
-
 const collectCssVariables = (nodes: csstree.CssNode[]): Record<string, string> => {
   const cssVariables: Record<string, string> = {};
 

@@ -44,7 +44,11 @@ export const normalizeStyleObject = (
       continue;
     }
 
-    normalized[toKebabCase(key)] = typeof value === "number" ? `${value}` : `${value}`;
+    if (typeof value !== "string" && typeof value !== "number") {
+      continue;
+    }
+
+    normalized[toKebabCase(key)] = `${value}`;
   }
 
   return normalized;

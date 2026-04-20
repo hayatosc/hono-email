@@ -1,15 +1,30 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
   "plugins": ["typescript", "unicorn", "oxc"],
+  "options": {
+    "typeAware": true
+  },
   "categories": {
     "correctness": "error"
   },
   "ignorePatterns": ["dist/**", "node_modules/**", "examples/**/node_modules/**"],
   "rules": {
     "typescript/no-explicit-any": "error",
+    "typescript/no-unsafe-type-assertion": "error",
+    "typescript/no-unnecessary-type-assertion": "error",
+    "typescript/consistent-type-imports": "error",
+    "typescript/switch-exhaustiveness-check": "warn",
     "typescript/consistent-type-assertions": "warn",
     "typescript/no-non-null-assertion": "warn"
   },
+  "overrides": [
+    {
+      "files": ["tests/**/*.test.ts", "tests/**/*.test.tsx"],
+      "rules": {
+        "typescript/await-thenable": "off"
+      }
+    }
+  ],
   "env": {
     "builtin": true
   }

@@ -10,9 +10,19 @@ import {
   type MarkdownStyleMode,
 } from "../markdown";
 import { renderFragmentToHtml } from "../render/html";
-import { transformTailwindHtml, type TailwindBuildArtifact, wrapGeneratedHeadCss } from "../tailwind";
+import {
+  transformTailwindHtml,
+  type TailwindBuildArtifact,
+  wrapGeneratedHeadCss,
+} from "../tailwind";
 
-export type { FontProps, MarkdownCustomClassNames, MarkdownCustomStyles, MarkdownStyleMode, TailwindBuildArtifact };
+export type {
+  FontProps,
+  MarkdownCustomClassNames,
+  MarkdownCustomStyles,
+  MarkdownStyleMode,
+  TailwindBuildArtifact,
+};
 
 export const TAILWIND_ARTIFACT_REQUIRED_ERROR_MESSAGE =
   "<Tailwind> requires a build artifact. Either:\n" +

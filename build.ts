@@ -8,7 +8,7 @@ await Bun.build({
   target: "browser",
   minify: true,
   plugins: [dts()],
-  external: ['hono']
+  external: ["hono"],
 });
 
 // Build unplugin (Node.js compatible)
@@ -19,5 +19,5 @@ await Bun.build({
   target: "node",
   minify: true,
   plugins: [dts()],
-  external: ['hono']
+  external: ["hono"],
 });

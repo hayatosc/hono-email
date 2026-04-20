@@ -201,7 +201,7 @@ import { Body, Html, Text, render } from "hono-email";
 const html = await render(
   <Html>
     <Body>
-      <Text style={{ color: '#0f172a' }}>Hello</Text>
+      <Text style={{ color: "#0f172a" }}>Hello</Text>
     </Body>
   </Html>,
 );
@@ -248,10 +248,7 @@ import tailwindcss from "@tailwindcss/vite";
 import { vitePlugin as EmailTailwind } from "hono-email/plugin";
 
 export default defineConfig({
-  plugins: [
-    tailwindcss(),
-    EmailTailwind(),
-  ],
+  plugins: [tailwindcss(), EmailTailwind()],
 });
 ```
 
