@@ -20,6 +20,10 @@ type TailwindRenderResult = {
   headCss: string;
 };
 
+export type TransformTailwindHtmlOptions = {
+  throwOnMissingClass?: boolean;
+};
+
 const REM_TO_PX_FACTOR = 16;
 const MAX_VARIABLE_RESOLUTION_DEPTH = 8;
 
@@ -627,8 +631,10 @@ export const buildTailwindArtifactFromCss = ({
 export const transformTailwindHtml = async (
   html: string,
   artifact: TailwindBuildArtifact,
+  options: TransformTailwindHtmlOptions = {},
 ): Promise<TailwindRenderResult> => {
   const knownClasses = new Set(artifact.classes);
+  const throwOnMissingClass = options.throwOnMissingClass ?? true;
   const responsiveCss = new Set<string>();
 
   const transformed = await new HTMLRewriter()
@@ -644,9 +650,12 @@ export const transformTailwindHtml = async (
 
         for (const token of tokens) {
           if (!knownClasses.has(token)) {
-            throw new Error(
-              `Tailwind class '${token}' is missing from the build artifact. Rebuild the artifact before rendering with <Tailwind>.`,
-            );
+            if (throwOnMissingClass) {
+              throw new Error(
+                `Tailwind class '${token}' is missing from the build artifact. Rebuild the artifact before rendering with <Tailwind>.`,
+              );
+            }
+            continue;
           }
 
           const inlineStyle = artifact.inlineStylesByClass[token];

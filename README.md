@@ -8,6 +8,7 @@
 - Render plain text from the same JSX tree through `render()`
 - Keep strict email validation enabled by default
 - Style markdown content with the `Markdown` component
+- Use `hono/css` class-based CSS-in-JS as a styling option
 - Apply Tailwind utility output through `Tailwind` build artifacts
 - Expose bundler integrations through `hono-email/plugin`
 
@@ -220,6 +221,40 @@ Paragraph with \`code\`
 ```
 
 `markdownCustomStyles` and `markdownContainerStyles` are still available in this mode if you want to mix class-based and inline overrides.
+
+## hono/css (CSS-in-JS)
+
+You can use `hono/css` class names directly on normal elements (`<div>`, `<Text>`, etc.).  
+`render()` automatically converts matching class rules to email-safe inline styles.
+
+`<Head><Style /></Head>` is required when using `hono/css`.
+
+```tsx
+import { Style, css } from "hono/css";
+import { Body, Head, Html, Text, render } from "hono-email";
+
+const titleClass = css`
+  color: #0f172a;
+  padding-inline: 1rem;
+
+  @media (width >= 40rem) {
+    color: #3b82f6;
+  }
+`;
+
+const html = await render(
+  <Html>
+    <Head>
+      <Style />
+    </Head>
+    <Body>
+      <Text className={titleClass}>Hello</Text>
+    </Body>
+  </Html>,
+);
+```
+
+Current support is focused on class-based rules (MVP scope). Complex selectors may not be converted.
 
 ## Tailwind
 
