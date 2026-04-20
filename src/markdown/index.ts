@@ -1,200 +1,200 @@
-import type { JSX } from "hono/jsx";
-import { HTMLRewriter } from "htmlrewriter";
-import rehypeRaw from "rehype-raw";
-import rehypeSanitize, { defaultSchema } from "rehype-sanitize";
-import rehypeStringify from "rehype-stringify";
-import remarkGfm from "remark-gfm";
-import remarkParse from "remark-parse";
-import remarkRehype from "remark-rehype";
-import { unified } from "unified";
+import type { JSX } from 'hono/jsx'
+import { HTMLRewriter } from 'htmlrewriter'
+import rehypeRaw from 'rehype-raw'
+import rehypeSanitize, { defaultSchema } from 'rehype-sanitize'
+import rehypeStringify from 'rehype-stringify'
+import remarkGfm from 'remark-gfm'
+import remarkParse from 'remark-parse'
+import remarkRehype from 'remark-rehype'
+import { unified } from 'unified'
 
-import { mergeStyleAttributes, normalizeStyleObject } from "../style";
+import { mergeStyleAttributes, normalizeStyleObject } from '../style'
 
 type MarkdownStyleKey =
-  | "a"
-  | "blockquote"
-  | "code"
-  | "codeInline"
-  | "h1"
-  | "h2"
-  | "h3"
-  | "h4"
-  | "h5"
-  | "h6"
-  | "img"
-  | "li"
-  | "ol"
-  | "p"
-  | "pre"
-  | "table"
-  | "tbody"
-  | "td"
-  | "th"
-  | "thead"
-  | "tr"
-  | "ul";
+  | 'a'
+  | 'blockquote'
+  | 'code'
+  | 'codeInline'
+  | 'h1'
+  | 'h2'
+  | 'h3'
+  | 'h4'
+  | 'h5'
+  | 'h6'
+  | 'img'
+  | 'li'
+  | 'ol'
+  | 'p'
+  | 'pre'
+  | 'table'
+  | 'tbody'
+  | 'td'
+  | 'th'
+  | 'thead'
+  | 'tr'
+  | 'ul'
 
-export type MarkdownCustomStyles = Partial<Record<MarkdownStyleKey, JSX.CSSProperties>>;
-export type MarkdownCustomClassNames = Partial<Record<MarkdownStyleKey, string>>;
-export type MarkdownStyleMode = "inline" | "tailwind";
+export type MarkdownCustomStyles = Partial<Record<MarkdownStyleKey, JSX.CSSProperties>>
+export type MarkdownCustomClassNames = Partial<Record<MarkdownStyleKey, string>>
+export type MarkdownStyleMode = 'inline' | 'tailwind'
 export const MARKDOWN_TAILWIND_PARENT_REQUIRED_ATTRIBUTE_NAME =
-  "data-hono-email-markdown-tailwind-parent-required";
+  'data-hono-email-markdown-tailwind-parent-required'
 export const MARKDOWN_TAILWIND_PARENT_REQUIRED_ERROR_MESSAGE =
-  '<Markdown markdownStyleMode="tailwind"> requires a <Tailwind> parent. Wrap it in <Tailwind> so markdown classes can be converted to email-safe inline styles.';
+  '<Markdown markdownStyleMode="tailwind"> requires a <Tailwind> parent. Wrap it in <Tailwind> so markdown classes can be converted to email-safe inline styles.'
 
 export type MarkdownRenderOptions = {
-  markdownContainerStyles?: JSX.CSSProperties;
-  markdownContainerClassName?: string;
-  markdownCustomStyles?: MarkdownCustomStyles;
-  markdownCustomClassNames?: MarkdownCustomClassNames;
-  markdownStyleMode?: MarkdownStyleMode;
-  sanitize?: boolean;
-};
+  markdownContainerStyles?: JSX.CSSProperties
+  markdownContainerClassName?: string
+  markdownCustomStyles?: MarkdownCustomStyles
+  markdownCustomClassNames?: MarkdownCustomClassNames
+  markdownStyleMode?: MarkdownStyleMode
+  sanitize?: boolean
+}
 
 const DEFAULT_MARKDOWN_STYLES: Record<MarkdownStyleKey, Record<string, string>> = {
   a: {
-    color: "#2563eb",
-    "text-decoration": "underline",
+    color: '#2563eb',
+    'text-decoration': 'underline',
   },
   blockquote: {
-    margin: "16px 0",
-    padding: "0 0 0 16px",
-    color: "#475569",
-    "border-left": "4px solid #cbd5e1",
+    margin: '16px 0',
+    padding: '0 0 0 16px',
+    color: '#475569',
+    'border-left': '4px solid #cbd5e1',
   },
   code: {
-    "font-family": "ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace",
+    'font-family': 'ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace',
   },
   codeInline: {
-    "font-family": "ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace",
-    "background-color": "#f1f5f9",
-    padding: "2px 4px",
-    "border-radius": "4px",
+    'font-family': 'ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace',
+    'background-color': '#f1f5f9',
+    padding: '2px 4px',
+    'border-radius': '4px',
   },
   h1: {
-    margin: "0 0 16px",
-    "font-size": "30px",
-    "line-height": "36px",
+    margin: '0 0 16px',
+    'font-size': '30px',
+    'line-height': '36px',
   },
   h2: {
-    margin: "0 0 16px",
-    "font-size": "24px",
-    "line-height": "32px",
+    margin: '0 0 16px',
+    'font-size': '24px',
+    'line-height': '32px',
   },
   h3: {
-    margin: "0 0 12px",
-    "font-size": "20px",
-    "line-height": "28px",
+    margin: '0 0 12px',
+    'font-size': '20px',
+    'line-height': '28px',
   },
   h4: {
-    margin: "0 0 12px",
-    "font-size": "18px",
-    "line-height": "24px",
+    margin: '0 0 12px',
+    'font-size': '18px',
+    'line-height': '24px',
   },
   h5: {
-    margin: "0 0 8px",
-    "font-size": "16px",
-    "line-height": "22px",
+    margin: '0 0 8px',
+    'font-size': '16px',
+    'line-height': '22px',
   },
   h6: {
-    margin: "0 0 8px",
-    "font-size": "14px",
-    "line-height": "20px",
+    margin: '0 0 8px',
+    'font-size': '14px',
+    'line-height': '20px',
   },
   img: {
-    display: "block",
-    "max-width": "100%",
+    display: 'block',
+    'max-width': '100%',
   },
   li: {
-    margin: "0 0 8px",
+    margin: '0 0 8px',
   },
   ol: {
-    margin: "0 0 16px",
-    padding: "0 0 0 24px",
+    margin: '0 0 16px',
+    padding: '0 0 0 24px',
   },
   p: {
-    margin: "0 0 16px",
+    margin: '0 0 16px',
   },
   pre: {
-    margin: "0 0 16px",
-    padding: "12px",
-    overflow: "auto",
-    "background-color": "#f8fafc",
-    "border-radius": "6px",
+    margin: '0 0 16px',
+    padding: '12px',
+    overflow: 'auto',
+    'background-color': '#f8fafc',
+    'border-radius': '6px',
   },
   table: {
-    width: "100%",
-    "margin-bottom": "16px",
-    "border-collapse": "collapse",
+    width: '100%',
+    'margin-bottom': '16px',
+    'border-collapse': 'collapse',
   },
   tbody: {},
   td: {
-    padding: "8px",
-    border: "1px solid #cbd5e1",
-    "vertical-align": "top",
+    padding: '8px',
+    border: '1px solid #cbd5e1',
+    'vertical-align': 'top',
   },
   th: {
-    padding: "8px",
-    border: "1px solid #cbd5e1",
-    "vertical-align": "top",
-    "text-align": "left",
-    "background-color": "#f8fafc",
+    padding: '8px',
+    border: '1px solid #cbd5e1',
+    'vertical-align': 'top',
+    'text-align': 'left',
+    'background-color': '#f8fafc',
   },
   thead: {},
   tr: {},
   ul: {
-    margin: "0 0 16px",
-    padding: "0 0 0 24px",
+    margin: '0 0 16px',
+    padding: '0 0 0 24px',
   },
-};
+}
 
 const DEFAULT_CONTAINER_STYLE = {
-  color: "#0f172a",
-  "font-size": "14px",
-  "line-height": "24px",
-};
+  color: '#0f172a',
+  'font-size': '14px',
+  'line-height': '24px',
+}
 
 const SAFE_MARKDOWN_TAGS = [
-  "a",
-  "b",
-  "blockquote",
-  "br",
-  "code",
-  "div",
-  "em",
-  "h1",
-  "h2",
-  "h3",
-  "h4",
-  "h5",
-  "h6",
-  "hr",
-  "i",
-  "img",
-  "li",
-  "ol",
-  "p",
-  "pre",
-  "s",
-  "small",
-  "span",
-  "strong",
-  "table",
-  "tbody",
-  "td",
-  "th",
-  "thead",
-  "tr",
-  "u",
-  "ul",
-] as const;
+  'a',
+  'b',
+  'blockquote',
+  'br',
+  'code',
+  'div',
+  'em',
+  'h1',
+  'h2',
+  'h3',
+  'h4',
+  'h5',
+  'h6',
+  'hr',
+  'i',
+  'img',
+  'li',
+  'ol',
+  'p',
+  'pre',
+  's',
+  'small',
+  'span',
+  'strong',
+  'table',
+  'tbody',
+  'td',
+  'th',
+  'thead',
+  'tr',
+  'u',
+  'ul',
+] as const
 
-const unique = <T>(values: readonly T[]): T[] => [...new Set(values)];
+const unique = <T>(values: readonly T[]): T[] => [...new Set(values)]
 const classNameTokens = (className?: string): string[] =>
-  (className ?? "")
+  (className ?? '')
     .split(/\s+/)
     .map((token) => token.trim())
-    .filter((token) => token !== "");
+    .filter((token) => token !== '')
 
 const mergeClassAttributes = (
   existingClassName: string | undefined,
@@ -203,62 +203,62 @@ const mergeClassAttributes = (
   const mergedTokens = unique([
     ...classNameTokens(existingClassName),
     ...classNameTokens(additionalClassName),
-  ]);
+  ])
 
-  return mergedTokens.length > 0 ? mergedTokens.join(" ") : undefined;
-};
+  return mergedTokens.length > 0 ? mergedTokens.join(' ') : undefined
+}
 
 const MARKDOWN_SANITIZE_SCHEMA = {
   ...defaultSchema,
   tagNames: unique([...(defaultSchema.tagNames ?? []), ...SAFE_MARKDOWN_TAGS]),
   attributes: {
     ...defaultSchema.attributes,
-    "*": unique([...(defaultSchema.attributes?.["*"] ?? []), "align"]),
-    a: unique([...(defaultSchema.attributes?.a ?? []), "name", "target", "rel", "title"]),
-    img: unique([...(defaultSchema.attributes?.img ?? []), "alt", "title", "width", "height"]),
+    '*': unique([...(defaultSchema.attributes?.['*'] ?? []), 'align']),
+    a: unique([...(defaultSchema.attributes?.a ?? []), 'name', 'target', 'rel', 'title']),
+    img: unique([...(defaultSchema.attributes?.img ?? []), 'alt', 'title', 'width', 'height']),
     table: unique([
       ...(defaultSchema.attributes?.table ?? []),
-      "align",
-      "width",
-      "cellpadding",
-      "cellspacing",
-      "border",
-      "role",
+      'align',
+      'width',
+      'cellpadding',
+      'cellspacing',
+      'border',
+      'role',
     ]),
-    td: unique([...(defaultSchema.attributes?.td ?? []), "align", "colspan", "rowspan"]),
-    th: unique([...(defaultSchema.attributes?.th ?? []), "align", "colspan", "rowspan"]),
+    td: unique([...(defaultSchema.attributes?.td ?? []), 'align', 'colspan', 'rowspan']),
+    th: unique([...(defaultSchema.attributes?.th ?? []), 'align', 'colspan', 'rowspan']),
   },
   protocols: {
     ...defaultSchema.protocols,
-    href: unique([...(defaultSchema.protocols?.href ?? []), "tel"]),
+    href: unique([...(defaultSchema.protocols?.href ?? []), 'tel']),
   },
-};
+}
 
 const normalizeSanitizedMarkdownHtml = async (html: string): Promise<string> =>
   new HTMLRewriter()
-    .on("a", {
+    .on('a', {
       element(el) {
-        if (!el.getAttribute("href")) {
-          el.removeAndKeepContent();
+        if (!el.getAttribute('href')) {
+          el.removeAndKeepContent()
         }
       },
     })
-    .on("img", {
+    .on('img', {
       element(el) {
-        if (!el.getAttribute("src")) {
-          el.remove();
+        if (!el.getAttribute('src')) {
+          el.remove()
         }
       },
     })
     .transform(new Response(html))
-    .text();
+    .text()
 
 export const renderMarkdownHtml = async (
   markdown: string,
   options: MarkdownRenderOptions = {},
 ): Promise<string> => {
-  const styleMode = options.markdownStyleMode ?? "inline";
-  const requiresTailwindParent = styleMode === "tailwind";
+  const styleMode = options.markdownStyleMode ?? 'inline'
+  const requiresTailwindParent = styleMode === 'tailwind'
   const htmlSource =
     options.sanitize === false
       ? String(
@@ -281,195 +281,216 @@ export const renderMarkdownHtml = async (
               .use(rehypeStringify)
               .process(markdown),
           ),
-        );
+        )
 
-  const s = options.markdownCustomStyles;
-  const classNames = options.markdownCustomClassNames ?? {};
+  const s = options.markdownCustomStyles
+  const classNames = options.markdownCustomClassNames ?? {}
   const mergeStyle = (key: MarkdownStyleKey): Record<string, string> => ({
-    ...(styleMode === "inline" ? DEFAULT_MARKDOWN_STYLES[key] : {}),
+    ...(styleMode === 'inline' ? DEFAULT_MARKDOWN_STYLES[key] : {}),
     ...normalizeStyleObject(s?.[key]),
-  });
-  const styles = Object.fromEntries(
-    (Object.keys(DEFAULT_MARKDOWN_STYLES) as MarkdownStyleKey[]).map((key) => [key, mergeStyle(key)]),
-  ) as Record<MarkdownStyleKey, Record<string, string>>;
+  })
+  const styles: Record<MarkdownStyleKey, Record<string, string>> = {
+    a: mergeStyle('a'),
+    blockquote: mergeStyle('blockquote'),
+    code: mergeStyle('code'),
+    codeInline: mergeStyle('codeInline'),
+    h1: mergeStyle('h1'),
+    h2: mergeStyle('h2'),
+    h3: mergeStyle('h3'),
+    h4: mergeStyle('h4'),
+    h5: mergeStyle('h5'),
+    h6: mergeStyle('h6'),
+    img: mergeStyle('img'),
+    li: mergeStyle('li'),
+    ol: mergeStyle('ol'),
+    p: mergeStyle('p'),
+    pre: mergeStyle('pre'),
+    table: mergeStyle('table'),
+    tbody: mergeStyle('tbody'),
+    td: mergeStyle('td'),
+    th: mergeStyle('th'),
+    thead: mergeStyle('thead'),
+    tr: mergeStyle('tr'),
+    ul: mergeStyle('ul'),
+  }
 
   const containerStyle = mergeStyleAttributes(undefined, {
-    ...(styleMode === "inline" ? DEFAULT_CONTAINER_STYLE : {}),
+    ...(styleMode === 'inline' ? DEFAULT_CONTAINER_STYLE : {}),
     ...normalizeStyleObject(options.markdownContainerStyles),
-  });
-  const containerClassName = options.markdownContainerClassName;
+  })
+  const containerClassName = options.markdownContainerClassName
 
   const applyStyle = (
     el: { getAttribute(n: string): string | null; setAttribute(n: string, v: string): void },
     style: Record<string, string>,
   ) => {
     if (Object.keys(style).length === 0) {
-      return;
+      return
     }
 
-    el.setAttribute("style", mergeStyleAttributes(el.getAttribute("style") ?? undefined, style));
-  };
+    el.setAttribute('style', mergeStyleAttributes(el.getAttribute('style') ?? undefined, style))
+  }
   const applyClassName = (
     el: { getAttribute(n: string): string | null; setAttribute(n: string, v: string): void },
     className: string | undefined,
   ) => {
-    const mergedClassName = mergeClassAttributes(el.getAttribute("class") ?? undefined, className);
+    const mergedClassName = mergeClassAttributes(el.getAttribute('class') ?? undefined, className)
     if (mergedClassName) {
-      el.setAttribute("class", mergedClassName);
+      el.setAttribute('class', mergedClassName)
     }
-  };
+  }
 
-  let insidePre = false;
-  let divDepth = 0;
+  let insidePre = false
+  let divDepth = 0
 
   return new HTMLRewriter()
-    .on("div", {
+    .on('div', {
       element(el) {
-        divDepth++;
+        divDepth++
         if (divDepth === 1) {
           if (requiresTailwindParent) {
-            el.setAttribute(MARKDOWN_TAILWIND_PARENT_REQUIRED_ATTRIBUTE_NAME, "true");
+            el.setAttribute(MARKDOWN_TAILWIND_PARENT_REQUIRED_ATTRIBUTE_NAME, 'true')
           }
-          if (containerStyle !== "") {
-            el.setAttribute("style", containerStyle);
+          if (containerStyle !== '') {
+            el.setAttribute('style', containerStyle)
           }
-          applyClassName(el, containerClassName);
+          applyClassName(el, containerClassName)
         }
         el.onEndTag(() => {
-          divDepth--;
-        });
+          divDepth--
+        })
       },
     })
-    .on("a", {
+    .on('a', {
       element(el) {
-        applyStyle(el, styles.a);
-        applyClassName(el, classNames.a);
+        applyStyle(el, styles.a)
+        applyClassName(el, classNames.a)
       },
     })
-    .on("blockquote", {
+    .on('blockquote', {
       element(el) {
-        applyStyle(el, styles.blockquote);
-        applyClassName(el, classNames.blockquote);
+        applyStyle(el, styles.blockquote)
+        applyClassName(el, classNames.blockquote)
       },
     })
-    .on("h1", {
+    .on('h1', {
       element(el) {
-        applyStyle(el, styles.h1);
-        applyClassName(el, classNames.h1);
+        applyStyle(el, styles.h1)
+        applyClassName(el, classNames.h1)
       },
     })
-    .on("h2", {
+    .on('h2', {
       element(el) {
-        applyStyle(el, styles.h2);
-        applyClassName(el, classNames.h2);
+        applyStyle(el, styles.h2)
+        applyClassName(el, classNames.h2)
       },
     })
-    .on("h3", {
+    .on('h3', {
       element(el) {
-        applyStyle(el, styles.h3);
-        applyClassName(el, classNames.h3);
+        applyStyle(el, styles.h3)
+        applyClassName(el, classNames.h3)
       },
     })
-    .on("h4", {
+    .on('h4', {
       element(el) {
-        applyStyle(el, styles.h4);
-        applyClassName(el, classNames.h4);
+        applyStyle(el, styles.h4)
+        applyClassName(el, classNames.h4)
       },
     })
-    .on("h5", {
+    .on('h5', {
       element(el) {
-        applyStyle(el, styles.h5);
-        applyClassName(el, classNames.h5);
+        applyStyle(el, styles.h5)
+        applyClassName(el, classNames.h5)
       },
     })
-    .on("h6", {
+    .on('h6', {
       element(el) {
-        applyStyle(el, styles.h6);
-        applyClassName(el, classNames.h6);
+        applyStyle(el, styles.h6)
+        applyClassName(el, classNames.h6)
       },
     })
-    .on("img", {
+    .on('img', {
       element(el) {
-        applyStyle(el, styles.img);
-        applyClassName(el, classNames.img);
+        applyStyle(el, styles.img)
+        applyClassName(el, classNames.img)
       },
     })
-    .on("li", {
+    .on('li', {
       element(el) {
-        applyStyle(el, styles.li);
-        applyClassName(el, classNames.li);
+        applyStyle(el, styles.li)
+        applyClassName(el, classNames.li)
       },
     })
-    .on("ol", {
+    .on('ol', {
       element(el) {
-        applyStyle(el, styles.ol);
-        applyClassName(el, classNames.ol);
+        applyStyle(el, styles.ol)
+        applyClassName(el, classNames.ol)
       },
     })
-    .on("p", {
+    .on('p', {
       element(el) {
-        applyStyle(el, styles.p);
-        applyClassName(el, classNames.p);
+        applyStyle(el, styles.p)
+        applyClassName(el, classNames.p)
       },
     })
-    .on("pre", {
+    .on('pre', {
       element(el) {
-        applyStyle(el, styles.pre);
-        applyClassName(el, classNames.pre);
-        insidePre = true;
+        applyStyle(el, styles.pre)
+        applyClassName(el, classNames.pre)
+        insidePre = true
         el.onEndTag(() => {
-          insidePre = false;
-        });
+          insidePre = false
+        })
       },
     })
-    .on("code", {
+    .on('code', {
       element(el) {
-        applyStyle(el, insidePre ? styles.code : styles.codeInline);
-        applyClassName(el, insidePre ? classNames.code : classNames.codeInline);
+        applyStyle(el, insidePre ? styles.code : styles.codeInline)
+        applyClassName(el, insidePre ? classNames.code : classNames.codeInline)
       },
     })
-    .on("table", {
+    .on('table', {
       element(el) {
-        applyStyle(el, styles.table);
-        applyClassName(el, classNames.table);
+        applyStyle(el, styles.table)
+        applyClassName(el, classNames.table)
       },
     })
-    .on("tbody", {
+    .on('tbody', {
       element(el) {
-        applyStyle(el, styles.tbody);
-        applyClassName(el, classNames.tbody);
+        applyStyle(el, styles.tbody)
+        applyClassName(el, classNames.tbody)
       },
     })
-    .on("td", {
+    .on('td', {
       element(el) {
-        applyStyle(el, styles.td);
-        applyClassName(el, classNames.td);
+        applyStyle(el, styles.td)
+        applyClassName(el, classNames.td)
       },
     })
-    .on("th", {
+    .on('th', {
       element(el) {
-        applyStyle(el, styles.th);
-        applyClassName(el, classNames.th);
+        applyStyle(el, styles.th)
+        applyClassName(el, classNames.th)
       },
     })
-    .on("thead", {
+    .on('thead', {
       element(el) {
-        applyStyle(el, styles.thead);
-        applyClassName(el, classNames.thead);
+        applyStyle(el, styles.thead)
+        applyClassName(el, classNames.thead)
       },
     })
-    .on("tr", {
+    .on('tr', {
       element(el) {
-        applyStyle(el, styles.tr);
-        applyClassName(el, classNames.tr);
+        applyStyle(el, styles.tr)
+        applyClassName(el, classNames.tr)
       },
     })
-    .on("ul", {
+    .on('ul', {
       element(el) {
-        applyStyle(el, styles.ul);
-        applyClassName(el, classNames.ul);
+        applyStyle(el, styles.ul)
+        applyClassName(el, classNames.ul)
       },
     })
     .transform(new Response(`<div>${htmlSource}</div>`))
-    .text();
-};
+    .text()
+}

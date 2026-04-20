@@ -24,7 +24,7 @@ npm install hono-email
 ## Quick Start
 
 ```tsx
-import { Body, Button, Container, Head, Heading, Html, Preview, Text, render } from "hono-email";
+import { Body, Button, Container, Head, Heading, Html, Preview, Text, render } from 'hono-email'
 
 function WelcomeEmail() {
   return (
@@ -33,25 +33,25 @@ function WelcomeEmail() {
         <title>Welcome</title>
       </Head>
       <Preview>Your account is ready.</Preview>
-      <Body style={{ backgroundColor: "#f6f9fc", color: "#1f2937" }}>
-        <Container style={{ maxWidth: "560px", margin: "0 auto", padding: "24px" }}>
+      <Body style={{ backgroundColor: '#f6f9fc', color: '#1f2937' }}>
+        <Container style={{ maxWidth: '560px', margin: '0 auto', padding: '24px' }}>
           <Heading as="h1">Welcome</Heading>
           <Text>Thanks for signing up.</Text>
           <Button href="https://example.com/start">Get started</Button>
         </Container>
       </Body>
     </Html>
-  );
+  )
 }
 
-const html = await render(<WelcomeEmail />);
+const html = await render(<WelcomeEmail />)
 const text = await render(<WelcomeEmail />, {
-  output: "text",
+  output: 'text',
   text: {
-    headingStyle: "preserve",
-    linkFormat: "text-only",
+    headingStyle: 'preserve',
+    linkFormat: 'text-only',
   },
-});
+})
 ```
 
 ## `render()`
@@ -65,15 +65,15 @@ const text = await render(<WelcomeEmail />, {
 - Accepts plain-text options through the `text` field when `output: 'text'`
 
 ```tsx
-const html = await render(<WelcomeEmail />);
+const html = await render(<WelcomeEmail />)
 
 const text = await render(<WelcomeEmail />, {
-  output: "text",
+  output: 'text',
   text: {
-    linkFormat: "text-only",
-    listBullet: "*",
+    linkFormat: 'text-only',
+    listBullet: '*',
   },
-});
+})
 ```
 
 ## Components
@@ -135,23 +135,23 @@ Representative compatibility-sensitive cases include:
 Please note `@font-face` is not available for some clients, so it is recommended to set `fallbackFontFamily`. [see](https://www.caniemail.com/features/css-at-font-face/)
 
 ```tsx
-import { Font, Head, Html, render } from "hono-email";
+import { Font, Head, Html, render } from 'hono-email'
 
 const html = await render(
   <Html>
     <Head>
       <Font
-        fallbackFontFamily={["Arial", "sans-serif"]}
+        fallbackFontFamily={['Arial', 'sans-serif']}
         fontFamily="Inter"
         fontWeight={400}
         webFont={{
-          url: "https://example.com/inter.woff2",
-          format: "woff2",
+          url: 'https://example.com/inter.woff2',
+          format: 'woff2',
         }}
       />
     </Head>
   </Html>,
-);
+)
 ```
 
 ## Styling
@@ -161,7 +161,7 @@ const html = await render(
 ### Basic
 
 ```tsx
-import { Body, Html, Text, render } from "hono-email";
+import { Body, Html, Text, render } from 'hono-email'
 
 const html = await render(
   <Html>
@@ -169,7 +169,7 @@ const html = await render(
       <Text style={{ color: '#0f172a' }}>Hello</Text>
     </Body>
   </Html>,
-);
+)
 ```
 
 ### hono/css (CSS-in-JS)
@@ -180,15 +180,15 @@ You can use `hono/css` class names directly on normal elements (`<div>`, `<Text>
 `<Head><Style /></Head>` is required when using `hono/css`.
 
 ```tsx
-import { Style, css } from "hono/css";
-import { Body, Head, Html, Text, render } from "hono-email";
+import { Style, css } from 'hono/css'
+import { Body, Head, Html, Text, render } from 'hono-email'
 
 const titleClass = css`
   color: #0f172a;
   padding-left: 1rem;
   padding-right: 1rem;
   font-weight: bold;
-`;
+`
 
 const html = await render(
   <Html>
@@ -199,7 +199,7 @@ const html = await render(
       <Text className={titleClass}>Hello</Text>
     </Body>
   </Html>,
-);
+)
 ```
 
 ### Tailwind
@@ -208,22 +208,19 @@ If you are using `<Tailwind>` component, we recommend using a bundler (Vite, Rol
 
 ```tsx
 // vite.config.ts
-import { defineConfig } from "vite";
-import tailwindcss from "@tailwindcss/vite";
-import { vitePlugin as EmailTailwind } from "hono-email/plugin";
+import { defineConfig } from 'vite'
+import tailwindcss from '@tailwindcss/vite'
+import { vitePlugin as EmailTailwind } from 'hono-email/plugin'
 
 export default defineConfig({
-  plugins: [
-    tailwindcss(),
-    EmailTailwind(),
-  ],
-});
+  plugins: [tailwindcss(), EmailTailwind()],
+})
 ```
 
 This plugin automatically finds `<Tailwind>` and automatically injects Tailwind styles.
 
 ```tsx
-import { Body, Head, Html, Tailwind, Text, render } from "hono-email";
+import { Body, Head, Html, Tailwind, Text, render } from 'hono-email'
 
 const html = await render(
   <Html>
@@ -234,13 +231,13 @@ const html = await render(
       </Body>
     </Tailwind>
   </Html>,
-);
+)
 ```
 
 When using Tailwind for frontend styling, we recommend using `@source` with `not` to exclude emails from being scanned by the frontend Tailwind build.
 
 ```css
-@import "tailwindcss";
+@import 'tailwindcss';
 
 @source not "./emails";
 ```
@@ -250,7 +247,7 @@ When using Tailwind for frontend styling, we recommend using `@source` with `not
 If you are not using a bundler plugin, use `buildTailwindArtifactFromCss()`.
 
 ```tsx
-import { Body, Head, Html, Tailwind, Text, buildTailwindArtifactFromCss, render } from "hono-email";
+import { Body, Head, Html, Tailwind, Text, buildTailwindArtifactFromCss, render } from 'hono-email'
 
 const artifact = buildTailwindArtifactFromCss({
   css: `
@@ -261,7 +258,7 @@ const artifact = buildTailwindArtifactFromCss({
       .py-2 { padding-top: 0.5rem; padding-bottom: 0.5rem; }
     }
   `,
-});
+})
 
 const html = await render(
   <Html>
@@ -272,7 +269,7 @@ const html = await render(
       </Body>
     </Tailwind>
   </Html>,
-);
+)
 ```
 
 ## Markdown
@@ -280,7 +277,7 @@ const html = await render(
 `<Markdown>` converts GFM into HTML and applies email-friendly inline styles by default. Sanitization is enabled by default.
 
 ```tsx
-import { Body, Head, Html, Markdown, render } from "hono-email";
+import { Body, Head, Html, Markdown, render } from 'hono-email'
 
 const html = await render(
   <Html lang="en">
@@ -290,14 +287,14 @@ const html = await render(
     <Body>
       <Markdown
         markdownContainerStyles={{
-          padding: "12px",
-          border: "1px solid #111827",
+          padding: '12px',
+          border: '1px solid #111827',
         }}
         markdownCustomStyles={{
-          h1: { color: "#dc2626" },
+          h1: { color: '#dc2626' },
           codeInline: {
-            backgroundColor: "#e5e7eb",
-            padding: "2px 4px",
+            backgroundColor: '#e5e7eb',
+            padding: '2px 4px',
           },
         }}
       >{`
@@ -309,7 +306,7 @@ const html = await render(
       `}</Markdown>
     </Body>
   </Html>,
-);
+)
 ```
 
 ### Markdown with Tailwind classes
@@ -318,7 +315,7 @@ When you render Markdown inside `<Tailwind>`, you can switch Markdown to class-b
 `markdownStyleMode="tailwind"` is only supported inside `<Tailwind>` and throws otherwise.
 
 ```tsx
-import { Body, Head, Html, Markdown, Tailwind, render } from "hono-email";
+import { Body, Head, Html, Markdown, Tailwind, render } from 'hono-email'
 
 const html = await render(
   <Html lang="en">
@@ -329,9 +326,9 @@ const html = await render(
           markdownStyleMode="tailwind"
           markdownContainerClassName="prose text-slate-900"
           markdownCustomClassNames={{
-            h1: "text-2xl font-semibold",
-            p: "mb-3",
-            codeInline: "bg-slate-100 px-1 rounded",
+            h1: 'text-2xl font-semibold',
+            p: 'mb-3',
+            codeInline: 'bg-slate-100 px-1 rounded',
           }}
         >{`
 # Markdown email
@@ -341,7 +338,7 @@ Paragraph with \`code\`
       </Body>
     </Tailwind>
   </Html>,
-);
+)
 ```
 
 `markdownCustomStyles` and `markdownContainerStyles` are still available in this mode if you want to mix class-based and inline overrides.

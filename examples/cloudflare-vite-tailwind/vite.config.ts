@@ -1,10 +1,10 @@
-import { fileURLToPath, URL } from 'node:url';
+import { fileURLToPath, URL } from 'node:url'
 
-import { cloudflare } from '@cloudflare/vite-plugin';
-import tailwindcss from '@tailwindcss/vite';
-import { defineConfig } from 'vite';
+import { cloudflare } from '@cloudflare/vite-plugin'
+import tailwindcss from '@tailwindcss/vite'
+import { defineConfig } from 'vite'
 
-import { vitePlugin as EmailTailwind } from '../../src/unplugin';
+import { vitePlugin as EmailTailwind } from '../../src/unplugin'
 
 export default defineConfig({
   resolve: {
@@ -20,4 +20,4 @@ export default defineConfig({
     ],
   },
   plugins: [cloudflare(), tailwindcss(), EmailTailwind()],
-});
+})

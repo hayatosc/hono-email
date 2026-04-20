@@ -1,39 +1,39 @@
-import { Body, Container, Head, Heading, Html, Preview, Tailwind, Text, render } from "hono-email";
+import { Body, Container, Head, Heading, Html, Preview, Tailwind, Text, render } from 'hono-email'
 
 export type WelcomeEmailInput = {
-  message: string;
-  subject: string;
-};
+  message: string
+  subject: string
+}
 
-export type WelcomeEmailOverrides = Partial<WelcomeEmailInput>;
+export type WelcomeEmailOverrides = Partial<WelcomeEmailInput>
 
 export const defaultWelcomeEmailInput = (): WelcomeEmailInput => ({
-  message: "Hello,\n\nThis email was sent from the Hono form in examples/cloudflare-vite-tailwind.",
-  subject: "Test email from hono-email",
-});
+  message: 'Hello,\n\nThis email was sent from the Hono form in examples/cloudflare-vite-tailwind.',
+  subject: 'Test email from hono-email',
+})
 
 const mergeField = (value: string | undefined, fallback: string): string => {
-  const normalized = value?.trim();
+  const normalized = value?.trim()
 
-  return normalized && normalized.length > 0 ? normalized : fallback;
-};
+  return normalized && normalized.length > 0 ? normalized : fallback
+}
 
 export const createWelcomeEmailInput = (
   overrides: WelcomeEmailOverrides = {},
 ): WelcomeEmailInput => {
-  const defaults = defaultWelcomeEmailInput();
+  const defaults = defaultWelcomeEmailInput()
 
   return {
     message: mergeField(overrides.message, defaults.message),
     subject: mergeField(overrides.subject, defaults.subject),
-  };
-};
+  }
+}
 
 const toParagraphs = (value: string): string[] =>
   value
     .split(/\n{2,}/)
     .map((paragraph) => paragraph.trim())
-    .filter((paragraph) => paragraph.length > 0);
+    .filter((paragraph) => paragraph.length > 0)
 
 const WelcomeEmail = ({ message, subject }: WelcomeEmailInput) => (
   <Html lang="en">
@@ -67,12 +67,12 @@ const WelcomeEmail = ({ message, subject }: WelcomeEmailInput) => (
       </Body>
     </Tailwind>
   </Html>
-);
+)
 
 export const renderWelcomeEmail = (input: WelcomeEmailInput): Promise<string> =>
-  render(<WelcomeEmail {...input} />);
+  render(<WelcomeEmail {...input} />)
 
 export const renderWelcomeEmailText = (input: WelcomeEmailInput): Promise<string> =>
   render(<WelcomeEmail {...input} />, {
-    output: "text",
-  });
+    output: 'text',
+  })
