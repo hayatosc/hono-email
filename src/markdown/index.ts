@@ -35,10 +35,19 @@ type MarkdownStyleKey =
   | "ul";
 
 export type MarkdownCustomStyles = Partial<Record<MarkdownStyleKey, JSX.CSSProperties>>;
+export type MarkdownCustomClassNames = Partial<Record<MarkdownStyleKey, string>>;
+export type MarkdownStyleMode = "inline" | "tailwind";
+export const MARKDOWN_TAILWIND_PARENT_REQUIRED_ATTRIBUTE_NAME =
+  "data-hono-email-markdown-tailwind-parent-required";
+export const MARKDOWN_TAILWIND_PARENT_REQUIRED_ERROR_MESSAGE =
+  '<Markdown markdownStyleMode="tailwind"> requires a <Tailwind> parent. Wrap it in <Tailwind> so markdown classes can be converted to email-safe inline styles.';
 
 export type MarkdownRenderOptions = {
   markdownContainerStyles?: JSX.CSSProperties;
+  markdownContainerClassName?: string;
   markdownCustomStyles?: MarkdownCustomStyles;
+  markdownCustomClassNames?: MarkdownCustomClassNames;
+  markdownStyleMode?: MarkdownStyleMode;
   sanitize?: boolean;
 };
 
@@ -181,6 +190,23 @@ const SAFE_MARKDOWN_TAGS = [
 ] as const;
 
 const unique = <T>(values: readonly T[]): T[] => [...new Set(values)];
+const classNameTokens = (className?: string): string[] =>
+  (className ?? "")
+    .split(/\s+/)
+    .map((token) => token.trim())
+    .filter((token) => token !== "");
+
+const mergeClassAttributes = (
+  existingClassName: string | undefined,
+  additionalClassName: string | undefined,
+): string | undefined => {
+  const mergedTokens = unique([
+    ...classNameTokens(existingClassName),
+    ...classNameTokens(additionalClassName),
+  ]);
+
+  return mergedTokens.length > 0 ? mergedTokens.join(" ") : undefined;
+};
 
 const MARKDOWN_SANITIZE_SCHEMA = {
   ...defaultSchema,
@@ -231,6 +257,8 @@ export const renderMarkdownHtml = async (
   markdown: string,
   options: MarkdownRenderOptions = {},
 ): Promise<string> => {
+  const styleMode = options.markdownStyleMode ?? "inline";
+  const requiresTailwindParent = styleMode === "tailwind";
   const htmlSource =
     options.sanitize === false
       ? String(
@@ -256,41 +284,39 @@ export const renderMarkdownHtml = async (
         );
 
   const s = options.markdownCustomStyles;
-  const styles: Record<MarkdownStyleKey, Record<string, string>> = {
-    a: { ...DEFAULT_MARKDOWN_STYLES.a, ...normalizeStyleObject(s?.a) },
-    blockquote: { ...DEFAULT_MARKDOWN_STYLES.blockquote, ...normalizeStyleObject(s?.blockquote) },
-    code: { ...DEFAULT_MARKDOWN_STYLES.code, ...normalizeStyleObject(s?.code) },
-    codeInline: { ...DEFAULT_MARKDOWN_STYLES.codeInline, ...normalizeStyleObject(s?.codeInline) },
-    h1: { ...DEFAULT_MARKDOWN_STYLES.h1, ...normalizeStyleObject(s?.h1) },
-    h2: { ...DEFAULT_MARKDOWN_STYLES.h2, ...normalizeStyleObject(s?.h2) },
-    h3: { ...DEFAULT_MARKDOWN_STYLES.h3, ...normalizeStyleObject(s?.h3) },
-    h4: { ...DEFAULT_MARKDOWN_STYLES.h4, ...normalizeStyleObject(s?.h4) },
-    h5: { ...DEFAULT_MARKDOWN_STYLES.h5, ...normalizeStyleObject(s?.h5) },
-    h6: { ...DEFAULT_MARKDOWN_STYLES.h6, ...normalizeStyleObject(s?.h6) },
-    img: { ...DEFAULT_MARKDOWN_STYLES.img, ...normalizeStyleObject(s?.img) },
-    li: { ...DEFAULT_MARKDOWN_STYLES.li, ...normalizeStyleObject(s?.li) },
-    ol: { ...DEFAULT_MARKDOWN_STYLES.ol, ...normalizeStyleObject(s?.ol) },
-    p: { ...DEFAULT_MARKDOWN_STYLES.p, ...normalizeStyleObject(s?.p) },
-    pre: { ...DEFAULT_MARKDOWN_STYLES.pre, ...normalizeStyleObject(s?.pre) },
-    table: { ...DEFAULT_MARKDOWN_STYLES.table, ...normalizeStyleObject(s?.table) },
-    tbody: { ...DEFAULT_MARKDOWN_STYLES.tbody, ...normalizeStyleObject(s?.tbody) },
-    td: { ...DEFAULT_MARKDOWN_STYLES.td, ...normalizeStyleObject(s?.td) },
-    th: { ...DEFAULT_MARKDOWN_STYLES.th, ...normalizeStyleObject(s?.th) },
-    thead: { ...DEFAULT_MARKDOWN_STYLES.thead, ...normalizeStyleObject(s?.thead) },
-    tr: { ...DEFAULT_MARKDOWN_STYLES.tr, ...normalizeStyleObject(s?.tr) },
-    ul: { ...DEFAULT_MARKDOWN_STYLES.ul, ...normalizeStyleObject(s?.ul) },
-  };
+  const classNames = options.markdownCustomClassNames ?? {};
+  const mergeStyle = (key: MarkdownStyleKey): Record<string, string> => ({
+    ...(styleMode === "inline" ? DEFAULT_MARKDOWN_STYLES[key] : {}),
+    ...normalizeStyleObject(s?.[key]),
+  });
+  const styles = Object.fromEntries(
+    (Object.keys(DEFAULT_MARKDOWN_STYLES) as MarkdownStyleKey[]).map((key) => [key, mergeStyle(key)]),
+  ) as Record<MarkdownStyleKey, Record<string, string>>;
 
   const containerStyle = mergeStyleAttributes(undefined, {
-    ...DEFAULT_CONTAINER_STYLE,
+    ...(styleMode === "inline" ? DEFAULT_CONTAINER_STYLE : {}),
     ...normalizeStyleObject(options.markdownContainerStyles),
   });
+  const containerClassName = options.markdownContainerClassName;
 
   const applyStyle = (
     el: { getAttribute(n: string): string | null; setAttribute(n: string, v: string): void },
     style: Record<string, string>,
   ) => {
+    if (Object.keys(style).length === 0) {
+      return;
+    }
+
     el.setAttribute("style", mergeStyleAttributes(el.getAttribute("style") ?? undefined, style));
+  };
+  const applyClassName = (
+    el: { getAttribute(n: string): string | null; setAttribute(n: string, v: string): void },
+    className: string | undefined,
+  ) => {
+    const mergedClassName = mergeClassAttributes(el.getAttribute("class") ?? undefined, className);
+    if (mergedClassName) {
+      el.setAttribute("class", mergedClassName);
+    }
   };
 
   let insidePre = false;
@@ -300,7 +326,15 @@ export const renderMarkdownHtml = async (
     .on("div", {
       element(el) {
         divDepth++;
-        if (divDepth === 1) el.setAttribute("style", containerStyle);
+        if (divDepth === 1) {
+          if (requiresTailwindParent) {
+            el.setAttribute(MARKDOWN_TAILWIND_PARENT_REQUIRED_ATTRIBUTE_NAME, "true");
+          }
+          if (containerStyle !== "") {
+            el.setAttribute("style", containerStyle);
+          }
+          applyClassName(el, containerClassName);
+        }
         el.onEndTag(() => {
           divDepth--;
         });
@@ -309,66 +343,79 @@ export const renderMarkdownHtml = async (
     .on("a", {
       element(el) {
         applyStyle(el, styles.a);
+        applyClassName(el, classNames.a);
       },
     })
     .on("blockquote", {
       element(el) {
         applyStyle(el, styles.blockquote);
+        applyClassName(el, classNames.blockquote);
       },
     })
     .on("h1", {
       element(el) {
         applyStyle(el, styles.h1);
+        applyClassName(el, classNames.h1);
       },
     })
     .on("h2", {
       element(el) {
         applyStyle(el, styles.h2);
+        applyClassName(el, classNames.h2);
       },
     })
     .on("h3", {
       element(el) {
         applyStyle(el, styles.h3);
+        applyClassName(el, classNames.h3);
       },
     })
     .on("h4", {
       element(el) {
         applyStyle(el, styles.h4);
+        applyClassName(el, classNames.h4);
       },
     })
     .on("h5", {
       element(el) {
         applyStyle(el, styles.h5);
+        applyClassName(el, classNames.h5);
       },
     })
     .on("h6", {
       element(el) {
         applyStyle(el, styles.h6);
+        applyClassName(el, classNames.h6);
       },
     })
     .on("img", {
       element(el) {
         applyStyle(el, styles.img);
+        applyClassName(el, classNames.img);
       },
     })
     .on("li", {
       element(el) {
         applyStyle(el, styles.li);
+        applyClassName(el, classNames.li);
       },
     })
     .on("ol", {
       element(el) {
         applyStyle(el, styles.ol);
+        applyClassName(el, classNames.ol);
       },
     })
     .on("p", {
       element(el) {
         applyStyle(el, styles.p);
+        applyClassName(el, classNames.p);
       },
     })
     .on("pre", {
       element(el) {
         applyStyle(el, styles.pre);
+        applyClassName(el, classNames.pre);
         insidePre = true;
         el.onEndTag(() => {
           insidePre = false;
@@ -378,41 +425,49 @@ export const renderMarkdownHtml = async (
     .on("code", {
       element(el) {
         applyStyle(el, insidePre ? styles.code : styles.codeInline);
+        applyClassName(el, insidePre ? classNames.code : classNames.codeInline);
       },
     })
     .on("table", {
       element(el) {
         applyStyle(el, styles.table);
+        applyClassName(el, classNames.table);
       },
     })
     .on("tbody", {
       element(el) {
         applyStyle(el, styles.tbody);
+        applyClassName(el, classNames.tbody);
       },
     })
     .on("td", {
       element(el) {
         applyStyle(el, styles.td);
+        applyClassName(el, classNames.td);
       },
     })
     .on("th", {
       element(el) {
         applyStyle(el, styles.th);
+        applyClassName(el, classNames.th);
       },
     })
     .on("thead", {
       element(el) {
         applyStyle(el, styles.thead);
+        applyClassName(el, classNames.thead);
       },
     })
     .on("tr", {
       element(el) {
         applyStyle(el, styles.tr);
+        applyClassName(el, classNames.tr);
       },
     })
     .on("ul", {
       element(el) {
         applyStyle(el, styles.ul);
+        applyClassName(el, classNames.ul);
       },
     })
     .transform(new Response(`<div>${htmlSource}</div>`))

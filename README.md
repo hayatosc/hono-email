@@ -2,12 +2,16 @@
 
 `hono-email` is an ESM library for rendering HTML email and plain text from `hono/jsx`. It focuses on rendering, normalization, validation, and email-oriented primitives.
 
+> [!WARNING]
+> This project is in the early stages of development. APIs and other elements are subject to change in the future.
+
 ## Features
 
 - Render HTML email from `hono/jsx`
 - Render plain text from the same JSX tree through `render()`
 - Keep strict email validation enabled by default
 - Style markdown content with the `Markdown` component
+- Use `hono/css` class-based CSS-in-JS as a styling option
 - Apply Tailwind utility output through `Tailwind` build artifacts
 - Expose bundler integrations through `hono-email/plugin`
 
@@ -128,7 +132,7 @@ Representative compatibility-sensitive cases include:
 
 `<Font>` renders `@font-face` and a fallback `font-family` declaration inside `<Head>`
 
-Please Note `@font-face` is not avilable for some clients, so it is recommended that setting `fallbackFontFamily`. [see](https://www.caniemail.com/features/css-at-font-face/)
+Please note `@font-face` is not available for some clients, so it is recommended to set `fallbackFontFamily`. [see](https://www.caniemail.com/features/css-at-font-face/)
 
 ```tsx
 import { Font, Head, Html, render } from "hono-email";
@@ -150,9 +154,130 @@ const html = await render(
 );
 ```
 
+## Styling
+
+`hono-email` provides multiple types of styling.
+
+### Basic
+
+```tsx
+import { Body, Html, Text, render } from "hono-email";
+
+const html = await render(
+  <Html>
+    <Body>
+      <Text style={{ color: '#0f172a' }}>Hello</Text>
+    </Body>
+  </Html>,
+);
+```
+
+### hono/css (CSS-in-JS)
+
+You can use `hono/css` class names directly on normal elements (`<div>`, `<Text>`, etc.).  
+`render()` automatically converts matching class rules to email-safe inline styles.
+
+`<Head><Style /></Head>` is required when using `hono/css`.
+
+```tsx
+import { Style, css } from "hono/css";
+import { Body, Head, Html, Text, render } from "hono-email";
+
+const titleClass = css`
+  color: #0f172a;
+  padding-left: 1rem;
+  padding-right: 1rem;
+  font-weight: bold;
+`;
+
+const html = await render(
+  <Html>
+    <Head>
+      <Style />
+    </Head>
+    <Body>
+      <Text className={titleClass}>Hello</Text>
+    </Body>
+  </Html>,
+);
+```
+
+### Tailwind
+
+If you are using `<Tailwind>` component, we recommend using a bundler (Vite, Rolldown, Webpack, Esbuild etc) and the `EmailTailwind` plugin.
+
+```tsx
+// vite.config.ts
+import { defineConfig } from "vite";
+import tailwindcss from "@tailwindcss/vite";
+import { vitePlugin as EmailTailwind } from "hono-email/plugin";
+
+export default defineConfig({
+  plugins: [
+    tailwindcss(),
+    EmailTailwind(),
+  ],
+});
+```
+
+This plugin automatically finds `<Tailwind>` and automatically injects Tailwind styles.
+
+```tsx
+import { Body, Head, Html, Tailwind, Text, render } from "hono-email";
+
+const html = await render(
+  <Html>
+    <Head />
+    <Tailwind>
+      <Body>
+        <Text className="text-brand bg-brand px-4 py-2">Hello</Text>
+      </Body>
+    </Tailwind>
+  </Html>,
+);
+```
+
+When using Tailwind for frontend styling, we recommend using `@source` with `not` to exclude emails from being scanned by the frontend Tailwind build.
+
+```css
+@import "tailwindcss";
+
+@source not "./emails";
+```
+
+#### Passing an artifact explicitly
+
+If you are not using a bundler plugin, use `buildTailwindArtifactFromCss()`.
+
+```tsx
+import { Body, Head, Html, Tailwind, Text, buildTailwindArtifactFromCss, render } from "hono-email";
+
+const artifact = buildTailwindArtifactFromCss({
+  css: `
+    @layer utilities {
+      .bg-brand { background-color: #0f172a; }
+      .text-white { color: #ffffff; }
+      .px-4 { padding-left: 1rem; padding-right: 1rem; }
+      .py-2 { padding-top: 0.5rem; padding-bottom: 0.5rem; }
+    }
+  `,
+});
+
+const html = await render(
+  <Html>
+    <Head />
+    <Tailwind artifact={artifact}>
+      <Body>
+        <Text className="bg-brand text-white px-4 py-2">Hello</Text>
+      </Body>
+    </Tailwind>
+  </Html>,
+);
+```
+
 ## Markdown
 
-`<Markdown>` converts GFM into HTML and applies email-friendly inline styles. Sanitization is enabled by default.
+`<Markdown>` converts GFM into HTML and applies email-friendly inline styles by default. Sanitization is enabled by default.
 
 ```tsx
 import { Body, Head, Html, Markdown, render } from "hono-email";
@@ -187,78 +312,39 @@ const html = await render(
 );
 ```
 
-## Tailwind
+### Markdown with Tailwind classes
 
-If you are using `<Tailwind>` component, I recommend use any bundlers (Vite, Rolldown, Webpack, Esbuild etc) and `EmailTailwind` plugin.
-
-```tsx
-// vite.config.ts
-import { defineConfig } from "vite";
-import tailwindcss from "@tailwindcss/vite";
-import { vitePlugin as EmailTailwind } from "hono-email/plugin";
-
-export default defineConfig({
-  plugins: [
-    tailwindcss(),
-    EmailTailwind(),
-  ],
-});
-```
-
-This plugin automatically finds `<Tailwind>` and automatically injects Tailwind styles.
+When you render Markdown inside `<Tailwind>`, you can switch Markdown to class-based mode so Tailwind utilities control the styling.
+`markdownStyleMode="tailwind"` is only supported inside `<Tailwind>` and throws otherwise.
 
 ```tsx
-import { Body, Head, Html, Tailwind, Text, render } from "hono-email";
+import { Body, Head, Html, Markdown, Tailwind, render } from "hono-email";
 
 const html = await render(
-  <Html>
+  <Html lang="en">
     <Head />
     <Tailwind>
       <Body>
-        <Text className="text-brand bg-brand px-4 py-2 sm:text-blue-500">Hello</Text>
+        <Markdown
+          markdownStyleMode="tailwind"
+          markdownContainerClassName="prose text-slate-900"
+          markdownCustomClassNames={{
+            h1: "text-2xl font-semibold",
+            p: "mb-3",
+            codeInline: "bg-slate-100 px-1 rounded",
+          }}
+        >{`
+# Markdown email
+
+Paragraph with \`code\`
+        `}</Markdown>
       </Body>
     </Tailwind>
   </Html>,
 );
 ```
 
-When using Tailwind for frontend styling, we recommend using @source not to exclude emails.
-
-```css
-@import "tailwindcss";
-
-@source not "./emails";
-```
-
-### Passing an artifact explicitly
-
-If you are not using a bundler plugin, use `buildTailwindArtifactFromCss()`.
-
-```tsx
-import { Body, Head, Html, Tailwind, Text, buildTailwindArtifactFromCss, render } from "hono-email";
-
-const artifact = buildTailwindArtifactFromCss({
-  css: `
-    @layer utilities {
-      .bg-brand { background-color: #0f172a; }
-      .text-white { color: #ffffff; }
-      .px-4 { padding-inline: 1rem; }
-      .py-2 { padding-block: 0.5rem; }
-    }
-  `,
-});
-
-const html = await render(
-  <Html>
-    <Head />
-    <Tailwind artifact={artifact}>
-      <Body>
-        <Text className="bg-brand text-white px-4 py-2">Hello</Text>
-      </Body>
-    </Tailwind>
-  </Html>,
-);
-```
+`markdownCustomStyles` and `markdownContainerStyles` are still available in this mode if you want to mix class-based and inline overrides.
 
 ## Development
 
@@ -268,3 +354,7 @@ bun run build
 bun test
 bun run typecheck
 ```
+
+## Credits
+
+This project is inspired by [react-email](https://github.com/resend/react-email) and [jsx-email](https://github.com/shellscape/jsx-email). Thanks to everyone involved in these projects.

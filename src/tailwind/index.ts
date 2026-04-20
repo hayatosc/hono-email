@@ -1,6 +1,7 @@
 import { HTMLRewriter } from "htmlrewriter";
 import * as csstree from "css-tree";
 
+import { MARKDOWN_TAILWIND_PARENT_REQUIRED_ATTRIBUTE_NAME } from "../markdown";
 import { mergeStyleAttributes, serializeStyleAttribute } from "../style";
 
 export type TailwindBuildArtifact = {
@@ -17,6 +18,12 @@ export type BuildTailwindArtifactFromCssOptions = {
 type TailwindRenderResult = {
   html: string;
   headCss: string;
+};
+
+export type TransformTailwindHtmlOptions = {
+  throwOnMissingClass?: boolean;
+  ignoreMissingClass?: (className: string) => boolean;
+  preserveMarkdownTailwindParentRequiredAttribute?: boolean;
 };
 
 const REM_TO_PX_FACTOR = 16;
@@ -413,30 +420,6 @@ const appendMediaRuleByClass = (
   target[classToken] = `${target[classToken] ?? ""}${mediaRule}`;
 };
 
-const resolveVarsInString = (str: string, cssVariables: Record<string, string>): string => {
-  let result = str;
-  for (let depth = 0; depth < MAX_VARIABLE_RESOLUTION_DEPTH; depth++) {
-    let changed = false;
-    result = result.replace(
-      VAR_FUNCTION_PATTERN,
-      (match, variableName: string, fallback: string | undefined) => {
-        const mapped = cssVariables[variableName];
-        if (mapped !== undefined) {
-          changed = true;
-          return mapped;
-        }
-        if (fallback !== undefined) {
-          changed = true;
-          return fallback.trim();
-        }
-        return match;
-      },
-    );
-    if (!changed) break;
-  }
-  VAR_FUNCTION_PATTERN.lastIndex = 0;
-  return result;
-};
 
 const collectCssVariables = (nodes: csstree.CssNode[]): Record<string, string> => {
   const cssVariables: Record<string, string> = {};
@@ -582,7 +565,7 @@ const buildArtifactFromCss = (cssText: string, classes?: string[]): TailwindBuil
 
   for (const classToken of Object.keys(headCssByClass)) {
     if (headCssByClass[classToken].includes("var(")) {
-      headCssByClass[classToken] = resolveVarsInString(headCssByClass[classToken], cssVariables);
+      headCssByClass[classToken] = resolveCssVariables(headCssByClass[classToken], cssVariables);
     }
   }
 
@@ -626,11 +609,26 @@ export const buildTailwindArtifactFromCss = ({
 export const transformTailwindHtml = async (
   html: string,
   artifact: TailwindBuildArtifact,
+  options: TransformTailwindHtmlOptions = {},
 ): Promise<TailwindRenderResult> => {
   const knownClasses = new Set(artifact.classes);
+  const throwOnMissingClass = options.throwOnMissingClass ?? true;
+  const ignoreMissingClass = options.ignoreMissingClass;
+  const preserveMarkdownTailwindParentRequiredAttribute =
+    options.preserveMarkdownTailwindParentRequiredAttribute ?? false;
   const responsiveCss = new Set<string>();
 
-  const transformed = await new HTMLRewriter()
+  let rewriter = new HTMLRewriter();
+
+  if (!preserveMarkdownTailwindParentRequiredAttribute) {
+    rewriter = rewriter.on(`[${MARKDOWN_TAILWIND_PARENT_REQUIRED_ATTRIBUTE_NAME}]`, {
+      element(el) {
+        el.removeAttribute(MARKDOWN_TAILWIND_PARENT_REQUIRED_ATTRIBUTE_NAME);
+      },
+    });
+  }
+
+  const transformed = await rewriter
     .on("[class]", {
       element(el) {
         const tokens = el.getAttribute("class")!.split(/\s+/).filter(Boolean);
@@ -638,9 +636,15 @@ export const transformTailwindHtml = async (
 
         for (const token of tokens) {
           if (!knownClasses.has(token)) {
-            throw new Error(
-              `Tailwind class '${token}' is missing from the build artifact. Rebuild the artifact before rendering with <Tailwind>.`,
-            );
+            if (ignoreMissingClass?.(token)) {
+              continue;
+            }
+            if (throwOnMissingClass) {
+              throw new Error(
+                `Tailwind class '${token}' is missing from the build artifact. Rebuild the artifact before rendering with <Tailwind>.`,
+              );
+            }
+            continue;
           }
 
           const inlineStyle = artifact.inlineStylesByClass[token];
