@@ -161,13 +161,10 @@ const html = await render(
 ### Basic
 
 ```tsx
-import { Body, Head, Html, Text, render } from "hono-email";
+import { Body, Html, Text, render } from "hono-email";
 
 const html = await render(
   <Html>
-    <Head>
-      <Style />
-    </Head>
     <Body>
       <Text style={{ color: '#0f172a' }}>Hello</Text>
     </Body>
