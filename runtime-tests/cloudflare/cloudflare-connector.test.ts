@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vitest'
 import { connect } from 'cloudflare:sockets'
 
-import { cloudflareSmtpConnector } from '../../src/smtp/cloudflare'
+import { cloudflareSmtpConnector } from '../../src/adapter/cloudflare/smtp'
 
 describe('cloudflareSmtpConnector runtime smoke', () => {
   test('resolves cloudflare:sockets in the Workers test runtime', () => {

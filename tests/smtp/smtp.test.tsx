@@ -7,7 +7,7 @@ import {
   SmtpTransport,
   type SmtpConnector,
   type SmtpSocket,
-} from '../../src/smtp'
+} from '../../src/adapter/smtp'
 
 const CRLF = '\r\n'
 

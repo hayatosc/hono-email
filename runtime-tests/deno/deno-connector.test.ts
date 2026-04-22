@@ -1,4 +1,4 @@
-import { denoSmtpConnector } from '../../src/smtp/deno.ts'
+import { denoSmtpConnector } from '../../src/adapter/deno/smtp.ts'
 
 const assertEquals = <T>(actual: T, expected: T): void => {
   if (!Object.is(actual, expected)) {

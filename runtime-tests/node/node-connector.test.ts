@@ -2,7 +2,7 @@ import { createServer } from 'node:net'
 import test from 'node:test'
 import assert from 'node:assert/strict'
 
-import { nodeSmtpConnector } from '../../src/smtp/node.ts'
+import { nodeSmtpConnector } from '../../src/adapter/node/smtp.ts'
 
 const listen = (server: ReturnType<typeof createServer>): Promise<void> =>
   new Promise((resolve) => {

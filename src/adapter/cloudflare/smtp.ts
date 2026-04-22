@@ -3,7 +3,7 @@ import type {
   SmtpConnectorOptions,
   SmtpSocket,
   SmtpSocketAddress,
-} from './types'
+} from '../smtp/types'
 
 const CLOUDFLARE_SOCKETS_MODULE = 'cloudflare:sockets'
 

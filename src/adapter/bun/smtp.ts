@@ -3,7 +3,7 @@ import type {
   SmtpConnectorOptions,
   SmtpSocket,
   SmtpSocketAddress,
-} from './types'
+} from '../smtp/types'
 
 type BunTcpSocket = {
   write(data: Uint8Array): number

@@ -1,4 +1,4 @@
-import type { EmailMessage, SendEmailReceipt } from '../email'
+import type { EmailMessage, SendEmailReceipt } from '../index'
 
 export type SmtpSecureTransport = 'off' | 'on' | 'starttls'
 

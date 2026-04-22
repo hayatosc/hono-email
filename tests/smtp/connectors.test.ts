@@ -2,9 +2,9 @@ import { createServer } from 'node:net'
 
 import { describe, expect, test } from 'bun:test'
 
-import { bunSmtpConnector } from '../../src/smtp/bun'
-import { denoSmtpConnector } from '../../src/smtp/deno'
-import { nodeSmtpConnector } from '../../src/smtp/node'
+import { bunSmtpConnector } from '../../src/adapter/bun/smtp'
+import { denoSmtpConnector } from '../../src/adapter/deno/smtp'
+import { nodeSmtpConnector } from '../../src/adapter/node/smtp'
 
 type RuntimeGlobals = typeof globalThis & {
   Bun?: unknown

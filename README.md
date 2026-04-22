@@ -72,8 +72,9 @@ const { html, text } = await render(<WelcomeEmail />, {
 
 ## SMTP
 
-`hono-email/smtp` provides a connector-based SMTP sender. The shared email message and receipt
-types are kept separate from SMTP so other provider adapters can reuse them later.
+`hono-email/smtp` provides a connector-based SMTP sender. Shared email message, transport, and
+receipt types are exported from `hono-email/adapter` so other provider adapters can reuse them
+later.
 
 ```tsx
 import { cloudflareSmtpConnector } from 'hono-email/smtp/cloudflare'

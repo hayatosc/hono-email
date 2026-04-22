@@ -7,15 +7,15 @@ import type {
   EmailMessageDraft,
   EmailTransport,
   SendEmailReceipt,
-} from '../email'
-import { addressToPath, buildRawEmailMessage, toAddressList } from '../email/message'
-import { runSmtpSession } from './protocol'
+} from './index'
+import { addressToPath, buildRawEmailMessage, toAddressList } from './message'
+import { runSmtpSession } from './smtp/protocol'
 import type {
   SmtpConnector,
   SmtpSecureTransport,
   SmtpTransportLike,
   SmtpTransportOptions,
-} from './types'
+} from './smtp/types'
 
 export type {
   EmailAddress,
@@ -26,8 +26,8 @@ export type {
   FailedSendReceipt,
   SendEmailReceipt,
   SuccessfulSendReceipt,
-} from '../email'
-export { buildRawEmailMessage } from '../email/message'
+} from './index'
+export { buildRawEmailMessage } from './message'
 export type {
   SmtpAuth,
   SmtpConnector,
@@ -38,7 +38,7 @@ export type {
   SmtpSocketAddress,
   SmtpTransportLike,
   SmtpTransportOptions,
-} from './types'
+} from './smtp/types'
 
 export type SendEmailOptions = Omit<EmailMessageDraft, 'jsx'> & {
   jsx: Child

@@ -29,25 +29,29 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
     },
+    "./adapter": {
+      "types": "./dist/adapter/index.d.ts",
+      "import": "./dist/adapter/index.js"
+    },
     "./smtp": {
-      "types": "./dist/smtp/index.d.ts",
-      "import": "./dist/smtp/index.js"
+      "types": "./dist/adapter/smtp.d.ts",
+      "import": "./dist/adapter/smtp.js"
     },
     "./smtp/cloudflare": {
-      "types": "./dist/smtp/cloudflare.d.ts",
-      "import": "./dist/smtp/cloudflare.js"
+      "types": "./dist/adapter/cloudflare/smtp.d.ts",
+      "import": "./dist/adapter/cloudflare/smtp.js"
     },
     "./smtp/node": {
-      "types": "./dist/smtp/node.d.ts",
-      "import": "./dist/smtp/node.js"
+      "types": "./dist/adapter/node/smtp.d.ts",
+      "import": "./dist/adapter/node/smtp.js"
     },
     "./smtp/deno": {
-      "types": "./dist/smtp/deno.d.ts",
-      "import": "./dist/smtp/deno.js"
+      "types": "./dist/adapter/deno/smtp.d.ts",
+      "import": "./dist/adapter/deno/smtp.js"
     },
     "./smtp/bun": {
-      "types": "./dist/smtp/bun.d.ts",
-      "import": "./dist/smtp/bun.js"
+      "types": "./dist/adapter/bun/smtp.d.ts",
+      "import": "./dist/adapter/bun/smtp.js"
     },
     "./plugin": {
       "types": "./dist/unplugin.d.ts",

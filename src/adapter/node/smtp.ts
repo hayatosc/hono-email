@@ -1,12 +1,11 @@
-import { createConnection, type Socket } from 'node:net'
-import { connect as connectTls } from 'node:tls'
+import type { Socket } from 'node:net'
 
 import type {
   SmtpConnector,
   SmtpConnectorOptions,
   SmtpSocket,
   SmtpSocketAddress,
-} from './types'
+} from '../smtp/types'
 
 const waitForSocketEvent = (
   socket: Socket,
@@ -121,15 +120,21 @@ const toSmtpSocket = (
       socket.end()
       socket.destroy()
     },
-    startTls: () => {
-      const tlsSocket = connectTls({ servername: hostname, socket })
+    startTls: async () => {
+      const { connect } = await import('node:tls')
+      const tlsSocket = connect({ servername: hostname, socket })
       return toSmtpSocket(tlsSocket, waitForSocketEvent(tlsSocket, 'secureConnect'), hostname)
     },
   }
 }
 
 export const nodeSmtpConnector: SmtpConnector = {
-  connect(address: SmtpSocketAddress, options: SmtpConnectorOptions): SmtpSocket {
+  async connect(address: SmtpSocketAddress, options: SmtpConnectorOptions): Promise<SmtpSocket> {
+    const [{ createConnection }, { connect: connectTls }] = await Promise.all([
+      import('node:net'),
+      import('node:tls'),
+    ])
+
     if (options.secureTransport === 'on') {
       const socket = connectTls({
         host: address.hostname,

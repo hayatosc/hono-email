@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 
-import { bunSmtpConnector } from '../../src/smtp/bun'
+import { bunSmtpConnector } from '../../src/adapter/bun/smtp'
 
 describe('bunSmtpConnector runtime smoke', () => {
   test('reads and writes through a Bun TCP socket', async () => {

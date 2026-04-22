@@ -18,67 +18,23 @@ const emitUnpluginDeclaration = (): void => {
   }
 }
 
-// Build core library (Browser/Edge compatible)
+// Build library entry points (Browser/Edge compatible)
 await Bun.build({
-  entrypoints: ['./src/index.ts'],
+  entrypoints: [
+    './src/index.ts',
+    './src/adapter/index.ts',
+    './src/adapter/smtp.ts',
+    './src/adapter/cloudflare/smtp.ts',
+    './src/adapter/node/smtp.ts',
+    './src/adapter/deno/smtp.ts',
+    './src/adapter/bun/smtp.ts',
+  ],
   outdir: 'dist',
   format: 'esm',
   target: 'browser',
   minify: true,
   plugins: [dtsPlugin],
-  external: ['hono'],
-})
-
-// Build SMTP runtime (connector-based, Browser/Edge compatible)
-await Bun.build({
-  entrypoints: ['./src/smtp/index.ts'],
-  outdir: 'dist/smtp',
-  format: 'esm',
-  target: 'browser',
-  minify: true,
-  plugins: [dtsPlugin],
-  external: ['hono'],
-})
-
-// Build Cloudflare Workers SMTP connector
-await Bun.build({
-  entrypoints: ['./src/smtp/cloudflare.ts'],
-  outdir: 'dist/smtp',
-  format: 'esm',
-  target: 'browser',
-  minify: true,
-  plugins: [dtsPlugin],
-  external: ['cloudflare:sockets'],
-})
-
-// Build Node.js SMTP connector
-await Bun.build({
-  entrypoints: ['./src/smtp/node.ts'],
-  outdir: 'dist/smtp',
-  format: 'esm',
-  target: 'node',
-  minify: true,
-  plugins: [dtsPlugin],
-})
-
-// Build Deno SMTP connector
-await Bun.build({
-  entrypoints: ['./src/smtp/deno.ts'],
-  outdir: 'dist/smtp',
-  format: 'esm',
-  target: 'browser',
-  minify: true,
-  plugins: [dtsPlugin],
-})
-
-// Build Bun SMTP connector
-await Bun.build({
-  entrypoints: ['./src/smtp/bun.ts'],
-  outdir: 'dist/smtp',
-  format: 'esm',
-  target: 'browser',
-  minify: true,
-  plugins: [dtsPlugin],
+  external: ['cloudflare:sockets', 'hono', 'node:net', 'node:tls'],
 })
 
 // Build unplugin (Node.js compatible)
