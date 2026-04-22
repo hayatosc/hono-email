@@ -1,5 +1,23 @@
 import dts from 'bun-plugin-dts'
 
+const dtsPlugin = dts()
+
+const emitUnpluginDeclaration = (): void => {
+  const result = Bun.spawnSync({
+    cmd: [
+      './node_modules/.bin/tsgo',
+      '--project',
+      'tsconfig.build-unplugin.json',
+    ],
+    stderr: 'inherit',
+    stdout: 'inherit',
+  })
+
+  if (!result.success) {
+    throw new Error('Failed to emit declarations for src/unplugin.ts.')
+  }
+}
+
 // Build core library (Browser/Edge compatible)
 await Bun.build({
   entrypoints: ['./src/index.ts'],
@@ -7,7 +25,7 @@ await Bun.build({
   format: 'esm',
   target: 'browser',
   minify: true,
-  plugins: [dts()],
+  plugins: [dtsPlugin],
   external: ['hono'],
 })
 
@@ -18,7 +36,7 @@ await Bun.build({
   format: 'esm',
   target: 'browser',
   minify: true,
-  plugins: [dts()],
+  plugins: [dtsPlugin],
   external: ['hono'],
 })
 
@@ -29,7 +47,7 @@ await Bun.build({
   format: 'esm',
   target: 'browser',
   minify: true,
-  plugins: [dts()],
+  plugins: [dtsPlugin],
   external: ['cloudflare:sockets'],
 })
 
@@ -40,7 +58,7 @@ await Bun.build({
   format: 'esm',
   target: 'node',
   minify: true,
-  plugins: [dts()],
+  plugins: [dtsPlugin],
 })
 
 // Build Deno SMTP connector
@@ -50,7 +68,7 @@ await Bun.build({
   format: 'esm',
   target: 'browser',
   minify: true,
-  plugins: [dts()],
+  plugins: [dtsPlugin],
 })
 
 // Build Bun SMTP connector
@@ -60,7 +78,7 @@ await Bun.build({
   format: 'esm',
   target: 'browser',
   minify: true,
-  plugins: [dts()],
+  plugins: [dtsPlugin],
 })
 
 // Build unplugin (Node.js compatible)
@@ -70,6 +88,7 @@ await Bun.build({
   format: 'esm',
   target: 'node',
   minify: true,
-  plugins: [dts()],
   external: ['hono'],
 })
+
+emitUnpluginDeclaration()

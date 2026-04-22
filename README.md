@@ -123,6 +123,26 @@ Runtime connector entry points:
 Bun's TCP API supports direct TLS connections, but this connector does not support STARTTLS upgrade.
 Use port `465` with `secure: true` on Bun.
 
+### Runtime connector tests
+
+The default test suite runs with Bun:
+
+```sh
+bun test
+```
+
+Runtime-specific SMTP connector smoke tests are split by runtime:
+
+```sh
+bun run test:runtime:node
+bun run test:runtime:deno
+bun run test:runtime:bun
+bun run test:runtime:cloudflare
+```
+
+Use `bun run test:runtime` to run all runtime smoke tests. Runtime versions are declared in
+`mise.toml`.
+
 ## Components
 
 - `Html`
