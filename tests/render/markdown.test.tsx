@@ -12,7 +12,7 @@ import {
 
 describe('Markdown', () => {
   test('renders markdown tables and safe raw html', async () => {
-    const html = await render(
+    const { html } = await render(
       <Html>
         <Head />
         <Body>
@@ -36,7 +36,7 @@ describe('Markdown', () => {
   })
 
   test('sanitizes unsafe raw html and applies custom styles', async () => {
-    const html = await render(
+    const { html } = await render(
       <Html>
         <Head />
         <Body>
@@ -73,7 +73,7 @@ Paragraph with \`code\`
   })
 
   test('allows opting out of sanitization', async () => {
-    const html = await render(
+    const { html } = await render(
       <Html>
         <Head />
         <Body>
@@ -102,7 +102,7 @@ Paragraph with \`code\`
 `,
     })
 
-    const html = await render(
+    const { html } = await render(
       <Html>
         <Head />
         <Tailwind artifact={artifact}>
@@ -150,7 +150,7 @@ Paragraph with \`code\`
   })
 
   test('sanitizes dangerous attributes, urls, and styles while keeping safe content', async () => {
-    const html = await render(
+    const { html } = await render(
       <Html>
         <Head />
         <Body>
@@ -184,7 +184,7 @@ Paragraph with \`code\`
   })
 
   test('drops unsafe attribute values and removes comments', async () => {
-    const html = await render(
+    const { html } = await render(
       <Html>
         <Head />
         <Body>

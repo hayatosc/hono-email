@@ -33,7 +33,7 @@ const StyledEmail = ({ includeStyle = true }: { includeStyle?: boolean } = {}) =
 
 describe('hono/css integration', () => {
   test('inlines hono/css classes during render', async () => {
-    const html = await render(<StyledEmail />)
+    const { html } = await render(<StyledEmail />)
 
     expect(html).not.toContain('id="hono-css"')
     expect(html).toContain('color:#0f172a')
@@ -58,7 +58,7 @@ describe('hono/css integration', () => {
       'custom-class',
     )
 
-    const html = await render(
+    const { html } = await render(
       <Html>
         <Head>
           <Style />
@@ -106,7 +106,7 @@ describe('hono/css integration', () => {
       'text-brand px-4',
     )
 
-    const html = await render(
+    const { html } = await render(
       <Html>
         <Head>
           <Style />

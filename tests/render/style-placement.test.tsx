@@ -4,7 +4,7 @@ import { render } from '../../src'
 
 describe('style placement', () => {
   test('allows style tags inside head', async () => {
-    const html = await render(
+    const { html } = await render(
       <html>
         <head>
           <style>{'p { color: red; }'}</style>

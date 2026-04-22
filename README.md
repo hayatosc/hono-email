@@ -44,9 +44,7 @@ function WelcomeEmail() {
   )
 }
 
-const html = await render(<WelcomeEmail />)
-const text = await render(<WelcomeEmail />, {
-  output: 'text',
+const { html, text } = await render(<WelcomeEmail />, {
   text: {
     headingStyle: 'preserve',
     linkFormat: 'text-only',
@@ -58,17 +56,13 @@ const text = await render(<WelcomeEmail />, {
 
 `render()` is the primary runtime API.
 
-- Returns HTML by default
-- Returns plain text when `output: 'text'` is set
+- Returns HTML and plain text as `{ html, text }`
 - Uses `strict: true` by default
 - Accepts `doctype: 'html5' | 'xhtml-transitional' | false`
-- Accepts plain-text options through the `text` field when `output: 'text'`
+- Accepts plain-text options through the `text` field
 
 ```tsx
-const html = await render(<WelcomeEmail />)
-
-const text = await render(<WelcomeEmail />, {
-  output: 'text',
+const { html, text } = await render(<WelcomeEmail />, {
   text: {
     linkFormat: 'text-only',
     listBullet: '*',
@@ -137,7 +131,7 @@ Please note `@font-face` is not available for some clients, so it is recommended
 ```tsx
 import { Font, Head, Html, render } from 'hono-email'
 
-const html = await render(
+const { html } = await render(
   <Html>
     <Head>
       <Font
@@ -163,7 +157,7 @@ const html = await render(
 ```tsx
 import { Body, Html, Text, render } from 'hono-email'
 
-const html = await render(
+const { html } = await render(
   <Html>
     <Body>
       <Text style={{ color: '#0f172a' }}>Hello</Text>
@@ -190,7 +184,7 @@ const titleClass = css`
   font-weight: bold;
 `
 
-const html = await render(
+const { html } = await render(
   <Html>
     <Head>
       <Style />
@@ -222,7 +216,7 @@ This plugin automatically finds `<Tailwind>` and automatically injects Tailwind 
 ```tsx
 import { Body, Head, Html, Tailwind, Text, render } from 'hono-email'
 
-const html = await render(
+const { html } = await render(
   <Html>
     <Head />
     <Tailwind>
@@ -260,7 +254,7 @@ const artifact = buildTailwindArtifactFromCss({
   `,
 })
 
-const html = await render(
+const { html } = await render(
   <Html>
     <Head />
     <Tailwind artifact={artifact}>
@@ -279,7 +273,7 @@ const html = await render(
 ```tsx
 import { Body, Head, Html, Markdown, render } from 'hono-email'
 
-const html = await render(
+const { html } = await render(
   <Html lang="en">
     <Head>
       <title>Markdown example</title>
@@ -317,7 +311,7 @@ When you render Markdown inside `<Tailwind>`, you can switch Markdown to class-b
 ```tsx
 import { Body, Head, Html, Markdown, Tailwind, render } from 'hono-email'
 
-const html = await render(
+const { html } = await render(
   <Html lang="en">
     <Head />
     <Tailwind>

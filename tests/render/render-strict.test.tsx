@@ -1,15 +1,15 @@
 import { describe, expect, spyOn, test } from 'bun:test'
 
-import { render } from '../../src'
+import { render, type RenderResult } from '../../src'
 import { validateHtml } from '../../src/validate/html'
 
 const withWarnSpy = async (
-  run: () => Promise<string>,
+  run: () => Promise<RenderResult>,
 ): Promise<{ html: string; warnings: string[] }> => {
   const warnSpy = spyOn(console, 'warn').mockImplementation(() => {})
 
   try {
-    const html = await run()
+    const { html } = await run()
     const warnings = warnSpy.mock.calls.map((call) => String(call[0] ?? ''))
     return { html, warnings }
   } finally {
@@ -35,7 +35,7 @@ describe('render strict mode', () => {
   })
 
   test('allows unsupported tags when strict mode is disabled', async () => {
-    const html = await render(
+    const { html } = await render(
       <html>
         <body>
           <form action="https://example.com">
@@ -51,7 +51,7 @@ describe('render strict mode', () => {
   })
 
   test('normalizes semantic tags to divs', async () => {
-    const html = await render(
+    const { html } = await render(
       <html>
         <body>
           <section data-role="hero">

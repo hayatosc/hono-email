@@ -55,16 +55,14 @@ type BaseRenderOptions = {
   strict?: boolean
 }
 
-export type HtmlRenderOptions = BaseRenderOptions & {
-  output?: 'html'
-}
-
-export type TextRenderOptions = BaseRenderOptions & {
-  output: 'text'
+export type RenderOptions = BaseRenderOptions & {
   text?: PlainTextRenderOptions
 }
 
-export type RenderOptions = HtmlRenderOptions | TextRenderOptions
+export type RenderResult = {
+  html: string
+  text: string
+}
 
 export type { BaseRenderOptions }
 
@@ -230,15 +228,11 @@ const renderHtml = async (jsx: Child, options: BaseRenderOptions = {}): Promise<
   return html
 }
 
-export async function render(jsx: Child, options?: HtmlRenderOptions): Promise<string>
-export async function render(jsx: Child, options: TextRenderOptions): Promise<string>
-export async function render(jsx: Child, options: RenderOptions): Promise<string>
-export async function render(jsx: Child, options: RenderOptions = {}): Promise<string> {
+export async function render(jsx: Child, options: RenderOptions = {}): Promise<RenderResult> {
   const html = await renderHtml(jsx, options)
 
-  if (options.output === 'text') {
-    return renderPlainText(html, options.text)
+  return {
+    html,
+    text: renderPlainText(html, options.text),
   }
-
-  return html
 }

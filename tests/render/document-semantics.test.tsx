@@ -4,7 +4,7 @@ import { Body, Head, Html, Preview, render } from '../../src'
 
 describe('document semantics', () => {
   test('moves Preview content to the top of the body', async () => {
-    const html = await render(
+    const { html } = await render(
       <Html>
         <Head>
           <title>Welcome</title>
@@ -23,7 +23,7 @@ describe('document semantics', () => {
   })
 
   test('keeps preview hidden styles intact after relocation', async () => {
-    const html = await render(
+    const { html } = await render(
       <Html>
         <Preview>Preview text</Preview>
         <Body>

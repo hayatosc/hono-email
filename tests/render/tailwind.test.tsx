@@ -37,7 +37,7 @@ describe('Tailwind', () => {
       css: PRECOMPILED_TAILWIND_CSS,
     })
 
-    const html = await render(
+    const { html } = await render(
       <Html>
         <Head />
         <Tailwind artifact={artifact}>
@@ -61,7 +61,7 @@ describe('Tailwind', () => {
       css: PRECOMPILED_TAILWIND_CSS,
     })
 
-    const html = await render(
+    const { html } = await render(
       <Html>
         <Head />
         <Tailwind artifact={artifact}>
@@ -82,7 +82,7 @@ describe('Tailwind', () => {
       css: PRECOMPILED_TAILWIND_CSS,
     })
 
-    const html = await render(
+    const { html } = await render(
       <Html>
         <Head />
         <Tailwind artifact={artifact}>
@@ -135,7 +135,7 @@ describe('Tailwind', () => {
 `,
     })
 
-    const html = await render(
+    const { html } = await render(
       <Html>
         <Head />
         <Tailwind artifact={artifact}>
@@ -168,7 +168,7 @@ describe('Tailwind', () => {
 `,
     })
 
-    const html = await render(
+    const { html } = await render(
       <Html>
         <Head />
         <Tailwind artifact={artifact}>
