@@ -1,5 +1,4 @@
 {
   "name": "hono-email-smtp-runtime-tests",
-  "main": "./worker.ts",
-  "compatibility_date": "2025-10-11"
+  "compatibility_date": "2025-10-11",
 }

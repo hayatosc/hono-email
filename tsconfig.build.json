@@ -7,5 +7,5 @@
     "outDir": "dist",
     "rootDir": "src"
   },
-  "include": ["src/unplugin.ts"]
+  "include": ["src"]
 }

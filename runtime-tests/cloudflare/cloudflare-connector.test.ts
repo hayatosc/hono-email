@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'vitest'
 import { connect } from 'cloudflare:sockets'
 
+import { SmtpTransport } from '../../src/adapter/smtp'
 import { cloudflareSmtpConnector } from '../../src/adapter/cloudflare/smtp'
 
 describe('cloudflareSmtpConnector runtime smoke', () => {
@@ -9,11 +10,24 @@ describe('cloudflareSmtpConnector runtime smoke', () => {
   })
 
   test('rejects outbound SMTP port 25 before opening a socket', async () => {
-    await expect(
-      cloudflareSmtpConnector.connect(
-        { hostname: 'smtp.example.com', port: 25 },
-        { secureTransport: 'off' },
-      ),
-    ).rejects.toThrow('port 25')
+    const transport = new SmtpTransport({
+      connector: cloudflareSmtpConnector,
+      hostname: 'smtp.example.com',
+      port: 25,
+      secure: false,
+    })
+
+    const receipt = await transport.send({
+      from: 'sender@example.com',
+      html: '<p>Hello Cloudflare</p>',
+      subject: 'Cloudflare runtime',
+      text: 'Hello Cloudflare',
+      to: 'recipient@example.com',
+    })
+
+    expect(receipt.successful).toBe(false)
+    if (!receipt.successful) {
+      expect(receipt.errorMessages.join('\n')).toContain('port 25')
+    }
   })
 })

@@ -1,6 +1,6 @@
 import type { Child } from 'hono/jsx'
 
-import type { RenderOptions } from '../index'
+import { render, type RenderOptions } from '../index'
 
 export type EmailAddress =
   | string
@@ -49,6 +49,35 @@ export type FailedSendReceipt = {
 
 export type SendEmailReceipt = SuccessfulSendReceipt | FailedSendReceipt
 
-export type EmailTransport = {
+export type EmailAdapter = {
   send(message: EmailMessage): Promise<SendEmailReceipt>
+}
+
+export type EmailTransport = EmailAdapter
+
+export type SendEmailOptions = EmailMessageDraft & {
+  adapter: EmailAdapter
+}
+
+export const renderEmailMessage = async (draft: EmailMessageDraft): Promise<EmailMessage> => {
+  const rendered = await render(draft.jsx, draft.render)
+
+  return {
+    from: draft.from,
+    html: rendered.html,
+    subject: draft.subject,
+    text: rendered.text,
+    to: draft.to,
+    ...(draft.bcc !== undefined ? { bcc: draft.bcc } : {}),
+    ...(draft.cc !== undefined ? { cc: draft.cc } : {}),
+    ...(draft.date !== undefined ? { date: draft.date } : {}),
+    ...(draft.headers !== undefined ? { headers: draft.headers } : {}),
+    ...(draft.messageId !== undefined ? { messageId: draft.messageId } : {}),
+    ...(draft.replyTo !== undefined ? { replyTo: draft.replyTo } : {}),
+  }
+}
+
+export const sendEmail = async (options: SendEmailOptions): Promise<SendEmailReceipt> => {
+  const message = await renderEmailMessage(options)
+  return options.adapter.send(message)
 }

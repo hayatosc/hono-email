@@ -35,7 +35,9 @@ const isDenoRuntime = (value: unknown): value is DenoRuntime => {
 const getDenoRuntime = (): DenoRuntime => {
   const deno: unknown = Reflect.get(globalThis, 'Deno')
   if (!isDenoRuntime(deno)) {
-    throw new Error('Deno SMTP connector requires Deno.connect, Deno.connectTls, and Deno.startTls.')
+    throw new Error(
+      'Deno SMTP connector requires Deno.connect, Deno.connectTls, and Deno.startTls.',
+    )
   }
 
   return deno

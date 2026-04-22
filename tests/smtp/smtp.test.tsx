@@ -4,6 +4,7 @@ import { Body, Html, Text } from '../../src'
 import {
   buildRawEmailMessage,
   sendEmail,
+  smtp,
   SmtpTransport,
   type SmtpConnector,
   type SmtpSocket,
@@ -148,6 +149,13 @@ describe('sendEmail over SMTP', () => {
     })
 
     const receipt = await sendEmail({
+      adapter: smtp({
+        auth: { password: 'pass', username: 'user' },
+        connector: mock.connector,
+        hostname: 'smtp.example.com',
+        port: 587,
+        secure: 'starttls',
+      }),
       from: 'sender@example.com',
       jsx: (
         <Html>
@@ -156,13 +164,6 @@ describe('sendEmail over SMTP', () => {
           </Body>
         </Html>
       ),
-      smtp: {
-        auth: { password: 'pass', username: 'user' },
-        connector: mock.connector,
-        hostname: 'smtp.example.com',
-        port: 587,
-        secure: 'starttls',
-      },
       subject: 'SMTP test',
       to: 'recipient@example.com',
     })

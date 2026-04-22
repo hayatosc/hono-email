@@ -68,7 +68,9 @@ const createDeferred = <T>(): {
 export const bunSmtpConnector: SmtpConnector = {
   async connect(address: SmtpSocketAddress, options: SmtpConnectorOptions): Promise<SmtpSocket> {
     if (options.secureTransport === 'starttls') {
-      throw new Error('Bun SMTP connector does not support STARTTLS. Use port 465 with TLS instead.')
+      throw new Error(
+        'Bun SMTP connector does not support STARTTLS. Use port 465 with TLS instead.',
+      )
     }
 
     const bun = getBunRuntime()

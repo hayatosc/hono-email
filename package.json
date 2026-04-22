@@ -37,21 +37,9 @@
       "types": "./dist/adapter/smtp.d.ts",
       "import": "./dist/adapter/smtp.js"
     },
-    "./smtp/cloudflare": {
-      "types": "./dist/adapter/cloudflare/smtp.d.ts",
-      "import": "./dist/adapter/cloudflare/smtp.js"
-    },
-    "./smtp/node": {
-      "types": "./dist/adapter/node/smtp.d.ts",
-      "import": "./dist/adapter/node/smtp.js"
-    },
-    "./smtp/deno": {
-      "types": "./dist/adapter/deno/smtp.d.ts",
-      "import": "./dist/adapter/deno/smtp.js"
-    },
-    "./smtp/bun": {
-      "types": "./dist/adapter/bun/smtp.d.ts",
-      "import": "./dist/adapter/bun/smtp.js"
+    "./smtp/*": {
+      "types": "./dist/adapter/*/smtp.d.ts",
+      "import": "./dist/adapter/*/smtp.js"
     },
     "./plugin": {
       "types": "./dist/unplugin.d.ts",
@@ -62,7 +50,7 @@
     "build": "bun run build.ts",
     "format": "oxfmt --write .",
     "lint": "oxlint --type-aware .",
-    "test": "bun test tests/render tests/text tests/smtp",
+    "test": "bun test ./tests",
     "test:runtime": "bun run test:runtime:node && bun run test:runtime:deno && bun run test:runtime:bun && bun run test:runtime:cloudflare",
     "test:runtime:node": "node --test runtime-tests/node/*.test.ts",
     "test:runtime:deno": "deno test --allow-net --allow-read runtime-tests/deno",
@@ -87,7 +75,6 @@
     "@types/bun": "^1.3.12",
     "@types/css-tree": "^2.3.11",
     "@typescript/native-preview": "^7.0.0-dev.20260419.1",
-    "bun-plugin-dts": "^0.4.0",
     "hono": "^4.12.14",
     "oxfmt": "^0.45.0",
     "oxlint": "^1.60.0",

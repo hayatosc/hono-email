@@ -79,9 +79,19 @@ later.
 ```tsx
 import { cloudflareSmtpConnector } from 'hono-email/smtp/cloudflare'
 import { Body, Html, Text } from 'hono-email'
-import { sendEmail } from 'hono-email/smtp'
+import { sendEmail, smtp } from 'hono-email/smtp'
 
 const receipt = await sendEmail({
+  adapter: smtp({
+    connector: cloudflareSmtpConnector,
+    hostname: 'smtp.example.com',
+    port: 587,
+    secure: 'starttls',
+    auth: {
+      username: 'smtp-user',
+      password: 'smtp-password',
+    },
+  }),
   from: 'sender@example.com',
   to: 'recipient@example.com',
   subject: 'Welcome',
@@ -92,16 +102,6 @@ const receipt = await sendEmail({
       </Body>
     </Html>
   ),
-  smtp: {
-    connector: cloudflareSmtpConnector,
-    hostname: 'smtp.example.com',
-    port: 587,
-    secure: 'starttls',
-    auth: {
-      username: 'smtp-user',
-      password: 'smtp-password',
-    },
-  },
 })
 
 if (!receipt.successful) {
@@ -123,26 +123,6 @@ Runtime connector entry points:
 
 Bun's TCP API supports direct TLS connections, but this connector does not support STARTTLS upgrade.
 Use port `465` with `secure: true` on Bun.
-
-### Runtime connector tests
-
-The default test suite runs with Bun:
-
-```sh
-bun test
-```
-
-Runtime-specific SMTP connector smoke tests are split by runtime:
-
-```sh
-bun run test:runtime:node
-bun run test:runtime:deno
-bun run test:runtime:bun
-bun run test:runtime:cloudflare
-```
-
-Use `bun run test:runtime` to run all runtime smoke tests. Runtime versions are declared in
-`mise.toml`.
 
 ## Components
 

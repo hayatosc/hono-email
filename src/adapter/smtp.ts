@@ -1,30 +1,24 @@
-import type { Child } from 'hono/jsx'
-
-import { render, type RenderOptions } from '../index'
 import type {
+  EmailAdapter,
   EmailAddress,
   EmailMessage,
-  EmailMessageDraft,
-  EmailTransport,
+  SendEmailOptions,
   SendEmailReceipt,
 } from './index'
 import { addressToPath, buildRawEmailMessage, toAddressList } from './message'
 import { runSmtpSession } from './smtp/protocol'
-import type {
-  SmtpConnector,
-  SmtpSecureTransport,
-  SmtpTransportLike,
-  SmtpTransportOptions,
-} from './smtp/types'
+import type { SmtpConnector, SmtpSecureTransport, SmtpTransportOptions } from './smtp/types'
 
 export type {
   EmailAddress,
+  EmailAdapter,
   EmailHeaders,
   EmailMessage,
   EmailMessageDraft,
   EmailTransport,
   FailedSendReceipt,
   SendEmailReceipt,
+  SendEmailOptions,
   SuccessfulSendReceipt,
 } from './index'
 export { buildRawEmailMessage } from './message'
@@ -39,13 +33,6 @@ export type {
   SmtpTransportLike,
   SmtpTransportOptions,
 } from './smtp/types'
-
-export type SendEmailOptions = Omit<EmailMessageDraft, 'jsx'> & {
-  jsx: Child
-  render?: RenderOptions
-  transport?: SmtpTransportLike
-  smtp?: SmtpTransportOptions
-}
 
 const DEFAULT_CLIENT_NAME = 'localhost'
 
@@ -98,7 +85,7 @@ const failedReceipt = (
   cause: error,
 })
 
-export class SmtpTransport implements EmailTransport {
+export class SmtpTransport implements EmailAdapter {
   readonly #connector: SmtpConnector
   readonly #hostname: string
   readonly #port: number
@@ -166,34 +153,9 @@ export class SmtpTransport implements EmailTransport {
   }
 }
 
-const createTransport = (options: SendEmailOptions): SmtpTransportLike => {
-  if (options.transport !== undefined) {
-    return options.transport
-  }
+export const smtp = (options: SmtpTransportOptions): SmtpTransport => new SmtpTransport(options)
 
-  if (options.smtp !== undefined) {
-    return new SmtpTransport(options.smtp)
-  }
-
-  throw new Error('sendEmail requires either transport or smtp options.')
-}
-
-export async function sendEmail(options: SendEmailOptions): Promise<SendEmailReceipt> {
-  const transport = createTransport(options)
-  const rendered = await render(options.jsx, options.render)
-  const message: EmailMessage = {
-    from: options.from,
-    html: rendered.html,
-    subject: options.subject,
-    text: rendered.text,
-    to: options.to,
-    ...(options.bcc !== undefined ? { bcc: options.bcc } : {}),
-    ...(options.cc !== undefined ? { cc: options.cc } : {}),
-    ...(options.date !== undefined ? { date: options.date } : {}),
-    ...(options.headers !== undefined ? { headers: options.headers } : {}),
-    ...(options.messageId !== undefined ? { messageId: options.messageId } : {}),
-    ...(options.replyTo !== undefined ? { replyTo: options.replyTo } : {}),
-  }
-
-  return transport.send(message)
+export const sendEmail = async (options: SendEmailOptions): Promise<SendEmailReceipt> => {
+  const adapter = await import('./index')
+  return adapter.sendEmail(options)
 }

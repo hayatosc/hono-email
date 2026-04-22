@@ -1,20 +1,12 @@
-import dts from 'bun-plugin-dts'
-
-const dtsPlugin = dts()
-
-const emitUnpluginDeclaration = (): void => {
+const emitDeclaration = (): void => {
   const result = Bun.spawnSync({
-    cmd: [
-      './node_modules/.bin/tsgo',
-      '--project',
-      'tsconfig.build-unplugin.json',
-    ],
+    cmd: ['./node_modules/.bin/tsgo', '--project', 'tsconfig.build.json'],
     stderr: 'inherit',
     stdout: 'inherit',
   })
 
   if (!result.success) {
-    throw new Error('Failed to emit declarations for src/unplugin.ts.')
+    throw new Error('Failed to emit declarations.')
   }
 }
 
@@ -33,7 +25,6 @@ await Bun.build({
   format: 'esm',
   target: 'browser',
   minify: true,
-  plugins: [dtsPlugin],
   external: ['cloudflare:sockets', 'hono', 'node:net', 'node:tls'],
 })
 
@@ -47,4 +38,4 @@ await Bun.build({
   external: ['hono'],
 })
 
-emitUnpluginDeclaration()
+emitDeclaration()

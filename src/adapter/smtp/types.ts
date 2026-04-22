@@ -1,4 +1,4 @@
-import type { EmailMessage, SendEmailReceipt } from '../index'
+import type { EmailAdapter, SendEmailReceipt } from '../index'
 
 export type SmtpSecureTransport = 'off' | 'on' | 'starttls'
 
@@ -50,6 +50,4 @@ export type SmtpTransportOptions = {
 
 export type SmtpSendResult = SendEmailReceipt
 
-export type SmtpTransportLike = {
-  send(message: EmailMessage): Promise<SmtpSendResult>
-}
+export type SmtpTransportLike = EmailAdapter

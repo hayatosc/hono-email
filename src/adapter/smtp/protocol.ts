@@ -59,10 +59,12 @@ class SmtpProtocolClient {
   #decoder = new TextDecoder()
   #encoder = new TextEncoder()
   #reader: ReadableStreamDefaultReader<Uint8Array>
+  #socket: SmtpSocket
   #writer: WritableStreamDefaultWriter<Uint8Array>
   #buffer = ''
 
-  constructor(private socket: SmtpSocket) {
+  constructor(socket: SmtpSocket) {
+    this.#socket = socket
     this.#reader = socket.readable.getReader()
     this.#writer = socket.writable.getWriter()
   }
@@ -70,20 +72,20 @@ class SmtpProtocolClient {
   async close(): Promise<void> {
     this.#reader.releaseLock()
     this.#writer.releaseLock()
-    await this.socket.close?.()
+    await this.#socket.close?.()
   }
 
   async startTls(): Promise<void> {
-    if (this.socket.startTls === undefined) {
+    if (this.#socket.startTls === undefined) {
       throw new Error('SMTP connector does not support STARTTLS.')
     }
 
     this.#reader.releaseLock()
     this.#writer.releaseLock()
-    this.socket = await this.socket.startTls()
-    await this.socket.opened
-    this.#reader = this.socket.readable.getReader()
-    this.#writer = this.socket.writable.getWriter()
+    this.#socket = await this.#socket.startTls()
+    await this.#socket.opened
+    this.#reader = this.#socket.readable.getReader()
+    this.#writer = this.#socket.writable.getWriter()
     this.#buffer = ''
   }
 

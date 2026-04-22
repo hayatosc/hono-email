@@ -106,11 +106,7 @@ const socketToWritableStream = (socket: Socket): WritableStream<Uint8Array> =>
     },
   })
 
-const toSmtpSocket = (
-  socket: Socket,
-  opened: Promise<unknown>,
-  hostname: string,
-): SmtpSocket => {
+const toSmtpSocket = (socket: Socket, opened: Promise<unknown>, hostname: string): SmtpSocket => {
   return {
     readable: socketToReadableStream(socket),
     writable: socketToWritableStream(socket),
