@@ -19,7 +19,7 @@ import {
 
 describe('email components', () => {
   test('renders a basic email document with primitives', async () => {
-    const html = await render(
+    const { html } = await render(
       <Html lang="ja">
         <Head>
           <title>Welcome</title>
@@ -52,7 +52,7 @@ describe('email components', () => {
   })
 
   test('renders Button as a link with email-safe defaults', async () => {
-    const html = await render(
+    const { html } = await render(
       <Html>
         <Body>
           <Button href="https://example.com" style={{ padding: '12px 20px' }}>
@@ -72,7 +72,7 @@ describe('email components', () => {
   })
 
   test('renders Link and preserves href with default target', async () => {
-    const html = await render(
+    const { html } = await render(
       <Html>
         <Body>
           <Link href="https://example.com/docs">Docs</Link>
@@ -84,7 +84,7 @@ describe('email components', () => {
   })
 
   test('renders Hr with default divider styles', async () => {
-    const html = await render(
+    const { html } = await render(
       <Html>
         <Body>
           <Hr />
@@ -96,7 +96,7 @@ describe('email components', () => {
   })
 
   test('applies Heading margin shorthand props', async () => {
-    const html = await render(
+    const { html } = await render(
       <Html>
         <Body>
           <Heading as="h3" mx={12} mt="8">

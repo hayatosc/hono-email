@@ -4,7 +4,7 @@ import { Body, Font, Head, Html, render } from '../../src'
 
 describe('Font', () => {
   test('renders global font-family rule with fallbacks', async () => {
-    const html = await render(
+    const { html } = await render(
       <Html>
         <Head>
           <Font fontFamily="Roboto" fallbackFontFamily={['Verdana', 'sans-serif']} />
@@ -19,7 +19,7 @@ describe('Font', () => {
   })
 
   test('renders @font-face when webFont is provided', async () => {
-    const html = await render(
+    const { html } = await render(
       <Html>
         <Head>
           <Font

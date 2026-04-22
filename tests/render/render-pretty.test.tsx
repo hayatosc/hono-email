@@ -4,7 +4,7 @@ import { render } from '../../src'
 
 describe('render pretty output', () => {
   test('returns HTML output with a doctype', async () => {
-    const html = await render(
+    const { html } = await render(
       <html>
         <body>
           <p>Hello</p>

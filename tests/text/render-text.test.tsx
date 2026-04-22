@@ -3,8 +3,8 @@ import { describe, expect, test } from 'bun:test'
 import { Body, Html, render } from '../../src'
 
 describe('render output', () => {
-  test('supports plain text output via render options', async () => {
-    const text = await render(
+  test('returns plain text with render options', async () => {
+    const { text } = await render(
       <Html>
         <Body>
           <h1>Welcome</h1>
@@ -15,7 +15,6 @@ describe('render output', () => {
       </Html>,
       {
         doctype: false,
-        output: 'text',
         text: { headingStyle: 'preserve', linkFormat: 'text-only' },
       },
     )
@@ -26,7 +25,7 @@ describe('render output', () => {
   })
 
   test('supports plain text formatting options', async () => {
-    const text = await render(
+    const { text } = await render(
       <Html>
         <Body>
           <h1>Welcome</h1>
@@ -42,7 +41,6 @@ describe('render output', () => {
       </Html>,
       {
         doctype: false,
-        output: 'text',
         text: {
           headingStyle: 'preserve',
           hrSeparator: '***',

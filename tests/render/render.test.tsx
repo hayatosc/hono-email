@@ -3,8 +3,25 @@ import { describe, expect, test } from 'bun:test'
 import { render } from '../../src'
 
 describe('render', () => {
+  test('returns HTML and plain text by default', async () => {
+    const result = await render(
+      <html>
+        <body>
+          <h1>Welcome</h1>
+          <p>Hello world</p>
+        </body>
+      </html>,
+      { doctype: false },
+    )
+
+    expect(result).toEqual({
+      html: '<html><body><h1>Welcome</h1><p>Hello world</p></body></html>',
+      text: 'WELCOME\n\nHello world',
+    })
+  })
+
   test('prepends an HTML5 doctype by default', async () => {
-    const html = await render(
+    const { html } = await render(
       <html>
         <body>Hello</body>
       </html>,
@@ -15,7 +32,7 @@ describe('render', () => {
   })
 
   test('omits the doctype when disabled', async () => {
-    const html = await render(
+    const { html } = await render(
       <html>
         <body>Hello</body>
       </html>,
@@ -31,7 +48,7 @@ describe('render', () => {
       return <p>Done</p>
     }
 
-    const html = await render(
+    const { html } = await render(
       <html>
         <body>
           <AsyncMessage />
