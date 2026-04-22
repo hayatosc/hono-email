@@ -70,6 +70,59 @@ const { html, text } = await render(<WelcomeEmail />, {
 })
 ```
 
+## SMTP
+
+`hono-email/smtp` provides a connector-based SMTP sender. The shared email message and receipt
+types are kept separate from SMTP so other provider adapters can reuse them later.
+
+```tsx
+import { cloudflareSmtpConnector } from 'hono-email/smtp/cloudflare'
+import { Body, Html, Text } from 'hono-email'
+import { sendEmail } from 'hono-email/smtp'
+
+const receipt = await sendEmail({
+  from: 'sender@example.com',
+  to: 'recipient@example.com',
+  subject: 'Welcome',
+  jsx: (
+    <Html>
+      <Body>
+        <Text>Hello from hono-email.</Text>
+      </Body>
+    </Html>
+  ),
+  smtp: {
+    connector: cloudflareSmtpConnector,
+    hostname: 'smtp.example.com',
+    port: 587,
+    secure: 'starttls',
+    auth: {
+      username: 'smtp-user',
+      password: 'smtp-password',
+    },
+  },
+})
+
+if (!receipt.successful) {
+  console.error(receipt.errorMessages)
+}
+```
+
+SMTP transport uses Web Streams internally. Runtime-specific socket support is supplied by a
+connector such as `hono-email/smtp/cloudflare`, which uses Cloudflare Workers
+`cloudflare:sockets`. Cloudflare Workers does not allow outbound SMTP connections on port `25`, so
+use submission ports such as `465` or `587`.
+
+Runtime connector entry points:
+
+- `hono-email/smtp/cloudflare` for Cloudflare Workers
+- `hono-email/smtp/node` for Node.js
+- `hono-email/smtp/deno` for Deno
+- `hono-email/smtp/bun` for Bun
+
+Bun's TCP API supports direct TLS connections, but this connector does not support STARTTLS upgrade.
+Use port `465` with `secure: true` on Bun.
+
 ## Components
 
 - `Html`

@@ -29,6 +29,26 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
     },
+    "./smtp": {
+      "types": "./dist/smtp/index.d.ts",
+      "import": "./dist/smtp/index.js"
+    },
+    "./smtp/cloudflare": {
+      "types": "./dist/smtp/cloudflare.d.ts",
+      "import": "./dist/smtp/cloudflare.js"
+    },
+    "./smtp/node": {
+      "types": "./dist/smtp/node.d.ts",
+      "import": "./dist/smtp/node.js"
+    },
+    "./smtp/deno": {
+      "types": "./dist/smtp/deno.d.ts",
+      "import": "./dist/smtp/deno.js"
+    },
+    "./smtp/bun": {
+      "types": "./dist/smtp/bun.d.ts",
+      "import": "./dist/smtp/bun.js"
+    },
     "./plugin": {
       "types": "./dist/unplugin.d.ts",
       "import": "./dist/unplugin.js"
