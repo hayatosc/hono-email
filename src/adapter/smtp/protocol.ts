@@ -21,26 +21,7 @@ export type SmtpSessionOptions = {
   rawMessage: string
 }
 
-const encodeAsciiBase64 = (value: string): string => {
-  const bytes = new TextEncoder().encode(value)
-  const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
-  let output = ''
-
-  for (let index = 0; index < bytes.length; index += 3) {
-    const first = bytes[index] ?? 0
-    const second = bytes[index + 1] ?? 0
-    const third = bytes[index + 2] ?? 0
-    const combined = (first << 16) | (second << 8) | third
-
-    output += alphabet[(combined >> 18) & 0x3f]
-    output += alphabet[(combined >> 12) & 0x3f]
-    output += index + 1 < bytes.length ? alphabet[(combined >> 6) & 0x3f] : '='
-    output += index + 2 < bytes.length ? alphabet[combined & 0x3f] : '='
-  }
-
-  return output
-}
-
+const encodeAsciiBase64 = (value: string): string => Buffer.from(value, 'utf8').toString('base64')
 const responseText = (response: SmtpCommandResponse): string =>
   response.lines.length > 0 ? response.lines.join('\n') : `${response.code}`
 
