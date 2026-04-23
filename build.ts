@@ -1,6 +1,12 @@
 const emitDeclaration = (): void => {
+  const tsgo = Bun.which('tsgo')
+
+  if (!tsgo) {
+    throw new Error('Failed to locate `tsgo` in PATH.')
+  }
+
   const result = Bun.spawnSync({
-    cmd: ['./node_modules/.bin/tsgo', '--project', 'tsconfig.build.json'],
+    cmd: [tsgo, '--project', 'tsconfig.build.json'],
     stderr: 'inherit',
     stdout: 'inherit',
   })
