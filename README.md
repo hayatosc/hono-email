@@ -81,31 +81,40 @@ import { cloudflareSmtpConnector } from 'hono-email/smtp/cloudflare'
 import { Body, Html, Text } from 'hono-email'
 import { sendEmail, smtp } from 'hono-email/smtp'
 
-const receipt = await sendEmail({
-  adapter: smtp({
-    connector: cloudflareSmtpConnector,
-    hostname: 'smtp.example.com',
-    port: 587,
-    secure: 'starttls',
-    auth: {
-      username: 'smtp-user',
-      password: 'smtp-password',
-    },
-  }),
-  from: 'sender@example.com',
-  to: 'recipient@example.com',
-  subject: 'Welcome',
-  jsx: (
-    <Html>
-      <Body>
-        <Text>Hello from hono-email.</Text>
-      </Body>
-    </Html>
-  ),
+const transport = smtp({
+  connector: cloudflareSmtpConnector,
+  hostname: 'smtp.example.com',
+  port: 587,
+  secure: 'starttls',
+  auth: {
+    username: 'smtp-user',
+    password: 'smtp-password',
+  },
+  pool: {
+    maxConnections: 2,
+  },
 })
 
-if (!receipt.successful) {
-  console.error(receipt.errorMessages)
+try {
+  const receipt = await sendEmail({
+    adapter: transport,
+    from: 'sender@example.com',
+    to: 'recipient@example.com',
+    subject: 'Welcome',
+    jsx: (
+      <Html>
+        <Body>
+          <Text>Hello from hono-email.</Text>
+        </Body>
+      </Html>
+    ),
+  })
+
+  if (!receipt.successful) {
+    console.error(receipt.errorMessages)
+  }
+} finally {
+  await transport.close()
 }
 ```
 
@@ -113,6 +122,11 @@ SMTP transport uses Web Streams internally. Runtime-specific socket support is s
 connector such as `hono-email/smtp/cloudflare`, which uses Cloudflare Workers
 `cloudflare:sockets`. Cloudflare Workers does not allow outbound SMTP connections on port `25`, so
 use submission ports such as `465` or `587`.
+
+`SmtpTransport` reuses SMTP sessions until `transport.close()` is called. The default pool size is
+`1`, so sends on the same transport share one TCP connection sequentially. Set
+`pool.maxConnections` to allow multiple concurrent SMTP sessions. If a session fails during send,
+that session is discarded and the message is not retried automatically.
 
 Runtime connector entry points:
 

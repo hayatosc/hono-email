@@ -46,6 +46,9 @@ export type SmtpTransportOptions = {
   secure?: boolean | 'starttls'
   auth?: SmtpAuth
   clientName?: string
+  pool?: {
+    maxConnections?: number
+  }
 }
 
 export type SmtpSendResult = SendEmailReceipt

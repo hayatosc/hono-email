@@ -16,12 +16,47 @@ export type SmtpSessionOptions = {
   auth?: SmtpAuth
   clientName: string
   secureTransport: SmtpSecureTransport
+}
+
+export type SmtpSendOptions = {
   mailFrom: string
   recipients: string[]
   rawMessage: string
 }
 
 const encodeAsciiBase64 = (value: string): string => Buffer.from(value, 'utf8').toString('base64')
+
+export type SmtpSession = {
+  close(): Promise<void>
+  destroy(): Promise<void>
+  send(options: SmtpSendOptions): Promise<{
+    accepted: string[]
+    rejected: string[]
+    response: string
+  }>
+}
+
+const encodeAsciiBase64 = (value: string): string => {
+  const bytes = new TextEncoder().encode(value)
+  const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
+  let output = ''
+
+  for (let index = 0; index < bytes.length; index += 3) {
+    const first = bytes[index] ?? 0
+    const second = bytes[index + 1] ?? 0
+    const third = bytes[index + 2] ?? 0
+    const combined = (first << 16) | (second << 8) | third
+
+    output += alphabet[(combined >> 18) & 0x3f]
+    output += alphabet[(combined >> 12) & 0x3f]
+    output += index + 1 < bytes.length ? alphabet[(combined >> 6) & 0x3f] : '='
+    output += index + 2 < bytes.length ? alphabet[combined & 0x3f] : '='
+  }
+
+  return output
+}
+
+>>>>>>> 94af11b (feat: reuse smtp connection)
 const responseText = (response: SmtpCommandResponse): string =>
   response.lines.length > 0 ? response.lines.join('\n') : `${response.code}`
 
@@ -173,10 +208,77 @@ const sendRecipients = async (
   return { accepted, rejected }
 }
 
-export const runSmtpSession = async (
+class ReusableSmtpSession implements SmtpSession {
+  #client: SmtpProtocolClient
+  #closed = false
+
+  constructor(client: SmtpProtocolClient) {
+    this.#client = client
+  }
+
+  async close(): Promise<void> {
+    if (this.#closed) {
+      return
+    }
+
+    this.#closed = true
+
+    try {
+      await this.#client.tryCommand('QUIT')
+    } catch {
+      // Closing should be best-effort; the socket close below is authoritative.
+    } finally {
+      await this.#client.close()
+    }
+  }
+
+  async destroy(): Promise<void> {
+    if (this.#closed) {
+      return
+    }
+
+    this.#closed = true
+    await this.#client.close()
+  }
+
+  async send(options: SmtpSendOptions): Promise<{
+    accepted: string[]
+    rejected: string[]
+    response: string
+  }> {
+    if (this.#closed) {
+      throw new Error('SMTP session is closed.')
+    }
+
+    await this.#client.command(`MAIL FROM:<${options.mailFrom}>`, [250])
+
+    const recipients = await sendRecipients(this.#client, options.recipients)
+    if (recipients.accepted.length === 0) {
+      await this.#client.command('RSET', [250])
+      return {
+        ...recipients,
+        response: 'No SMTP recipients were accepted.',
+      }
+    }
+
+    await this.#client.command('DATA', [354])
+    await this.#client.sendRaw(`${dotStuffMessage(options.rawMessage)}${CRLF}.${CRLF}`)
+    const dataResponse = await this.#client.readResponse()
+    if (!isExpectedCode(dataResponse, [250])) {
+      throw new Error(`Unexpected SMTP response to DATA: ${responseText(dataResponse)}`)
+    }
+
+    return {
+      ...recipients,
+      response: responseText(dataResponse),
+    }
+  }
+}
+
+export const openSmtpSession = async (
   socket: SmtpSocket,
   options: SmtpSessionOptions,
-): Promise<{ accepted: string[]; rejected: string[]; response: string }> => {
+): Promise<SmtpSession> => {
   const client = new SmtpProtocolClient(socket)
 
   try {
@@ -197,34 +299,25 @@ export const runSmtpSession = async (
       await authenticate(client, options.auth)
     }
 
-    await client.command(`MAIL FROM:<${options.mailFrom}>`, [250])
+    return new ReusableSmtpSession(client)
+  } catch (error) {
+    await client.close().catch(() => {})
+    throw error
+  }
+}
 
-    const recipients = await sendRecipients(client, options.recipients)
-    if (recipients.accepted.length === 0) {
-      return {
-        ...recipients,
-        response: 'No SMTP recipients were accepted.',
-      }
-    }
+export const runSmtpSession = async (
+  socket: SmtpSocket,
+  options: SmtpSessionOptions & SmtpSendOptions,
+): Promise<{ accepted: string[]; rejected: string[]; response: string }> => {
+  const session = await openSmtpSession(socket, options)
 
-    await client.command('DATA', [354])
-    await client.sendRaw(`${dotStuffMessage(options.rawMessage)}${CRLF}.${CRLF}`)
-    const dataResponse = await client.readResponse()
-    if (!isExpectedCode(dataResponse, [250])) {
-      throw new Error(`Unexpected SMTP response to DATA: ${responseText(dataResponse)}`)
-    }
-
-    try {
-      await client.tryCommand('QUIT')
-    } catch {
-      // DATA succeeded; a failed QUIT response should not turn an accepted delivery into a failure.
-    }
-
-    return {
-      ...recipients,
-      response: responseText(dataResponse),
-    }
+  try {
+    return await session.send(options)
+  } catch (error) {
+    await session.destroy().catch(() => {})
+    throw error
   } finally {
-    await client.close()
+    await session.close()
   }
 }

@@ -21,15 +21,24 @@ type MockSmtpServer = {
 }
 
 const createMockConnector = (
-  handler: (server: MockSmtpServer) => Promise<void>,
-): { connector: SmtpConnector; wait: () => Promise<void>; commands: string[] } => {
+  handler: (server: MockSmtpServer, connectionIndex: number) => Promise<void>,
+): {
+  commands: string[]
+  connectCount: () => number
+  connector: SmtpConnector
+  wait: () => Promise<void>
+} => {
   const commands: string[] = []
-  let serverTask: Promise<void> = Promise.resolve()
+  const serverTasks: Promise<void>[] = []
+  let connectCount = 0
 
   return {
     commands,
+    connectCount: () => connectCount,
     connector: {
       connect() {
+        connectCount += 1
+        const connectionIndex = connectCount
         const clientToServer = new TransformStream<Uint8Array, Uint8Array>()
         const serverToClient = new TransformStream<Uint8Array, Uint8Array>()
         const reader = clientToServer.readable.getReader()
@@ -81,7 +90,7 @@ const createMockConnector = (
           writeResponse: (value: string) => writer.write(encoder.encode(value)),
         }
 
-        serverTask = handler(server)
+        serverTasks.push(handler(server, connectionIndex))
 
         const socket: SmtpSocket = {
           readable: serverToClient.readable,
@@ -99,9 +108,31 @@ const createMockConnector = (
         return socket
       },
     },
-    wait: () => serverTask,
+    wait: async () => {
+      await Promise.all(serverTasks)
+    },
   }
 }
+
+const createDeferred = <T,>(): {
+  promise: Promise<T>
+  resolve(value: T | PromiseLike<T>): void
+} => {
+  let resolve: (value: T | PromiseLike<T>) => void = () => {}
+  const promise = new Promise<T>((innerResolve) => {
+    resolve = innerResolve
+  })
+
+  return { promise, resolve }
+}
+
+const createEmailMessage = (subject: string, to = 'recipient@example.com') => ({
+  from: 'sender@example.com',
+  html: `<p>${subject}</p>`,
+  subject,
+  text: subject,
+  to,
+})
 
 describe('SMTP message building', () => {
   test('builds a multipart message without leaking Bcc headers', () => {
@@ -148,14 +179,15 @@ describe('sendEmail over SMTP', () => {
       await server.writeResponse('221 Bye\r\n')
     })
 
+    const transport = smtp({
+      auth: { password: 'pass', username: 'user' },
+      connector: mock.connector,
+      hostname: 'smtp.example.com',
+      port: 587,
+      secure: 'starttls',
+    })
     const receipt = await sendEmail({
-      adapter: smtp({
-        auth: { password: 'pass', username: 'user' },
-        connector: mock.connector,
-        hostname: 'smtp.example.com',
-        port: 587,
-        secure: 'starttls',
-      }),
+      adapter: transport,
       from: 'sender@example.com',
       jsx: (
         <Html>
@@ -167,6 +199,7 @@ describe('sendEmail over SMTP', () => {
       subject: 'SMTP test',
       to: 'recipient@example.com',
     })
+    await transport.close()
 
     await mock.wait()
 
@@ -178,27 +211,175 @@ describe('sendEmail over SMTP', () => {
     }
     expect(data).toContain('Subject: SMTP test')
     expect(data).toContain('Content-Type: multipart/alternative;')
+    expect(mock.connectCount()).toBe(1)
+  })
+
+  test('reuses a single SMTP session across sequential sends until close', async () => {
+    const mock = createMockConnector(async (server) => {
+      await server.writeResponse('220 smtp.example.com ready\r\n')
+      expect(await server.readLine()).toBe('EHLO localhost')
+      await server.writeResponse('250 smtp.example.com\r\n')
+
+      for (const recipient of ['first@example.com', 'second@example.com']) {
+        expect(await server.readLine()).toBe('MAIL FROM:<sender@example.com>')
+        await server.writeResponse('250 OK\r\n')
+        expect(await server.readLine()).toBe(`RCPT TO:<${recipient}>`)
+        await server.writeResponse('250 Accepted\r\n')
+        expect(await server.readLine()).toBe('DATA')
+        await server.writeResponse('354 Continue\r\n')
+        await server.readData()
+        await server.writeResponse(`250 queued ${recipient}\r\n`)
+      }
+
+      expect(await server.readLine()).toBe('QUIT')
+      await server.writeResponse('221 Bye\r\n')
+    })
+
+    const transport = new SmtpTransport({
+      connector: mock.connector,
+      hostname: 'smtp.example.com',
+      port: 465,
+      secure: true,
+    })
+
+    const firstReceipt = await transport.send(createEmailMessage('First', 'first@example.com'))
+    const secondReceipt = await transport.send(createEmailMessage('Second', 'second@example.com'))
+    await transport.close()
+    await mock.wait()
+
+    expect(firstReceipt.successful).toBe(true)
+    expect(secondReceipt.successful).toBe(true)
+    expect(mock.connectCount()).toBe(1)
+    expect(mock.commands.filter((command) => command === 'EHLO localhost')).toHaveLength(1)
+  })
+
+  test('uses multiple SMTP sessions up to pool maxConnections', async () => {
+    const firstDataRead = createDeferred<void>()
+    const releaseFirstResponse = createDeferred<void>()
+    const mock = createMockConnector(async (server, connectionIndex) => {
+      await server.writeResponse('220 smtp.example.com ready\r\n')
+      expect(await server.readLine()).toBe('EHLO localhost')
+      await server.writeResponse('250 smtp.example.com\r\n')
+      expect(await server.readLine()).toBe('MAIL FROM:<sender@example.com>')
+      await server.writeResponse('250 OK\r\n')
+      expect(await server.readLine()).toMatch(/^RCPT TO:<(first|second)@example\.com>$/)
+      await server.writeResponse('250 Accepted\r\n')
+      expect(await server.readLine()).toBe('DATA')
+      await server.writeResponse('354 Continue\r\n')
+      await server.readData()
+
+      if (connectionIndex === 1) {
+        firstDataRead.resolve()
+        await releaseFirstResponse.promise
+      }
+
+      await server.writeResponse(`250 queued ${connectionIndex}\r\n`)
+      expect(await server.readLine()).toBe('QUIT')
+      await server.writeResponse('221 Bye\r\n')
+    })
+
+    const transport = new SmtpTransport({
+      connector: mock.connector,
+      hostname: 'smtp.example.com',
+      pool: { maxConnections: 2 },
+      port: 465,
+      secure: true,
+    })
+
+    const firstReceipt = transport.send(createEmailMessage('First', 'first@example.com'))
+    await firstDataRead.promise
+    const secondReceipt = transport.send(createEmailMessage('Second', 'second@example.com'))
+    releaseFirstResponse.resolve()
+
+    const receipts = await Promise.all([firstReceipt, secondReceipt])
+    await transport.close()
+    await mock.wait()
+
+    expect(receipts.every((receipt) => receipt.successful)).toBe(true)
+    expect(mock.connectCount()).toBe(2)
+  })
+
+  test('discards a failed SMTP session without retrying the message automatically', async () => {
+    const mock = createMockConnector(async (server, connectionIndex) => {
+      await server.writeResponse('220 smtp.example.com ready\r\n')
+      expect(await server.readLine()).toBe('EHLO localhost')
+      await server.writeResponse('250 smtp.example.com\r\n')
+      expect(await server.readLine()).toBe('MAIL FROM:<sender@example.com>')
+      await server.writeResponse('250 OK\r\n')
+      expect(await server.readLine()).toMatch(/^RCPT TO:<(first|second)@example\.com>$/)
+      await server.writeResponse('250 Accepted\r\n')
+      expect(await server.readLine()).toBe('DATA')
+      await server.writeResponse('354 Continue\r\n')
+      await server.readData()
+
+      if (connectionIndex === 1) {
+        await server.writeResponse('451 temporary failure\r\n')
+        return
+      }
+
+      await server.writeResponse('250 queued\r\n')
+      expect(await server.readLine()).toBe('QUIT')
+      await server.writeResponse('221 Bye\r\n')
+    })
+
+    const transport = new SmtpTransport({
+      connector: mock.connector,
+      hostname: 'smtp.example.com',
+      port: 465,
+      secure: true,
+    })
+
+    const failedReceipt = await transport.send(createEmailMessage('First', 'first@example.com'))
+    const successfulReceipt = await transport.send(createEmailMessage('Second', 'second@example.com'))
+    await transport.close()
+    await mock.wait()
+
+    expect(failedReceipt.successful).toBe(false)
+    if (failedReceipt.successful) {
+      throw new Error('Expected first send to fail.')
+    }
+    expect(failedReceipt.errorMessages).toEqual([
+      'Unexpected SMTP response to DATA: 451 temporary failure',
+    ])
+    expect(successfulReceipt.successful).toBe(true)
+    expect(mock.connectCount()).toBe(2)
+  })
+
+  test('throws when sending after the SMTP transport is closed', async () => {
+    const transport = new SmtpTransport({
+      connector: createMockConnector(async () => {}).connector,
+      hostname: 'smtp.example.com',
+      port: 465,
+      secure: true,
+    })
+
+    await transport.close()
+
+    await expect(transport.send(createEmailMessage('Closed'))).rejects.toThrow(
+      'SMTP transport is closed.',
+    )
   })
 
   test('returns partial recipient rejection without failing the accepted delivery', async () => {
+    const mock = createMockConnector(async (server) => {
+      await server.writeResponse('220 smtp.example.com ready\r\n')
+      await server.readLine()
+      await server.writeResponse('250 smtp.example.com\r\n')
+      await server.readLine()
+      await server.writeResponse('250 OK\r\n')
+      await server.readLine()
+      await server.writeResponse('550 No such user\r\n')
+      await server.readLine()
+      await server.writeResponse('250 Accepted\r\n')
+      await server.readLine()
+      await server.writeResponse('354 Continue\r\n')
+      await server.readData()
+      await server.writeResponse('250 queued\r\n')
+      expect(await server.readLine()).toBe('QUIT')
+      await server.writeResponse('221 Bye\r\n')
+    })
     const transport = new SmtpTransport({
-      connector: createMockConnector(async (server) => {
-        await server.writeResponse('220 smtp.example.com ready\r\n')
-        await server.readLine()
-        await server.writeResponse('250 smtp.example.com\r\n')
-        await server.readLine()
-        await server.writeResponse('250 OK\r\n')
-        await server.readLine()
-        await server.writeResponse('550 No such user\r\n')
-        await server.readLine()
-        await server.writeResponse('250 Accepted\r\n')
-        await server.readLine()
-        await server.writeResponse('354 Continue\r\n')
-        await server.readData()
-        await server.writeResponse('250 queued\r\n')
-        await server.readLine()
-        await server.writeResponse('221 Bye\r\n')
-      }).connector,
+      connector: mock.connector,
       hostname: 'smtp.example.com',
       port: 465,
       secure: true,
@@ -211,6 +392,8 @@ describe('sendEmail over SMTP', () => {
       text: 'Hello',
       to: ['missing@example.com', 'ok@example.com'],
     })
+    await transport.close()
+    await mock.wait()
 
     expect(receipt.successful).toBe(true)
     if (receipt.successful) {
@@ -220,16 +403,21 @@ describe('sendEmail over SMTP', () => {
   })
 
   test('returns a failed receipt when no recipient is accepted', async () => {
+    const mock = createMockConnector(async (server) => {
+      await server.writeResponse('220 smtp.example.com ready\r\n')
+      await server.readLine()
+      await server.writeResponse('250 smtp.example.com\r\n')
+      await server.readLine()
+      await server.writeResponse('250 OK\r\n')
+      await server.readLine()
+      await server.writeResponse('550 No such user\r\n')
+      expect(await server.readLine()).toBe('RSET')
+      await server.writeResponse('250 Reset\r\n')
+      expect(await server.readLine()).toBe('QUIT')
+      await server.writeResponse('221 Bye\r\n')
+    })
     const transport = new SmtpTransport({
-      connector: createMockConnector(async (server) => {
-        await server.writeResponse('220 smtp.example.com ready\r\n')
-        await server.readLine()
-        await server.writeResponse('250 smtp.example.com\r\n')
-        await server.readLine()
-        await server.writeResponse('250 OK\r\n')
-        await server.readLine()
-        await server.writeResponse('550 No such user\r\n')
-      }).connector,
+      connector: mock.connector,
       hostname: 'smtp.example.com',
       port: 465,
       secure: true,
@@ -242,6 +430,8 @@ describe('sendEmail over SMTP', () => {
       text: 'Hello',
       to: 'missing@example.com',
     })
+    await transport.close()
+    await mock.wait()
 
     expect(receipt).toMatchObject({
       accepted: [],
