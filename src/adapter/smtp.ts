@@ -338,7 +338,10 @@ export class SmtpTransport implements EmailAdapter {
       }
 
       if (this.#totalSlots < this.#maxConnections) {
-        this.#openSlot().then(waiter.resolve, waiter.reject)
+        this.#openSlot().then(
+          (slot) => waiter.resolve(slot),
+          (error) => waiter.reject(error),
+        )
         continue
       }
 

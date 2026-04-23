@@ -24,8 +24,6 @@ export type SmtpSendOptions = {
   rawMessage: string
 }
 
-const encodeAsciiBase64 = (value: string): string => Buffer.from(value, 'utf8').toString('base64')
-
 export type SmtpSession = {
   close(): Promise<void>
   destroy(): Promise<void>
@@ -55,8 +53,6 @@ const encodeAsciiBase64 = (value: string): string => {
 
   return output
 }
-
->>>>>>> 94af11b (feat: reuse smtp connection)
 const responseText = (response: SmtpCommandResponse): string =>
   response.lines.length > 0 ? response.lines.join('\n') : `${response.code}`
 
