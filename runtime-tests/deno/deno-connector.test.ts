@@ -1,4 +1,4 @@
-import { denoSmtpConnector } from '../../src/adapter/deno/smtp.ts'
+import DenoConnector from '../../src/adapter/deno/smtp.ts'
 import { runSmtpSession } from '../../src/adapter/smtp/protocol.ts'
 
 const CRLF = '\r\n'
@@ -84,7 +84,7 @@ Deno.test('denoSmtpConnector sends a message through an SMTP session over a Deno
   })()
 
   try {
-    const socket = await denoSmtpConnector.connect(
+    const socket = await DenoConnector.connect(
       { hostname: '127.0.0.1', port: address.port },
       { secureTransport: 'off' },
     )

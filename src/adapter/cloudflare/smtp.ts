@@ -84,3 +84,5 @@ export const cloudflareSmtpConnector: SmtpConnector = {
 }
 
 export const createCloudflareSmtpConnector = (): SmtpConnector => cloudflareSmtpConnector
+
+export default cloudflareSmtpConnector

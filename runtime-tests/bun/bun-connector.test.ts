@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 
 import { SmtpTransport } from '../../src/adapter/smtp'
-import { bunSmtpConnector } from '../../src/adapter/bun/smtp'
+import BunConnector from '../../src/adapter/bun/smtp'
 
 const CRLF = '\r\n'
 
@@ -76,7 +76,7 @@ describe('bunSmtpConnector runtime smoke', () => {
 
     try {
       const transport = new SmtpTransport({
-        connector: bunSmtpConnector,
+        connector: BunConnector,
         hostname: '127.0.0.1',
         port: server.port,
         secure: false,
@@ -102,7 +102,7 @@ describe('bunSmtpConnector runtime smoke', () => {
 
   test('rejects STARTTLS explicitly', async () => {
     try {
-      await bunSmtpConnector.connect(
+      await BunConnector.connect(
         { hostname: 'smtp.example.com', port: 587 },
         { secureTransport: 'starttls' },
       )

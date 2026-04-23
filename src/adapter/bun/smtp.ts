@@ -157,3 +157,5 @@ export const bunSmtpConnector: SmtpConnector = {
 }
 
 export const createBunSmtpConnector = (): SmtpConnector => bunSmtpConnector
+
+export default bunSmtpConnector

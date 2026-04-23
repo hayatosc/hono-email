@@ -67,3 +67,5 @@ export const denoSmtpConnector: SmtpConnector = {
 }
 
 export const createDenoSmtpConnector = (): SmtpConnector => denoSmtpConnector
+
+export default denoSmtpConnector

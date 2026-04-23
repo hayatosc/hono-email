@@ -147,3 +147,5 @@ export const nodeSmtpConnector: SmtpConnector = {
 }
 
 export const createNodeSmtpConnector = (): SmtpConnector => nodeSmtpConnector
+
+export default nodeSmtpConnector

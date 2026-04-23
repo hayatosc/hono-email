@@ -1,8 +1,8 @@
-import { describe, expect, test } from 'vitest'
 import { connect } from 'cloudflare:sockets'
+import { describe, expect, test } from 'vitest'
 
+import CloudflareConnector from '../../src/adapter/cloudflare/smtp'
 import { SmtpTransport } from '../../src/adapter/smtp'
-import { cloudflareSmtpConnector } from '../../src/adapter/cloudflare/smtp'
 
 describe('cloudflareSmtpConnector runtime smoke', () => {
   test('resolves cloudflare:sockets in the Workers test runtime', () => {
@@ -11,7 +11,7 @@ describe('cloudflareSmtpConnector runtime smoke', () => {
 
   test('rejects outbound SMTP port 25 before opening a socket', async () => {
     const transport = new SmtpTransport({
-      connector: cloudflareSmtpConnector,
+      connector: CloudflareConnector,
       hostname: 'smtp.example.com',
       port: 25,
       secure: false,

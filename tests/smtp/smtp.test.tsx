@@ -4,7 +4,6 @@ import { Body, Html, Text } from '../../src'
 import {
   buildRawEmailMessage,
   sendEmail,
-  smtp,
   SmtpTransport,
   type SmtpConnector,
   type SmtpSocket,
@@ -179,7 +178,7 @@ describe('sendEmail over SMTP', () => {
       await server.writeResponse('221 Bye\r\n')
     })
 
-    const transport = smtp({
+    const smtp = new SmtpTransport({
       auth: { password: 'pass', username: 'user' },
       connector: mock.connector,
       hostname: 'smtp.example.com',
@@ -187,7 +186,7 @@ describe('sendEmail over SMTP', () => {
       secure: 'starttls',
     })
     const receipt = await sendEmail({
-      adapter: transport,
+      adapter: smtp,
       from: 'sender@example.com',
       jsx: (
         <Html>
@@ -199,7 +198,7 @@ describe('sendEmail over SMTP', () => {
       subject: 'SMTP test',
       to: 'recipient@example.com',
     })
-    await transport.close()
+    await smtp.close()
 
     await mock.wait()
 
@@ -235,16 +234,16 @@ describe('sendEmail over SMTP', () => {
       await server.writeResponse('221 Bye\r\n')
     })
 
-    const transport = new SmtpTransport({
+    const smtp = new SmtpTransport({
       connector: mock.connector,
       hostname: 'smtp.example.com',
       port: 465,
       secure: true,
     })
 
-    const firstReceipt = await transport.send(createEmailMessage('First', 'first@example.com'))
-    const secondReceipt = await transport.send(createEmailMessage('Second', 'second@example.com'))
-    await transport.close()
+    const firstReceipt = await smtp.send(createEmailMessage('First', 'first@example.com'))
+    const secondReceipt = await smtp.send(createEmailMessage('Second', 'second@example.com'))
+    await smtp.close()
     await mock.wait()
 
     expect(firstReceipt.successful).toBe(true)
@@ -278,7 +277,7 @@ describe('sendEmail over SMTP', () => {
       await server.writeResponse('221 Bye\r\n')
     })
 
-    const transport = new SmtpTransport({
+    const smtp = new SmtpTransport({
       connector: mock.connector,
       hostname: 'smtp.example.com',
       pool: { maxConnections: 2 },
@@ -286,13 +285,13 @@ describe('sendEmail over SMTP', () => {
       secure: true,
     })
 
-    const firstReceipt = transport.send(createEmailMessage('First', 'first@example.com'))
+    const firstReceipt = smtp.send(createEmailMessage('First', 'first@example.com'))
     await firstDataRead.promise
-    const secondReceipt = transport.send(createEmailMessage('Second', 'second@example.com'))
+    const secondReceipt = smtp.send(createEmailMessage('Second', 'second@example.com'))
     releaseFirstResponse.resolve()
 
     const receipts = await Promise.all([firstReceipt, secondReceipt])
-    await transport.close()
+    await smtp.close()
     await mock.wait()
 
     expect(receipts.every((receipt) => receipt.successful)).toBe(true)
@@ -322,18 +321,16 @@ describe('sendEmail over SMTP', () => {
       await server.writeResponse('221 Bye\r\n')
     })
 
-    const transport = new SmtpTransport({
+    const smtp = new SmtpTransport({
       connector: mock.connector,
       hostname: 'smtp.example.com',
       port: 465,
       secure: true,
     })
 
-    const failedReceipt = await transport.send(createEmailMessage('First', 'first@example.com'))
-    const successfulReceipt = await transport.send(
-      createEmailMessage('Second', 'second@example.com'),
-    )
-    await transport.close()
+    const failedReceipt = await smtp.send(createEmailMessage('First', 'first@example.com'))
+    const successfulReceipt = await smtp.send(createEmailMessage('Second', 'second@example.com'))
+    await smtp.close()
     await mock.wait()
 
     expect(failedReceipt.successful).toBe(false)
@@ -348,16 +345,16 @@ describe('sendEmail over SMTP', () => {
   })
 
   test('throws when sending after the SMTP transport is closed', async () => {
-    const transport = new SmtpTransport({
+    const smtp = new SmtpTransport({
       connector: createMockConnector(async () => {}).connector,
       hostname: 'smtp.example.com',
       port: 465,
       secure: true,
     })
 
-    await transport.close()
+    await smtp.close()
 
-    await expect(transport.send(createEmailMessage('Closed'))).rejects.toThrow(
+    await expect(smtp.send(createEmailMessage('Closed'))).rejects.toThrow(
       'SMTP transport is closed.',
     )
   })
@@ -380,21 +377,21 @@ describe('sendEmail over SMTP', () => {
       expect(await server.readLine()).toBe('QUIT')
       await server.writeResponse('221 Bye\r\n')
     })
-    const transport = new SmtpTransport({
+    const smtp = new SmtpTransport({
       connector: mock.connector,
       hostname: 'smtp.example.com',
       port: 465,
       secure: true,
     })
 
-    const receipt = await transport.send({
+    const receipt = await smtp.send({
       from: 'sender@example.com',
       html: '<p>Hello</p>',
       subject: 'Hello',
       text: 'Hello',
       to: ['missing@example.com', 'ok@example.com'],
     })
-    await transport.close()
+    await smtp.close()
     await mock.wait()
 
     expect(receipt.successful).toBe(true)
@@ -418,21 +415,21 @@ describe('sendEmail over SMTP', () => {
       expect(await server.readLine()).toBe('QUIT')
       await server.writeResponse('221 Bye\r\n')
     })
-    const transport = new SmtpTransport({
+    const smtp = new SmtpTransport({
       connector: mock.connector,
       hostname: 'smtp.example.com',
       port: 465,
       secure: true,
     })
 
-    const receipt = await transport.send({
+    const receipt = await smtp.send({
       from: 'sender@example.com',
       html: '<p>Hello</p>',
       subject: 'Hello',
       text: 'Hello',
       to: 'missing@example.com',
     })
-    await transport.close()
+    await smtp.close()
     await mock.wait()
 
     expect(receipt).toMatchObject({

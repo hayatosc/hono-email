@@ -1,8 +1,8 @@
+import assert from 'node:assert/strict'
 import { createServer } from 'node:net'
 import test from 'node:test'
-import assert from 'node:assert/strict'
 
-import { nodeSmtpConnector } from '../../src/adapter/node/smtp.ts'
+import NodeConnector from '../../src/adapter/node/smtp.ts'
 import { runSmtpSession } from '../../src/adapter/smtp/protocol.ts'
 
 const CRLF = '\r\n'
@@ -74,7 +74,7 @@ void test('nodeSmtpConnector sends a message through an SMTP session over a Node
     assert.equal(typeof address, 'object')
     assert.notEqual(address, null)
 
-    const socket = await nodeSmtpConnector.connect(
+    const socket = await NodeConnector.connect(
       { hostname: '127.0.0.1', port: address.port },
       { secureTransport: 'off' },
     )

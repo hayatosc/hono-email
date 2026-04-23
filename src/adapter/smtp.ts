@@ -351,8 +351,6 @@ export class SmtpTransport implements EmailAdapter {
   }
 }
 
-export const smtp = (options: SmtpTransportOptions): SmtpTransport => new SmtpTransport(options)
-
 export const sendEmail = async (options: SendEmailOptions): Promise<SendEmailReceipt> => {
   const adapter = await import('./index')
   return adapter.sendEmail(options)
