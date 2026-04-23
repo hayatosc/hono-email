@@ -330,7 +330,9 @@ describe('sendEmail over SMTP', () => {
     })
 
     const failedReceipt = await transport.send(createEmailMessage('First', 'first@example.com'))
-    const successfulReceipt = await transport.send(createEmailMessage('Second', 'second@example.com'))
+    const successfulReceipt = await transport.send(
+      createEmailMessage('Second', 'second@example.com'),
+    )
     await transport.close()
     await mock.wait()
 
