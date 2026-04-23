@@ -59,6 +59,18 @@ const responseText = (response: SmtpCommandResponse): string =>
 const isExpectedCode = (response: SmtpCommandResponse, expectedCodes: number[]): boolean =>
   expectedCodes.includes(response.code)
 
+const validateSmtpPath = (path: string, label: string): void => {
+  if (/[\r\n>]/.test(path)) {
+    throw new Error(`Invalid ${label}: must not contain CR, LF, or ">".`)
+  }
+}
+
+const validateClientName = (name: string): void => {
+  if (/[\r\n ]/.test(name)) {
+    throw new Error('Invalid SMTP client name: must not contain CR, LF, or spaces.')
+  }
+}
+
 const dotStuffMessage = (rawMessage: string): string => {
   const normalized = rawMessage.replace(/\r\n|\r|\n/g, CRLF)
   return normalized
@@ -193,6 +205,7 @@ const sendRecipients = async (
   const rejected: string[] = []
 
   for (const recipient of recipients) {
+    validateSmtpPath(recipient, 'SMTP recipient')
     const response = await client.tryCommand(`RCPT TO:<${recipient}>`)
     if (isExpectedCode(response, [250, 251])) {
       accepted.push(recipient)
@@ -246,6 +259,7 @@ class ReusableSmtpSession implements SmtpSession {
       throw new Error('SMTP session is closed.')
     }
 
+    validateSmtpPath(options.mailFrom, 'SMTP envelope sender')
     await this.#client.command(`MAIL FROM:<${options.mailFrom}>`, [250])
 
     const recipients = await sendRecipients(this.#client, options.recipients)
@@ -258,7 +272,9 @@ class ReusableSmtpSession implements SmtpSession {
     }
 
     await this.#client.command('DATA', [354])
-    await this.#client.sendRaw(`${dotStuffMessage(options.rawMessage)}${CRLF}.${CRLF}`)
+    const rawMessage = dotStuffMessage(options.rawMessage)
+    const dataTerminator = rawMessage.endsWith(CRLF) ? `.${CRLF}` : `${CRLF}.${CRLF}`
+    await this.#client.sendRaw(`${rawMessage}${dataTerminator}`)
     const dataResponse = await this.#client.readResponse()
     if (!isExpectedCode(dataResponse, [250])) {
       throw new Error(`Unexpected SMTP response to DATA: ${responseText(dataResponse)}`)
@@ -283,6 +299,7 @@ export const openSmtpSession = async (
       throw new Error(`Unexpected SMTP greeting: ${responseText(greeting)}`)
     }
 
+    validateClientName(options.clientName)
     await client.command(`EHLO ${options.clientName}`, [250])
 
     if (options.secureTransport === 'starttls') {

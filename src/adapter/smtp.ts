@@ -88,7 +88,14 @@ const collectRecipients = (message: EmailMessage): string[] => {
     ...toAddressList(message.bcc),
   ]
 
-  return [...new Set(recipients.map(addressToPath))]
+  return [...new Set(recipients.map((addr) => {
+    const path = addressToPath(addr)
+    if (/[\r\n>]/.test(path)) {
+      throw new Error(`Invalid email address: ${path}`)
+    }
+
+    return path
+  }))]
 }
 
 const failedReceipt = (
