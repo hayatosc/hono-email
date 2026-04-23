@@ -113,11 +113,25 @@ class SmtpProtocolClient {
     await this.#writer.write(this.#encoder.encode(value))
   }
 
+  private describeCommandForError(command: string): string {
+    if (/^AUTH\s+/i.test(command)) {
+      return 'AUTH [REDACTED]'
+    }
+
+    if (/^[A-Za-z0-9+/]+={0,2}$/.test(command)) {
+      return '[REDACTED AUTH DATA]'
+    }
+
+    return command
+  }
+
   async command(command: string, expectedCodes: number[]): Promise<SmtpCommandResponse> {
     await this.sendRaw(`${command}${CRLF}`)
     const response = await this.readResponse()
     if (!isExpectedCode(response, expectedCodes)) {
-      throw new Error(`Unexpected SMTP response to ${command}: ${responseText(response)}`)
+      throw new Error(
+        `Unexpected SMTP response to ${this.describeCommandForError(command)}: ${responseText(response)}`,
+      )
     }
 
     return response
