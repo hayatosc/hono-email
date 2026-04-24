@@ -17,7 +17,7 @@
     "noUncheckedIndexedAccess": true,
     "exactOptionalPropertyTypes": true,
     "noImplicitOverride": true,
-    "types": ["bun"]
+    "types": ["bun", "@cloudflare/workers-types"]
   },
   "include": ["src", "tests"]
 }
