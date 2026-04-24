@@ -1,44 +1,26 @@
 import { Hono } from 'hono'
+import {
+  sendEmail,
+  type CloudflareEmailBinding,
+  type EmailAddress,
+} from 'hono-email/cloudflare-email'
+import { WorkersConnector } from 'hono-email/cloudflare-email/cloudflare'
+import { env } from 'hono/adapter'
 
 import {
   createWelcomeEmailInput,
   defaultWelcomeEmailInput,
-  renderWelcomeEmail,
-  renderWelcomeEmailText,
+  WelcomeEmail,
   type WelcomeEmailOverrides,
 } from './emails/welcome'
 
+import styleUrl from './style.css?url'
+
 type Recipient = string | string[]
-
-type EmailAddress = {
-  email: string
-  name?: string
-}
-
-type SendEmailRequest = {
-  from: string | EmailAddress
-  html: string
-  subject: string
-  text: string
-  to: Recipient
-}
-
-type SendEmailResult = {
-  messageId?: string
-}
-
-type SendEmailBinding = {
-  send(message: SendEmailRequest): Promise<SendEmailResult>
-}
-
-type Bindings = {
-  EMAIL?: SendEmailBinding
+type AppBindings = {
+  EMAIL?: CloudflareEmailBinding
   EMAIL_FROM?: string
   EMAIL_FROM_NAME?: string
-}
-
-type AppEnv = {
-  Bindings: Bindings
 }
 
 type WelcomeFormState = WelcomeEmailOverrides & {
@@ -53,7 +35,7 @@ type ComposerPageData = {
   }
 }
 
-const app = new Hono<AppEnv>()
+const app = new Hono<{ Bindings: AppBindings }>()
 
 const splitRecipients = (value: string | undefined): string[] =>
   (value ?? '')
@@ -72,8 +54,8 @@ const toRecipient = (value: string | undefined): Recipient | null => {
   return recipients.length === 1 ? first : recipients
 }
 
-const toFromAddress = (email: string, name: string | undefined): string | EmailAddress =>
-  name && name.trim().length > 0 ? { email, name: name.trim() } : email
+const toFromAddress = (address: string, name: string | undefined): EmailAddress =>
+  name && name.trim().length > 0 ? { address, name: name.trim() } : address
 
 const toWelcomeFormState = (overrides: Partial<WelcomeFormState> = {}): WelcomeFormState => {
   const defaults = defaultWelcomeEmailInput()
@@ -111,7 +93,7 @@ const renderComposerPage = ({ form, status }: ComposerPageData) => {
         <meta charSet="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>hono-email Send Form</title>
-        <link rel="stylesheet" href="/src/style.css" />
+        <link rel="stylesheet" href={styleUrl} />
       </head>
       <body class="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(255,127,50,0.22),_transparent_34%),radial-gradient(circle_at_top_right,_rgba(255,255,255,0.16),_transparent_26%),linear-gradient(180deg,#2e241f_0%,#17191d_54%,#0f1115_100%)] font-[Avenir_Next,Hiragino_Sans,Yu_Gothic,sans-serif] text-stone-50">
         <main class="mx-auto w-[min(720px,calc(100vw-32px))] py-6 pb-10">
@@ -208,8 +190,9 @@ app.get('/', async (c) => c.html(renderComposerPage({ form: toWelcomeFormState()
 
 app.post('/send', async (c) => {
   const form = formDataToWelcomeFormState(await c.req.formData())
+  const emailEnv = env<AppBindings>(c)
 
-  if (!c.env.EMAIL || !c.env.EMAIL_FROM) {
+  if (!emailEnv.EMAIL || !emailEnv.EMAIL_FROM) {
     return c.html(
       renderComposerPage({
         form,
@@ -239,20 +222,36 @@ app.post('/send', async (c) => {
   }
 
   const email = createWelcomeEmailInput(form)
-  const [html, text] = await Promise.all([renderWelcomeEmail(email), renderWelcomeEmailText(email)])
-  await c.env.EMAIL.send({
-    from: toFromAddress(c.env.EMAIL_FROM, c.env.EMAIL_FROM_NAME),
-    html,
+  const receipt = await sendEmail({
+    adapter: WorkersConnector(),
+    from: toFromAddress(emailEnv.EMAIL_FROM, emailEnv.EMAIL_FROM_NAME),
+    jsx: <WelcomeEmail {...email} />,
     subject: email.subject,
-    text,
     to,
   })
+
+  if (!receipt.successful) {
+    return c.html(
+      renderComposerPage({
+        form,
+        status: {
+          message: receipt.errorMessages.join(' / '),
+          tone: 'error',
+        },
+      }),
+      502,
+    )
+  }
+
+  const statusMessage = receipt.queued
+    ? `Accepted successfully. ${receipt.queuedRecipients?.length ?? 0} recipient(s) queued.`
+    : 'Sent successfully.'
 
   return c.html(
     renderComposerPage({
       form,
       status: {
-        message: `Sent successfully.`,
+        message: statusMessage,
         tone: 'success',
       },
     }),

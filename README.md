@@ -18,7 +18,7 @@
 ## Setup
 
 ```sh
-npm install hono-email
+npm i hono-email
 ```
 
 ## Quick Start
@@ -70,7 +70,9 @@ const { html, text } = await render(<WelcomeEmail />, {
 })
 ```
 
-## SMTP
+## Send Email with Adapter
+
+### SMTP
 
 `hono-email/smtp` provides a connector-based SMTP sender.
 
@@ -136,27 +138,21 @@ Runtime connector entry points:
 Bun's TCP API supports direct TLS connections, but this connector does not support STARTTLS upgrade.
 Use port `465` with `secure: true` on Bun.
 
-## Cloudflare Email Service
+### Cloudflare Email Service
 
-`hono-email/cloudflare-email` provides an adapter for Cloudflare Email Service. In Cloudflare
-Workers, pass the `env.EMAIL` binding. In other runtimes, pass Cloudflare REST API credentials.
+`hono-email/cloudflare-email` provides the Binding or REST adapter for Cloudflare Email Service.
 
-Workers binding:
+On Cloudflare Workers:
 
 ```tsx
 import { Body, Html, Text } from 'hono-email'
-import { sendEmail, WorkersConnector } from 'hono-email/cloudflare-email'
-
-type Env = {
-  EMAIL: {
-    send(message: unknown): Promise<{ messageId: string }>
-  }
-}
+import { sendEmail } from 'hono-email/cloudflare-email'
+import { WorkersConnector } from 'hono-email/cloudflare-email/cloudflare'
 
 export default {
   async fetch(_request: Request, env: Env): Promise<Response> {
     const receipt = await sendEmail({
-      adapter: WorkersConnector(env.EMAIL),
+      adapter: WorkersConnector(),
       from: 'sender@example.com',
       to: 'recipient@example.com',
       subject: 'Welcome',
@@ -174,7 +170,7 @@ export default {
 }
 ```
 
-REST API:
+REST API (other runtimes):
 
 ```tsx
 import { Body, Html, Text } from 'hono-email'
@@ -201,9 +197,6 @@ if (receipt.successful && receipt.queued) {
   console.log('Queued recipients:', receipt.queuedRecipients)
 }
 ```
-
-Attachments are intentionally not part of the first adapter surface. The Cloudflare payload mapping
-is kept isolated so attachment support can be added later without changing the adapter model.
 
 ## Components
 
@@ -477,7 +470,7 @@ Paragraph with \`code\`
 ```sh
 bun i
 bun run build
-bun test
+bun run test
 bun run typecheck
 ```
 

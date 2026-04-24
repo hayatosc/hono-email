@@ -1,74 +1,33 @@
 # Cloudflare + Vite + Hono + Tailwind Example
 
-This is a runnable example that uses `hono-email/vite` to inject the `<Tailwind>` artifact at build time.
-The example has its own `package.json` and keeps the frontend intentionally minimal: a server-rendered Hono JSX send form.
-Email delivery uses the structured `env.EMAIL.send({...})` API from Cloudflare Email Service.
-Inside this repository, the example resolves `hono-email` to `../../src` via local aliasing, so `ni` does not need a linked package install.
+An example using `hono-email` in cloudflare workers environment.
 
-Frontend and email styling are intentionally separated:
-
-- `src/frontend.css` builds the browser-facing Tailwind CSS for the send form
-- `hono-email/vite` scans `src/emails` only, so the email artifact contains email classes only
+- Hono
+- Vite
+- Cloudflare plugin
+  - Using Cloudflare Email Sending
+- Tailwind plugin (with `EmailTailwind` on `hono-email` )
 
 ## Commands
 
-Run these commands inside the example directory.
+Dev:
 
 ```sh
 cd examples/cloudflare-vite-tailwind
-ni
-nr dev
+bun install
+bun run typegen
+bun run dev
 ```
 
 Build and preview:
 
 ```sh
-nr build
-nr preview
+bun run build
+bun run preview
 ```
 
 Deploy to Cloudflare Workers:
 
 ```sh
-nr deploy
+bun run deploy
 ```
-
-## Routes
-
-- `GET /`
-  - minimal send form rendered with Hono JSX
-- `POST /send`
-  - sends the form payload through Cloudflare Email Service
-
-Send example:
-
-```sh
-curl -X POST "http://127.0.0.1:5173/send" \
-  -H "content-type: application/x-www-form-urlencoded" \
-  --data-urlencode "to=recipient@example.com" \
-  --data-urlencode "subject=テスト送信" \
-  --data-urlencode "message=こんにちは。%0A%0ACloudflare Email Service から送っています。"
-```
-
-## Optional Email Binding
-
-To send real email, configure `send_email` and `vars` in `wrangler.jsonc`.
-By default, this example keeps the binding local so `nr dev` works without a Cloudflare login.
-If you want real delivery during local development, add `remote: true` to the `send_email` binding and log in to Cloudflare first.
-
-```jsonc
-{
-  "send_email": [{ "name": "EMAIL" }],
-  "vars": {
-    "EMAIL_FROM": "welcome@example.com",
-    "EMAIL_FROM_NAME": "hono-email",
-  },
-}
-```
-
-Notes:
-
-- Set `EMAIL_FROM` to an address that is allowed by your Cloudflare Email Service configuration.
-- The `to` field supports multiple recipients separated by commas.
-- Actual delivery depends on your Cloudflare Email Service domain setup and permissions.
-- For real delivery in `nr dev`, switch the binding to `{ "name": "EMAIL", "remote": true }` and authenticate with Cloudflare.
