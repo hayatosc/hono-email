@@ -36,14 +36,20 @@ const createWorkersConnector = (binding: CloudflareEmailBinding): CloudflareEmai
   },
 })
 
+const isCloudflareEmailBinding = (value: unknown): value is CloudflareEmailBinding =>
+  typeof value === 'object' &&
+  value !== null &&
+  'send' in value &&
+  typeof Reflect.get(value, 'send') === 'function'
+
 const resolveEmailBinding = (bindingName: string): CloudflareEmailBinding => {
-  const binding = (env as Record<string, CloudflareEmailBinding | undefined>)[bindingName]
-  if (binding === undefined) {
+  const rawBinding: unknown = Reflect.get(env, bindingName)
+  if (!isCloudflareEmailBinding(rawBinding)) {
     throw new Error(
       `Cloudflare Email binding \`${bindingName}\` is unavailable. Configure \`send_email\` in wrangler.jsonc.`,
     )
   }
-  return binding
+  return rawBinding
 }
 
 export const WorkersConnector = (options?: { bindingName?: string }) => {
