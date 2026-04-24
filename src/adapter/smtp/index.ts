@@ -2,7 +2,6 @@ import type {
   EmailAdapter,
   EmailAddress,
   EmailMessage,
-  SendEmailOptions,
   SendEmailReceipt,
 } from '../index'
 import { addressToPath, buildRawEmailMessage, toAddressList } from '../message'
@@ -344,9 +343,4 @@ export class SmtpTransport implements EmailAdapter {
       return
     }
   }
-}
-
-export const sendEmail = async (options: SendEmailOptions): Promise<SendEmailReceipt> => {
-  const adapter = await import('../index')
-  return adapter.sendEmail(options)
 }

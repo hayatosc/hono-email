@@ -78,8 +78,8 @@ const { html, text } = await render(<WelcomeEmail />, {
 
 ```tsx
 import CloudflareConnector from 'hono-email/smtp/cloudflare'
-import { Body, Html, Text } from 'hono-email'
-import { sendEmail, SmtpTransport } from 'hono-email/smtp'
+import { Body, Html, Text, sendEmail } from 'hono-email'
+import { SmtpTransport } from 'hono-email/smtp'
 
 const smtp = new SmtpTransport({
   connector: CloudflareConnector,
@@ -145,14 +145,13 @@ Use port `465` with `secure: true` on Bun.
 On Cloudflare Workers:
 
 ```tsx
-import { Body, Html, Text } from 'hono-email'
-import { sendEmail } from 'hono-email/cloudflare-email'
-import { WorkersConnector } from 'hono-email/cloudflare-email/cloudflare'
+import { Body, Html, Text, sendEmail } from 'hono-email'
+import CloudflareEmailConnector from 'hono-email/cloudflare-email/cloudflare'
 
 export default {
   async fetch(_request: Request, env: Env): Promise<Response> {
     const receipt = await sendEmail({
-      adapter: WorkersConnector(),
+      adapter: CloudflareEmailConnector(),
       from: 'sender@example.com',
       to: 'recipient@example.com',
       subject: 'Welcome',
@@ -173,11 +172,11 @@ export default {
 REST API (other runtimes):
 
 ```tsx
-import { Body, Html, Text } from 'hono-email'
-import { RESTConnector, sendEmail } from 'hono-email/cloudflare-email'
+import { Body, Html, Text, sendEmail } from 'hono-email'
+import CloudflareEmailRESTConnector from 'hono-email/cloudflare-email'
 
 const receipt = await sendEmail({
-  adapter: RESTConnector({
+  adapter: CloudflareEmailRESTConnector({
     accountId: process.env.CLOUDFLARE_ACCOUNT_ID!,
     apiToken: process.env.CLOUDFLARE_API_TOKEN!,
   }),

@@ -52,7 +52,9 @@ const resolveEmailBinding = (bindingName: string): CloudflareEmailBinding => {
   return rawBinding
 }
 
-export const WorkersConnector = (options?: { bindingName?: string }) => {
+const WorkersConnector = (options?: { bindingName?: string }) => {
   const bindingName = options?.bindingName ?? 'EMAIL'
   return createCloudflareEmailAdapter(createWorkersConnector(resolveEmailBinding(bindingName)))
 }
+
+export default WorkersConnector

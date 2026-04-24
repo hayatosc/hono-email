@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 
-import { sendEmail, RESTConnector } from '../../src/adapter/cloudflare-email'
+import { sendEmail } from '../../src'
+import RESTConnector from '../../src/adapter/cloudflare-email'
 import {
   type CloudflareEmailFetch,
   type CloudflareEmailFetchInit,

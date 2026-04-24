@@ -20,6 +20,11 @@ export {
   Text,
 } from './components'
 import {
+  sendEmail as sendEmailWithRender,
+  type SendEmailOptions,
+  type SendEmailReceipt,
+} from './email'
+import {
   TAILWIND_ARTIFACT_REQUIRED_ERROR_MESSAGE,
   TAILWIND_ARTIFACT_REQUIRED_TAG_NAME,
 } from './components'
@@ -30,6 +35,18 @@ export type {
   MarkdownStyleMode,
   TailwindBuildArtifact,
 } from './components'
+export type {
+  EmailAdapter,
+  EmailAddress,
+  EmailHeaders,
+  EmailMessage,
+  EmailMessageDraft,
+  EmailTransport,
+  FailedSendReceipt,
+  SendEmailOptions,
+  SendEmailReceipt,
+  SuccessfulSendReceipt,
+} from './email'
 import {
   MARKDOWN_TAILWIND_PARENT_REQUIRED_ATTRIBUTE_NAME,
   MARKDOWN_TAILWIND_PARENT_REQUIRED_ERROR_MESSAGE,
@@ -236,3 +253,6 @@ export async function render(jsx: Child, options: RenderOptions = {}): Promise<R
     text: renderPlainText(html, options.text),
   }
 }
+
+export const sendEmail = async (options: SendEmailOptions): Promise<SendEmailReceipt> =>
+  sendEmailWithRender(render, options)

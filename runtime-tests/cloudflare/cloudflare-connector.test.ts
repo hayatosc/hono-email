@@ -2,8 +2,8 @@ import { connect } from 'cloudflare:sockets'
 import { withEnv } from 'cloudflare:workers'
 import { describe, expect, test } from 'vitest'
 
-import { WorkersConnector } from '../../src/adapter/platform/cloudflare/email-service'
 import type { CloudflareEmailBinding } from '../../src/adapter/platform/cloudflare/email-service'
+import WorkersConnector from '../../src/adapter/platform/cloudflare/email-service'
 import CloudflareConnector from '../../src/adapter/platform/cloudflare/smtp'
 import { SmtpTransport } from '../../src/adapter/smtp'
 

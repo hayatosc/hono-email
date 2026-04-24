@@ -1,11 +1,9 @@
 import { Hono } from 'hono'
-import {
-  sendEmail,
-  type CloudflareEmailBinding,
-  type EmailAddress,
-} from 'hono-email/cloudflare-email'
-import { WorkersConnector } from 'hono-email/cloudflare-email/cloudflare'
 import { env } from 'hono/adapter'
+import { sendEmail, type EmailAddress } from 'hono-email'
+import CloudflareEmailConnector, {
+  type CloudflareEmailBinding,
+} from 'hono-email/cloudflare-email/cloudflare'
 
 import {
   createWelcomeEmailInput,
@@ -223,7 +221,7 @@ app.post('/send', async (c) => {
 
   const email = createWelcomeEmailInput(form)
   const receipt = await sendEmail({
-    adapter: WorkersConnector(),
+    adapter: CloudflareEmailConnector(),
     from: toFromAddress(emailEnv.EMAIL_FROM, emailEnv.EMAIL_FROM_NAME),
     jsx: <WelcomeEmail {...email} />,
     subject: email.subject,

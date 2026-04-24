@@ -143,5 +143,7 @@ const createRestConnector = (
   }
 }
 
-export const RESTConnector = (options: CloudflareEmailRestConnectorOptions) =>
+const RESTConnector = (options: CloudflareEmailRestConnectorOptions) =>
   createCloudflareEmailAdapter(createRestConnector(options))
+
+export default RESTConnector
