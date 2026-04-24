@@ -3,8 +3,8 @@ import type {
   CloudflareEmailConnector,
   CloudflareEmailConnectorRequest,
   CloudflareEmailConnectorResult,
-} from './cloudflare-email-types'
-import { createCloudflareEmailAdapter } from './cloudflare-email-adapter'
+} from '../../cloudflare-email/types'
+import { createCloudflareEmailAdapter } from '../../cloudflare-email/adapter'
 
 export type {
   CloudflareEmailBinding,
@@ -14,7 +14,7 @@ export type {
   CloudflareEmailConnectorResult,
   CloudflareEmailWorkerNameAddress,
   CloudflareEmailWorkerPayload,
-} from './cloudflare-email-types'
+} from '../../cloudflare-email/types'
 
 const createAcceptedResponse = (recipients: string[]): string =>
   `Cloudflare Email Service accepted ${recipients.length} recipient(s).`

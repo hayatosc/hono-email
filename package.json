@@ -34,24 +34,24 @@
       "import": "./dist/adapter/index.js"
     },
     "./smtp": {
-      "types": "./dist/adapter/smtp.d.ts",
-      "import": "./dist/adapter/smtp.js"
+      "types": "./dist/adapter/smtp/index.d.ts",
+      "import": "./dist/adapter/smtp/index.js"
     },
     "./smtp/*": {
-      "types": "./dist/adapter/*/smtp.d.ts",
-      "import": "./dist/adapter/*/smtp.js"
+      "types": "./dist/adapter/platform/*/smtp.d.ts",
+      "import": "./dist/adapter/platform/*/smtp.js"
     },
     "./cloudflare-email": {
-      "types": "./dist/adapter/cloudflare-email.d.ts",
-      "import": "./dist/adapter/cloudflare-email.js"
+      "types": "./dist/adapter/cloudflare-email/index.d.ts",
+      "import": "./dist/adapter/cloudflare-email/index.js"
     },
     "./cloudflare-email/cloudflare": {
-      "types": "./dist/adapter/cloudflare-email-cloudflare.d.ts",
-      "import": "./dist/adapter/cloudflare-email-cloudflare.js"
+      "types": "./dist/adapter/platform/cloudflare/email-service.d.ts",
+      "import": "./dist/adapter/platform/cloudflare/email-service.js"
     },
     "./cloudflare-email/rest": {
-      "types": "./dist/adapter/cloudflare-email-rest.d.ts",
-      "import": "./dist/adapter/cloudflare-email-rest.js"
+      "types": "./dist/adapter/cloudflare-email/rest.d.ts",
+      "import": "./dist/adapter/cloudflare-email/rest.js"
     },
     "./plugin": {
       "types": "./dist/unplugin.d.ts",
@@ -85,6 +85,7 @@
   },
   "devDependencies": {
     "@cloudflare/vitest-pool-workers": "^0.14.9",
+    "@cloudflare/workers-types": "^4.20260424.1",
     "@types/bun": "^1.3.12",
     "@types/css-tree": "^2.3.11",
     "@typescript/native-preview": "^7.0.0-dev.20260419.1",

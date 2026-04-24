@@ -1,4 +1,4 @@
-import type { SendEmailOptions, SendEmailReceipt } from './index'
+import type { SendEmailOptions, SendEmailReceipt } from '../index'
 
 export type {
   EmailAddress,
@@ -11,7 +11,7 @@ export type {
   SendEmailOptions,
   SendEmailReceipt,
   SuccessfulSendReceipt,
-} from './index'
+} from '../index'
 export type {
   CloudflareEmailBinding,
   CloudflareEmailBindingSendResult,
@@ -25,11 +25,11 @@ export type {
   CloudflareEmailRestPayload,
   CloudflareEmailWorkerNameAddress,
   CloudflareEmailWorkerPayload,
-} from './cloudflare-email-types'
-export { WorkersConnector } from './cloudflare-email-cloudflare'
-export { RESTConnector } from './cloudflare-email-rest'
+} from './types'
+export { WorkersConnector } from '../platform/cloudflare/email-service'
+export { RESTConnector } from './rest'
 
 export const sendEmail = async (options: SendEmailOptions): Promise<SendEmailReceipt> => {
-  const adapter = await import('./index')
+  const adapter = await import('../index')
   return adapter.sendEmail(options)
 }

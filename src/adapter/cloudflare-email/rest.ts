@@ -3,9 +3,9 @@ import type {
   CloudflareEmailConnectorRequest,
   CloudflareEmailConnectorResult,
   CloudflareEmailRestConnectorOptions,
-} from './cloudflare-email-types'
-import { CloudflareEmailConnectorError } from './cloudflare-email-types'
-import { createCloudflareEmailAdapter } from './cloudflare-email-adapter'
+} from './types'
+import { CloudflareEmailConnectorError } from './types'
+import { createCloudflareEmailAdapter } from './adapter'
 
 export type {
   CloudflareEmailConnector,
@@ -17,7 +17,7 @@ export type {
   CloudflareEmailRecipientField,
   CloudflareEmailRestConnectorOptions,
   CloudflareEmailRestPayload,
-} from './cloudflare-email-types'
+} from './types'
 
 const DEFAULT_API_BASE_URL = 'https://api.cloudflare.com/client/v4'
 

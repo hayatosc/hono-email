@@ -1,5 +1,5 @@
-import type { EmailAddress, EmailMessage, SendEmailReceipt } from './index'
-import { addressToPath, toAddressList } from './message'
+import type { EmailAddress, EmailMessage, SendEmailReceipt } from '../index'
+import { addressToPath, toAddressList } from '../message'
 
 import {
   asCloudflareEmailRecipientField,
@@ -9,7 +9,7 @@ import {
   type CloudflareEmailRestPayload,
   type CloudflareEmailWorkerNameAddress,
   type CloudflareEmailWorkerPayload,
-} from './cloudflare-email-types'
+} from './types'
 
 const REST_MESSAGE_ID_PREFIX = 'cloudflare-email-rest'
 

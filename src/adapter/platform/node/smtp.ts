@@ -5,7 +5,7 @@ import type {
   SmtpConnectorOptions,
   SmtpSocket,
   SmtpSocketAddress,
-} from '../smtp/types'
+} from '../../smtp/types'
 
 const waitForSocketEvent = (
   socket: Socket,
