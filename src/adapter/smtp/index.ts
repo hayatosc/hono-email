@@ -4,16 +4,11 @@ import type {
   EmailMessage,
   SendEmailOptions,
   SendEmailReceipt,
-} from './index'
-import { addressToPath, buildRawEmailMessage, toAddressList } from './message'
-import { openSmtpSession } from './smtp/protocol'
-import type { SmtpSession } from './smtp/protocol'
-import type {
-  SmtpConnector,
-  SmtpSecureTransport,
-  SmtpSocket,
-  SmtpTransportOptions,
-} from './smtp/types'
+} from '../index'
+import { addressToPath, buildRawEmailMessage, toAddressList } from '../message'
+import { openSmtpSession } from './protocol'
+import type { SmtpSession } from './protocol'
+import type { SmtpConnector, SmtpSecureTransport, SmtpSocket, SmtpTransportOptions } from './types'
 
 export type {
   EmailAddress,
@@ -26,8 +21,8 @@ export type {
   SendEmailReceipt,
   SendEmailOptions,
   SuccessfulSendReceipt,
-} from './index'
-export { buildRawEmailMessage } from './message'
+} from '../index'
+export { buildRawEmailMessage } from '../message'
 export type {
   SmtpAuth,
   SmtpConnector,
@@ -38,7 +33,7 @@ export type {
   SmtpSocketAddress,
   SmtpTransportLike,
   SmtpTransportOptions,
-} from './smtp/types'
+} from './types'
 
 const DEFAULT_CLIENT_NAME = 'localhost'
 const DEFAULT_MAX_CONNECTIONS = 1
@@ -352,6 +347,6 @@ export class SmtpTransport implements EmailAdapter {
 }
 
 export const sendEmail = async (options: SendEmailOptions): Promise<SendEmailReceipt> => {
-  const adapter = await import('./index')
+  const adapter = await import('../index')
   return adapter.sendEmail(options)
 }

@@ -112,7 +112,7 @@ try {
     console.error(receipt.errorMessages)
   }
 } finally {
-  await transport.close()
+  await smtp.close()
 }
 ```
 
@@ -135,6 +135,75 @@ Runtime connector entry points:
 
 Bun's TCP API supports direct TLS connections, but this connector does not support STARTTLS upgrade.
 Use port `465` with `secure: true` on Bun.
+
+## Cloudflare Email Service
+
+`hono-email/cloudflare-email` provides an adapter for Cloudflare Email Service. In Cloudflare
+Workers, pass the `env.EMAIL` binding. In other runtimes, pass Cloudflare REST API credentials.
+
+Workers binding:
+
+```tsx
+import { Body, Html, Text } from 'hono-email'
+import { sendEmail, WorkersConnector } from 'hono-email/cloudflare-email'
+
+type Env = {
+  EMAIL: {
+    send(message: unknown): Promise<{ messageId: string }>
+  }
+}
+
+export default {
+  async fetch(_request: Request, env: Env): Promise<Response> {
+    const receipt = await sendEmail({
+      adapter: WorkersConnector(env.EMAIL),
+      from: 'sender@example.com',
+      to: 'recipient@example.com',
+      subject: 'Welcome',
+      jsx: (
+        <Html>
+          <Body>
+            <Text>Hello from Cloudflare Workers.</Text>
+          </Body>
+        </Html>
+      ),
+    })
+
+    return Response.json(receipt)
+  },
+}
+```
+
+REST API:
+
+```tsx
+import { Body, Html, Text } from 'hono-email'
+import { RESTConnector, sendEmail } from 'hono-email/cloudflare-email'
+
+const receipt = await sendEmail({
+  adapter: RESTConnector({
+    accountId: process.env.CLOUDFLARE_ACCOUNT_ID!,
+    apiToken: process.env.CLOUDFLARE_API_TOKEN!,
+  }),
+  from: { address: 'sender@example.com', name: 'Sender' },
+  to: ['first@example.com', 'second@example.com'],
+  subject: 'Welcome',
+  jsx: (
+    <Html>
+      <Body>
+        <Text>Hello from the Cloudflare REST API.</Text>
+      </Body>
+    </Html>
+  ),
+})
+
+if (receipt.successful && receipt.queued) {
+  console.log('Queued recipients:', receipt.queuedRecipients)
+}
+```
+
+Attachments are intentionally not part of the first adapter surface. The Cloudflare payload mapping
+is kept isolated so attachment support can be added later without changing the adapter model.
 
 ## Components
 

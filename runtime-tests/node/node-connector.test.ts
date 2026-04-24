@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { createServer } from 'node:net'
 import test from 'node:test'
 
-import NodeConnector from '../../src/adapter/node/smtp.ts'
+import NodeConnector from '../../src/adapter/platform/node/smtp.ts'
 import { runSmtpSession } from '../../src/adapter/smtp/protocol.ts'
 
 const CRLF = '\r\n'

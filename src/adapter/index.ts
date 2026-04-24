@@ -35,6 +35,8 @@ export type SuccessfulSendReceipt = {
   messageId: string
   accepted: string[]
   rejected: string[]
+  queued?: boolean
+  queuedRecipients?: string[]
   response: string
 }
 

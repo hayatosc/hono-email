@@ -3,7 +3,7 @@ import type {
   SmtpConnectorOptions,
   SmtpSocket,
   SmtpSocketAddress,
-} from '../smtp/types'
+} from '../../smtp/types'
 
 type DenoConn = {
   readable: ReadableStream<Uint8Array>
