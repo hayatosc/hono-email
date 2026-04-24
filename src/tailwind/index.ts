@@ -1,5 +1,5 @@
-import { HTMLRewriter } from 'htmlrewriter'
 import * as csstree from 'css-tree'
+import { HTMLRewriter } from 'htmlrewriter'
 
 import { MARKDOWN_TAILWIND_PARENT_REQUIRED_ATTRIBUTE_NAME } from '../markdown'
 import { mergeStyleAttributes, serializeStyleAttribute } from '../style'

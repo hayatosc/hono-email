@@ -1,5 +1,5 @@
-import type { FC, JSX, PropsWithChildren } from 'hono/jsx'
 import { raw } from 'hono/html'
+import type { FC, JSX, PropsWithChildren } from 'hono/jsx'
 
 import { styleObjectFromUnknown } from '../style'
 

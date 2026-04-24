@@ -2,11 +2,11 @@ import { describe, expect, test } from 'bun:test'
 
 import { Body, Html, Text } from '../../src'
 import { sendEmail, WorkersConnector, RESTConnector } from '../../src/adapter/cloudflare-email'
-import { type CloudflareEmailBinding } from '../../src/adapter/platform/cloudflare/email-service'
 import {
   type CloudflareEmailFetch,
   type CloudflareEmailFetchInit,
 } from '../../src/adapter/cloudflare-email/rest'
+import { type CloudflareEmailBinding } from '../../src/adapter/platform/cloudflare/email-service'
 
 const createMessage = () => ({
   from: { address: 'sender@example.com', name: 'Sender' },

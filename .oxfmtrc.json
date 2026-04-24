@@ -5,5 +5,6 @@
   "trailingComma": "all",
   "quoteProps": "as-needed",
   "printWidth": 100,
+  "sortImports": true,
   "ignorePatterns": ["dist/**", "examples/**/node_modules/**"]
 }

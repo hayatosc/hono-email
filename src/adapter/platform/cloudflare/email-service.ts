@@ -1,10 +1,10 @@
+import { createCloudflareEmailAdapter } from '../../cloudflare-email/adapter'
 import type {
   CloudflareEmailBinding,
   CloudflareEmailConnector,
   CloudflareEmailConnectorRequest,
   CloudflareEmailConnectorResult,
 } from '../../cloudflare-email/types'
-import { createCloudflareEmailAdapter } from '../../cloudflare-email/adapter'
 
 export type {
   CloudflareEmailBinding,

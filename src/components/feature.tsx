@@ -1,5 +1,5 @@
-import type { PropsWithChildren } from 'hono/jsx'
 import { raw } from 'hono/html'
+import type { PropsWithChildren } from 'hono/jsx'
 
 import { renderFontStyleTag, type FontProps } from '../font'
 import {

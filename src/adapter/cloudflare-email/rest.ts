@@ -1,3 +1,4 @@
+import { createCloudflareEmailAdapter } from './adapter'
 import type {
   CloudflareEmailConnector,
   CloudflareEmailConnectorRequest,
@@ -5,7 +6,6 @@ import type {
   CloudflareEmailRestConnectorOptions,
 } from './types'
 import { CloudflareEmailConnectorError } from './types'
-import { createCloudflareEmailAdapter } from './adapter'
 
 export type {
   CloudflareEmailConnector,

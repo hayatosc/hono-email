@@ -30,13 +30,13 @@ export type {
   MarkdownStyleMode,
   TailwindBuildArtifact,
 } from './components'
-import { relocateHeadStyles } from './normalize/head-styles'
-import { normalizeHtml } from './normalize/html'
-import { relocatePreview } from './normalize/preview'
 import {
   MARKDOWN_TAILWIND_PARENT_REQUIRED_ATTRIBUTE_NAME,
   MARKDOWN_TAILWIND_PARENT_REQUIRED_ERROR_MESSAGE,
 } from './markdown'
+import { relocateHeadStyles } from './normalize/head-styles'
+import { normalizeHtml } from './normalize/html'
+import { relocatePreview } from './normalize/preview'
 import { renderFragmentToHtml } from './render/html'
 import { prettyPrintHtml } from './render/pretty'
 import {

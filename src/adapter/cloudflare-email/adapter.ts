@@ -1,6 +1,5 @@
 import type { EmailAddress, EmailMessage, SendEmailReceipt } from '../index'
 import { addressToPath, toAddressList } from '../message'
-
 import {
   asCloudflareEmailRecipientField,
   CloudflareEmailConnectorError,
