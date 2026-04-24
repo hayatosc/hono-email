@@ -7,7 +7,7 @@ export type CloudflareEmailNameAddress = {
 
 export type CloudflareEmailWorkerNameAddress = {
   email: string
-  name?: string
+  name: string
 }
 
 export type CloudflareEmailRecipientField = string | string[]
@@ -51,8 +51,14 @@ export type CloudflareEmailBindingSendResult = {
   messageId: string
 }
 
+export type CloudflareEmailBindingMessage = {
+  readonly from: string
+  readonly to: string
+}
+
 export type CloudflareEmailBinding = {
-  send(message: CloudflareEmailWorkerPayload): Promise<CloudflareEmailBindingSendResult>
+  send(message: CloudflareEmailBindingMessage): Promise<CloudflareEmailBindingSendResult>
+  send(builder: CloudflareEmailWorkerPayload): Promise<CloudflareEmailBindingSendResult>
 }
 
 export type CloudflareEmailConnectorRequest = {

@@ -1,45 +1,14 @@
 import { Hono } from 'hono'
+import { sendEmail, type EmailAddress, WorkersConnector } from 'hono-email/cloudflare-email'
 
 import {
   createWelcomeEmailInput,
   defaultWelcomeEmailInput,
-  renderWelcomeEmail,
-  renderWelcomeEmailText,
+  WelcomeEmail,
   type WelcomeEmailOverrides,
 } from './emails/welcome'
 
 type Recipient = string | string[]
-
-type EmailAddress = {
-  email: string
-  name?: string
-}
-
-type SendEmailRequest = {
-  from: string | EmailAddress
-  html: string
-  subject: string
-  text: string
-  to: Recipient
-}
-
-type SendEmailResult = {
-  messageId?: string
-}
-
-type SendEmailBinding = {
-  send(message: SendEmailRequest): Promise<SendEmailResult>
-}
-
-type Bindings = {
-  EMAIL?: SendEmailBinding
-  EMAIL_FROM?: string
-  EMAIL_FROM_NAME?: string
-}
-
-type AppEnv = {
-  Bindings: Bindings
-}
 
 type WelcomeFormState = WelcomeEmailOverrides & {
   to: string
@@ -53,7 +22,7 @@ type ComposerPageData = {
   }
 }
 
-const app = new Hono<AppEnv>()
+const app = new Hono<{ Bindings: Env }>()
 
 const splitRecipients = (value: string | undefined): string[] =>
   (value ?? '')
@@ -72,8 +41,8 @@ const toRecipient = (value: string | undefined): Recipient | null => {
   return recipients.length === 1 ? first : recipients
 }
 
-const toFromAddress = (email: string, name: string | undefined): string | EmailAddress =>
-  name && name.trim().length > 0 ? { email, name: name.trim() } : email
+const toFromAddress = (address: string, name: string | undefined): EmailAddress =>
+  name && name.trim().length > 0 ? { address, name: name.trim() } : address
 
 const toWelcomeFormState = (overrides: Partial<WelcomeFormState> = {}): WelcomeFormState => {
   const defaults = defaultWelcomeEmailInput()
@@ -239,20 +208,36 @@ app.post('/send', async (c) => {
   }
 
   const email = createWelcomeEmailInput(form)
-  const [html, text] = await Promise.all([renderWelcomeEmail(email), renderWelcomeEmailText(email)])
-  await c.env.EMAIL.send({
+  const receipt = await sendEmail({
+    adapter: WorkersConnector(c.env.EMAIL),
     from: toFromAddress(c.env.EMAIL_FROM, c.env.EMAIL_FROM_NAME),
-    html,
+    jsx: <WelcomeEmail {...email} />,
     subject: email.subject,
-    text,
     to,
   })
+
+  if (!receipt.successful) {
+    return c.html(
+      renderComposerPage({
+        form,
+        status: {
+          message: receipt.errorMessages.join(' / '),
+          tone: 'error',
+        },
+      }),
+      502,
+    )
+  }
+
+  const statusMessage = receipt.queued
+    ? `Accepted successfully. ${receipt.queuedRecipients?.length ?? 0} recipient(s) queued.`
+    : 'Sent successfully.'
 
   return c.html(
     renderComposerPage({
       form,
       status: {
-        message: `Sent successfully.`,
+        message: statusMessage,
         tone: 'success',
       },
     }),

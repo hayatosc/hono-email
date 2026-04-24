@@ -1,4 +1,4 @@
-import { Body, Container, Head, Heading, Html, Preview, Tailwind, Text, render } from 'hono-email'
+import { Body, Container, Head, Heading, Html, Preview, Tailwind, Text } from 'hono-email'
 
 export type WelcomeEmailInput = {
   message: string
@@ -35,7 +35,7 @@ const toParagraphs = (value: string): string[] =>
     .map((paragraph) => paragraph.trim())
     .filter((paragraph) => paragraph.length > 0)
 
-const WelcomeEmail = ({ message, subject }: WelcomeEmailInput) => (
+export const WelcomeEmail = ({ message, subject }: WelcomeEmailInput) => (
   <Html lang="en">
     <Head>
       <title>{subject}</title>
@@ -68,11 +68,3 @@ const WelcomeEmail = ({ message, subject }: WelcomeEmailInput) => (
     </Tailwind>
   </Html>
 )
-
-export const renderWelcomeEmail = (input: WelcomeEmailInput): Promise<string> =>
-  render(<WelcomeEmail {...input} />)
-
-export const renderWelcomeEmailText = (input: WelcomeEmailInput): Promise<string> =>
-  render(<WelcomeEmail {...input} />, {
-    output: 'text',
-  })

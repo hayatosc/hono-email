@@ -1,14 +1,15 @@
 # Cloudflare + Vite + Hono + Tailwind Example
 
-This is a runnable example that uses `hono-email/vite` to inject the `<Tailwind>` artifact at build time.
+This is a runnable example that uses `hono-email/plugin` to inject the `<Tailwind>` artifact at build time.
 The example has its own `package.json` and keeps the frontend intentionally minimal: a server-rendered Hono JSX send form.
-Email delivery uses the structured `env.EMAIL.send({...})` API from Cloudflare Email Service.
-Inside this repository, the example resolves `hono-email` to `../../src` via local aliasing, so `ni` does not need a linked package install.
+Email delivery uses `hono-email/cloudflare-email` with `WorkersConnector(env.EMAIL)`.
+Inside this repository, the example resolves `hono-email`, `hono-email/plugin`, and `hono-email/cloudflare-email` to `../../src` via local aliasing, so `ni` does not need a linked package install.
+Cloudflare binding types come from generated `worker-configuration.d.ts`, so the Worker uses the same `Env` shape as a real Wrangler project.
 
 Frontend and email styling are intentionally separated:
 
-- `src/frontend.css` builds the browser-facing Tailwind CSS for the send form
-- `hono-email/vite` scans `src/emails` only, so the email artifact contains email classes only
+- `src/style.css` builds the browser-facing Tailwind CSS for the send form
+- `hono-email/plugin` scans `src/emails` only, so the email artifact contains email classes only
 
 ## Commands
 
@@ -17,6 +18,7 @@ Run these commands inside the example directory.
 ```sh
 cd examples/cloudflare-vite-tailwind
 ni
+nr cf-typegen
 nr dev
 ```
 
@@ -38,7 +40,7 @@ nr deploy
 - `GET /`
   - minimal send form rendered with Hono JSX
 - `POST /send`
-  - sends the form payload through Cloudflare Email Service
+  - sends the form payload through `sendEmail()` and Cloudflare Email Service
 
 Send example:
 
@@ -72,3 +74,4 @@ Notes:
 - The `to` field supports multiple recipients separated by commas.
 - Actual delivery depends on your Cloudflare Email Service domain setup and permissions.
 - For real delivery in `nr dev`, switch the binding to `{ "name": "EMAIL", "remote": true }` and authenticate with Cloudflare.
+- After changing `send_email` bindings or `vars`, rerun `nr cf-typegen`.

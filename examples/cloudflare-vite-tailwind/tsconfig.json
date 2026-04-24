@@ -4,8 +4,9 @@
     "types": ["bun", "vite/client"],
     "paths": {
       "hono-email": ["../../src/index.ts"],
+      "hono-email/cloudflare-email": ["../../src/adapter/cloudflare-email/index.ts"],
       "hono-email/plugin": ["../../src/unplugin.ts"]
     }
   },
-  "include": ["src", "vite.config.ts"]
+  "include": ["src", "vite.config.ts", "worker-configuration.d.ts"]
 }
