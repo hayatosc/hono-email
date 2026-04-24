@@ -1,4 +1,4 @@
-import type { EmailAddress } from './index'
+import type { EmailAddress } from '../index'
 
 export type CloudflareEmailNameAddress = {
   address: string
