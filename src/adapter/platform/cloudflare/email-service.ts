@@ -1,3 +1,7 @@
+/// <reference types="@cloudflare/workers-types" />
+
+import { env } from 'cloudflare:workers'
+
 import { createCloudflareEmailAdapter } from '../../cloudflare-email/adapter'
 import type {
   CloudflareEmailBinding,
@@ -25,7 +29,8 @@ const createWorkersConnector = (binding: CloudflareEmailBinding): CloudflareEmai
 
     return {
       delivered: request.recipients,
-      messageId: result.messageId,
+      // Local preview bindings may accept the send but omit EmailSendResult.
+      messageId: result?.messageId,
       permanentBounces: [],
       queued: [],
       response: createAcceptedResponse(request.recipients),
@@ -33,5 +38,15 @@ const createWorkersConnector = (binding: CloudflareEmailBinding): CloudflareEmai
   },
 })
 
-export const WorkersConnector = (binding: CloudflareEmailBinding) =>
-  createCloudflareEmailAdapter(createWorkersConnector(binding))
+const resolveEmailBinding = (): CloudflareEmailBinding => {
+  const binding = (env as { EMAIL?: CloudflareEmailBinding }).EMAIL
+  if (binding === undefined) {
+    throw new Error(
+      'Cloudflare Email binding `EMAIL` is unavailable. Configure `send_email` in wrangler.jsonc.',
+    )
+  }
+  return binding
+}
+
+export const WorkersConnector = () =>
+  createCloudflareEmailAdapter(createWorkersConnector(resolveEmailBinding()))

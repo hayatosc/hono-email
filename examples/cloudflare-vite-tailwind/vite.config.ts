@@ -10,6 +10,12 @@ export default defineConfig({
   resolve: {
     alias: [
       {
+        find: 'hono-email/cloudflare-email/cloudflare',
+        replacement: fileURLToPath(
+          new URL('../../src/adapter/platform/cloudflare/email-service.ts', import.meta.url),
+        ),
+      },
+      {
         find: 'hono-email/cloudflare-email',
         replacement: fileURLToPath(
           new URL('../../src/adapter/cloudflare-email/index.ts', import.meta.url),

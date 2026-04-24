@@ -35,7 +35,7 @@ await Bun.build({
   format: 'esm',
   target: 'browser',
   minify: true,
-  external: ['cloudflare:sockets', 'hono', 'node:net', 'node:tls'],
+  external: ['cloudflare:sockets', 'cloudflare:workers', 'hono', 'node:net', 'node:tls'],
 })
 
 // Build unplugin (Node.js compatible)

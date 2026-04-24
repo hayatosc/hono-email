@@ -4,11 +4,11 @@
   "type": "module",
   "scripts": {
     "build": "vite build",
-    "cf-typegen": "wrangler types --config wrangler.jsonc",
+    "typegen": "wrangler types --config wrangler.jsonc",
     "deploy": "wrangler deploy --config wrangler.jsonc",
     "dev": "vite",
     "preview": "vite preview",
-    "typecheck": "tsc --noEmit -p tsconfig.json"
+    "typecheck": "tsgo --noEmit"
   },
   "dependencies": {
     "hono": "^4.12.14"
@@ -16,6 +16,7 @@
   "devDependencies": {
     "@cloudflare/vite-plugin": "^1.32.3",
     "@tailwindcss/vite": "^4.2.2",
+    "@typescript/native-preview": "^7.0.0-dev.20260419.1",
     "tailwindcss": "^4.2.2",
     "typescript": "^6.0.3",
     "vite": "^8.0.8",

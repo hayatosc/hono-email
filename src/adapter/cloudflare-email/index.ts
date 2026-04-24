@@ -26,7 +26,6 @@ export type {
   CloudflareEmailWorkerNameAddress,
   CloudflareEmailWorkerPayload,
 } from './types'
-export { WorkersConnector } from '../platform/cloudflare/email-service'
 export { RESTConnector } from './rest'
 
 export const sendEmail = async (options: SendEmailOptions): Promise<SendEmailReceipt> => {

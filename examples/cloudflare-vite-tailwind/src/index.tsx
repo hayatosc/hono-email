@@ -1,5 +1,11 @@
 import { Hono } from 'hono'
-import { sendEmail, type EmailAddress, WorkersConnector } from 'hono-email/cloudflare-email'
+import {
+  sendEmail,
+  type CloudflareEmailBinding,
+  type EmailAddress,
+} from 'hono-email/cloudflare-email'
+import { WorkersConnector } from 'hono-email/cloudflare-email/cloudflare'
+import { env } from 'hono/adapter'
 
 import {
   createWelcomeEmailInput,
@@ -8,7 +14,14 @@ import {
   type WelcomeEmailOverrides,
 } from './emails/welcome'
 
+import styleUrl from './style.css?url'
+
 type Recipient = string | string[]
+type AppBindings = {
+  EMAIL?: CloudflareEmailBinding
+  EMAIL_FROM?: string
+  EMAIL_FROM_NAME?: string
+}
 
 type WelcomeFormState = WelcomeEmailOverrides & {
   to: string
@@ -22,7 +35,7 @@ type ComposerPageData = {
   }
 }
 
-const app = new Hono<{ Bindings: Env }>()
+const app = new Hono<{ Bindings: AppBindings }>()
 
 const splitRecipients = (value: string | undefined): string[] =>
   (value ?? '')
@@ -80,7 +93,7 @@ const renderComposerPage = ({ form, status }: ComposerPageData) => {
         <meta charSet="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>hono-email Send Form</title>
-        <link rel="stylesheet" href="/src/style.css" />
+        <link rel="stylesheet" href={styleUrl} />
       </head>
       <body class="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(255,127,50,0.22),_transparent_34%),radial-gradient(circle_at_top_right,_rgba(255,255,255,0.16),_transparent_26%),linear-gradient(180deg,#2e241f_0%,#17191d_54%,#0f1115_100%)] font-[Avenir_Next,Hiragino_Sans,Yu_Gothic,sans-serif] text-stone-50">
         <main class="mx-auto w-[min(720px,calc(100vw-32px))] py-6 pb-10">
@@ -177,8 +190,9 @@ app.get('/', async (c) => c.html(renderComposerPage({ form: toWelcomeFormState()
 
 app.post('/send', async (c) => {
   const form = formDataToWelcomeFormState(await c.req.formData())
+  const emailEnv = env<AppBindings>(c)
 
-  if (!c.env.EMAIL || !c.env.EMAIL_FROM) {
+  if (!emailEnv.EMAIL || !emailEnv.EMAIL_FROM) {
     return c.html(
       renderComposerPage({
         form,
@@ -209,8 +223,8 @@ app.post('/send', async (c) => {
 
   const email = createWelcomeEmailInput(form)
   const receipt = await sendEmail({
-    adapter: WorkersConnector(c.env.EMAIL),
-    from: toFromAddress(c.env.EMAIL_FROM, c.env.EMAIL_FROM_NAME),
+    adapter: WorkersConnector(),
+    from: toFromAddress(emailEnv.EMAIL_FROM, emailEnv.EMAIL_FROM_NAME),
     jsx: <WelcomeEmail {...email} />,
     subject: email.subject,
     to,

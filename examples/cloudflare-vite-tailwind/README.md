@@ -2,9 +2,10 @@
 
 This is a runnable example that uses `hono-email/plugin` to inject the `<Tailwind>` artifact at build time.
 The example has its own `package.json` and keeps the frontend intentionally minimal: a server-rendered Hono JSX send form.
-Email delivery uses `hono-email/cloudflare-email` with `WorkersConnector(env.EMAIL)`.
-Inside this repository, the example resolves `hono-email`, `hono-email/plugin`, and `hono-email/cloudflare-email` to `../../src` via local aliasing, so `ni` does not need a linked package install.
-Cloudflare binding types come from generated `worker-configuration.d.ts`, so the Worker uses the same `Env` shape as a real Wrangler project.
+Email delivery uses `hono-email/cloudflare-email/cloudflare` with `WorkersConnector()`.
+Inside this repository, the example resolves `hono-email`, `hono-email/plugin`, `hono-email/cloudflare-email`, and `hono-email/cloudflare-email/cloudflare` to `../../src` via local aliasing, so `ni` does not need a linked package install.
+The Hono route reads bindings and vars with `env(c)` from `hono/adapter`.
+Cloudflare binding types still come from generated `worker-configuration.d.ts` for the Worker runtime.
 
 Frontend and email styling are intentionally separated:
 

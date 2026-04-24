@@ -5,6 +5,9 @@
     "paths": {
       "hono-email": ["../../src/index.ts"],
       "hono-email/cloudflare-email": ["../../src/adapter/cloudflare-email/index.ts"],
+      "hono-email/cloudflare-email/cloudflare": [
+        "../../src/adapter/platform/cloudflare/email-service.ts"
+      ],
       "hono-email/plugin": ["../../src/unplugin.ts"]
     }
   },
