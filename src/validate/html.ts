@@ -338,7 +338,15 @@ const ATTRIBUTE_PATTERN = /([^\s"'=<>`/]+)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s
 const CSS_DECLARATION_PATTERN = /([a-z0-9-]+)\s*:\s*([^;}{]+)/gi
 const HEAD_CLOSE_PATTERN = /<\/head\s*>/i
 
-const stripHtmlComments = (html: string): string => html.replace(HTML_COMMENT_PATTERN, '')
+const stripHtmlComments = (html: string): string => {
+  let result = html
+  let prev: string
+  do {
+    prev = result
+    result = result.replace(HTML_COMMENT_PATTERN, '')
+  } while (result !== prev)
+  return result
+}
 
 const stripCssComments = (cssText: string): string => cssText.replace(CSS_COMMENT_PATTERN, ' ')
 
