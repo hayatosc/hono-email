@@ -8,6 +8,8 @@ import { render } from '../index'
 export type {
   EmailAdapter,
   EmailAddress,
+  EmailDkimOptions,
+  EmailEnvelope,
   EmailHeaders,
   EmailMessage,
   EmailMessageDraft,

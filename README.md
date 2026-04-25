@@ -81,6 +81,10 @@ import CloudflareConnector from 'hono-email/smtp/cloudflare'
 import { Body, Html, Text, sendEmail } from 'hono-email'
 import { SmtpTransport } from 'hono-email/smtp'
 
+const dkimPrivateKey = `-----BEGIN PRIVATE KEY-----
+...
+-----END PRIVATE KEY-----`
+
 const smtp = new SmtpTransport({
   connector: CloudflareConnector,
   hostname: 'smtp.example.com',
@@ -90,17 +94,27 @@ const smtp = new SmtpTransport({
     username: 'smtp-user',
     password: 'smtp-password',
   },
+  dkim: {
+    domainName: 'example.com',
+    keySelector: 'mail',
+    privateKey: dkimPrivateKey,
+  },
   pool: {
     maxConnections: 2,
   },
 })
 
 try {
+  await smtp.verify()
+
   const receipt = await sendEmail({
     adapter: smtp,
     from: 'sender@example.com',
     to: 'recipient@example.com',
     subject: 'Welcome',
+    envelope: {
+      from: 'bounces@example.com',
+    },
     jsx: (
       <Html>
         <Body>
@@ -127,6 +141,12 @@ use submission ports such as `465` or `587`.
 `1`, so sends on the same transport share one TCP connection sequentially. Set
 `pool.maxConnections` to allow multiple concurrent SMTP sessions. If a session fails during send,
 that session is discarded and the message is not retried automatically.
+
+SMTP-specific delivery controls:
+
+- `await transport.verify()` checks connection setup, TLS negotiation, and authentication without sending a message.
+- `dkim` can be configured on `SmtpTransport` or overridden per message to add a `DKIM-Signature` header before SMTP delivery.
+- `envelope` lets you override the SMTP envelope sender and recipients without changing the visible `From` / `To` headers.
 
 Runtime connector entry points:
 

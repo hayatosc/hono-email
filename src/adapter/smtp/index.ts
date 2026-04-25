@@ -1,5 +1,6 @@
-import type { EmailAdapter, EmailAddress, EmailMessage, SendEmailReceipt } from '../index'
-import { addressToPath, buildRawEmailMessage, toAddressList } from '../message'
+import type { EmailAdapter, EmailMessage, SendEmailReceipt } from '../index'
+import { buildRawEmailMessage, resolveEmailEnvelope } from '../message'
+import { applyDkimSignature } from './dkim'
 import { openSmtpSession } from './protocol'
 import type { SmtpSession } from './protocol'
 import type { SmtpConnector, SmtpSecureTransport, SmtpSocket, SmtpTransportOptions } from './types'
@@ -7,6 +8,8 @@ import type { SmtpConnector, SmtpSecureTransport, SmtpSocket, SmtpTransportOptio
 export type {
   EmailAddress,
   EmailAdapter,
+  EmailDkimOptions,
+  EmailEnvelope,
   EmailHeaders,
   EmailMessage,
   EmailMessageDraft,
@@ -70,16 +73,6 @@ const resolveSecureTransport = (
   return 'off'
 }
 
-const collectRecipients = (message: EmailMessage): string[] => {
-  const recipients: EmailAddress[] = [
-    ...toAddressList(message.to),
-    ...toAddressList(message.cc),
-    ...toAddressList(message.bcc),
-  ]
-
-  return [...new Set(recipients.map(addressToPath))]
-}
-
 const failedReceipt = (
   error: unknown,
   accepted: string[] = [],
@@ -113,6 +106,7 @@ export class SmtpTransport implements EmailAdapter {
   readonly #port: number
   readonly #secureTransport: SmtpSecureTransport
   readonly #auth: SmtpTransportOptions['auth']
+  readonly #dkim: SmtpTransportOptions['dkim']
   readonly #clientName: string
   readonly #maxConnections: number
   #activeSends = new Set<Promise<SendEmailReceipt>>()
@@ -127,6 +121,7 @@ export class SmtpTransport implements EmailAdapter {
     this.#port = options.port
     this.#secureTransport = resolveSecureTransport(options.secure, options.port)
     this.#auth = options.auth
+    this.#dkim = options.dkim
     this.#clientName = options.clientName ?? DEFAULT_CLIENT_NAME
     this.#maxConnections = resolveMaxConnections(options.pool?.maxConnections)
   }
@@ -166,9 +161,36 @@ export class SmtpTransport implements EmailAdapter {
     await Promise.allSettled(slots.map((slot) => slot.session.close()))
   }
 
+  async verify(): Promise<void> {
+    if (this.#closed) {
+      throw new Error(CLOSED_TRANSPORT_ERROR_MESSAGE)
+    }
+
+    let socket: SmtpSocket | undefined
+    let session: SmtpSession | undefined
+
+    try {
+      socket = await this.#connector.connect(
+        { hostname: this.#hostname, port: this.#port },
+        { secureTransport: this.#secureTransport },
+      )
+      await socket.opened
+      session = await openSmtpSession(socket, {
+        clientName: this.#clientName,
+        secureTransport: this.#secureTransport,
+        ...(this.#auth !== undefined ? { auth: this.#auth } : {}),
+      })
+    } finally {
+      await session?.close().catch(() => {})
+      if (session === undefined) {
+        await Promise.resolve(socket?.close?.()).catch(() => {})
+      }
+    }
+  }
+
   async #send(message: EmailMessage): Promise<SendEmailReceipt> {
-    const recipients = collectRecipients(message)
-    if (recipients.length === 0) {
+    const envelope = resolveEmailEnvelope(message)
+    if (envelope.recipients.length === 0) {
       return {
         successful: false,
         accepted: [],
@@ -179,14 +201,17 @@ export class SmtpTransport implements EmailAdapter {
 
     try {
       const builtMessage = buildRawEmailMessage(message)
+      const dkim = message.dkim ?? this.#dkim
+      const rawMessage =
+        dkim === undefined ? builtMessage.raw : await applyDkimSignature(builtMessage.raw, dkim)
       const slot = await this.#acquireSlot()
       let result: Awaited<ReturnType<SmtpSession['send']>>
 
       try {
         result = await slot.session.send({
-          mailFrom: addressToPath(message.from),
-          rawMessage: builtMessage.raw,
-          recipients,
+          mailFrom: envelope.mailFrom,
+          rawMessage,
+          recipients: envelope.recipients,
         })
       } catch (error) {
         await this.#discardSlot(slot).catch(() => {})
