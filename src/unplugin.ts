@@ -147,7 +147,8 @@ const factory: UnpluginFactory<EmailTailwindPluginOptions | undefined> = (option
       return null
     },
     load(id) {
-      const bareId = id.replace(/\?.*$/, '')
+      const qIdx = id.indexOf('?')
+      const bareId = qIdx >= 0 ? id.slice(0, qIdx) : id
       if (bareId.startsWith(RESOLVED_CSS_PREFIX) && bareId.endsWith(RESOLVED_CSS_SUFFIX)) {
         const encodedPath = bareId.slice(RESOLVED_CSS_PREFIX.length, -RESOLVED_CSS_SUFFIX.length)
         const sourceFilePath = decodeURIComponent(encodedPath)

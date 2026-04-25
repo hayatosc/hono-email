@@ -127,12 +127,12 @@ const extractHeadBounds = (html: string): { headOpen: number; headClose: number 
 
 const decodeHonoCssRuntimeString = (rawCss: string): string =>
   rawCss
-    .replace(/\\\\/g, '\\')
     .replace(/\\n/g, '\n')
     .replace(/\\r/g, '\r')
     .replace(/\\t/g, '\t')
     .replace(/\\"/g, '"')
     .replace(/\\'/g, "'")
+    .replace(/\\\\/g, '\\')
 
 const extractHonoCssFromHtml = (
   html: string,

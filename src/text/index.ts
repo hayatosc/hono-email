@@ -59,8 +59,16 @@ export const renderPlainText = (html: string, options: PlainTextRenderOptions = 
 
   let text = stripDoctype(html)
 
-  text = text.replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, '')
-  text = text.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '')
+  let prev: string
+  do {
+    prev = text
+    text = text.replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, '')
+  } while (text !== prev)
+  do {
+    prev = text
+    text = text.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '')
+  } while (text !== prev)
+
   text = text.replace(/<hr\s*\/?>/gi, `\n${resolvedOptions.hrSeparator}\n`)
   text = text.replace(/<br\s*\/?>/gi, '\n')
   text = text.replace(/<\/p>/gi, '\n\n')
@@ -75,7 +83,10 @@ export const renderPlainText = (html: string, options: PlainTextRenderOptions = 
     /<a\b[^>]*href="([^"]*)"[^>]*>([\s\S]*?)<\/a>/gi,
     (_match, href: string, label: string) => formatLink(label, href, resolvedOptions.linkFormat),
   )
-  text = text.replace(/<[^>]+>/g, '')
+  do {
+    prev = text
+    text = text.replace(/<[^>]+>/g, '')
+  } while (text !== prev)
 
   const collapsed = collapseWhitespace(text)
 

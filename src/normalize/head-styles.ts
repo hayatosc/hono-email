@@ -11,7 +11,12 @@ export const relocateHeadStyles = (html: string): string => {
     return html
   }
 
-  let normalizedHtml = html.replace(GENERATED_HEAD_STYLE_PATTERN, '')
+  let normalizedHtml = html
+  let prev: string
+  do {
+    prev = normalizedHtml
+    normalizedHtml = normalizedHtml.replace(GENERATED_HEAD_STYLE_PATTERN, '')
+  } while (normalizedHtml !== prev)
 
   const headClose = normalizedHtml.match(HEAD_CLOSE_PATTERN)
   if (headClose?.index !== undefined) {
