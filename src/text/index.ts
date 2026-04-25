@@ -62,11 +62,11 @@ export const renderPlainText = (html: string, options: PlainTextRenderOptions = 
   let prev: string
   do {
     prev = text
-    text = text.replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, '')
+    text = text.replace(/<style\b[^>]*>[\s\S]*?<\/style(?:\s+[^>]*)?\s*>/gi, '')
   } while (text !== prev)
   do {
     prev = text
-    text = text.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '')
+    text = text.replace(/<script\b[^>]*>[\s\S]*?<\/script(?:\s+[^>]*)?\s*>/gi, '')
   } while (text !== prev)
 
   text = text.replace(/<hr\s*\/?>/gi, `\n${resolvedOptions.hrSeparator}\n`)
