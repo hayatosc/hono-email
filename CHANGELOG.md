@@ -88,7 +88,6 @@ export default {
 - Update publish.yml to remove auth token
 - Upgrade setup-node action from v4 to v5
 
-
 ## [0.2.0] - 2026-04-20
 
 - 0.2.0
