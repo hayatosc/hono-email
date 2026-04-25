@@ -1,5 +1,93 @@
 # Changelog
 
+## [0.3.0] - 2026-04-25
+
+### Add SMTP Connector
+
+Added native support for sending via SMTP protocol. It works in any runtime, including Node.js, Bun, Deno, and Cloudflare Workers.
+
+```tsx
+import CloudflareConnector from 'hono-email/smtp/cloudflare'
+import { Body, Html, Text, sendEmail } from 'hono-email'
+import { SmtpTransport } from 'hono-email/smtp'
+
+const smtp = new SmtpTransport({
+  connector: CloudflareConnector,
+  hostname: 'smtp.example.com',
+  port: 587,
+  secure: 'starttls',
+  auth: {
+    username: 'smtp-user',
+    password: 'smtp-password',
+  },
+  pool: {
+    maxConnections: 2,
+  },
+})
+
+try {
+  const receipt = await sendEmail({
+    adapter: smtp,
+    from: 'sender@example.com',
+    to: 'recipient@example.com',
+    subject: 'Welcome',
+    jsx: (
+      <Html>
+        <Body>
+          <Text>Hello from hono-email.</Text>
+        </Body>
+      </Html>
+    ),
+  })
+
+  if (!receipt.successful) {
+    console.error(receipt.errorMessages)
+  }
+} finally {
+  await smtp.close()
+}
+```
+
+### Add Cloudflare Email Service Adapter
+
+We have added an adapter for [Cloudflare Email Service](https://developers.cloudflare.com/email-service/) . It functions as a Workers Binding when running on Cloudflare Workers, and as a REST API in other runtimes.
+
+```tsx
+import { Body, Html, Text, sendEmail } from 'hono-email'
+import { CloudflareEmailAdapter } from 'hono-email/cloudflare-email'
+import WorkersConnector from 'hono-email/cloudflare-email/cloudflare'
+
+export default {
+  async fetch(_request: Request, env: Env): Promise<Response> {
+    const receipt = await sendEmail({
+      adapter: CloudflareEmailAdapter({ connector: WorkersConnector }),
+      from: 'sender@example.com',
+      to: 'recipient@example.com',
+      subject: 'Welcome',
+      jsx: (
+        <Html>
+          <Body>
+            <Text>Hello from Cloudflare Workers.</Text>
+          </Body>
+        </Html>
+      ),
+    })
+
+    return Response.json(receipt)
+  },
+}
+```
+
+- 0.3.0
+- chore: add node example (#11)
+- feat: remove env argument from cloudflare workers connector and update example (#10)
+- chore: update oxlint adn oxfmt settings
+- Add Cloudflare Email Sending Adapter (#9)
+- [codex] add smtp transport connectors (#8)
+- feat: return html and text from render (#7)
+- Update publish.yml to remove auth token
+- Upgrade setup-node action from v4 to v5
+
 ## [0.2.0] - 2026-04-20
 
 - 0.2.0
