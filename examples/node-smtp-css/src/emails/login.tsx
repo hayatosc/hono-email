@@ -1,5 +1,5 @@
-import { Style, css } from 'hono/css'
 import { Body, Container, Head, Heading, Hr, Html, Preview, Text } from 'hono-email'
+import { Style, css } from 'hono/css'
 
 export type LoginEmailProps = {
   code: string

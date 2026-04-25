@@ -11,8 +11,10 @@ export type {
   SuccessfulSendReceipt,
 } from '../index'
 export type {
+  CloudflareEmailAdapterOptions,
   CloudflareEmailBinding,
   CloudflareEmailBindingSendResult,
+  CloudflareEmailConnector,
   CloudflareEmailConnectorRequest,
   CloudflareEmailConnectorResult,
   CloudflareEmailFetch,
@@ -23,5 +25,8 @@ export type {
   CloudflareEmailRestPayload,
   CloudflareEmailWorkerNameAddress,
   CloudflareEmailWorkerPayload,
+  CloudflareEmailWorkersConnectorOptions,
 } from './types'
-export { default } from './rest'
+export { RESTConnector } from './rest'
+export { CloudflareEmailAdapter } from './adapter'
+export { CloudflareEmailAdapter as default } from './adapter'

@@ -1,14 +1,9 @@
-import { render } from '../index'
 import {
   renderEmailMessage as renderEmailMessageWithRender,
   sendEmail as sendEmailWithRender,
 } from '../email'
-import type {
-  EmailMessage,
-  EmailMessageDraft,
-  SendEmailOptions,
-  SendEmailReceipt,
-} from '../email'
+import type { EmailMessage, EmailMessageDraft, SendEmailOptions, SendEmailReceipt } from '../email'
+import { render } from '../index'
 
 export type {
   EmailAdapter,

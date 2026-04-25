@@ -1,11 +1,11 @@
 import { env } from 'cloudflare:workers'
 
-import { createCloudflareEmailAdapter } from '../../cloudflare-email/adapter'
 import type {
   CloudflareEmailBinding,
   CloudflareEmailConnector,
   CloudflareEmailConnectorRequest,
   CloudflareEmailConnectorResult,
+  CloudflareEmailWorkersConnectorOptions,
 } from '../../cloudflare-email/types'
 
 export type {
@@ -14,27 +14,13 @@ export type {
   CloudflareEmailConnector,
   CloudflareEmailConnectorRequest,
   CloudflareEmailConnectorResult,
+  CloudflareEmailWorkersConnectorOptions,
   CloudflareEmailWorkerNameAddress,
   CloudflareEmailWorkerPayload,
 } from '../../cloudflare-email/types'
 
 const createAcceptedResponse = (recipients: string[]): string =>
   `Cloudflare Email Service accepted ${recipients.length} recipient(s).`
-
-const createWorkersConnector = (binding: CloudflareEmailBinding): CloudflareEmailConnector => ({
-  async send(request: CloudflareEmailConnectorRequest): Promise<CloudflareEmailConnectorResult> {
-    const result = await binding.send(request.workersPayload)
-
-    return {
-      delivered: request.recipients,
-      // Local preview bindings may accept the send but omit EmailSendResult.
-      messageId: result?.messageId,
-      permanentBounces: [],
-      queued: [],
-      response: createAcceptedResponse(request.recipients),
-    }
-  },
-})
 
 const isCloudflareEmailBinding = (value: unknown): value is CloudflareEmailBinding =>
   typeof value === 'object' &&
@@ -52,9 +38,26 @@ const resolveEmailBinding = (bindingName: string): CloudflareEmailBinding => {
   return rawBinding
 }
 
-const WorkersConnector = (options?: { bindingName?: string }) => {
-  const bindingName = options?.bindingName ?? 'EMAIL'
-  return createCloudflareEmailAdapter(createWorkersConnector(resolveEmailBinding(bindingName)))
-}
+const buildConnector = (bindingName: string): CloudflareEmailConnector => ({
+  async send(request: CloudflareEmailConnectorRequest): Promise<CloudflareEmailConnectorResult> {
+    const binding = resolveEmailBinding(bindingName)
+    const result = await binding.send(request.workersPayload)
+
+    return {
+      delivered: request.recipients,
+      // Local preview bindings may accept the send but omit EmailSendResult.
+      messageId: result?.messageId,
+      permanentBounces: [],
+      queued: [],
+      response: createAcceptedResponse(request.recipients),
+    }
+  },
+})
+
+export const createWorkersConnector = (
+  options?: CloudflareEmailWorkersConnectorOptions,
+): CloudflareEmailConnector => buildConnector(options?.bindingName ?? 'EMAIL')
+
+export const WorkersConnector: CloudflareEmailConnector = buildConnector('EMAIL')
 
 export default WorkersConnector

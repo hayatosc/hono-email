@@ -1,9 +1,4 @@
-import type {
-  EmailAdapter,
-  EmailAddress,
-  EmailMessage,
-  SendEmailReceipt,
-} from '../index'
+import type { EmailAdapter, EmailAddress, EmailMessage, SendEmailReceipt } from '../index'
 import { addressToPath, buildRawEmailMessage, toAddressList } from '../message'
 import { openSmtpSession } from './protocol'
 import type { SmtpSession } from './protocol'

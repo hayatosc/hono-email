@@ -1,8 +1,7 @@
 import dotenv from 'dotenv'
-
 import { sendEmail } from 'hono-email'
-import NodeConnector from 'hono-email/smtp/node'
 import { SmtpTransport } from 'hono-email/smtp'
+import NodeConnector from 'hono-email/smtp/node'
 
 import { LoginEmail } from './emails/login'
 
