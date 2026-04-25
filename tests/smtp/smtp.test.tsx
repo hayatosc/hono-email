@@ -1,9 +1,8 @@
 import { describe, expect, test } from 'bun:test'
 
-import { Body, Html, Text } from '../../src'
+import { Body, Html, Text, sendEmail } from '../../src'
 import {
   buildRawEmailMessage,
-  sendEmail,
   SmtpTransport,
   type SmtpConnector,
   type SmtpSocket,

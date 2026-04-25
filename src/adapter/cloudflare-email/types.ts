@@ -88,6 +88,14 @@ export type CloudflareEmailRestConnectorOptions = {
   fetch?: CloudflareEmailFetch
 }
 
+export type CloudflareEmailWorkersConnectorOptions = {
+  bindingName?: string
+}
+
+export type CloudflareEmailAdapterOptions = {
+  connector: CloudflareEmailConnector
+}
+
 export class CloudflareEmailConnectorError extends Error {
   readonly errorMessages: string[]
   readonly rejected: string[] | undefined

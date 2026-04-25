@@ -78,8 +78,8 @@ const { html, text } = await render(<WelcomeEmail />, {
 
 ```tsx
 import CloudflareConnector from 'hono-email/smtp/cloudflare'
-import { Body, Html, Text } from 'hono-email'
-import { sendEmail, SmtpTransport } from 'hono-email/smtp'
+import { Body, Html, Text, sendEmail } from 'hono-email'
+import { SmtpTransport } from 'hono-email/smtp'
 
 const smtp = new SmtpTransport({
   connector: CloudflareConnector,
@@ -140,19 +140,19 @@ Use port `465` with `secure: true` on Bun.
 
 ### Cloudflare Email Service
 
-`hono-email/cloudflare-email` provides the Binding or REST adapter for Cloudflare Email Service.
+`hono-email/cloudflare-email` provides `CloudflareEmailAdapter` and connectors for Cloudflare Email Service.
 
-On Cloudflare Workers:
+On Cloudflare Workers (using `WorkersConnector`):
 
 ```tsx
-import { Body, Html, Text } from 'hono-email'
-import { sendEmail } from 'hono-email/cloudflare-email'
-import { WorkersConnector } from 'hono-email/cloudflare-email/cloudflare'
+import { Body, Html, Text, sendEmail } from 'hono-email'
+import { CloudflareEmailAdapter } from 'hono-email/cloudflare-email'
+import WorkersConnector from 'hono-email/cloudflare-email/cloudflare'
 
 export default {
   async fetch(_request: Request, env: Env): Promise<Response> {
     const receipt = await sendEmail({
-      adapter: WorkersConnector(),
+      adapter: CloudflareEmailAdapter({ connector: WorkersConnector }),
       from: 'sender@example.com',
       to: 'recipient@example.com',
       subject: 'Welcome',
@@ -170,16 +170,18 @@ export default {
 }
 ```
 
-REST API (other runtimes):
+REST API (other runtimes, using `RESTConnector`):
 
 ```tsx
-import { Body, Html, Text } from 'hono-email'
-import { RESTConnector, sendEmail } from 'hono-email/cloudflare-email'
+import { Body, Html, Text, sendEmail } from 'hono-email'
+import { CloudflareEmailAdapter, RESTConnector } from 'hono-email/cloudflare-email'
 
 const receipt = await sendEmail({
-  adapter: RESTConnector({
-    accountId: process.env.CLOUDFLARE_ACCOUNT_ID!,
-    apiToken: process.env.CLOUDFLARE_API_TOKEN!,
+  adapter: CloudflareEmailAdapter({
+    connector: RESTConnector({
+      accountId: process.env.CLOUDFLARE_ACCOUNT_ID!,
+      apiToken: process.env.CLOUDFLARE_API_TOKEN!,
+    }),
   }),
   from: { address: 'sender@example.com', name: 'Sender' },
   to: ['first@example.com', 'second@example.com'],
@@ -296,7 +298,7 @@ const { html } = await render(
 
 ### hono/css (CSS-in-JS)
 
-You can use `hono/css` class names directly on normal elements (`<div>`, `<Text>`, etc.).  
+You can use `hono/css` class names directly on normal elements (`<div>`, `<Text>`, etc.).
 `render()` automatically converts matching class rules to email-safe inline styles.
 
 `<Head><Style /></Head>` is required when using `hono/css`.

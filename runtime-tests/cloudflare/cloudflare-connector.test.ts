@@ -2,8 +2,9 @@ import { connect } from 'cloudflare:sockets'
 import { withEnv } from 'cloudflare:workers'
 import { describe, expect, test } from 'vitest'
 
-import { WorkersConnector } from '../../src/adapter/platform/cloudflare/email-service'
+import { CloudflareEmailAdapter } from '../../src/adapter/cloudflare-email/adapter'
 import type { CloudflareEmailBinding } from '../../src/adapter/platform/cloudflare/email-service'
+import WorkersConnector from '../../src/adapter/platform/cloudflare/email-service'
 import CloudflareConnector from '../../src/adapter/platform/cloudflare/smtp'
 import { SmtpTransport } from '../../src/adapter/smtp'
 
@@ -44,7 +45,7 @@ describe('Cloudflare email adapters in Workers runtime', () => {
     }
 
     const receipt = await withEnv({ EMAIL: binding }, () =>
-      WorkersConnector().send({
+      CloudflareEmailAdapter({ connector: WorkersConnector }).send({
         from: 'sender@example.com',
         html: '<p>Hello Workers</p>',
         subject: 'Workers runtime test',
@@ -69,7 +70,7 @@ describe('Cloudflare email adapters in Workers runtime', () => {
     }
 
     const receipt = await withEnv({ EMAIL: binding }, () =>
-      WorkersConnector().send({
+      CloudflareEmailAdapter({ connector: WorkersConnector }).send({
         from: 'sender@example.com',
         html: '<p>Hello Workers</p>',
         subject: 'Workers runtime preview fallback',

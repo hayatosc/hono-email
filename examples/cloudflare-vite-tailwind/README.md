@@ -1,12 +1,14 @@
 # Cloudflare + Vite + Hono + Tailwind Example
 
-An example using `hono-email` in cloudflare workers environment.
+An example using `hono-email` in a Cloudflare Workers environment.
 
 - Hono
 - Vite
 - Cloudflare plugin
   - Using Cloudflare Email Sending
-- Tailwind plugin (with `EmailTailwind` on `hono-email` )
+- `sendEmail` from `hono-email`
+- `CloudflareEmailAdapter` from `hono-email/cloudflare-email` with `WorkersConnector` from `hono-email/cloudflare-email/cloudflare`
+- Tailwind plugin (with `EmailTailwind` on `hono-email`)
 
 ## Commands
 

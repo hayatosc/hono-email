@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 
-import { sendEmail, RESTConnector } from '../../src/adapter/cloudflare-email'
+import { sendEmail } from '../../src'
+import { CloudflareEmailAdapter, RESTConnector } from '../../src/adapter/cloudflare-email'
 import {
   type CloudflareEmailFetch,
   type CloudflareEmailFetchInit,
@@ -38,11 +39,13 @@ describe('Cloudflare Email Service adapter', () => {
       )
     }
 
-    const receipt = await RESTConnector({
-      accountId: 'account-123',
-      apiBaseUrl: 'https://api.example.test/client/v4',
-      apiToken: 'token-123',
-      fetch: fetchImplementation,
+    const receipt = await CloudflareEmailAdapter({
+      connector: RESTConnector({
+        accountId: 'account-123',
+        apiBaseUrl: 'https://api.example.test/client/v4',
+        apiToken: 'token-123',
+        fetch: fetchImplementation,
+      }),
     }).send({
       ...createMessage(),
       messageId: '<local-message@example.com>',
@@ -96,10 +99,12 @@ describe('Cloudflare Email Service adapter', () => {
         { status: 400 },
       )
 
-    const receipt = await RESTConnector({
-      accountId: 'account-123',
-      apiToken: 'token-123',
-      fetch: fetchImplementation,
+    const receipt = await CloudflareEmailAdapter({
+      connector: RESTConnector({
+        accountId: 'account-123',
+        apiToken: 'token-123',
+        fetch: fetchImplementation,
+      }),
     }).send(createMessage())
 
     expect(receipt.successful).toBe(false)
@@ -127,10 +132,12 @@ describe('Cloudflare Email Service adapter', () => {
       )
 
     const receipt = await sendEmail({
-      adapter: RESTConnector({
-        accountId: 'account-123',
-        apiToken: 'token-123',
-        fetch: fetchImplementation,
+      adapter: CloudflareEmailAdapter({
+        connector: RESTConnector({
+          accountId: 'account-123',
+          apiToken: 'token-123',
+          fetch: fetchImplementation,
+        }),
       }),
       from: 'sender@example.com',
       jsx: 'Hello Cloudflare',

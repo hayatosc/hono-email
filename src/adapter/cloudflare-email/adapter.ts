@@ -1,9 +1,9 @@
-import type { EmailAddress, EmailMessage, SendEmailReceipt } from '../index'
+import type { EmailAdapter, EmailAddress, EmailMessage, SendEmailReceipt } from '../index'
 import { addressToPath, toAddressList } from '../message'
 import {
   asCloudflareEmailRecipientField,
   CloudflareEmailConnectorError,
-  type CloudflareEmailConnector,
+  type CloudflareEmailAdapterOptions,
   type CloudflareEmailNameAddress,
   type CloudflareEmailRestPayload,
   type CloudflareEmailWorkerNameAddress,
@@ -137,10 +137,9 @@ const buildRestMessageId = (message: EmailMessage): string => {
   return `${REST_MESSAGE_ID_PREFIX}:${randomId}`
 }
 
-export const createCloudflareEmailAdapter = (
-  connector: CloudflareEmailConnector,
-): { send(message: EmailMessage): Promise<SendEmailReceipt> } => ({
+export const CloudflareEmailAdapter = (options: CloudflareEmailAdapterOptions): EmailAdapter => ({
   async send(message: EmailMessage): Promise<SendEmailReceipt> {
+    const connector = options.connector
     const recipients = collectRecipients(message)
     if (recipients.length === 0) {
       return {

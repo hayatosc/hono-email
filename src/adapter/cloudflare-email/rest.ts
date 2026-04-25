@@ -1,4 +1,3 @@
-import { createCloudflareEmailAdapter } from './adapter'
 import type {
   CloudflareEmailConnector,
   CloudflareEmailConnectorRequest,
@@ -92,7 +91,7 @@ const buildResponseText = (result: CloudflareRestResult): string =>
 const createMissingFetchError = (): Error =>
   new Error('Cloudflare REST connector requires a fetch implementation.')
 
-const createRestConnector = (
+export const RESTConnector = (
   options: CloudflareEmailRestConnectorOptions,
 ): CloudflareEmailConnector => {
   const fetchImplementation = options.fetch ?? globalThis.fetch
@@ -143,5 +142,4 @@ const createRestConnector = (
   }
 }
 
-export const RESTConnector = (options: CloudflareEmailRestConnectorOptions) =>
-  createCloudflareEmailAdapter(createRestConnector(options))
+export default RESTConnector
