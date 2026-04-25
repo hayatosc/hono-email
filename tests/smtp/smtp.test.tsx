@@ -574,6 +574,37 @@ describe('sendEmail over SMTP', () => {
     expect(data).not.toContain('transport.example.com')
   })
 
+  test('rejects malformed DKIM keys with repeated PEM markers before connecting', async () => {
+    const repeatedPemMarkers = `${'-----BEGIN PRIVATE KEY-----a'.repeat(1_000)}`
+    const mock = createMockConnector(async () => {
+      throw new Error('SMTP connection should not be opened for invalid DKIM keys.')
+    })
+    const smtp = new SmtpTransport({
+      connector: mock.connector,
+      dkim: {
+        domainName: 'example.com',
+        keySelector: 'test',
+        privateKey: repeatedPemMarkers,
+      },
+      hostname: 'smtp.example.com',
+      port: 465,
+      secure: true,
+    })
+
+    const receipt = await smtp.send(createEmailMessage('Invalid DKIM key'))
+    await smtp.close()
+
+    expect(receipt).toMatchObject({
+      accepted: [],
+      errorMessages: [
+        'Invalid DKIM private key: expected PKCS#8 PRIVATE KEY or PKCS#1 RSA PRIVATE KEY PEM.',
+      ],
+      rejected: [],
+      successful: false,
+    })
+    expect(mock.connectCount()).toBe(0)
+  })
+
   test('uses the SMTP envelope override without changing visible headers', async () => {
     let data = ''
     const mock = createMockConnector(async (server) => {

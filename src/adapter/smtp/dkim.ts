@@ -129,21 +129,34 @@ const wrapPkcs1InPkcs8 = (pkcs1: Uint8Array): Uint8Array =>
     encodeDerOctetString(pkcs1),
   )
 
+const extractPemBlock = (value: string, label: string): string | undefined => {
+  const beginMarker = `-----BEGIN ${label}-----`
+  const endMarker = `-----END ${label}-----`
+  const bodyStart = value.indexOf(beginMarker)
+  if (bodyStart < 0) {
+    return undefined
+  }
+
+  const contentStart = bodyStart + beginMarker.length
+  const bodyEnd = value.indexOf(endMarker, contentStart)
+  if (bodyEnd < 0) {
+    return undefined
+  }
+
+  return value.slice(contentStart, bodyEnd)
+}
+
 const decodePemPrivateKey = (pem: string): Uint8Array => {
   const trimmed = pem.trim()
 
-  const pkcs8Match = trimmed.match(
-    /-----BEGIN PRIVATE KEY-----([\s\S]+?)-----END PRIVATE KEY-----/u,
-  )
-  if (pkcs8Match?.[1] !== undefined) {
-    return base64ToBytes(pkcs8Match[1])
+  const pkcs8 = extractPemBlock(trimmed, 'PRIVATE KEY')
+  if (pkcs8 !== undefined) {
+    return base64ToBytes(pkcs8)
   }
 
-  const pkcs1Match = trimmed.match(
-    /-----BEGIN RSA PRIVATE KEY-----([\s\S]+?)-----END RSA PRIVATE KEY-----/u,
-  )
-  if (pkcs1Match?.[1] !== undefined) {
-    return wrapPkcs1InPkcs8(base64ToBytes(pkcs1Match[1]))
+  const pkcs1 = extractPemBlock(trimmed, 'RSA PRIVATE KEY')
+  if (pkcs1 !== undefined) {
+    return wrapPkcs1InPkcs8(base64ToBytes(pkcs1))
   }
 
   throw new Error(
