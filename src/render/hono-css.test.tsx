@@ -11,7 +11,7 @@ import {
   Text,
   buildTailwindArtifactFromCss,
   render,
-} from '../../src'
+} from '../index'
 
 const StyledEmail = ({ includeStyle = true }: { includeStyle?: boolean } = {}) => {
   const titleClassName = css`

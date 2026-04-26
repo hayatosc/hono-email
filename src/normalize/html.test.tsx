@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 
-import { Body, Head, Html, Preview, render } from '../../src'
+import { Body, Head, Html, Preview, render } from '../index'
 
 describe('document semantics', () => {
   test('moves Preview content to the top of the body', async () => {

@@ -19,5 +19,5 @@
     "noImplicitOverride": true,
     "types": ["bun", "@cloudflare/workers-types"]
   },
-  "include": ["src", "tests"]
+  "include": ["src"]
 }

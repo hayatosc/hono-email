@@ -15,7 +15,7 @@ import {
   Section,
   Text,
   render,
-} from '../../src'
+} from '../index'
 
 describe('email components', () => {
   test('renders a basic email document with primitives', async () => {

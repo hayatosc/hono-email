@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 
-import { render } from '../../src'
+import { render } from '../index'
 
 describe('style placement', () => {
   test('allows style tags inside head', async () => {
