@@ -11,6 +11,21 @@ export type EmailAddress =
 
 export type EmailHeaders = Record<string, string>
 
+export type EmailEnvelope = {
+  from?: EmailAddress
+  to?: EmailAddress | EmailAddress[]
+  cc?: EmailAddress | EmailAddress[]
+  bcc?: EmailAddress | EmailAddress[]
+}
+
+export type EmailDkimOptions = {
+  domainName: string
+  keySelector: string
+  privateKey: string
+  headerFieldNames?: string[]
+  skipFields?: string[]
+}
+
 export type EmailMessage = {
   from: EmailAddress
   to: EmailAddress | EmailAddress[]
@@ -23,6 +38,8 @@ export type EmailMessage = {
   headers?: EmailHeaders
   messageId?: string
   date?: Date
+  envelope?: EmailEnvelope
+  dkim?: EmailDkimOptions
 }
 
 export type EmailMessageDraft = Omit<EmailMessage, 'html' | 'text'> & {
@@ -84,6 +101,8 @@ export const renderEmailMessage = async (
     ...(draft.bcc !== undefined ? { bcc: draft.bcc } : {}),
     ...(draft.cc !== undefined ? { cc: draft.cc } : {}),
     ...(draft.date !== undefined ? { date: draft.date } : {}),
+    ...(draft.dkim !== undefined ? { dkim: draft.dkim } : {}),
+    ...(draft.envelope !== undefined ? { envelope: draft.envelope } : {}),
     ...(draft.headers !== undefined ? { headers: draft.headers } : {}),
     ...(draft.messageId !== undefined ? { messageId: draft.messageId } : {}),
     ...(draft.replyTo !== undefined ? { replyTo: draft.replyTo } : {}),

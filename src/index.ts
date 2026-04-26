@@ -38,6 +38,8 @@ export type {
 export type {
   EmailAdapter,
   EmailAddress,
+  EmailDkimOptions,
+  EmailEnvelope,
   EmailHeaders,
   EmailMessage,
   EmailMessageDraft,

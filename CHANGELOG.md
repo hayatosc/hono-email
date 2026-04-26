@@ -1,5 +1,9 @@
 # Changelog
 
+## [Unreleased]
+
+- feat(smtp): add DKIM signing, SMTP envelope overrides, and `verify()`
+
 ## [0.3.0] - 2026-04-25
 
 ### Add SMTP Connector

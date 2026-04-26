@@ -9,6 +9,7 @@ import {
 } from '../../src/adapter/smtp'
 
 const CRLF = '\r\n'
+const BASE64_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
 
 type MockSmtpServer = {
   commands: string[]
@@ -131,6 +132,49 @@ const createEmailMessage = (subject: string, to = 'recipient@example.com') => ({
   text: subject,
   to,
 })
+
+const bytesToBase64 = (bytes: Uint8Array): string => {
+  let output = ''
+  for (let index = 0; index < bytes.length; index += 3) {
+    const first = bytes[index] ?? 0
+    const second = bytes[index + 1] ?? 0
+    const third = bytes[index + 2] ?? 0
+    const combined = (first << 16) | (second << 8) | third
+
+    output += BASE64_ALPHABET[(combined >> 18) & 0x3f]
+    output += BASE64_ALPHABET[(combined >> 12) & 0x3f]
+    output += index + 1 < bytes.length ? BASE64_ALPHABET[(combined >> 6) & 0x3f] : '='
+    output += index + 2 < bytes.length ? BASE64_ALPHABET[combined & 0x3f] : '='
+  }
+
+  return output
+}
+
+const toPem = (label: string, bytes: Uint8Array): string => {
+  const encoded = bytesToBase64(bytes)
+  const lines: string[] = []
+  for (let index = 0; index < encoded.length; index += 64) {
+    lines.push(encoded.slice(index, index + 64))
+  }
+
+  return `-----BEGIN ${label}-----\n${lines.join('\n')}\n-----END ${label}-----`
+}
+
+const createDkimPrivateKey = async (): Promise<string> => {
+  const keyPair = await crypto.subtle.generateKey(
+    {
+      name: 'RSASSA-PKCS1-v1_5',
+      hash: 'SHA-256',
+      modulusLength: 1024,
+      publicExponent: new Uint8Array([1, 0, 1]),
+    },
+    true,
+    ['sign', 'verify'],
+  )
+
+  const pkcs8 = await crypto.subtle.exportKey('pkcs8', keyPair.privateKey)
+  return toPem('PRIVATE KEY', new Uint8Array(pkcs8))
+}
 
 describe('SMTP message building', () => {
   test('builds a multipart message without leaking Bcc headers', () => {
@@ -437,5 +481,221 @@ describe('sendEmail over SMTP', () => {
       rejected: ['missing@example.com'],
       successful: false,
     })
+  })
+
+  test('signs outgoing messages with transport-level DKIM settings', async () => {
+    const privateKey = await createDkimPrivateKey()
+    let data = ''
+    const mock = createMockConnector(async (server) => {
+      await server.writeResponse('220 smtp.example.com ready\r\n')
+      expect(await server.readLine()).toBe('EHLO localhost')
+      await server.writeResponse('250 smtp.example.com\r\n')
+      expect(await server.readLine()).toBe('MAIL FROM:<sender@example.com>')
+      await server.writeResponse('250 OK\r\n')
+      expect(await server.readLine()).toBe('RCPT TO:<recipient@example.com>')
+      await server.writeResponse('250 Accepted\r\n')
+      expect(await server.readLine()).toBe('DATA')
+      await server.writeResponse('354 Continue\r\n')
+      data = await server.readData()
+      await server.writeResponse('250 queued\r\n')
+      expect(await server.readLine()).toBe('QUIT')
+      await server.writeResponse('221 Bye\r\n')
+    })
+
+    const smtp = new SmtpTransport({
+      connector: mock.connector,
+      dkim: {
+        domainName: 'example.com',
+        keySelector: 'test',
+        privateKey,
+      },
+      hostname: 'smtp.example.com',
+      port: 465,
+      secure: true,
+    })
+
+    const receipt = await smtp.send(createEmailMessage('Signed'))
+    await smtp.close()
+    await mock.wait()
+
+    expect(receipt.successful).toBe(true)
+    expect(data.startsWith('DKIM-Signature: ')).toBe(true)
+    expect(data).toContain(' d=example.com;')
+    expect(data).toContain(' s=test;')
+    expect(data).toContain(`${CRLF}From: sender@example.com`)
+  })
+
+  test('uses per-message DKIM settings instead of transport defaults', async () => {
+    const transportKey = await createDkimPrivateKey()
+    const messageKey = await createDkimPrivateKey()
+    let data = ''
+    const mock = createMockConnector(async (server) => {
+      await server.writeResponse('220 smtp.example.com ready\r\n')
+      await server.readLine()
+      await server.writeResponse('250 smtp.example.com\r\n')
+      await server.readLine()
+      await server.writeResponse('250 OK\r\n')
+      await server.readLine()
+      await server.writeResponse('250 Accepted\r\n')
+      await server.readLine()
+      await server.writeResponse('354 Continue\r\n')
+      data = await server.readData()
+      await server.writeResponse('250 queued\r\n')
+      expect(await server.readLine()).toBe('QUIT')
+      await server.writeResponse('221 Bye\r\n')
+    })
+
+    const smtp = new SmtpTransport({
+      connector: mock.connector,
+      dkim: {
+        domainName: 'transport.example.com',
+        keySelector: 'transport',
+        privateKey: transportKey,
+      },
+      hostname: 'smtp.example.com',
+      port: 465,
+      secure: true,
+    })
+
+    const receipt = await smtp.send({
+      ...createEmailMessage('Override'),
+      dkim: {
+        domainName: 'message.example.com',
+        keySelector: 'message',
+        privateKey: messageKey,
+      },
+    })
+    await smtp.close()
+    await mock.wait()
+
+    expect(receipt.successful).toBe(true)
+    expect(data).toContain(' d=message.example.com;')
+    expect(data).toContain(' s=message;')
+    expect(data).not.toContain('transport.example.com')
+  })
+
+  test('rejects malformed DKIM keys with repeated PEM markers before connecting', async () => {
+    const repeatedPemMarkers = `${'-----BEGIN PRIVATE KEY-----a'.repeat(1_000)}`
+    const mock = createMockConnector(async () => {
+      throw new Error('SMTP connection should not be opened for invalid DKIM keys.')
+    })
+    const smtp = new SmtpTransport({
+      connector: mock.connector,
+      dkim: {
+        domainName: 'example.com',
+        keySelector: 'test',
+        privateKey: repeatedPemMarkers,
+      },
+      hostname: 'smtp.example.com',
+      port: 465,
+      secure: true,
+    })
+
+    const receipt = await smtp.send(createEmailMessage('Invalid DKIM key'))
+    await smtp.close()
+
+    expect(receipt).toMatchObject({
+      accepted: [],
+      errorMessages: [
+        'Invalid DKIM private key: expected PKCS#8 PRIVATE KEY or PKCS#1 RSA PRIVATE KEY PEM.',
+      ],
+      rejected: [],
+      successful: false,
+    })
+    expect(mock.connectCount()).toBe(0)
+  })
+
+  test('uses the SMTP envelope override without changing visible headers', async () => {
+    let data = ''
+    const mock = createMockConnector(async (server) => {
+      await server.writeResponse('220 smtp.example.com ready\r\n')
+      expect(await server.readLine()).toBe('EHLO localhost')
+      await server.writeResponse('250 smtp.example.com\r\n')
+      expect(await server.readLine()).toBe('MAIL FROM:<bounce@example.com>')
+      await server.writeResponse('250 OK\r\n')
+      expect(await server.readLine()).toBe('RCPT TO:<actual@example.com>')
+      await server.writeResponse('250 Accepted\r\n')
+      expect(await server.readLine()).toBe('DATA')
+      await server.writeResponse('354 Continue\r\n')
+      data = await server.readData()
+      await server.writeResponse('250 queued\r\n')
+      expect(await server.readLine()).toBe('QUIT')
+      await server.writeResponse('221 Bye\r\n')
+    })
+
+    const smtp = new SmtpTransport({
+      connector: mock.connector,
+      hostname: 'smtp.example.com',
+      port: 465,
+      secure: true,
+    })
+
+    const receipt = await smtp.send({
+      envelope: {
+        from: 'bounce@example.com',
+        to: 'actual@example.com',
+      },
+      from: 'sender@example.com',
+      html: '<p>Hello</p>',
+      subject: 'Envelope',
+      text: 'Hello',
+      to: 'visible@example.com',
+    })
+    await smtp.close()
+    await mock.wait()
+
+    expect(receipt.successful).toBe(true)
+    expect(data).toContain('From: sender@example.com')
+    expect(data).toContain('To: visible@example.com')
+    expect(data).not.toContain('actual@example.com')
+  })
+
+  test('verify succeeds after greeting, TLS negotiation, and authentication', async () => {
+    const mock = createMockConnector(async (server) => {
+      await server.writeResponse('220 smtp.example.com ESMTP ready\r\n')
+      expect(await server.readLine()).toBe('EHLO localhost')
+      await server.writeResponse('250-smtp.example.com\r\n250 STARTTLS\r\n')
+      expect(await server.readLine()).toBe('STARTTLS')
+      await server.writeResponse('220 Ready to start TLS\r\n')
+      expect(await server.readLine()).toBe('EHLO localhost')
+      await server.writeResponse('250 AUTH PLAIN LOGIN\r\n')
+      expect(await server.readLine()).toBe('AUTH PLAIN AHVzZXIAcGFzcw==')
+      await server.writeResponse('235 Authentication successful\r\n')
+      expect(await server.readLine()).toBe('QUIT')
+      await server.writeResponse('221 Bye\r\n')
+    })
+
+    const smtp = new SmtpTransport({
+      auth: { password: 'pass', username: 'user' },
+      connector: mock.connector,
+      hostname: 'smtp.example.com',
+      port: 587,
+      secure: 'starttls',
+    })
+
+    await expect(smtp.verify()).resolves.toBeUndefined()
+    await mock.wait()
+  })
+
+  test('verify fails when authentication is rejected', async () => {
+    const mock = createMockConnector(async (server) => {
+      await server.writeResponse('220 smtp.example.com ready\r\n')
+      expect(await server.readLine()).toBe('EHLO localhost')
+      await server.writeResponse('250 AUTH PLAIN\r\n')
+      expect(await server.readLine()).toBe('AUTH PLAIN AHVzZXIAcGFzcw==')
+      await server.writeResponse('535 Authentication failed\r\n')
+    })
+
+    const smtp = new SmtpTransport({
+      auth: { password: 'pass', username: 'user' },
+      connector: mock.connector,
+      hostname: 'smtp.example.com',
+      port: 465,
+      secure: true,
+    })
+
+    await expect(smtp.verify()).rejects.toThrow(
+      'Unexpected SMTP response to AUTH [REDACTED]: 535 Authentication failed',
+    )
   })
 })

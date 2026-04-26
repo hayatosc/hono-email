@@ -73,6 +73,11 @@ export const toAddressList = (
   return Array.isArray(addresses) ? addresses : [addresses]
 }
 
+export type ResolvedEmailEnvelope = {
+  mailFrom: string
+  recipients: string[]
+}
+
 const formatAddress = (address: EmailAddress): string => {
   if (typeof address === 'string') {
     const safeAddress = ensureSafeHeaderValue(address, 'email address')
@@ -138,6 +143,20 @@ const appendCustomHeaders = (lines: string[], headers: EmailHeaders | undefined)
     }
 
     appendHeader(lines, name, encodeHeaderValue(value, name))
+  }
+}
+
+export const resolveEmailEnvelope = (message: EmailMessage): ResolvedEmailEnvelope => {
+  const envelope = message.envelope
+  const recipients = [
+    ...toAddressList(envelope?.to ?? message.to),
+    ...toAddressList(envelope?.cc ?? message.cc),
+    ...toAddressList(envelope?.bcc ?? message.bcc),
+  ]
+
+  return {
+    mailFrom: addressToPath(envelope?.from ?? message.from),
+    recipients: [...new Set(recipients.map(addressToPath))],
   }
 }
 
