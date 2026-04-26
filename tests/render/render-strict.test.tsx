@@ -427,4 +427,14 @@ describe('render strict mode', () => {
       ),
     ).not.toThrow()
   })
+
+  test('deduplicates warnings collected from style attributes and style tags', () => {
+    const warnings = validateHtml(
+      '<html><head><style>.hero{box-shadow:0 1px 2px #000}</style></head><body><p style="box-shadow:0 1px 2px #000">Hello</p></body></html>',
+    )
+
+    expect(
+      warnings.filter((message) => message.includes("The CSS property 'box-shadow'")),
+    ).toHaveLength(1)
+  })
 })

@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 
 import { Body, Html, Text, sendEmail } from '../../src'
+import { resolveEmailEnvelope } from '../../src/adapter/message'
 import {
   buildRawEmailMessage,
   buildRawEmailMessageAsync,
@@ -178,6 +179,26 @@ const createDkimPrivateKey = async (): Promise<string> => {
 }
 
 describe('SMTP message building', () => {
+  test('resolves envelope overrides and deduplicates recipients', () => {
+    expect(
+      resolveEmailEnvelope({
+        envelope: {
+          bcc: 'recipient@example.com',
+          from: 'bounce@example.com',
+          to: ['recipient@example.com', 'audit@example.com'],
+        },
+        from: 'sender@example.com',
+        html: '<p>Hello</p>',
+        subject: 'Hello',
+        text: 'Hello',
+        to: ['visible@example.com', 'recipient@example.com'],
+      }),
+    ).toEqual({
+      mailFrom: 'bounce@example.com',
+      recipients: ['recipient@example.com', 'audit@example.com'],
+    })
+  })
+
   test('builds a multipart message without leaking Bcc headers', () => {
     const { raw } = buildRawEmailMessage({
       bcc: 'hidden@example.com',

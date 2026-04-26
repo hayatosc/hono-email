@@ -1,8 +1,16 @@
 import type { EmailAdapter, EmailMessage, SendEmailReceipt } from '../index'
 import { buildRawEmailMessageAsync, resolveEmailEnvelope } from '../message'
 import { applyDkimSignature } from './dkim'
+import {
+  DEFAULT_CLIENT_NAME,
+  resolveMaxConnections,
+  resolveMaxMessages,
+  resolveSecureTransport,
+  withTimeout,
+} from './options'
 import { openSmtpSession } from './protocol'
 import type { SmtpSession } from './protocol'
+import { CLOSED_TRANSPORT_ERROR_MESSAGE, failedReceipt, isClosedTransportError } from './receipt'
 import type { SmtpConnector, SmtpSecureTransport, SmtpSocket, SmtpTransportOptions } from './types'
 
 export type {
@@ -37,10 +45,6 @@ export type {
   SmtpTransportOptions,
 } from './types'
 
-const DEFAULT_CLIENT_NAME = 'localhost'
-const DEFAULT_MAX_CONNECTIONS = 1
-const CLOSED_TRANSPORT_ERROR_MESSAGE = 'SMTP transport is closed.'
-
 type SmtpConnectionSlot = {
   busy: boolean
   sentMessages: number
@@ -50,101 +54,6 @@ type SmtpConnectionSlot = {
 type SmtpConnectionWaiter = {
   reject(error: unknown): void
   resolve(slot: SmtpConnectionSlot): void
-}
-
-const resolveSecureTransport = (
-  secure: SmtpTransportOptions['secure'],
-  port: number,
-): SmtpSecureTransport => {
-  if (secure === 'starttls') {
-    return 'starttls'
-  }
-
-  if (secure === true) {
-    return 'on'
-  }
-
-  if (secure === false) {
-    return 'off'
-  }
-
-  if (port === 465) {
-    return 'on'
-  }
-
-  if (port === 587) {
-    return 'starttls'
-  }
-
-  return 'off'
-}
-
-const failedReceipt = (
-  error: unknown,
-  accepted: string[] = [],
-  rejected: string[] = [],
-): SendEmailReceipt => ({
-  successful: false,
-  accepted,
-  rejected,
-  errorMessages: [error instanceof Error ? error.message : String(error)],
-  cause: error,
-})
-
-const isClosedTransportError = (error: unknown): boolean =>
-  error instanceof Error && error.message === CLOSED_TRANSPORT_ERROR_MESSAGE
-
-const resolveMaxConnections = (maxConnections: number | undefined): number => {
-  if (maxConnections === undefined) {
-    return DEFAULT_MAX_CONNECTIONS
-  }
-
-  if (!Number.isSafeInteger(maxConnections) || maxConnections < 1) {
-    throw new Error('SMTP pool maxConnections must be a positive integer.')
-  }
-
-  return maxConnections
-}
-
-const resolveMaxMessages = (maxMessages: number | undefined): number | undefined => {
-  if (maxMessages === undefined) {
-    return undefined
-  }
-
-  if (!Number.isSafeInteger(maxMessages) || maxMessages < 1) {
-    throw new Error('SMTP pool maxMessages must be a positive integer.')
-  }
-
-  return maxMessages
-}
-
-const withTimeout = async <T>(
-  task: Promise<T>,
-  timeout: number | undefined,
-  label: string,
-): Promise<T> => {
-  if (timeout === undefined) {
-    return await task
-  }
-
-  if (!Number.isSafeInteger(timeout) || timeout < 1) {
-    throw new Error(`${label} timeout must be a positive integer.`)
-  }
-
-  let timeoutId: ReturnType<typeof setTimeout> | undefined
-  const timeoutTask = new Promise<never>((_resolve, reject) => {
-    timeoutId = setTimeout(() => {
-      reject(new Error(`${label} timed out after ${timeout}ms.`))
-    }, timeout)
-  })
-
-  try {
-    return await Promise.race([task, timeoutTask])
-  } finally {
-    if (timeoutId !== undefined) {
-      clearTimeout(timeoutId)
-    }
-  }
 }
 
 export class SmtpTransport implements EmailAdapter {
