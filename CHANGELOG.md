@@ -1,8 +1,13 @@
 # Changelog
 
-## [Unreleased]
+## [0.3.1] - 2026-04-26
 
-- feat(smtp): add DKIM signing, SMTP envelope overrides, and `verify()`
+- refactor: split rendering and validation internals (#17)
+- feat: add attachment support for smtp and cloudflare adapters (#16)
+- feat(smtp): add dkim envelope and verify support (#15)
+- fix: resolve CodeQL code scanning security alerts (#14)
+
+## [Unreleased]
 
 ## [0.3.0] - 2026-04-25
 
