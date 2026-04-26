@@ -1,9 +1,40 @@
-import type { EmailAddress, EmailHeaders, EmailMessage } from './index'
+import {
+  encodeAttachmentContentBase64,
+  type ResolvedEmailAttachment,
+  resolveEmailAttachments,
+  resolveEmailAttachmentsSync,
+} from './attachment'
+import type { EmailAddress, EmailAttachmentLimits, EmailHeaders, EmailMessage } from './index'
 
 const CRLF = '\r\n'
 const BASE64_CHUNK_SIZE = 76
 const EMAIL_ADDRESS_PATTERN = /^[^\s@<>]+@[^\s@<>]+$/
 const HEADER_NAME_PATTERN = /^[A-Za-z0-9-]+$/
+const PROTECTED_CUSTOM_HEADERS = new Set(
+  [
+    'Bcc',
+    'Cc',
+    'Content-Type',
+    'Date',
+    'DKIM-Signature',
+    'From',
+    'Message-ID',
+    'MIME-Version',
+    'Reply-To',
+    'Sender',
+    'Subject',
+    'To',
+  ].map((name) => name.toLowerCase()),
+)
+const PROTECTED_ATTACHMENT_HEADERS = new Set(
+  [
+    'Content-Disposition',
+    'Content-ID',
+    'Content-Transfer-Encoding',
+    'Content-Type',
+    'MIME-Version',
+  ].map((name) => name.toLowerCase()),
+)
 
 const BASE64_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
 
@@ -59,6 +90,9 @@ const encodeHeaderValue = (value: string, fieldName: string): string => {
 }
 
 const quoteDisplayName = (value: string): string => `"${value.replace(/["\\]/g, '\\$&')}"`
+
+const quoteHeaderParameter = (value: string): string =>
+  `"${ensureSafeHeaderValue(value, 'header parameter').replace(/["\\]/g, '\\$&')}"`
 
 export const addressToPath = (address: EmailAddress): string =>
   typeof address === 'string' ? address : address.address
@@ -142,6 +176,51 @@ const appendCustomHeaders = (lines: string[], headers: EmailHeaders | undefined)
       throw new Error(`Invalid email header name: ${name}`)
     }
 
+    if (PROTECTED_CUSTOM_HEADERS.has(name.toLowerCase())) {
+      throw new Error(
+        `Email header ${name} is managed by hono-email and must not be set in custom headers.`,
+      )
+    }
+
+    appendHeader(lines, name, encodeHeaderValue(value, name))
+  }
+}
+
+const appendAttachmentHeaders = (lines: string[], attachment: ResolvedEmailAttachment): void => {
+  const contentTypeParameters =
+    attachment.filename === undefined ? '' : `; name=${quoteHeaderParameter(attachment.filename)}`
+  appendHeader(lines, 'Content-Type', `${attachment.contentType}${contentTypeParameters}`)
+  appendHeader(lines, 'Content-Transfer-Encoding', 'base64')
+
+  const dispositionParameters =
+    attachment.filename === undefined
+      ? ''
+      : `; filename=${quoteHeaderParameter(attachment.filename)}`
+  appendHeader(
+    lines,
+    'Content-Disposition',
+    `${attachment.contentDisposition}${dispositionParameters}`,
+  )
+
+  if (attachment.cid !== undefined) {
+    appendHeader(lines, 'Content-ID', `<${ensureSafeHeaderValue(attachment.cid, 'contentId')}>`)
+  }
+
+  if (attachment.headers === undefined) {
+    return
+  }
+
+  for (const [name, value] of Object.entries(attachment.headers)) {
+    if (!HEADER_NAME_PATTERN.test(name)) {
+      throw new Error(`Invalid attachment header name: ${name}`)
+    }
+
+    if (PROTECTED_ATTACHMENT_HEADERS.has(name.toLowerCase())) {
+      throw new Error(
+        `Attachment header ${name} is managed by hono-email and must not be set in attachment headers.`,
+      )
+    }
+
     appendHeader(lines, name, encodeHeaderValue(value, name))
   }
 }
@@ -160,9 +239,51 @@ export const resolveEmailEnvelope = (message: EmailMessage): ResolvedEmailEnvelo
   }
 }
 
-export const buildRawEmailMessage = (message: EmailMessage): { messageId: string; raw: string } => {
+type BuildRawEmailMessageOptions = EmailAttachmentLimits & {
+  resolvedAttachments?: ResolvedEmailAttachment[]
+}
+
+const appendAlternativeParts = (lines: string[], boundary: string, message: EmailMessage): void => {
+  lines.push(
+    `--${boundary}`,
+    'Content-Type: text/plain; charset=UTF-8',
+    'Content-Transfer-Encoding: base64',
+    '',
+    encodeBase64Text(message.text),
+    `--${boundary}`,
+    'Content-Type: text/html; charset=UTF-8',
+    'Content-Transfer-Encoding: base64',
+    '',
+    encodeBase64Text(message.html),
+    `--${boundary}--`,
+  )
+}
+
+const appendAttachmentPart = (
+  lines: string[],
+  boundary: string,
+  attachment: ResolvedEmailAttachment,
+): void => {
+  lines.push(`--${boundary}`)
+  appendAttachmentHeaders(lines, attachment)
+  lines.push('', wrapBase64(encodeAttachmentContentBase64(attachment.content)))
+}
+
+const buildRawEmailMessageWithAttachments = (
+  message: EmailMessage,
+  options: BuildRawEmailMessageOptions = {},
+): { messageId: string; raw: string } => {
   const messageId = message.messageId ?? buildMessageId(getMessageIdDomain(message.from))
-  const boundary = buildBoundary()
+  const alternativeBoundary = buildBoundary()
+  const attachments =
+    options.resolvedAttachments ?? resolveEmailAttachmentsSync(message.attachments, options)
+  const inlineAttachments = attachments.filter(
+    (attachment) => attachment.contentDisposition === 'inline' || attachment.cid !== undefined,
+  )
+  const inlineAttachmentSet = new Set(inlineAttachments)
+  const regularAttachments = attachments.filter(
+    (attachment) => !inlineAttachmentSet.has(attachment),
+  )
   const headers: string[] = []
 
   appendHeader(headers, 'From', formatAddress(message.from))
@@ -183,25 +304,71 @@ export const buildRawEmailMessage = (message: EmailMessage): { messageId: string
   appendHeader(headers, 'Message-ID', ensureSafeHeaderValue(messageId, 'messageId'))
   appendHeader(headers, 'MIME-Version', '1.0')
   appendCustomHeaders(headers, message.headers)
-  appendHeader(headers, 'Content-Type', `multipart/alternative; boundary="${boundary}"`)
 
-  const body = [
-    `--${boundary}`,
-    'Content-Type: text/plain; charset=UTF-8',
-    'Content-Transfer-Encoding: base64',
-    '',
-    encodeBase64Text(message.text),
-    `--${boundary}`,
-    'Content-Type: text/html; charset=UTF-8',
-    'Content-Transfer-Encoding: base64',
-    '',
-    encodeBase64Text(message.html),
-    `--${boundary}--`,
-    '',
-  ]
+  const body: string[] = []
+  if (attachments.length === 0) {
+    appendHeader(
+      headers,
+      'Content-Type',
+      `multipart/alternative; boundary="${alternativeBoundary}"`,
+    )
+    appendAlternativeParts(body, alternativeBoundary, message)
+  } else if (regularAttachments.length === 0 && inlineAttachments.length > 0) {
+    const relatedBoundary = buildBoundary()
+    appendHeader(headers, 'Content-Type', `multipart/related; boundary="${relatedBoundary}"`)
+    body.push(`--${relatedBoundary}`)
+    appendHeader(body, 'Content-Type', `multipart/alternative; boundary="${alternativeBoundary}"`)
+    body.push('')
+    appendAlternativeParts(body, alternativeBoundary, message)
+    for (const attachment of inlineAttachments) {
+      appendAttachmentPart(body, relatedBoundary, attachment)
+    }
+    body.push(`--${relatedBoundary}--`)
+  } else {
+    const mixedBoundary = buildBoundary()
+    appendHeader(headers, 'Content-Type', `multipart/mixed; boundary="${mixedBoundary}"`)
+    body.push(`--${mixedBoundary}`)
+
+    if (inlineAttachments.length > 0) {
+      const relatedBoundary = buildBoundary()
+      appendHeader(body, 'Content-Type', `multipart/related; boundary="${relatedBoundary}"`)
+      body.push('', `--${relatedBoundary}`)
+      appendHeader(body, 'Content-Type', `multipart/alternative; boundary="${alternativeBoundary}"`)
+      body.push('')
+      appendAlternativeParts(body, alternativeBoundary, message)
+      for (const attachment of inlineAttachments) {
+        appendAttachmentPart(body, relatedBoundary, attachment)
+      }
+      body.push(`--${relatedBoundary}--`)
+    } else {
+      appendHeader(body, 'Content-Type', `multipart/alternative; boundary="${alternativeBoundary}"`)
+      body.push('')
+      appendAlternativeParts(body, alternativeBoundary, message)
+    }
+
+    for (const attachment of regularAttachments) {
+      appendAttachmentPart(body, mixedBoundary, attachment)
+    }
+    body.push(`--${mixedBoundary}--`)
+  }
+  body.push('')
 
   return {
     messageId,
     raw: [...headers, '', ...body].join(CRLF),
   }
 }
+
+export const buildRawEmailMessage = (
+  message: EmailMessage,
+  options: EmailAttachmentLimits = {},
+): { messageId: string; raw: string } => buildRawEmailMessageWithAttachments(message, options)
+
+export const buildRawEmailMessageAsync = async (
+  message: EmailMessage,
+  options: EmailAttachmentLimits = {},
+): Promise<{ messageId: string; raw: string }> =>
+  buildRawEmailMessageWithAttachments(message, {
+    ...options,
+    resolvedAttachments: await resolveEmailAttachments(message.attachments, options),
+  })

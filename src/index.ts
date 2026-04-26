@@ -38,6 +38,11 @@ export type {
 export type {
   EmailAdapter,
   EmailAddress,
+  EmailAttachment,
+  EmailAttachmentContent,
+  EmailAttachmentDisposition,
+  EmailAttachmentEncoding,
+  EmailAttachmentLimits,
   EmailDkimOptions,
   EmailEnvelope,
   EmailHeaders,

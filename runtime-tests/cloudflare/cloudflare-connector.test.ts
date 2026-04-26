@@ -4,7 +4,9 @@ import { describe, expect, test } from 'vitest'
 
 import { CloudflareEmailAdapter } from '../../src/adapter/cloudflare-email/adapter'
 import type { CloudflareEmailBinding } from '../../src/adapter/platform/cloudflare/email-service'
-import WorkersConnector from '../../src/adapter/platform/cloudflare/email-service'
+import WorkersConnector, {
+  createWorkersConnector,
+} from '../../src/adapter/platform/cloudflare/email-service'
 import CloudflareConnector from '../../src/adapter/platform/cloudflare/smtp'
 import { SmtpTransport } from '../../src/adapter/smtp'
 
@@ -83,6 +85,33 @@ describe('Cloudflare email adapters in Workers runtime', () => {
     if (receipt.successful) {
       expect(receipt.accepted).toEqual(['recipient@example.com'])
       expect(receipt.messageId.length).toBeGreaterThan(0)
+    }
+  })
+
+  test('createWorkersConnector reads a custom binding name', async () => {
+    const binding: CloudflareEmailBinding = {
+      async send(payload) {
+        expect(payload.subject).toBe('Workers custom binding')
+        return { messageId: 'custom-binding-id' }
+      },
+    }
+
+    const receipt = await withEnv({ CUSTOM_EMAIL: binding }, () =>
+      CloudflareEmailAdapter({
+        connector: createWorkersConnector({ bindingName: 'CUSTOM_EMAIL' }),
+      }).send({
+        from: 'sender@example.com',
+        html: '<p>Hello Workers</p>',
+        subject: 'Workers custom binding',
+        text: 'Hello Workers',
+        to: 'recipient@example.com',
+      }),
+    )
+
+    expect(receipt.successful).toBe(true)
+    if (receipt.successful) {
+      expect(receipt.messageId).toBe('custom-binding-id')
+      expect(receipt.response).toBe('Cloudflare Email Service accepted 1 recipient(s).')
     }
   })
 })

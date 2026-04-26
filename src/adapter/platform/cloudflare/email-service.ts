@@ -16,6 +16,7 @@ export type {
   CloudflareEmailConnectorResult,
   CloudflareEmailWorkersConnectorOptions,
   CloudflareEmailWorkerNameAddress,
+  CloudflareEmailWorkerAttachment,
   CloudflareEmailWorkerPayload,
 } from '../../cloudflare-email/types'
 

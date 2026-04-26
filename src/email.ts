@@ -11,6 +11,29 @@ export type EmailAddress =
 
 export type EmailHeaders = Record<string, string>
 
+export type EmailAttachmentContent = string | Uint8Array | ArrayBuffer | ReadableStream<Uint8Array>
+
+export type EmailAttachmentEncoding = 'base64' | 'hex' | 'utf8'
+
+export type EmailAttachmentDisposition = 'attachment' | 'inline'
+
+export type EmailAttachment = {
+  filename?: string
+  content?: EmailAttachmentContent
+  path?: string
+  href?: string
+  httpHeaders?: EmailHeaders
+  contentType?: string
+  contentDisposition?: EmailAttachmentDisposition
+  cid?: string
+  encoding?: EmailAttachmentEncoding
+  headers?: EmailHeaders
+}
+
+export type EmailAttachmentLimits = {
+  maxAttachmentSize?: number
+}
+
 export type EmailEnvelope = {
   from?: EmailAddress
   to?: EmailAddress | EmailAddress[]
@@ -35,6 +58,7 @@ export type EmailMessage = {
   subject: string
   html: string
   text: string
+  attachments?: EmailAttachment[]
   headers?: EmailHeaders
   messageId?: string
   date?: Date
@@ -94,6 +118,7 @@ export const renderEmailMessage = async (
 
   return {
     from: draft.from,
+    ...(draft.attachments !== undefined ? { attachments: draft.attachments } : {}),
     html: rendered.html,
     subject: draft.subject,
     text: rendered.text,

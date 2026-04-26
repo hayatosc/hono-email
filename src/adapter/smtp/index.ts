@@ -1,5 +1,5 @@
 import type { EmailAdapter, EmailMessage, SendEmailReceipt } from '../index'
-import { buildRawEmailMessage, resolveEmailEnvelope } from '../message'
+import { buildRawEmailMessageAsync, resolveEmailEnvelope } from '../message'
 import { applyDkimSignature } from './dkim'
 import { openSmtpSession } from './protocol'
 import type { SmtpSession } from './protocol'
@@ -11,6 +11,11 @@ export type {
   EmailDkimOptions,
   EmailEnvelope,
   EmailHeaders,
+  EmailAttachment,
+  EmailAttachmentContent,
+  EmailAttachmentDisposition,
+  EmailAttachmentEncoding,
+  EmailAttachmentLimits,
   EmailMessage,
   EmailMessageDraft,
   EmailTransport,
@@ -19,7 +24,7 @@ export type {
   SendEmailOptions,
   SuccessfulSendReceipt,
 } from '../index'
-export { buildRawEmailMessage } from '../message'
+export { buildRawEmailMessage, buildRawEmailMessageAsync } from '../message'
 export type {
   SmtpAuth,
   SmtpConnector,
@@ -38,6 +43,7 @@ const CLOSED_TRANSPORT_ERROR_MESSAGE = 'SMTP transport is closed.'
 
 type SmtpConnectionSlot = {
   busy: boolean
+  sentMessages: number
   session: SmtpSession
 }
 
@@ -100,6 +106,47 @@ const resolveMaxConnections = (maxConnections: number | undefined): number => {
   return maxConnections
 }
 
+const resolveMaxMessages = (maxMessages: number | undefined): number | undefined => {
+  if (maxMessages === undefined) {
+    return undefined
+  }
+
+  if (!Number.isSafeInteger(maxMessages) || maxMessages < 1) {
+    throw new Error('SMTP pool maxMessages must be a positive integer.')
+  }
+
+  return maxMessages
+}
+
+const withTimeout = async <T>(
+  task: Promise<T>,
+  timeout: number | undefined,
+  label: string,
+): Promise<T> => {
+  if (timeout === undefined) {
+    return await task
+  }
+
+  if (!Number.isSafeInteger(timeout) || timeout < 1) {
+    throw new Error(`${label} timeout must be a positive integer.`)
+  }
+
+  let timeoutId: ReturnType<typeof setTimeout> | undefined
+  const timeoutTask = new Promise<never>((_resolve, reject) => {
+    timeoutId = setTimeout(() => {
+      reject(new Error(`${label} timed out after ${timeout}ms.`))
+    }, timeout)
+  })
+
+  try {
+    return await Promise.race([task, timeoutTask])
+  } finally {
+    if (timeoutId !== undefined) {
+      clearTimeout(timeoutId)
+    }
+  }
+}
+
 export class SmtpTransport implements EmailAdapter {
   readonly #connector: SmtpConnector
   readonly #hostname: string
@@ -108,7 +155,12 @@ export class SmtpTransport implements EmailAdapter {
   readonly #auth: SmtpTransportOptions['auth']
   readonly #dkim: SmtpTransportOptions['dkim']
   readonly #clientName: string
+  readonly #connectionTimeout: number | undefined
+  readonly #greetingTimeout: number | undefined
+  readonly #limits: SmtpTransportOptions['limits']
   readonly #maxConnections: number
+  readonly #maxMessages: number | undefined
+  readonly #socketTimeout: number | undefined
   #activeSends = new Set<Promise<SendEmailReceipt>>()
   #closed = false
   #slots: SmtpConnectionSlot[] = []
@@ -123,7 +175,12 @@ export class SmtpTransport implements EmailAdapter {
     this.#auth = options.auth
     this.#dkim = options.dkim
     this.#clientName = options.clientName ?? DEFAULT_CLIENT_NAME
+    this.#connectionTimeout = options.connectionTimeout
+    this.#greetingTimeout = options.greetingTimeout
+    this.#limits = options.limits
     this.#maxConnections = resolveMaxConnections(options.pool?.maxConnections)
+    this.#maxMessages = resolveMaxMessages(options.pool?.maxMessages)
+    this.#socketTimeout = options.socketTimeout
   }
 
   async send(message: EmailMessage): Promise<SendEmailReceipt> {
@@ -170,13 +227,21 @@ export class SmtpTransport implements EmailAdapter {
     let session: SmtpSession | undefined
 
     try {
-      socket = await this.#connector.connect(
-        { hostname: this.#hostname, port: this.#port },
-        { secureTransport: this.#secureTransport },
+      socket = await withTimeout(
+        Promise.resolve(
+          this.#connector.connect(
+            { hostname: this.#hostname, port: this.#port },
+            { secureTransport: this.#secureTransport },
+          ),
+        ),
+        this.#connectionTimeout,
+        'SMTP connection',
       )
-      await socket.opened
+      await withTimeout(Promise.resolve(socket.opened), this.#connectionTimeout, 'SMTP connection')
       session = await openSmtpSession(socket, {
         clientName: this.#clientName,
+        ...(this.#greetingTimeout !== undefined ? { greetingTimeout: this.#greetingTimeout } : {}),
+        ...(this.#socketTimeout !== undefined ? { responseTimeout: this.#socketTimeout } : {}),
         secureTransport: this.#secureTransport,
         ...(this.#auth !== undefined ? { auth: this.#auth } : {}),
       })
@@ -200,7 +265,7 @@ export class SmtpTransport implements EmailAdapter {
     }
 
     try {
-      const builtMessage = buildRawEmailMessage(message)
+      const builtMessage = await buildRawEmailMessageAsync(message, this.#limits)
       const dkim = message.dkim ?? this.#dkim
       const rawMessage =
         dkim === undefined ? builtMessage.raw : await applyDkimSignature(builtMessage.raw, dkim)
@@ -218,7 +283,8 @@ export class SmtpTransport implements EmailAdapter {
         return failedReceipt(error)
       }
 
-      this.#releaseSlot(slot)
+      slot.sentMessages += 1
+      await this.#releaseOrRetireSlot(slot)
 
       if (result.accepted.length === 0) {
         return {
@@ -271,14 +337,22 @@ export class SmtpTransport implements EmailAdapter {
     let socket: SmtpSocket | undefined
 
     try {
-      socket = await this.#connector.connect(
-        { hostname: this.#hostname, port: this.#port },
-        { secureTransport: this.#secureTransport },
+      socket = await withTimeout(
+        Promise.resolve(
+          this.#connector.connect(
+            { hostname: this.#hostname, port: this.#port },
+            { secureTransport: this.#secureTransport },
+          ),
+        ),
+        this.#connectionTimeout,
+        'SMTP connection',
       )
-      await socket.opened
+      await withTimeout(Promise.resolve(socket.opened), this.#connectionTimeout, 'SMTP connection')
 
       const session = await openSmtpSession(socket, {
         clientName: this.#clientName,
+        ...(this.#greetingTimeout !== undefined ? { greetingTimeout: this.#greetingTimeout } : {}),
+        ...(this.#socketTimeout !== undefined ? { responseTimeout: this.#socketTimeout } : {}),
         secureTransport: this.#secureTransport,
         ...(this.#auth !== undefined ? { auth: this.#auth } : {}),
       })
@@ -288,7 +362,7 @@ export class SmtpTransport implements EmailAdapter {
         throw new Error(CLOSED_TRANSPORT_ERROR_MESSAGE)
       }
 
-      const slot: SmtpConnectionSlot = { busy: true, session }
+      const slot: SmtpConnectionSlot = { busy: true, sentMessages: 0, session }
       this.#slots.push(slot)
       return slot
     } catch (error) {
@@ -317,6 +391,29 @@ export class SmtpTransport implements EmailAdapter {
     }
 
     slot.busy = false
+  }
+
+  async #releaseOrRetireSlot(slot: SmtpConnectionSlot): Promise<void> {
+    if (this.#maxMessages !== undefined && slot.sentMessages >= this.#maxMessages) {
+      await this.#retireSlot(slot)
+      return
+    }
+
+    this.#releaseSlot(slot)
+  }
+
+  async #retireSlot(slot: SmtpConnectionSlot): Promise<void> {
+    const index = this.#slots.indexOf(slot)
+    if (index >= 0) {
+      this.#slots.splice(index, 1)
+      this.#totalSlots -= 1
+    }
+
+    try {
+      await slot.session.close()
+    } finally {
+      this.#serveWaiters()
+    }
   }
 
   async #discardSlot(slot: SmtpConnectionSlot): Promise<void> {

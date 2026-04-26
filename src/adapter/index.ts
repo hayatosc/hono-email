@@ -8,6 +8,11 @@ import { render } from '../index'
 export type {
   EmailAdapter,
   EmailAddress,
+  EmailAttachment,
+  EmailAttachmentContent,
+  EmailAttachmentDisposition,
+  EmailAttachmentEncoding,
+  EmailAttachmentLimits,
   EmailDkimOptions,
   EmailEnvelope,
   EmailHeaders,

@@ -15,6 +15,8 @@ export type SmtpRecipientResult = {
 export type SmtpSessionOptions = {
   auth?: SmtpAuth
   clientName: string
+  greetingTimeout?: number
+  responseTimeout?: number
   secureTransport: SmtpSecureTransport
 }
 
@@ -59,6 +61,35 @@ const responseText = (response: SmtpCommandResponse): string =>
 const isExpectedCode = (response: SmtpCommandResponse, expectedCodes: number[]): boolean =>
   expectedCodes.includes(response.code)
 
+const withTimeout = async <T>(
+  task: Promise<T>,
+  timeout: number | undefined,
+  label: string,
+): Promise<T> => {
+  if (timeout === undefined) {
+    return await task
+  }
+
+  if (!Number.isSafeInteger(timeout) || timeout < 1) {
+    throw new Error(`${label} timeout must be a positive integer.`)
+  }
+
+  let timeoutId: ReturnType<typeof setTimeout> | undefined
+  const timeoutTask = new Promise<never>((_resolve, reject) => {
+    timeoutId = setTimeout(() => {
+      reject(new Error(`${label} timed out after ${timeout}ms.`))
+    }, timeout)
+  })
+
+  try {
+    return await Promise.race([task, timeoutTask])
+  } finally {
+    if (timeoutId !== undefined) {
+      clearTimeout(timeoutId)
+    }
+  }
+}
+
 const validateSmtpPath = (path: string, label: string): void => {
   if (/[\r\n>]/.test(path)) {
     throw new Error(`Invalid ${label}: must not contain CR, LF, or ">".`)
@@ -83,12 +114,14 @@ class SmtpProtocolClient {
   #decoder = new TextDecoder()
   #encoder = new TextEncoder()
   #reader: ReadableStreamDefaultReader<Uint8Array>
+  #responseTimeout: number | undefined
   #socket: SmtpSocket
   #writer: WritableStreamDefaultWriter<Uint8Array>
   #buffer = ''
 
-  constructor(socket: SmtpSocket) {
+  constructor(socket: SmtpSocket, responseTimeout: number | undefined) {
     this.#socket = socket
+    this.#responseTimeout = responseTimeout
     this.#reader = socket.readable.getReader()
     this.#writer = socket.writable.getWriter()
   }
@@ -113,7 +146,11 @@ class SmtpProtocolClient {
     this.#buffer = ''
   }
 
-  async readResponse(): Promise<SmtpCommandResponse> {
+  async readResponse(timeout = this.#responseTimeout): Promise<SmtpCommandResponse> {
+    return withTimeout(this.#readResponse(), timeout, 'SMTP response')
+  }
+
+  async #readResponse(): Promise<SmtpCommandResponse> {
     const lines: string[] = []
 
     while (true) {
@@ -134,7 +171,11 @@ class SmtpProtocolClient {
   }
 
   async sendRaw(value: string): Promise<void> {
-    await this.#writer.write(this.#encoder.encode(value))
+    await withTimeout(
+      this.#writer.write(this.#encoder.encode(value)),
+      this.#responseTimeout,
+      'SMTP write',
+    )
   }
 
   private describeCommandForError(command: string): string {
@@ -195,6 +236,50 @@ const authenticate = async (client: SmtpProtocolClient, auth: SmtpAuth): Promise
 
   const payload = `\u0000${auth.username}\u0000${auth.password}`
   await client.command(`AUTH PLAIN ${encodeAsciiBase64(payload)}`, [235])
+}
+
+type SmtpCapabilities = {
+  authMechanisms: Set<string>
+  extensions: Set<string>
+}
+
+const parseEhloCapabilities = (response: SmtpCommandResponse): SmtpCapabilities => {
+  const extensions = new Set<string>()
+  const authMechanisms = new Set<string>()
+
+  for (const line of response.lines) {
+    const content = line.slice(4).trim()
+    const [rawKeyword, ...rest] = content.split(/\s+/u)
+    if (rawKeyword === undefined || rawKeyword === '') {
+      continue
+    }
+
+    const [keyword, authValue] = rawKeyword.split('=', 2)
+    const normalizedKeyword = keyword?.toUpperCase()
+    if (normalizedKeyword === undefined) {
+      continue
+    }
+
+    extensions.add(normalizedKeyword)
+
+    if (normalizedKeyword === 'AUTH') {
+      const mechanisms = authValue === undefined ? rest : [authValue, ...rest]
+      for (const mechanism of mechanisms) {
+        if (mechanism !== '') {
+          authMechanisms.add(mechanism.toUpperCase())
+        }
+      }
+    }
+  }
+
+  return { authMechanisms, extensions }
+}
+
+const assertAuthCapability = (capabilities: SmtpCapabilities, auth: SmtpAuth): void => {
+  const mechanism = auth.type === 'login' ? 'LOGIN' : 'PLAIN'
+  if (!capabilities.authMechanisms.has(mechanism)) {
+    throw new Error(`SMTP server does not advertise AUTH ${mechanism}.`)
+  }
 }
 
 const sendRecipients = async (
@@ -291,24 +376,32 @@ export const openSmtpSession = async (
   socket: SmtpSocket,
   options: SmtpSessionOptions,
 ): Promise<SmtpSession> => {
-  const client = new SmtpProtocolClient(socket)
+  const client = new SmtpProtocolClient(socket, options.responseTimeout)
 
   try {
-    const greeting = await client.readResponse()
+    const greeting = await client.readResponse(options.greetingTimeout)
     if (!isExpectedCode(greeting, [220])) {
       throw new Error(`Unexpected SMTP greeting: ${responseText(greeting)}`)
     }
 
     validateClientName(options.clientName)
-    await client.command(`EHLO ${options.clientName}`, [250])
+    let capabilities = parseEhloCapabilities(
+      await client.command(`EHLO ${options.clientName}`, [250]),
+    )
 
     if (options.secureTransport === 'starttls') {
+      if (!capabilities.extensions.has('STARTTLS')) {
+        throw new Error('SMTP server does not advertise STARTTLS.')
+      }
       await client.command('STARTTLS', [220])
       await client.startTls()
-      await client.command(`EHLO ${options.clientName}`, [250])
+      capabilities = parseEhloCapabilities(
+        await client.command(`EHLO ${options.clientName}`, [250]),
+      )
     }
 
     if (options.auth !== undefined) {
+      assertAuthCapability(capabilities, options.auth)
       await authenticate(client, options.auth)
     }
 
