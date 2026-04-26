@@ -1,11 +1,8 @@
 import { describe, expect, test } from 'bun:test'
 
-import { sendEmail } from '../../index'
 import { CloudflareEmailAdapter, RESTConnector } from '.'
-import {
-  type CloudflareEmailFetch,
-  type CloudflareEmailFetchInit,
-} from './rest'
+import { sendEmail } from '../../index'
+import { type CloudflareEmailFetch, type CloudflareEmailFetchInit } from './rest'
 
 const createMessage = () => ({
   attachments: [
