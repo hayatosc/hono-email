@@ -2,6 +2,7 @@ import { describe, expect, test } from 'bun:test'
 
 import BunConnector from '../../src/adapter/platform/bun/smtp'
 import { SmtpTransport } from '../../src/adapter/smtp'
+import { runSmtpSession } from '../../src/adapter/smtp/protocol'
 
 const CRLF = '\r\n'
 
@@ -113,6 +114,47 @@ describe('bunSmtpConnector runtime smoke', () => {
       }
 
       expect(error.message).toContain('does not support STARTTLS')
+    }
+  })
+
+  test('dot-stuffs SMTP DATA over a Bun TCP socket', async () => {
+    const state = {
+      buffer: '',
+      dataLines: [] as string[],
+      readingData: false,
+    }
+    const server = Bun.listen({
+      hostname: '127.0.0.1',
+      port: 0,
+      socket: {
+        open(socket) {
+          socket.write('220 bun ready\r\n')
+        },
+        data(socket, data) {
+          handleSmtpChunk(socket, state, data)
+        },
+      },
+    })
+
+    try {
+      const socket = await BunConnector.connect(
+        { hostname: '127.0.0.1', port: server.port },
+        { secureTransport: 'off' },
+      )
+      const result = await runSmtpSession(socket, {
+        clientName: 'localhost',
+        mailFrom: 'sender@example.com',
+        rawMessage: ['Subject: Bun dot stuffing', '', '.visible', '..already dotted'].join(CRLF),
+        recipients: ['recipient@example.com'],
+        secureTransport: 'off',
+      })
+
+      expect(result.accepted).toEqual(['recipient@example.com'])
+      expect(result.response).toBe('250 bun queued')
+      expect(state.dataLines).toContain('..visible')
+      expect(state.dataLines).toContain('...already dotted')
+    } finally {
+      server.stop(true)
     }
   })
 })
