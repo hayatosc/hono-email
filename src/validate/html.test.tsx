@@ -1,7 +1,7 @@
 import { describe, expect, spyOn, test } from 'bun:test'
 
-import { render, type RenderResult } from '../../src'
-import { validateHtml } from '../../src/validate/html'
+import { render, type RenderResult } from '../index'
+import { validateHtml } from './html'
 
 const withWarnSpy = async (
   run: () => Promise<RenderResult>,

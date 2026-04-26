@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 
-import { Body, Html, render } from '../../src'
+import { Body, Html, render } from '../index'
 
 describe('render output', () => {
   test('returns plain text with render options', async () => {

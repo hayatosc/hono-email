@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 
-import { Body, Font, Head, Html, render } from '../../src'
+import { Body, Font, Head, Html, render } from '../index'
 
 describe('Font', () => {
   test('renders global font-family rule with fallbacks', async () => {

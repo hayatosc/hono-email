@@ -9,7 +9,7 @@ import {
   Text,
   buildTailwindArtifactFromCss,
   render,
-} from '../../src'
+} from '../index'
 
 const PRECOMPILED_TAILWIND_CSS = `
 @layer utilities {

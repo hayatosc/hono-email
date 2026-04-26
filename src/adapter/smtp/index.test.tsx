@@ -1,14 +1,14 @@
 import { describe, expect, test } from 'bun:test'
 
-import { Body, Html, Text, sendEmail } from '../../src'
-import { resolveEmailEnvelope } from '../../src/adapter/message'
+import { Body, Html, Text, sendEmail } from '../../index'
+import { resolveEmailEnvelope } from '../message'
 import {
   buildRawEmailMessage,
   buildRawEmailMessageAsync,
   SmtpTransport,
   type SmtpConnector,
   type SmtpSocket,
-} from '../../src/adapter/smtp'
+} from '.'
 
 const CRLF = '\r\n'
 const BASE64_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'

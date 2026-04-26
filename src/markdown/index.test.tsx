@@ -8,7 +8,7 @@ import {
   Tailwind,
   buildTailwindArtifactFromCss,
   render,
-} from '../../src'
+} from '../index'
 
 describe('Markdown', () => {
   test('renders markdown tables and safe raw html', async () => {

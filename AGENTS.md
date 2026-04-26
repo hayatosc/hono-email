@@ -35,7 +35,7 @@ Transport/provider integration (SES, Resend, SMTP, etc.) is intentionally out of
 - `src/markdown/`: Markdown rendering + sanitization
 - `src/tailwind/`: Tailwind artifact handling and HTML transformation
 - `src/unplugin.ts`: bundler plugin (Vite/Rollup/Webpack/etc.)
-- `tests/render/`: render/strict/tailwind/markdown behavior tests
+- Tests live next to the source files they cover as `*.test.ts` / `*.test.tsx`
 
 ## Strict-mode notes
 
@@ -49,4 +49,4 @@ Transport/provider integration (SES, Resend, SMTP, etc.) is intentionally out of
 - `bun run typecheck`
 - `bun run build`
 
-When changing runtime behavior, update/add tests in `tests/` and keep README examples aligned with exported entry points.
+When changing runtime behavior, update/add colocated tests next to the source file and keep README examples aligned with exported entry points.
