@@ -8,6 +8,20 @@ import {
 } from '../../src/adapter/cloudflare-email/rest'
 
 const createMessage = () => ({
+  attachments: [
+    {
+      content: 'Invoice',
+      contentType: 'text/plain',
+      filename: 'invoice.txt',
+    },
+    {
+      cid: 'logo',
+      content: 'logo-bytes',
+      contentDisposition: 'inline' as const,
+      contentType: 'image/png',
+      filename: 'logo.png',
+    },
+  ],
   from: { address: 'sender@example.com', name: 'Sender' },
   headers: {
     'X-Campaign-ID': 'welcome',
@@ -61,6 +75,21 @@ describe('Cloudflare Email Service adapter', () => {
       'Content-Type': 'application/json',
     })
     expect(JSON.parse(String(requests[0]?.init?.body)) as unknown).toEqual({
+      attachments: [
+        {
+          content: 'SW52b2ljZQ==',
+          disposition: 'attachment',
+          filename: 'invoice.txt',
+          type: 'text/plain',
+        },
+        {
+          content: 'bG9nby1ieXRlcw==',
+          content_id: 'logo',
+          disposition: 'inline',
+          filename: 'logo.png',
+          type: 'image/png',
+        },
+      ],
       from: { address: 'sender@example.com', name: 'Sender' },
       headers: {
         'X-Campaign-ID': 'welcome',
@@ -146,5 +175,49 @@ describe('Cloudflare Email Service adapter', () => {
     })
 
     expect(receipt.successful).toBe(true)
+  })
+
+  test('builds Workers payload attachments with contentId', async () => {
+    let workersPayload: unknown
+    const receipt = await CloudflareEmailAdapter({
+      connector: {
+        send(request) {
+          workersPayload = request.workersPayload
+          return {
+            delivered: ['recipient@example.com'],
+            permanentBounces: [],
+            queued: [],
+            response: 'accepted',
+          }
+        },
+      },
+    }).send({
+      attachments: [
+        {
+          cid: 'chart',
+          content: 'chart-bytes',
+          contentType: 'image/png',
+          filename: 'chart.png',
+        },
+      ],
+      from: 'sender@example.com',
+      html: '<img src="cid:chart" alt="Chart">',
+      subject: 'Inline',
+      text: 'Inline',
+      to: 'recipient@example.com',
+    })
+
+    expect(receipt.successful).toBe(true)
+    expect(workersPayload).toMatchObject({
+      attachments: [
+        {
+          content: 'Y2hhcnQtYnl0ZXM=',
+          contentId: 'chart',
+          disposition: 'inline',
+          filename: 'chart.png',
+          type: 'image/png',
+        },
+      ],
+    })
   })
 })

@@ -3,6 +3,7 @@ import { describe, expect, test } from 'bun:test'
 import { Body, Html, Text, sendEmail } from '../../src'
 import {
   buildRawEmailMessage,
+  buildRawEmailMessageAsync,
   SmtpTransport,
   type SmtpConnector,
   type SmtpSocket,
@@ -194,6 +195,113 @@ describe('SMTP message building', () => {
     expect(raw).toContain('Content-Type: text/plain; charset=UTF-8')
     expect(raw).toContain('Content-Type: text/html; charset=UTF-8')
   })
+
+  test('builds mixed and related MIME parts for file and inline attachments', () => {
+    const { raw } = buildRawEmailMessage({
+      attachments: [
+        {
+          content: 'Invoice',
+          contentType: 'text/plain',
+          filename: 'invoice.txt',
+        },
+        {
+          cid: 'logo',
+          content: 'logo-bytes',
+          contentDisposition: 'inline',
+          contentType: 'image/png',
+          filename: 'logo.png',
+        },
+      ],
+      from: 'sender@example.com',
+      html: '<img src="cid:logo" alt="Logo">',
+      subject: 'Attachments',
+      text: 'Attachments',
+      to: ['first@example.com', 'second@example.com'],
+    })
+
+    expect(raw).toContain('To: first@example.com, second@example.com')
+    expect(raw).toContain('Content-Type: multipart/mixed;')
+    expect(raw).toContain('Content-Type: multipart/related;')
+    expect(raw).toContain('Content-Type: multipart/alternative;')
+    expect(raw).toContain('Content-Type: text/plain; name="invoice.txt"')
+    expect(raw).toContain('Content-Disposition: attachment; filename="invoice.txt"')
+    expect(raw).toContain('Content-Type: image/png; name="logo.png"')
+    expect(raw).toContain('Content-Disposition: inline; filename="logo.png"')
+    expect(raw).toContain('Content-ID: <logo>')
+  })
+
+  test('rejects protected custom headers', () => {
+    expect(() =>
+      buildRawEmailMessage({
+        from: 'sender@example.com',
+        headers: {
+          Subject: 'Injected',
+        },
+        html: '<p>Hello</p>',
+        subject: 'Hello',
+        text: 'Hello',
+        to: 'recipient@example.com',
+      }),
+    ).toThrow('Email header Subject is managed by hono-email')
+  })
+
+  test('resolves href attachments and enforces attachment size limits', async () => {
+    const originalFetch = globalThis.fetch
+    const fetchImplementation = Object.assign(
+      async () =>
+        new Response('Remote', {
+          headers: {
+            'content-type': 'text/plain',
+          },
+        }),
+      {
+        preconnect: originalFetch.preconnect,
+      },
+    ) satisfies typeof fetch
+    globalThis.fetch = fetchImplementation
+
+    try {
+      const { raw } = await buildRawEmailMessageAsync(
+        {
+          attachments: [
+            {
+              href: 'https://example.test/report.txt',
+            },
+          ],
+          from: 'sender@example.com',
+          html: '<p>Hello</p>',
+          subject: 'Remote attachment',
+          text: 'Hello',
+          to: 'recipient@example.com',
+        },
+        { maxAttachmentSize: 10 },
+      )
+
+      expect(raw).toContain('Content-Type: text/plain; name="report.txt"')
+      expect(raw).toContain('UmVtb3Rl')
+
+      await expect(
+        buildRawEmailMessageAsync(
+          {
+            attachments: [
+              {
+                content: 'Too large',
+                filename: 'large.txt',
+              },
+            ],
+            from: 'sender@example.com',
+            html: '<p>Hello</p>',
+            subject: 'Large attachment',
+            text: 'Hello',
+            to: 'recipient@example.com',
+          },
+          { maxAttachmentSize: 1 },
+        ),
+      ).rejects.toThrow('Email attachment large.txt exceeds maxAttachmentSize.')
+    } finally {
+      globalThis.fetch = originalFetch
+    }
+  })
 })
 
 describe('sendEmail over SMTP', () => {
@@ -293,6 +401,43 @@ describe('sendEmail over SMTP', () => {
     expect(secondReceipt.successful).toBe(true)
     expect(mock.connectCount()).toBe(1)
     expect(mock.commands.filter((command) => command === 'EHLO localhost')).toHaveLength(1)
+  })
+
+  test('reopens pooled SMTP sessions after maxMessages is reached', async () => {
+    const mock = createMockConnector(async (server, connectionIndex) => {
+      await server.writeResponse('220 smtp.example.com ready\r\n')
+      expect(await server.readLine()).toBe('EHLO localhost')
+      await server.writeResponse('250 smtp.example.com\r\n')
+      expect(await server.readLine()).toBe('MAIL FROM:<sender@example.com>')
+      await server.writeResponse('250 OK\r\n')
+      expect(await server.readLine()).toBe(
+        `RCPT TO:<${connectionIndex === 1 ? 'first' : 'second'}@example.com>`,
+      )
+      await server.writeResponse('250 Accepted\r\n')
+      expect(await server.readLine()).toBe('DATA')
+      await server.writeResponse('354 Continue\r\n')
+      await server.readData()
+      await server.writeResponse(`250 queued ${connectionIndex}\r\n`)
+      expect(await server.readLine()).toBe('QUIT')
+      await server.writeResponse('221 Bye\r\n')
+    })
+
+    const smtp = new SmtpTransport({
+      connector: mock.connector,
+      hostname: 'smtp.example.com',
+      pool: { maxMessages: 1 },
+      port: 465,
+      secure: true,
+    })
+
+    const firstReceipt = await smtp.send(createEmailMessage('First', 'first@example.com'))
+    const secondReceipt = await smtp.send(createEmailMessage('Second', 'second@example.com'))
+    await smtp.close()
+    await mock.wait()
+
+    expect(firstReceipt.successful).toBe(true)
+    expect(secondReceipt.successful).toBe(true)
+    expect(mock.connectCount()).toBe(2)
   })
 
   test('uses multiple SMTP sessions up to pool maxConnections', async () => {
@@ -697,5 +842,38 @@ describe('sendEmail over SMTP', () => {
     await expect(smtp.verify()).rejects.toThrow(
       'Unexpected SMTP response to AUTH [REDACTED]: 535 Authentication failed',
     )
+  })
+
+  test('verify fails before STARTTLS when the server does not advertise STARTTLS', async () => {
+    const mock = createMockConnector(async (server) => {
+      await server.writeResponse('220 smtp.example.com ready\r\n')
+      expect(await server.readLine()).toBe('EHLO localhost')
+      await server.writeResponse('250 smtp.example.com\r\n')
+    })
+
+    const smtp = new SmtpTransport({
+      connector: mock.connector,
+      hostname: 'smtp.example.com',
+      port: 587,
+      secure: 'starttls',
+    })
+
+    await expect(smtp.verify()).rejects.toThrow('SMTP server does not advertise STARTTLS.')
+  })
+
+  test('verify fails when the greeting times out', async () => {
+    const mock = createMockConnector(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 20))
+    })
+
+    const smtp = new SmtpTransport({
+      connector: mock.connector,
+      greetingTimeout: 1,
+      hostname: 'smtp.example.com',
+      port: 465,
+      secure: true,
+    })
+
+    await expect(smtp.verify()).rejects.toThrow('SMTP response timed out after 1ms.')
   })
 })

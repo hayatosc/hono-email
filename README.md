@@ -90,6 +90,9 @@ const smtp = new SmtpTransport({
   hostname: 'smtp.example.com',
   port: 587,
   secure: 'starttls',
+  connectionTimeout: 10_000,
+  greetingTimeout: 10_000,
+  socketTimeout: 30_000,
   auth: {
     username: 'smtp-user',
     password: 'smtp-password',
@@ -101,6 +104,10 @@ const smtp = new SmtpTransport({
   },
   pool: {
     maxConnections: 2,
+    maxMessages: 100,
+  },
+  limits: {
+    maxAttachmentSize: 10 * 1024 * 1024,
   },
 })
 
@@ -110,7 +117,7 @@ try {
   const receipt = await sendEmail({
     adapter: smtp,
     from: 'sender@example.com',
-    to: 'recipient@example.com',
+    to: ['recipient@example.com', 'second@example.com'],
     subject: 'Welcome',
     envelope: {
       from: 'bounces@example.com',
@@ -122,6 +129,19 @@ try {
         </Body>
       </Html>
     ),
+    attachments: [
+      {
+        filename: 'invoice.txt',
+        content: 'Invoice text',
+        contentType: 'text/plain',
+      },
+      {
+        filename: 'logo.png',
+        path: './assets/logo.png',
+        cid: 'logo',
+        contentDisposition: 'inline',
+      },
+    ],
   })
 
   if (!receipt.successful) {
@@ -139,14 +159,19 @@ use submission ports such as `465` or `587`.
 
 `SmtpTransport` reuses SMTP sessions until `transport.close()` is called. The default pool size is
 `1`, so sends on the same transport share one TCP connection sequentially. Set
-`pool.maxConnections` to allow multiple concurrent SMTP sessions. If a session fails during send,
-that session is discarded and the message is not retried automatically.
+`pool.maxConnections` to allow multiple concurrent SMTP sessions, and `pool.maxMessages` to retire a
+session after a fixed number of messages. If a session fails during send, that session is discarded
+and the message is not retried automatically.
 
 SMTP-specific delivery controls:
 
 - `await transport.verify()` checks connection setup, TLS negotiation, and authentication without sending a message.
 - `dkim` can be configured on `SmtpTransport` or overridden per message to add a `DKIM-Signature` header before SMTP delivery.
 - `envelope` lets you override the SMTP envelope sender and recipients without changing the visible `From` / `To` headers.
+- `to`, `cc`, `bcc`, and `envelope.to` accept single addresses or arrays. SMTP sends one `RCPT TO` command per resolved recipient and reports partial recipient rejection in `receipt.rejected`.
+- `attachments` supports `content`, `path`, `href`, `ReadableStream`, `encoding`, inline `cid`, and explicit `contentType`. `limits.maxAttachmentSize` rejects oversized attachments before delivery.
+- `headers` is for custom headers only. Managed headers such as `From`, `To`, `Subject`, `Date`, `Message-ID`, `MIME-Version`, and `Content-Type` are rejected when passed as custom headers.
+- `connectionTimeout`, `greetingTimeout`, and `socketTimeout` bound SMTP connection and protocol waits. STARTTLS and AUTH are checked against EHLO capabilities before use.
 
 Runtime connector entry points:
 

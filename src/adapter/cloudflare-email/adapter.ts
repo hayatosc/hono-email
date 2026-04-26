@@ -1,11 +1,18 @@
+import {
+  encodeAttachmentContentBase64,
+  type ResolvedEmailAttachment,
+  resolveEmailAttachments,
+} from '../attachment'
 import type { EmailAdapter, EmailAddress, EmailMessage, SendEmailReceipt } from '../index'
 import { addressToPath, toAddressList } from '../message'
 import {
   asCloudflareEmailRecipientField,
   CloudflareEmailConnectorError,
   type CloudflareEmailAdapterOptions,
+  type CloudflareEmailRestAttachment,
   type CloudflareEmailNameAddress,
   type CloudflareEmailRestPayload,
+  type CloudflareEmailWorkerAttachment,
   type CloudflareEmailWorkerNameAddress,
   type CloudflareEmailWorkerPayload,
 } from './types'
@@ -78,10 +85,46 @@ const asWorkerReplyTo = (
   return asWorkerNameAddress(firstAddress)
 }
 
-const buildRestPayload = (message: EmailMessage): CloudflareEmailRestPayload => {
+const buildRestAttachment = (
+  attachment: ResolvedEmailAttachment,
+): CloudflareEmailRestAttachment => {
+  if (attachment.filename === undefined) {
+    throw new Error('Cloudflare Email Service attachments require a filename.')
+  }
+
+  return {
+    content: encodeAttachmentContentBase64(attachment.content),
+    disposition: attachment.contentDisposition,
+    filename: attachment.filename,
+    type: attachment.contentType,
+    ...(attachment.cid !== undefined ? { content_id: attachment.cid } : {}),
+  }
+}
+
+const buildWorkerAttachment = (
+  attachment: ResolvedEmailAttachment,
+): CloudflareEmailWorkerAttachment => {
+  if (attachment.filename === undefined) {
+    throw new Error('Cloudflare Email Service attachments require a filename.')
+  }
+
+  return {
+    content: encodeAttachmentContentBase64(attachment.content),
+    disposition: attachment.contentDisposition,
+    filename: attachment.filename,
+    type: attachment.contentType,
+    ...(attachment.cid !== undefined ? { contentId: attachment.cid } : {}),
+  }
+}
+
+const buildRestPayload = (
+  message: EmailMessage,
+  attachments: ResolvedEmailAttachment[],
+): CloudflareEmailRestPayload => {
   const cc = asCloudflareEmailRecipientField(toAddressList(message.cc))
   const bcc = asCloudflareEmailRecipientField(toAddressList(message.bcc))
   const replyTo = asSingleAddressPath(message.replyTo, 'replyTo')
+  const restAttachments = attachments.map(buildRestAttachment)
 
   return {
     from: asRestNameAddress(message.from),
@@ -89,6 +132,7 @@ const buildRestPayload = (message: EmailMessage): CloudflareEmailRestPayload => 
     subject: message.subject,
     text: message.text,
     to: asCloudflareEmailRecipientField(toAddressList(message.to)) ?? [],
+    ...(restAttachments.length > 0 ? { attachments: restAttachments } : {}),
     ...(bcc !== undefined ? { bcc } : {}),
     ...(cc !== undefined ? { cc } : {}),
     ...(message.headers !== undefined ? { headers: message.headers } : {}),
@@ -96,10 +140,14 @@ const buildRestPayload = (message: EmailMessage): CloudflareEmailRestPayload => 
   }
 }
 
-const buildWorkersPayload = (message: EmailMessage): CloudflareEmailWorkerPayload => {
+const buildWorkersPayload = (
+  message: EmailMessage,
+  attachments: ResolvedEmailAttachment[],
+): CloudflareEmailWorkerPayload => {
   const cc = asCloudflareEmailRecipientField(toAddressList(message.cc))
   const bcc = asCloudflareEmailRecipientField(toAddressList(message.bcc))
   const replyTo = asWorkerReplyTo(message.replyTo)
+  const workerAttachments = attachments.map(buildWorkerAttachment)
 
   return {
     from: asWorkerNameAddress(message.from),
@@ -107,6 +155,7 @@ const buildWorkersPayload = (message: EmailMessage): CloudflareEmailWorkerPayloa
     subject: message.subject,
     text: message.text,
     to: asCloudflareEmailRecipientField(toAddressList(message.to)) ?? [],
+    ...(workerAttachments.length > 0 ? { attachments: workerAttachments } : {}),
     ...(bcc !== undefined ? { bcc } : {}),
     ...(cc !== undefined ? { cc } : {}),
     ...(message.headers !== undefined ? { headers: message.headers } : {}),
@@ -153,8 +202,9 @@ export const CloudflareEmailAdapter = (options: CloudflareEmailAdapterOptions): 
     let restPayload: CloudflareEmailRestPayload
     let workersPayload: CloudflareEmailWorkerPayload
     try {
-      restPayload = buildRestPayload(message)
-      workersPayload = buildWorkersPayload(message)
+      const attachments = await resolveEmailAttachments(message.attachments, options.limits)
+      restPayload = buildRestPayload(message, attachments)
+      workersPayload = buildWorkersPayload(message, attachments)
     } catch (error) {
       return failedReceipt(error, [], recipients)
     }

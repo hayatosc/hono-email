@@ -1,4 +1,4 @@
-import type { EmailAddress } from '../index'
+import type { EmailAddress, EmailAttachmentLimits } from '../index'
 
 export type CloudflareEmailNameAddress = {
   address: string
@@ -12,6 +12,22 @@ export type CloudflareEmailWorkerNameAddress = {
 
 export type CloudflareEmailRecipientField = string | string[]
 
+export type CloudflareEmailRestAttachment = {
+  content: string
+  disposition: 'attachment' | 'inline'
+  filename: string
+  type: string
+  content_id?: string
+}
+
+export type CloudflareEmailWorkerAttachment = {
+  content: string
+  disposition: 'attachment' | 'inline'
+  filename: string
+  type: string
+  contentId?: string
+}
+
 export type CloudflareEmailFetchInit = {
   body: string
   headers: Record<string, string>
@@ -24,6 +40,7 @@ export type CloudflareEmailFetch = (
 ) => Promise<Response>
 
 export type CloudflareEmailRestPayload = {
+  attachments?: CloudflareEmailRestAttachment[]
   bcc?: CloudflareEmailRecipientField
   cc?: CloudflareEmailRecipientField
   from: string | CloudflareEmailNameAddress
@@ -36,6 +53,7 @@ export type CloudflareEmailRestPayload = {
 }
 
 export type CloudflareEmailWorkerPayload = {
+  attachments?: CloudflareEmailWorkerAttachment[]
   bcc?: CloudflareEmailRecipientField
   cc?: CloudflareEmailRecipientField
   from: string | CloudflareEmailWorkerNameAddress
@@ -94,6 +112,7 @@ export type CloudflareEmailWorkersConnectorOptions = {
 
 export type CloudflareEmailAdapterOptions = {
   connector: CloudflareEmailConnector
+  limits?: EmailAttachmentLimits
 }
 
 export class CloudflareEmailConnectorError extends Error {

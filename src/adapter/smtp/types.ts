@@ -1,4 +1,9 @@
-import type { EmailAdapter, EmailDkimOptions, SendEmailReceipt } from '../index'
+import type {
+  EmailAdapter,
+  EmailAttachmentLimits,
+  EmailDkimOptions,
+  SendEmailReceipt,
+} from '../index'
 
 export type SmtpSecureTransport = 'off' | 'on' | 'starttls'
 
@@ -47,8 +52,13 @@ export type SmtpTransportOptions = {
   auth?: SmtpAuth
   dkim?: EmailDkimOptions
   clientName?: string
+  connectionTimeout?: number
+  greetingTimeout?: number
+  socketTimeout?: number
+  limits?: EmailAttachmentLimits
   pool?: {
     maxConnections?: number
+    maxMessages?: number
   }
 }
 

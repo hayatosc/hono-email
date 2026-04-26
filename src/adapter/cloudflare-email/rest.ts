@@ -12,6 +12,7 @@ export type {
   CloudflareEmailConnectorResult,
   CloudflareEmailFetch,
   CloudflareEmailFetchInit,
+  CloudflareEmailRestAttachment,
   CloudflareEmailNameAddress,
   CloudflareEmailRecipientField,
   CloudflareEmailRestConnectorOptions,
