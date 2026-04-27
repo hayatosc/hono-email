@@ -41,10 +41,36 @@ describe('Font', () => {
 
     expect(html).toContain("@font-face {font-family: 'Roboto';")
     expect(html).toContain(
-      "src: url(https://fonts.gstatic.com/s/roboto/v27/roboto.woff2) format('woff2');",
+      "src: url('https://fonts.gstatic.com/s/roboto/v27/roboto.woff2') format('woff2');",
     )
     expect(html).toContain("mso-font-alt: 'Verdana';")
     expect(html).toContain("* { font-family: 'Roboto', 'Verdana'; }")
+  })
+
+  test('escapes font css values so they cannot break out of the style tag', async () => {
+    const { html } = await render(
+      <Html>
+        <Head>
+          <Font
+            fontFamily={'Bad</style><script>alert(1)</script>'}
+            fallbackFontFamily="sans-serif"
+            webFont={{
+              url: "https://example.com/font.woff2');}</style><script>alert(1)</script>",
+              format: 'woff2',
+            }}
+          />
+        </Head>
+        <Body>
+          <p>Hello</p>
+        </Body>
+      </Html>,
+    )
+
+    expect(html).not.toContain('<script')
+    expect(html).not.toContain('</style><script')
+    expect(html).toContain('Bad\\3C /style\\3E \\3C script\\3E alert(1)\\3C /script\\3E')
+    expect(html).toContain("src: url('https://example.com/font.woff2\\');}")
+    expect(html).toContain('\\3C /style\\3E \\3C script\\3E alert(1)\\3C /script\\3E')
   })
 
   test('is rejected outside head in strict mode', async () => {

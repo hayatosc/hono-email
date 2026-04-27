@@ -325,6 +325,24 @@ describe('SMTP message building', () => {
           {
             attachments: [
               {
+                href: 'https://example.test/report.txt',
+              },
+            ],
+            from: 'sender@example.com',
+            html: '<p>Hello</p>',
+            subject: 'Remote attachment too large',
+            text: 'Hello',
+            to: 'recipient@example.com',
+          },
+          { maxAttachmentSize: 3 },
+        ),
+      ).rejects.toThrow('Email attachment report.txt exceeds maxAttachmentSize.')
+
+      await expect(
+        buildRawEmailMessageAsync(
+          {
+            attachments: [
+              {
                 content: 'Too large',
                 filename: 'large.txt',
               },
@@ -338,6 +356,30 @@ describe('SMTP message building', () => {
           { maxAttachmentSize: 1 },
         ),
       ).rejects.toThrow('Email attachment large.txt exceeds maxAttachmentSize.')
+
+      await expect(
+        buildRawEmailMessageAsync(
+          {
+            attachments: [
+              {
+                content: new ReadableStream<Uint8Array>({
+                  start(controller) {
+                    controller.enqueue(new TextEncoder().encode('Too large'))
+                    controller.close()
+                  },
+                }),
+                filename: 'stream.txt',
+              },
+            ],
+            from: 'sender@example.com',
+            html: '<p>Hello</p>',
+            subject: 'Stream attachment',
+            text: 'Hello',
+            to: 'recipient@example.com',
+          },
+          { maxAttachmentSize: 3 },
+        ),
+      ).rejects.toThrow('Email attachment stream.txt exceeds maxAttachmentSize.')
     } finally {
       globalThis.fetch = originalFetch
     }

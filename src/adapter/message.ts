@@ -166,7 +166,7 @@ const appendHeader = (lines: string[], name: string, value: string): void => {
   lines.push(`${name}: ${value}`)
 }
 
-const appendCustomHeaders = (lines: string[], headers: EmailHeaders | undefined): void => {
+export const validateEmailHeaders = (headers: EmailHeaders | undefined): void => {
   if (headers === undefined) {
     return
   }
@@ -182,6 +182,14 @@ const appendCustomHeaders = (lines: string[], headers: EmailHeaders | undefined)
       )
     }
 
+    ensureSafeHeaderValue(value, name)
+  }
+}
+
+const appendCustomHeaders = (lines: string[], headers: EmailHeaders | undefined): void => {
+  validateEmailHeaders(headers)
+
+  for (const [name, value] of Object.entries(headers ?? {})) {
     appendHeader(lines, name, encodeHeaderValue(value, name))
   }
 }

@@ -4,7 +4,7 @@ import {
   resolveEmailAttachments,
 } from '../attachment'
 import type { EmailAdapter, EmailAddress, EmailMessage, SendEmailReceipt } from '../index'
-import { addressToPath, toAddressList } from '../message'
+import { addressToPath, toAddressList, validateEmailHeaders } from '../message'
 import {
   asCloudflareEmailRecipientField,
   CloudflareEmailConnectorError,
@@ -125,6 +125,7 @@ const buildRestPayload = (
   const bcc = asCloudflareEmailRecipientField(toAddressList(message.bcc))
   const replyTo = asSingleAddressPath(message.replyTo, 'replyTo')
   const restAttachments = attachments.map(buildRestAttachment)
+  validateEmailHeaders(message.headers)
 
   return {
     from: asRestNameAddress(message.from),
@@ -148,6 +149,7 @@ const buildWorkersPayload = (
   const bcc = asCloudflareEmailRecipientField(toAddressList(message.bcc))
   const replyTo = asWorkerReplyTo(message.replyTo)
   const workerAttachments = attachments.map(buildWorkerAttachment)
+  validateEmailHeaders(message.headers)
 
   return {
     from: asWorkerNameAddress(message.from),

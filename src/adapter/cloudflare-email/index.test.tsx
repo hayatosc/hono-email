@@ -141,6 +141,30 @@ describe('Cloudflare Email Service adapter', () => {
     }
   })
 
+  test('rejects protected custom headers before sending', async () => {
+    const receipt = await CloudflareEmailAdapter({
+      connector: {
+        send() {
+          throw new Error('Cloudflare connector should not be called for invalid headers.')
+        },
+      },
+    }).send({
+      ...createMessage(),
+      headers: {
+        Bcc: 'hidden@example.com',
+      },
+    })
+
+    expect(receipt).toMatchObject({
+      accepted: [],
+      errorMessages: [
+        'Email header Bcc is managed by hono-email and must not be set in custom headers.',
+      ],
+      rejected: ['first@example.com', 'second@example.com'],
+      successful: false,
+    })
+  })
+
   test('sendEmail is exported for REST-based delivery', async () => {
     const fetchImplementation: CloudflareEmailFetch = async () =>
       new Response(

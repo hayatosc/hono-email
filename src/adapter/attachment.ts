@@ -170,6 +170,34 @@ const filenameFromPath = (path: string): string | undefined => {
   return lastSegment === '' ? undefined : lastSegment
 }
 
+const attachmentLabel = (attachment: EmailAttachment): string => {
+  const filename = attachment.filename ?? filenameFromPath(attachment.path ?? attachment.href ?? '')
+  return `Email attachment${filename === undefined ? '' : ` ${filename}`}`
+}
+
+const getAttachmentSizeLimit = (limits: EmailAttachmentLimits | undefined): number | undefined => {
+  const limit = limits?.maxAttachmentSize
+  if (limit === undefined) {
+    return undefined
+  }
+
+  if (!Number.isSafeInteger(limit) || limit < 1) {
+    throw new Error('maxAttachmentSize must be a positive integer.')
+  }
+
+  return limit
+}
+
+const assertAttachmentSizeBytes = (
+  byteLength: number,
+  attachment: EmailAttachment,
+  limit: number | undefined,
+): void => {
+  if (limit !== undefined && byteLength > limit) {
+    throw new Error(`${attachmentLabel(attachment)} exceeds maxAttachmentSize.`)
+  }
+}
+
 const parseDataUri = (value: string): AttachmentContentSource | undefined => {
   const match = DATA_URI_PATTERN.exec(value)
   if (match === null) {
@@ -189,7 +217,11 @@ const parseDataUri = (value: string): AttachmentContentSource | undefined => {
   }
 }
 
-const readReadableStream = async (stream: ReadableStream<Uint8Array>): Promise<Uint8Array> => {
+const readReadableStream = async (
+  stream: ReadableStream<Uint8Array>,
+  attachment: EmailAttachment,
+  limit: number | undefined,
+): Promise<Uint8Array> => {
   const reader = stream.getReader()
   const chunks: Uint8Array[] = []
   let totalLength = 0
@@ -203,6 +235,7 @@ const readReadableStream = async (stream: ReadableStream<Uint8Array>): Promise<U
 
       chunks.push(result.value)
       totalLength += result.value.byteLength
+      assertAttachmentSizeBytes(totalLength, attachment, limit)
     }
   } finally {
     reader.releaseLock()
@@ -239,7 +272,9 @@ const readFileAttachment = async (path: string): Promise<Uint8Array> => {
 
 const fetchAttachment = async (
   href: string,
+  attachment: EmailAttachment,
   headers: EmailHeaders | undefined,
+  limit: number | undefined,
 ): Promise<AttachmentContentSource> => {
   if (globalThis.fetch === undefined) {
     throw new Error('Fetching attachment URLs requires a fetch implementation.')
@@ -257,17 +292,29 @@ const fetchAttachment = async (
     throw new Error(`Attachment URL returned ${response.status} ${response.statusText}.`)
   }
 
+  const contentLength = response.headers.get('content-length')
+  if (contentLength !== null && /^\d+$/.test(contentLength)) {
+    assertAttachmentSizeBytes(Number(contentLength), attachment, limit)
+  }
+
   const contentType = response.headers.get('content-type') ?? undefined
+  const content =
+    response.body === null
+      ? new Uint8Array(await response.arrayBuffer())
+      : await readReadableStream(response.body, attachment, limit)
+  assertAttachmentSizeBytes(content.byteLength, attachment, limit)
 
   return {
-    content: new Uint8Array(await response.arrayBuffer()),
+    content,
     ...(contentType !== undefined ? { contentType } : {}),
   }
 }
 
 const resolveAttachmentContent = async (
   attachment: EmailAttachment,
+  limits: EmailAttachmentLimits | undefined,
 ): Promise<AttachmentContentSource> => {
+  const limit = getAttachmentSizeLimit(limits)
   if (attachment.content !== undefined) {
     if (typeof attachment.content === 'string') {
       return {
@@ -284,7 +331,7 @@ const resolveAttachmentContent = async (
     }
 
     if (isReadableStream(attachment.content)) {
-      return { content: await readReadableStream(attachment.content) }
+      return { content: await readReadableStream(attachment.content, attachment, limit) }
     }
   }
 
@@ -295,14 +342,14 @@ const resolveAttachmentContent = async (
     }
 
     if (/^https?:\/\//iu.test(attachment.path)) {
-      return fetchAttachment(attachment.path, attachment.httpHeaders)
+      return fetchAttachment(attachment.path, attachment, attachment.httpHeaders, limit)
     }
 
     return { content: await readFileAttachment(attachment.path) }
   }
 
   if (attachment.href !== undefined) {
-    return fetchAttachment(attachment.href, attachment.httpHeaders)
+    return fetchAttachment(attachment.href, attachment, attachment.httpHeaders, limit)
   }
 
   throw new Error('Email attachment requires content, path, or href.')
@@ -342,22 +389,7 @@ const assertAttachmentSize = (
   attachment: EmailAttachment,
   limits: EmailAttachmentLimits | undefined,
 ): void => {
-  const limit = limits?.maxAttachmentSize
-  if (limit === undefined) {
-    return
-  }
-
-  if (!Number.isSafeInteger(limit) || limit < 1) {
-    throw new Error('maxAttachmentSize must be a positive integer.')
-  }
-
-  if (content.byteLength > limit) {
-    const filename =
-      attachment.filename ?? filenameFromPath(attachment.path ?? attachment.href ?? '')
-    throw new Error(
-      `Email attachment${filename === undefined ? '' : ` ${filename}`} exceeds maxAttachmentSize.`,
-    )
-  }
+  assertAttachmentSizeBytes(content.byteLength, attachment, getAttachmentSizeLimit(limits))
 }
 
 const buildResolvedAttachment = (
@@ -397,7 +429,11 @@ export const resolveEmailAttachments = async (
   const resolved: ResolvedEmailAttachment[] = []
   for (const attachment of attachments) {
     resolved.push(
-      buildResolvedAttachment(attachment, await resolveAttachmentContent(attachment), limits),
+      buildResolvedAttachment(
+        attachment,
+        await resolveAttachmentContent(attachment, limits),
+        limits,
+      ),
     )
   }
   return resolved
