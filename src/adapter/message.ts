@@ -187,20 +187,21 @@ const appendCustomHeaders = (lines: string[], headers: EmailHeaders | undefined)
 }
 
 const appendAttachmentHeaders = (lines: string[], attachment: ResolvedEmailAttachment): void => {
+  const safeContentType = ensureSafeHeaderValue(attachment.contentType, 'attachment contentType')
+  const safeDisposition = ensureSafeHeaderValue(
+    attachment.contentDisposition,
+    'attachment contentDisposition',
+  )
   const contentTypeParameters =
     attachment.filename === undefined ? '' : `; name=${quoteHeaderParameter(attachment.filename)}`
-  appendHeader(lines, 'Content-Type', `${attachment.contentType}${contentTypeParameters}`)
+  appendHeader(lines, 'Content-Type', `${safeContentType}${contentTypeParameters}`)
   appendHeader(lines, 'Content-Transfer-Encoding', 'base64')
 
   const dispositionParameters =
     attachment.filename === undefined
       ? ''
       : `; filename=${quoteHeaderParameter(attachment.filename)}`
-  appendHeader(
-    lines,
-    'Content-Disposition',
-    `${attachment.contentDisposition}${dispositionParameters}`,
-  )
+  appendHeader(lines, 'Content-Disposition', `${safeDisposition}${dispositionParameters}`)
 
   if (attachment.cid !== undefined) {
     appendHeader(lines, 'Content-ID', `<${ensureSafeHeaderValue(attachment.cid, 'contentId')}>`)

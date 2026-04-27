@@ -116,6 +116,30 @@ const DISALLOWED_CSS_DECLARATIONS = new Map([
 ])
 
 const DISALLOWED_CSS_PROPERTIES = new Set([
+  '-ms-grid',
+  '-ms-grid-column',
+  '-ms-grid-column-align',
+  '-ms-grid-column-span',
+  '-ms-grid-columns',
+  '-ms-grid-row',
+  '-ms-grid-row-align',
+  '-ms-grid-row-span',
+  '-ms-grid-rows',
+  'grid',
+  'grid-area',
+  'grid-auto-columns',
+  'grid-auto-flow',
+  'grid-auto-rows',
+  'grid-column',
+  'grid-column-end',
+  'grid-column-start',
+  'grid-row',
+  'grid-row-end',
+  'grid-row-start',
+  'grid-template',
+  'grid-template-areas',
+  'grid-template-columns',
+  'grid-template-rows',
   'margin-inline',
   'margin-inline-start',
   'margin-inline-end',
@@ -153,6 +177,26 @@ const DISALLOWED_CSS_PROPERTIES = new Set([
 ])
 
 const DISALLOWED_CSS_PROPERTY_MESSAGES = new Map([
+  [
+    'grid',
+    "The CSS property 'grid' isn't supported in HTML email strict mode. Use table-based layout instead.",
+  ],
+  [
+    'grid-template',
+    "The CSS property 'grid-template' isn't supported in HTML email strict mode. Use table-based layout instead.",
+  ],
+  [
+    'grid-template-areas',
+    "The CSS property 'grid-template-areas' isn't supported in HTML email strict mode. Use table-based layout instead.",
+  ],
+  [
+    'grid-template-columns',
+    "The CSS property 'grid-template-columns' isn't supported in HTML email strict mode. Use <Section>, <Row>, <Column>, or table-based layout instead.",
+  ],
+  [
+    'grid-template-rows',
+    "The CSS property 'grid-template-rows' isn't supported in HTML email strict mode. Use table-based layout instead.",
+  ],
   [
     'margin-inline',
     "The CSS property 'margin-inline' isn't supported in HTML email strict mode. Use physical properties such as margin-left and margin-right instead.",
@@ -270,6 +314,50 @@ const WARNING_CSS_DECLARATIONS = new Map([
 
 const WARNING_CSS_PROPERTIES = new Map([
   [
+    'align-content',
+    "The CSS property 'align-content' has inconsistent support in email clients. Prefer table structure and explicit spacing for layout.",
+  ],
+  [
+    'align-items',
+    "The CSS property 'align-items' has inconsistent support in email clients. Prefer table structure and explicit alignment attributes for layout.",
+  ],
+  [
+    'align-self',
+    "The CSS property 'align-self' has inconsistent support in email clients. Prefer table structure and explicit alignment attributes for layout.",
+  ],
+  [
+    'flex',
+    "The CSS property 'flex' has inconsistent support in email clients. Prefer table-based layout for critical structure.",
+  ],
+  [
+    'flex-basis',
+    "The CSS property 'flex-basis' has inconsistent support in email clients. Prefer table-based layout for critical structure.",
+  ],
+  [
+    'flex-direction',
+    "The CSS property 'flex-direction' has inconsistent support in email clients. Prefer table-based layout for critical structure.",
+  ],
+  [
+    'flex-grow',
+    "The CSS property 'flex-grow' has inconsistent support in email clients. Prefer fixed widths or table columns.",
+  ],
+  [
+    'flex-shrink',
+    "The CSS property 'flex-shrink' has inconsistent support in email clients. Prefer fixed widths or table columns.",
+  ],
+  [
+    'flex-wrap',
+    "The CSS property 'flex-wrap' has inconsistent support in email clients. Prefer table rows or stacked content.",
+  ],
+  [
+    'justify-content',
+    "The CSS property 'justify-content' has inconsistent support in email clients. Prefer table structure and explicit alignment attributes for layout.",
+  ],
+  [
+    'order',
+    "The CSS property 'order' has inconsistent support in email clients. Keep email source order aligned with the intended reading order.",
+  ],
+  [
     'position',
     "The CSS property 'position' may not be supported consistently across email clients. Prefer table structure, spacing, and natural document flow instead of positional offsets.",
   ],
@@ -336,17 +424,71 @@ const WARNING_AT_RULES = new Map([
     '@font-face',
     "The CSS at-rule '@font-face' has limited support in email clients. Keep fallback system fonts in your stack.",
   ],
+  [
+    '@supports',
+    "The CSS at-rule '@supports' has limited support in email clients. Keep fallback styles outside feature queries.",
+  ],
+])
+
+const DISALLOWED_AT_RULES = new Map([
+  [
+    '@keyframes',
+    "The CSS at-rule '@keyframes' isn't supported reliably in HTML email strict mode. Avoid CSS animations in email.",
+  ],
 ])
 
 const CSS_COMMENT_PATTERN = /\/\*[\s\S]*?\*\//g
 const IMPORTANT_PATTERN = /\s*!important\b/gi
 const CSS_DECLARATION_PATTERN = /([a-z0-9-]+)\s*:\s*([^;}{]+)/gi
+const CSS_URL_PATTERN = /url\(\s*(?:"([^"]*)"|'([^']*)'|([^)]*))\s*\)/gi
 const HEAD_CLOSE_PATTERN = /<\/head\s*>/i
+const DANGEROUS_URL_SCHEMES = new Set(['data', 'file', 'javascript', 'vbscript'])
+const DANGEROUS_CSS_URL_SCHEMES = new Set(['file', 'javascript', 'vbscript'])
 
 const stripCssComments = (cssText: string): string => cssText.replace(CSS_COMMENT_PATTERN, ' ')
 
 const normalizeCssValue = (value: string): string =>
   stripCssComments(value).replace(IMPORTANT_PATTERN, ' ').replace(/\s+/g, ' ').trim().toLowerCase()
+
+const decodeHtmlAttributeValue = (value: string): string =>
+  value.replace(/&(#x[0-9a-f]+|#\d+|colon|tab|newline);?/giu, (entity, body: string) => {
+    const normalized = body.toLowerCase()
+    if (normalized.startsWith('#x')) {
+      const codePoint = Number.parseInt(normalized.slice(2), 16)
+      return codePoint <= 0x10ffff ? String.fromCodePoint(codePoint) : entity
+    }
+
+    if (normalized.startsWith('#')) {
+      const codePoint = Number.parseInt(normalized.slice(1), 10)
+      return codePoint <= 0x10ffff ? String.fromCodePoint(codePoint) : entity
+    }
+
+    if (normalized === 'colon') {
+      return ':'
+    }
+
+    if (normalized === 'tab') {
+      return '\t'
+    }
+
+    if (normalized === 'newline') {
+      return '\n'
+    }
+
+    return entity
+  })
+
+const getUrlScheme = (value: string): string | undefined => {
+  const decoded = decodeHtmlAttributeValue(value).trim()
+  const compacted = Array.from(decoded)
+    .filter((character) => {
+      const codePoint = character.codePointAt(0) ?? 0
+      return codePoint > 0x20 && codePoint !== 0x7f
+    })
+    .join('')
+  const match = compacted.match(/^([a-z][a-z0-9+.-]*):/iu)
+  return match?.[1]?.toLowerCase()
+}
 
 const validateTags = (openingTags: OpeningTag[]): void => {
   for (const tag of openingTags) {
@@ -368,6 +510,50 @@ const validateAnchors = (openingTags: OpeningTag[]): void => {
     if (href === undefined || href.trim() === '') {
       throw new Error(
         'The <a> tag is missing an href attribute. Use <Link href="..."> or <Button href="..."> with a real destination URL.',
+      )
+    }
+  }
+}
+
+const validateUnsafeAttributes = (openingTags: OpeningTag[], warnings: Set<string>): void => {
+  for (const tag of openingTags) {
+    for (const attributeName of tag.attributes.keys()) {
+      if (attributeName.startsWith('on')) {
+        throw new Error(
+          `The '${attributeName}' attribute isn't supported in HTML email strict mode. JavaScript event handlers must not be used in email HTML.`,
+        )
+      }
+    }
+
+    const href = tag.attributes.get('href')
+    if (href !== undefined) {
+      const scheme = getUrlScheme(href)
+      if (scheme !== undefined && DANGEROUS_URL_SCHEMES.has(scheme)) {
+        throw new Error(
+          `The ${tag.name} href uses the unsafe '${scheme}:' URL scheme. Use http, https, mailto, tel, or a relative URL instead.`,
+        )
+      }
+    }
+
+    const src = tag.attributes.get('src')
+    if (src !== undefined) {
+      const scheme = getUrlScheme(src)
+      if (scheme !== undefined && DANGEROUS_URL_SCHEMES.has(scheme)) {
+        if (tag.name === 'img' && scheme === 'data') {
+          warnings.add(
+            'Base64 image data URLs have inconsistent support in email clients. Prefer hosted image URLs or cid: inline attachments.',
+          )
+        } else {
+          throw new Error(
+            `The ${tag.name} src uses the unsafe '${scheme}:' URL scheme. Use http, https, cid, or a relative URL instead.`,
+          )
+        }
+      }
+    }
+
+    if (tag.name === 'img' && (tag.attributes.has('srcset') || tag.attributes.has('sizes'))) {
+      warnings.add(
+        'The img srcset and sizes attributes have limited support in email clients. Use a single src image sized for email instead.',
       )
     }
   }
@@ -454,9 +640,37 @@ const collectStyleTagContents = (html: string, openingTags: OpeningTag[]): strin
 const collectCssWarnings = (cssText: string, warnings: Set<string>): void => {
   const normalizedCssText = stripCssComments(cssText).toLowerCase()
 
+  for (const [atRule, message] of DISALLOWED_AT_RULES) {
+    if (normalizedCssText.includes(atRule)) {
+      throw new Error(message)
+    }
+  }
+
   for (const [atRule, message] of WARNING_AT_RULES) {
     if (normalizedCssText.includes(atRule)) {
       warnings.add(message)
+    }
+  }
+}
+
+const validateCssUrls = (property: string, value: string, warnings: Set<string>): void => {
+  for (const match of value.matchAll(CSS_URL_PATTERN)) {
+    const rawUrl = (match[1] ?? match[2] ?? match[3] ?? '').trim()
+    const scheme = getUrlScheme(rawUrl)
+    if (scheme === undefined) {
+      continue
+    }
+
+    if (DANGEROUS_CSS_URL_SCHEMES.has(scheme)) {
+      throw new Error(
+        `The CSS property '${property}' uses the unsafe '${scheme}:' URL scheme. Use a hosted asset URL or cid: inline attachment instead.`,
+      )
+    }
+
+    if (scheme === 'data') {
+      warnings.add(
+        `The CSS property '${property}' uses a data URL, which has inconsistent support in email clients. Prefer hosted assets or cid: inline attachments.`,
+      )
     }
   }
 }
@@ -472,6 +686,8 @@ const validateCssDeclarations = (cssText: string, warnings: Set<string>): void =
     if (!property || !normalizedValue) {
       continue
     }
+
+    validateCssUrls(property, match[2] ?? '', warnings)
 
     if (property.startsWith('--')) {
       throw new Error(`CSS variables ('${property}') aren't supported in HTML email strict mode.`)
@@ -557,6 +773,7 @@ const validateHtmlFragment = (
   }
   validateStylesheetLinks(openingTags)
   validateAnchors(openingTags)
+  validateUnsafeAttributes(openingTags, warnings)
   validateImages(openingTags, warnings)
   validateStyleAttributes(openingTags, warnings)
   validateStyleTags(html, openingTags, warnings)

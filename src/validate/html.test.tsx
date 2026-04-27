@@ -335,6 +335,52 @@ describe('render strict mode', () => {
     )
   })
 
+  test('rejects unsafe event handlers and href URL schemes in strict mode', async () => {
+    await expect(
+      render(
+        <html>
+          <body>
+            <a href="java&#x73;cript:alert(1)">Open</a>
+          </body>
+        </html>,
+      ),
+    ).rejects.toThrow(
+      "The a href uses the unsafe 'javascript:' URL scheme. Use http, https, mailto, tel, or a relative URL instead.",
+    )
+
+    await expect(
+      render(
+        <html>
+          <body>
+            <div onclick="alert(1)">Open</div>
+          </body>
+        </html>,
+      ),
+    ).rejects.toThrow(
+      "The 'onclick' attribute isn't supported in HTML email strict mode. JavaScript event handlers must not be used in email HTML.",
+    )
+  })
+
+  test('warns about caniemail-limited image attributes and base64 image sources', async () => {
+    const { warnings } = await withWarnSpy(() =>
+      render(
+        <html>
+          <body>
+            <img
+              alt="Hero"
+              src="data:image/png;base64,iVBORw0KGgo="
+              srcset="https://example.com/hero@2x.png 2x"
+              sizes="100vw"
+            />
+          </body>
+        </html>,
+      ),
+    )
+
+    expect(warnings.some((message) => message.includes('Base64 image data URLs'))).toBe(true)
+    expect(warnings.some((message) => message.includes('img srcset and sizes'))).toBe(true)
+  })
+
   test('rejects stylesheet links even when they are in head', async () => {
     await expect(
       render(
@@ -349,6 +395,63 @@ describe('render strict mode', () => {
       ),
     ).rejects.toThrow(
       'The <link rel="stylesheet"> tag isn\'t supported in HTML email strict mode. Move styles into <Head><style>...</style> instead.',
+    )
+  })
+
+  test('rejects grid template properties and keyframes in strict mode', async () => {
+    await expect(
+      render(
+        <html>
+          <body>
+            <div style={{ gridTemplateColumns: '1fr 1fr' }}>Hello</div>
+          </body>
+        </html>,
+      ),
+    ).rejects.toThrow(
+      "The CSS property 'grid-template-columns' isn't supported in HTML email strict mode. Use <Section>, <Row>, <Column>, or table-based layout instead.",
+    )
+
+    await expect(
+      render(
+        <html>
+          <head>
+            <style>{'@keyframes fade { from { opacity: 0 } to { opacity: 1 } }'}</style>
+          </head>
+          <body>
+            <p>Hello</p>
+          </body>
+        </html>,
+      ),
+    ).rejects.toThrow(
+      "The CSS at-rule '@keyframes' isn't supported reliably in HTML email strict mode. Avoid CSS animations in email.",
+    )
+  })
+
+  test('warns about caniemail-limited flex properties and supports queries', async () => {
+    const { warnings } = await withWarnSpy(() =>
+      render(
+        <html>
+          <head>
+            <style>{'@supports (display: flex) { .x { color: red; } }'}</style>
+          </head>
+          <body>
+            <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+              Hello
+            </div>
+          </body>
+        </html>,
+      ),
+    )
+
+    expect(warnings.some((message) => message.includes("The CSS at-rule '@supports'"))).toBe(true)
+    expect(warnings.some((message) => message.includes("The CSS property 'display:flex'"))).toBe(
+      true,
+    )
+    expect(warnings.some((message) => message.includes("The CSS property 'flex-direction'"))).toBe(
+      true,
+    )
+    expect(warnings.some((message) => message.includes("The CSS property 'justify-content'"))).toBe(
+      true,
     )
   })
 

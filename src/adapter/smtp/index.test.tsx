@@ -266,6 +266,25 @@ describe('SMTP message building', () => {
     ).toThrow('Email header Subject is managed by hono-email')
   })
 
+  test('rejects attachment content-type header injection', () => {
+    expect(() =>
+      buildRawEmailMessage({
+        attachments: [
+          {
+            content: 'Invoice',
+            contentType: 'text/plain\r\nX-Injected: yes',
+            filename: 'invoice.txt',
+          },
+        ],
+        from: 'sender@example.com',
+        html: '<p>Hello</p>',
+        subject: 'Hello',
+        text: 'Hello',
+        to: 'recipient@example.com',
+      }),
+    ).toThrow('attachment contentType must not contain line breaks.')
+  })
+
   test('resolves href attachments and enforces attachment size limits', async () => {
     const originalFetch = globalThis.fetch
     const fetchImplementation = Object.assign(
@@ -764,6 +783,37 @@ describe('sendEmail over SMTP', () => {
       accepted: [],
       errorMessages: [
         'Invalid DKIM private key: expected PKCS#8 PRIVATE KEY or PKCS#1 RSA PRIVATE KEY PEM.',
+      ],
+      rejected: [],
+      successful: false,
+    })
+    expect(mock.connectCount()).toBe(0)
+  })
+
+  test('rejects DKIM tag value injection before connecting', async () => {
+    const privateKey = await createDkimPrivateKey()
+    const mock = createMockConnector(async () => {
+      throw new Error('SMTP connection should not be opened for invalid DKIM options.')
+    })
+    const smtp = new SmtpTransport({
+      connector: mock.connector,
+      dkim: {
+        domainName: 'example.com;\r\nX-Injected: yes',
+        keySelector: 'test',
+        privateKey,
+      },
+      hostname: 'smtp.example.com',
+      port: 465,
+      secure: true,
+    })
+
+    const receipt = await smtp.send(createEmailMessage('Invalid DKIM options'))
+    await smtp.close()
+
+    expect(receipt).toMatchObject({
+      accepted: [],
+      errorMessages: [
+        'Invalid DKIM domainName: expected a DNS domain without whitespace or separators.',
       ],
       rejected: [],
       successful: false,

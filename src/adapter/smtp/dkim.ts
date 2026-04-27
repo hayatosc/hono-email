@@ -13,6 +13,9 @@ const DEFAULT_HEADER_FIELD_NAMES = [
   'MIME-Version',
   'Content-Type',
 ]
+const DKIM_DOMAIN_PATTERN = /^[A-Za-z0-9](?:[A-Za-z0-9.-]*[A-Za-z0-9])?$/
+const DKIM_SELECTOR_PATTERN = /^[A-Za-z0-9](?:[A-Za-z0-9._-]*[A-Za-z0-9])?$/
+const HEADER_FIELD_NAME_PATTERN = /^[A-Za-z0-9-]+$/
 
 type ParsedHeader = {
   name: string
@@ -287,6 +290,26 @@ const normalizeHeaderFieldNames = (
   })
 }
 
+const validateDkimOptions = (options: EmailDkimOptions): void => {
+  if (!DKIM_DOMAIN_PATTERN.test(options.domainName)) {
+    throw new Error(
+      'Invalid DKIM domainName: expected a DNS domain without whitespace or separators.',
+    )
+  }
+
+  if (!DKIM_SELECTOR_PATTERN.test(options.keySelector)) {
+    throw new Error(
+      'Invalid DKIM keySelector: expected a selector without whitespace or separators.',
+    )
+  }
+
+  for (const fieldName of [...(options.headerFieldNames ?? []), ...(options.skipFields ?? [])]) {
+    if (!HEADER_FIELD_NAME_PATTERN.test(fieldName)) {
+      throw new Error(`Invalid DKIM header field name: ${fieldName}`)
+    }
+  }
+}
+
 const pickHeadersForSigning = (
   headers: ParsedHeader[],
   headerFieldNames: string[],
@@ -326,6 +349,7 @@ export const applyDkimSignature = async (
   rawMessage: string,
   options: EmailDkimOptions,
 ): Promise<string> => {
+  validateDkimOptions(options)
   const { body, headers } = splitMessage(rawMessage)
   const headerFieldNames = normalizeHeaderFieldNames(options, headers)
   if (headerFieldNames.length === 0) {
