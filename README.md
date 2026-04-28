@@ -290,46 +290,6 @@ Notes:
 - `Spacer` renders explicit email-safe spacing
 - `Conditional` renders Outlook conditional comments and is still validated in strict mode
 
-Layout helpers:
-
-```tsx
-import { Body, Card, Flex, Grid, Html, Spacer, Text, render } from 'hono-email'
-
-const { html } = await render(
-  <Html>
-    <Body>
-      <Flex align="middle" gap={12} justify="center">
-        <Text>Left</Text>
-        <Text>Right</Text>
-      </Flex>
-      <Spacer height={24} />
-      <Grid columns={2} gap={16}>
-        <Card>
-          <Text>First feature</Text>
-        </Card>
-        <Card>
-          <Text>Second feature</Text>
-        </Card>
-      </Grid>
-    </Body>
-  </Html>,
-)
-```
-
-Head helpers:
-
-```tsx
-import { ColorScheme, Head, Html, render } from 'hono-email'
-
-const { html } = await render(
-  <Html>
-    <Head>
-      <ColorScheme colorScheme="light dark" />
-    </Head>
-  </Html>,
-)
-```
-
 ## Strict Mode
 
 Strict mode is enabled by default in `render()`. It is meant to fail early on markup and CSS that are risky for HTML email clients.
