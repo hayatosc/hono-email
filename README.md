@@ -386,6 +386,17 @@ export default defineConfig({
 })
 ```
 
+For CommonJS Webpack config files, use the named `webpackPlugin` export.
+
+```js
+// webpack.config.cjs
+const { webpackPlugin: EmailTailwind } = require('hono-email/plugin')
+
+module.exports = {
+  plugins: [EmailTailwind()],
+}
+```
+
 This plugin automatically finds `<Tailwind>` and automatically injects Tailwind styles.
 
 ```tsx

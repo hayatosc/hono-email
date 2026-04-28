@@ -48,4 +48,17 @@ await Bun.build({
   external: ['hono'],
 })
 
+// Build unplugin CommonJS entry for CJS bundler config files.
+await Bun.build({
+  entrypoints: ['./src/unplugin.ts'],
+  outdir: 'dist',
+  naming: {
+    entry: '[name].cjs',
+  },
+  format: 'cjs',
+  target: 'node',
+  minify: true,
+  external: ['hono'],
+})
+
 emitDeclaration()
