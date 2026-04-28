@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.2] - 2026-04-28
+
+- feat: add commonjs plugin entry (#19)
+- fix: harden adapters and font css
+- fix: harden email validation and headers
+
+
 ## [0.3.1] - 2026-04-26
 
 - refactor: split rendering and validation internals (#17)
