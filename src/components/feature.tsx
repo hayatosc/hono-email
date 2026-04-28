@@ -50,8 +50,41 @@ type ColorSchemeProps = {
   supportedColorSchemes?: ColorSchemeValue
 }
 
+/**
+ * Renders `@font-face` and fallback font-family CSS for use inside `<Head>`.
+ *
+ * @param props - Font declaration props.
+ * @returns A `<style>` tag for the font declaration.
+ *
+ * @example
+ * ```tsx
+ * <Head>
+ *   <Font
+ *     fallbackFontFamily={['Arial', 'sans-serif']}
+ *     fontFamily="Inter"
+ *     webFont={{ url: 'https://example.com/inter.woff2', format: 'woff2' }}
+ *   />
+ * </Head>
+ * ```
+ */
 export const Font = (props: FontProps) => renderFontStyleTag(props)
 
+/**
+ * Applies a Tailwind build artifact to descendant class names.
+ *
+ * @param props - Tailwind wrapper props.
+ * @param props.artifact - Build artifact injected by the plugin or passed explicitly.
+ * @returns HTML with Tailwind classes converted to inline/head styles.
+ *
+ * @example
+ * ```tsx
+ * <Tailwind>
+ *   <Body>
+ *     <Text className="text-slate-900 px-4">Hello</Text>
+ *   </Body>
+ * </Tailwind>
+ * ```
+ */
 export const Tailwind = async ({ artifact, children }: TailwindProps) => {
   if (!artifact) {
     return raw(
@@ -66,6 +99,24 @@ export const Tailwind = async ({ artifact, children }: TailwindProps) => {
   return raw(`${wrapGeneratedHeadCss(transformed.headCss)}${transformed.html}`)
 }
 
+/**
+ * Converts Markdown into sanitized email-friendly HTML.
+ *
+ * @param props - Markdown render options and Markdown string children.
+ * @param props.children - Markdown source.
+ * @returns Rendered Markdown HTML.
+ *
+ * @example
+ * ```tsx
+ * <Markdown
+ *   markdownCustomStyles={{ h1: { color: '#111827' } }}
+ * >{`
+ * # Welcome
+ *
+ * Thanks for joining.
+ * `}</Markdown>
+ * ```
+ */
 export const Markdown = async ({
   children,
   markdownContainerClassName,
@@ -86,6 +137,21 @@ export const Markdown = async ({
     }),
   )
 
+/**
+ * Renders Outlook conditional comment branches.
+ *
+ * @param props - Conditional rendering props.
+ * @param props.mso - Render content inside an Outlook-only conditional comment. Defaults to `true`.
+ * @param props.notMso - Render content in a non-Outlook conditional comment.
+ * @returns Conditional-comment wrapped HTML.
+ *
+ * @example
+ * ```tsx
+ * <Conditional mso>
+ *   <Text>This appears in Outlook for Windows.</Text>
+ * </Conditional>
+ * ```
+ */
 export const Conditional = async ({ children, mso, notMso }: ConditionalProps) => {
   const renderedChildren = await renderFragmentToHtml(<>{children}</>)
 
@@ -100,6 +166,21 @@ export const Conditional = async ({ children, mso, notMso }: ConditionalProps) =
   return raw(`<!--[if mso]>${renderedChildren}<![endif]-->`)
 }
 
+/**
+ * Declares supported light and dark color schemes for email clients.
+ *
+ * @param props - Color scheme props.
+ * @param props.colorScheme - Declared color scheme. Defaults to `light dark`.
+ * @param props.supportedColorSchemes - Supported schemes meta value. Defaults to `colorScheme`.
+ * @returns Meta and style tags for color-scheme support.
+ *
+ * @example
+ * ```tsx
+ * <Head>
+ *   <ColorScheme colorScheme="light dark" />
+ * </Head>
+ * ```
+ */
 export const ColorScheme = ({
   colorScheme = 'light dark',
   supportedColorSchemes = colorScheme,

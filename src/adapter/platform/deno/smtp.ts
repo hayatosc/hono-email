@@ -51,6 +51,14 @@ const toSmtpSocket = (conn: DenoConn, deno: DenoRuntime, hostname: string): Smtp
   startTls: async () => toSmtpSocket(await deno.startTls(conn, { hostname }), deno, hostname),
 })
 
+/**
+ * Deno SMTP connector backed by `Deno.connect` and `Deno.connectTls`.
+ *
+ * @example
+ * ```ts
+ * const transport = new SmtpTransport({ connector: denoSmtpConnector, hostname, port })
+ * ```
+ */
 export const denoSmtpConnector: SmtpConnector = {
   async connect(address: SmtpSocketAddress, options: SmtpConnectorOptions): Promise<SmtpSocket> {
     const deno = getDenoRuntime()
@@ -66,6 +74,16 @@ export const denoSmtpConnector: SmtpConnector = {
   },
 }
 
+/**
+ * Creates the Deno SMTP connector.
+ *
+ * @returns The Deno SMTP connector.
+ *
+ * @example
+ * ```ts
+ * const connector = createDenoSmtpConnector()
+ * ```
+ */
 export const createDenoSmtpConnector = (): SmtpConnector => denoSmtpConnector
 
 export default denoSmtpConnector

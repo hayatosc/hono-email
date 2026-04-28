@@ -56,6 +56,30 @@ type SmtpConnectionWaiter = {
   resolve(slot: SmtpConnectionSlot): void
 }
 
+/**
+ * SMTP email adapter with optional pooling, STARTTLS, AUTH, attachments, and DKIM signing.
+ *
+ * @param options - SMTP transport options.
+ *
+ * @example
+ * ```tsx
+ * const smtp = new SmtpTransport({
+ *   connector: nodeSmtpConnector,
+ *   hostname: 'smtp.example.com',
+ *   port: 587,
+ *   secure: 'starttls',
+ *   auth: { username: 'smtp-user', password: 'smtp-password' },
+ * })
+ *
+ * await sendEmail({
+ *   adapter: smtp,
+ *   from: 'sender@example.com',
+ *   to: 'recipient@example.com',
+ *   subject: 'Welcome',
+ *   jsx: <Html><Body><Text>Hello</Text></Body></Html>,
+ * })
+ * ```
+ */
 export class SmtpTransport implements EmailAdapter {
   readonly #connector: SmtpConnector
   readonly #hostname: string

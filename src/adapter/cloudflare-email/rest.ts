@@ -92,6 +92,20 @@ const buildResponseText = (result: CloudflareRestResult): string =>
 const createMissingFetchError = (): Error =>
   new Error('Cloudflare REST connector requires a fetch implementation.')
 
+/**
+ * Creates a Cloudflare Email REST API connector.
+ *
+ * @param options - REST API account, token, and optional fetch settings.
+ * @returns A Cloudflare Email connector.
+ *
+ * @example
+ * ```ts
+ * const connector = RESTConnector({
+ *   accountId: 'account-id',
+ *   apiToken: 'api-token',
+ * })
+ * ```
+ */
 export const RESTConnector = (
   options: CloudflareEmailRestConnectorOptions,
 ): CloudflareEmailConnector => {

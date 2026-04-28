@@ -65,6 +65,17 @@ const createDeferred = <T>(): {
   return { promise, reject, resolve }
 }
 
+/**
+ * Bun SMTP connector backed by `Bun.connect`.
+ *
+ * @remarks
+ * STARTTLS is not supported by this connector. Use implicit TLS on port 465 when TLS is required.
+ *
+ * @example
+ * ```ts
+ * const transport = new SmtpTransport({ connector: bunSmtpConnector, hostname, port: 465 })
+ * ```
+ */
 export const bunSmtpConnector: SmtpConnector = {
   async connect(address: SmtpSocketAddress, options: SmtpConnectorOptions): Promise<SmtpSocket> {
     if (options.secureTransport === 'starttls') {
@@ -156,6 +167,16 @@ export const bunSmtpConnector: SmtpConnector = {
   },
 }
 
+/**
+ * Creates the Bun SMTP connector.
+ *
+ * @returns The Bun SMTP connector.
+ *
+ * @example
+ * ```ts
+ * const connector = createBunSmtpConnector()
+ * ```
+ */
 export const createBunSmtpConnector = (): SmtpConnector => bunSmtpConnector
 
 export default bunSmtpConnector

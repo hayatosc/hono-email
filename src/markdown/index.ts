@@ -34,14 +34,80 @@ type MarkdownStyleKey =
   | 'tr'
   | 'ul'
 
+/**
+ * Inline style overrides for Markdown-generated elements.
+ *
+ * @property h1 - Style override for rendered `h1` elements.
+ * @property p - Style override for rendered paragraphs.
+ * @property codeInline - Style override for inline code.
+ *
+ * @example
+ * ```tsx
+ * <Markdown markdownCustomStyles={{ h1: { color: '#111827' } }}>
+ *   {`# Welcome`}
+ * </Markdown>
+ * ```
+ */
 export type MarkdownCustomStyles = Partial<Record<MarkdownStyleKey, JSX.CSSProperties>>
+
+/**
+ * Class name overrides for Markdown-generated elements.
+ *
+ * @property h1 - Class name for rendered `h1` elements.
+ * @property p - Class name for rendered paragraphs.
+ * @property codeInline - Class name for inline code.
+ *
+ * @example
+ * ```tsx
+ * <Markdown
+ *   markdownStyleMode="tailwind"
+ *   markdownCustomClassNames={{ h1: 'text-2xl font-semibold' }}
+ * >
+ *   {`# Welcome`}
+ * </Markdown>
+ * ```
+ */
 export type MarkdownCustomClassNames = Partial<Record<MarkdownStyleKey, string>>
+
+/**
+ * Controls whether Markdown defaults are applied as inline styles or Tailwind class names.
+ *
+ * @remarks
+ * `tailwind` mode must be rendered inside `<Tailwind>`.
+ *
+ * @example
+ * ```tsx
+ * <Tailwind>
+ *   <Markdown markdownStyleMode="tailwind">{`# Welcome`}</Markdown>
+ * </Tailwind>
+ * ```
+ */
 export type MarkdownStyleMode = 'inline' | 'tailwind'
 export const MARKDOWN_TAILWIND_PARENT_REQUIRED_ATTRIBUTE_NAME =
   'data-hono-email-markdown-tailwind-parent-required'
 export const MARKDOWN_TAILWIND_PARENT_REQUIRED_ERROR_MESSAGE =
   '<Markdown markdownStyleMode="tailwind"> requires a <Tailwind> parent. Wrap it in <Tailwind> so markdown classes can be converted to email-safe inline styles.'
 
+/**
+ * Options used by `<Markdown>` and the Markdown renderer.
+ *
+ * @property markdownContainerClassName - Class name applied to the generated Markdown container.
+ * @property markdownContainerStyles - Inline styles applied to the generated Markdown container.
+ * @property markdownCustomClassNames - Class names applied to generated Markdown elements.
+ * @property markdownCustomStyles - Inline styles applied to generated Markdown elements.
+ * @property markdownStyleMode - Style output mode. Defaults to `inline`.
+ * @property sanitize - Sanitize Markdown HTML. Defaults to `true`.
+ *
+ * @example
+ * ```tsx
+ * <Markdown
+ *   markdownContainerStyles={{ padding: '12px' }}
+ *   sanitize
+ * >
+ *   {`**Hello**`}
+ * </Markdown>
+ * ```
+ */
 export type MarkdownRenderOptions = {
   markdownContainerStyles?: JSX.CSSProperties
   markdownContainerClassName?: string

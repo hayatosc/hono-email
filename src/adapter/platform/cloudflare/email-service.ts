@@ -55,10 +55,29 @@ const buildConnector = (bindingName: string): CloudflareEmailConnector => ({
   },
 })
 
+/**
+ * Creates a Cloudflare Workers Email binding connector.
+ *
+ * @param options - Workers binding options.
+ * @returns A Cloudflare Email connector.
+ *
+ * @example
+ * ```ts
+ * const connector = createWorkersConnector({ bindingName: 'EMAIL' })
+ * ```
+ */
 export const createWorkersConnector = (
   options?: CloudflareEmailWorkersConnectorOptions,
 ): CloudflareEmailConnector => buildConnector(options?.bindingName ?? 'EMAIL')
 
+/**
+ * Default Cloudflare Workers Email connector using the `EMAIL` binding.
+ *
+ * @example
+ * ```ts
+ * const adapter = CloudflareEmailAdapter({ connector: WorkersConnector })
+ * ```
+ */
 export const WorkersConnector: CloudflareEmailConnector = buildConnector('EMAIL')
 
 export default WorkersConnector
