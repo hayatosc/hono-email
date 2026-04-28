@@ -188,6 +188,27 @@ const buildRestMessageId = (message: EmailMessage): string => {
   return `${REST_MESSAGE_ID_PREFIX}:${randomId}`
 }
 
+/**
+ * Creates an adapter for Cloudflare Email Service.
+ *
+ * @param options - Cloudflare Email adapter options.
+ * @returns An email adapter that sends through Cloudflare Email Service.
+ *
+ * @example
+ * ```tsx
+ * const adapter = CloudflareEmailAdapter({
+ *   connector: RESTConnector({ accountId, apiToken }),
+ * })
+ *
+ * await sendEmail({
+ *   adapter,
+ *   from: 'sender@example.com',
+ *   to: 'recipient@example.com',
+ *   subject: 'Welcome',
+ *   jsx: <Html><Body><Text>Hello</Text></Body></Html>,
+ * })
+ * ```
+ */
 export const CloudflareEmailAdapter = (options: CloudflareEmailAdapterOptions): EmailAdapter => ({
   async send(message: EmailMessage): Promise<SendEmailReceipt> {
     const connector = options.connector

@@ -2,17 +2,28 @@ import { describe, expect, test } from 'bun:test'
 
 import {
   Body,
+  Box,
   Button,
+  Card,
+  CodeBlock,
+  CodeInline,
   Column,
+  ColorScheme,
+  Conditional,
   Container,
+  Flex,
+  Grid,
   Head,
   Heading,
   Hr,
   Html,
   Link,
+  List,
+  ListItem,
   Preview,
   Row,
   Section,
+  Spacer,
   Text,
   render,
 } from '../index'
@@ -93,6 +104,184 @@ describe('email components', () => {
     )
 
     expect(html).toContain('<hr style="width:100%;border:none;border-top:1px solid #eaeaea"/>')
+  })
+
+  test('renders Box and Spacer layout helpers', async () => {
+    const { html } = await render(
+      <Html>
+        <Body>
+          <Box as="td" style={{ padding: '12px' }}>
+            Content
+          </Box>
+          <Spacer height={24} />
+        </Body>
+      </Html>,
+    )
+
+    expect(html).toContain('<td style="padding:12px">Content</td>')
+    expect(html).toContain(
+      '<div aria-hidden="true" style="font-size:0px;line-height:0px;height:24px;width:100%">',
+    )
+  })
+
+  test('renders Flex as table-based row layout', async () => {
+    const { html } = await render(
+      <Html>
+        <Body>
+          <Flex align="middle" gap={12} justify="center">
+            <Text>A</Text>
+            <Text>B</Text>
+          </Flex>
+        </Body>
+      </Html>,
+    )
+
+    expect(html).toContain('<table border="0" cellPadding="0" cellSpacing="0" role="presentation"')
+    expect(html).toContain('align="center"')
+    expect(html).toContain('valign="middle"')
+    expect(html).toContain('width="12px"')
+    expect(html).not.toContain('display:flex')
+  })
+
+  test('renders Flex as table-based column layout', async () => {
+    const { html } = await render(
+      <Html>
+        <Body>
+          <Flex direction="column" gap="8px">
+            <Text>A</Text>
+            <Text>B</Text>
+          </Flex>
+        </Body>
+      </Html>,
+    )
+
+    expect(html).toContain('<td height="8px" style="font-size:0px;line-height:0px">')
+    expect(html).toContain('<td valign="top">')
+  })
+
+  test('renders Grid as a table with fixed column cells and spacer gaps', async () => {
+    const { html } = await render(
+      <Html>
+        <Body>
+          <Grid columns={2} gap={16}>
+            <Text>One</Text>
+            <Text>Two</Text>
+            <Text>Three</Text>
+          </Grid>
+        </Body>
+      </Html>,
+    )
+
+    expect(html).toContain(
+      '<table border="0" cellPadding="0" cellSpacing="0" role="presentation" width="100%"',
+    )
+    expect(html).toContain('width="50%"')
+    expect(html).toContain('width="16px"')
+    expect(html).toContain('colSpan="3" height="16px"')
+    expect(html).not.toContain('display:grid')
+  })
+
+  test('renders Card as a bordered table container', async () => {
+    const { html } = await render(
+      <Html>
+        <Body>
+          <Card borderColor="#d1d5db" padding={20}>
+            <Text>Inside</Text>
+          </Card>
+        </Body>
+      </Html>,
+    )
+
+    expect(html).toContain(
+      '<table border="0" cellPadding="0" cellSpacing="0" role="presentation" width="100%"',
+    )
+    expect(html).toContain(
+      '<td style="background-color:#ffffff;border:1px solid #d1d5db;padding:20px">',
+    )
+    expect(html).toContain('Inside')
+  })
+
+  test('renders code components with email-safe defaults', async () => {
+    const { html } = await render(
+      <Html>
+        <Body>
+          <Text>
+            Run <CodeInline>bun test</CodeInline>
+          </Text>
+          <CodeBlock>{'const ok = true'}</CodeBlock>
+        </Body>
+      </Html>,
+    )
+
+    expect(html).toContain('<code style="background-color:#f3f4f6')
+    expect(html).toContain('bun test</code>')
+    expect(html).toContain('<pre style="background-color:#f3f4f6')
+    expect(html).toContain('const ok = true</pre>')
+  })
+
+  test('renders List and ListItem with spacing defaults', async () => {
+    const { html } = await render(
+      <Html>
+        <Body>
+          <List marker="decimal" ordered>
+            <ListItem>First</ListItem>
+            <ListItem style={{ marginBottom: 0 }}>Second</ListItem>
+          </List>
+        </Body>
+      </Html>,
+    )
+
+    expect(html).toContain('<ol style="margin:16px 0;padding-left:24px;list-style-type:decimal">')
+    expect(html).toContain(
+      '<li style="font-size:14px;line-height:24px;margin-bottom:8px">First</li>',
+    )
+    expect(html).toContain(
+      '<li style="font-size:14px;line-height:24px;margin-bottom:0px">Second</li>',
+    )
+  })
+
+  test('renders Outlook conditional content', async () => {
+    const { html } = await render(
+      <Html>
+        <Body>
+          <Conditional>
+            <table>
+              <tbody>
+                <tr>
+                  <td>Only Outlook</td>
+                </tr>
+              </tbody>
+            </table>
+          </Conditional>
+          <Conditional notMso>
+            <Text>Not Outlook</Text>
+          </Conditional>
+        </Body>
+      </Html>,
+    )
+
+    expect(html).toContain('<!--[if mso]><table>')
+    expect(html).toContain('<td>Only Outlook</td>')
+    expect(html).toContain('<![endif]-->')
+    expect(html).toContain('<!--[if !mso]><!-->')
+    expect(html).toContain('Not Outlook')
+    expect(html).toContain('<!--<![endif]-->')
+  })
+
+  test('renders ColorScheme metadata for Head', async () => {
+    const { html } = await render(
+      <Html>
+        <Head>
+          <ColorScheme colorScheme="light" />
+        </Head>
+      </Html>,
+    )
+
+    expect(html).toContain('<meta name="color-scheme" content="light"/>')
+    expect(html).toContain('<meta name="supported-color-schemes" content="light"/>')
+    expect(html).toContain(
+      '<style>:root { color-scheme: light; supported-color-schemes: light; }</style>',
+    )
   })
 
   test('applies Heading margin shorthand props', async () => {

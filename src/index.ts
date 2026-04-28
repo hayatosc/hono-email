@@ -2,20 +2,31 @@ import type { Child } from 'hono/jsx'
 
 export {
   Body,
+  Box,
   Button,
+  Card,
+  CodeBlock,
+  CodeInline,
   Column,
+  ColorScheme,
+  Conditional,
   Container,
+  Flex,
   Font,
+  Grid,
   Head,
   Heading,
   Hr,
   Html,
   Img,
   Link,
+  List,
+  ListItem,
   Markdown,
   Preview,
   Row,
   Section,
+  Spacer,
   Tailwind,
   Text,
 } from './components'
@@ -69,16 +80,55 @@ export type { BuildTailwindArtifactFromCssOptions } from './tailwind'
 import { renderPlainText, type PlainTextRenderOptions } from './text'
 import { validateHtml } from './validate/html'
 
+/**
+ * Shared HTML render options.
+ *
+ * @property doctype - Doctype to prepend. Defaults to HTML5.
+ * @property pretty - Pretty-print the rendered HTML when `true`.
+ * @property strict - Run strict email validation when `true`. Defaults to `true`.
+ *
+ * @example
+ * ```tsx
+ * const options: BaseRenderOptions = {
+ *   doctype: 'xhtml-transitional',
+ *   pretty: true,
+ * }
+ * ```
+ */
 type BaseRenderOptions = {
   doctype?: 'html5' | 'xhtml-transitional' | false
   pretty?: boolean
   strict?: boolean
 }
 
+/**
+ * Options for rendering JSX into HTML and derived plain text.
+ *
+ * @property text - Plain-text conversion options.
+ *
+ * @example
+ * ```tsx
+ * await render(<WelcomeEmail />, {
+ *   text: { linkFormat: 'text-only' },
+ * })
+ * ```
+ */
 export type RenderOptions = BaseRenderOptions & {
   text?: PlainTextRenderOptions
 }
 
+/**
+ * HTML email output and the plain-text version generated from it.
+ *
+ * @property html - Rendered HTML email, including the configured doctype.
+ * @property text - Plain-text output derived from the rendered HTML.
+ *
+ * @example
+ * ```tsx
+ * const result: RenderResult = await render(<WelcomeEmail />)
+ * console.log(result.html, result.text)
+ * ```
+ */
 export type RenderResult = {
   html: string
   text: string
@@ -135,6 +185,24 @@ const renderHtml = async (jsx: Child, options: BaseRenderOptions = {}): Promise<
   return html
 }
 
+/**
+ * Renders a `hono/jsx` email tree into HTML and plain text.
+ *
+ * @param jsx - Email JSX tree to render.
+ * @param options - Render options.
+ * @returns Rendered HTML and derived plain text.
+ *
+ * @example
+ * ```tsx
+ * const { html, text } = await render(
+ *   <Html>
+ *     <Body>
+ *       <Text>Hello from hono-email.</Text>
+ *     </Body>
+ *   </Html>,
+ * )
+ * ```
+ */
 export async function render(jsx: Child, options: RenderOptions = {}): Promise<RenderResult> {
   const html = await renderHtml(jsx, options)
 
@@ -144,5 +212,22 @@ export async function render(jsx: Child, options: RenderOptions = {}): Promise<R
   }
 }
 
+/**
+ * Renders a JSX email draft and sends it through the provided adapter.
+ *
+ * @param options - Email draft and delivery adapter.
+ * @returns Delivery receipt from the adapter.
+ *
+ * @example
+ * ```tsx
+ * const receipt = await sendEmail({
+ *   adapter,
+ *   from: 'sender@example.com',
+ *   to: 'recipient@example.com',
+ *   subject: 'Welcome',
+ *   jsx: <Html><Body><Text>Hello</Text></Body></Html>,
+ * })
+ * ```
+ */
 export const sendEmail = async (options: SendEmailOptions): Promise<SendEmailReceipt> =>
   sendEmailWithRender(render, options)

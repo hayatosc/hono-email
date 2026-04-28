@@ -1,5 +1,19 @@
 import type { EmailAddress, EmailAttachmentLimits } from '../index'
 
+/**
+ * Name/address object shape used by the Cloudflare Email REST API payload.
+ *
+ * @property address - Email address path.
+ * @property name - Optional display name.
+ *
+ * @example
+ * ```ts
+ * const from: CloudflareEmailNameAddress = {
+ *   address: 'sender@example.com',
+ *   name: 'Sender',
+ * }
+ * ```
+ */
 export type CloudflareEmailNameAddress = {
   address: string
   name?: string
@@ -93,12 +107,42 @@ export type CloudflareEmailConnectorResult = {
   response: string
 }
 
+/**
+ * Connector interface used by `CloudflareEmailAdapter`.
+ *
+ * @property send - Sends a prepared Cloudflare Email connector request.
+ *
+ * @example
+ * ```ts
+ * const connector: CloudflareEmailConnector = {
+ *   async send(request) {
+ *     return sendWithRuntime(request)
+ *   },
+ * }
+ * ```
+ */
 export type CloudflareEmailConnector = {
   send(
     request: CloudflareEmailConnectorRequest,
   ): CloudflareEmailConnectorResult | Promise<CloudflareEmailConnectorResult>
 }
 
+/**
+ * Options for the Cloudflare Email REST API connector.
+ *
+ * @property accountId - Cloudflare account ID.
+ * @property apiBaseUrl - Optional API base URL override.
+ * @property apiToken - Cloudflare API token.
+ * @property fetch - Optional fetch implementation.
+ *
+ * @example
+ * ```ts
+ * const options: CloudflareEmailRestConnectorOptions = {
+ *   accountId: 'account-id',
+ *   apiToken: 'api-token',
+ * }
+ * ```
+ */
 export type CloudflareEmailRestConnectorOptions = {
   accountId: string
   apiBaseUrl?: string
@@ -106,15 +150,48 @@ export type CloudflareEmailRestConnectorOptions = {
   fetch?: CloudflareEmailFetch
 }
 
+/**
+ * Options for resolving a Cloudflare Workers Email binding.
+ *
+ * @property bindingName - Workers binding name. Defaults to `EMAIL`.
+ *
+ * @example
+ * ```ts
+ * const options: CloudflareEmailWorkersConnectorOptions = {
+ *   bindingName: 'EMAIL',
+ * }
+ * ```
+ */
 export type CloudflareEmailWorkersConnectorOptions = {
   bindingName?: string
 }
 
+/**
+ * Options for creating a Cloudflare Email Service adapter.
+ *
+ * @property connector - Cloudflare Email connector.
+ * @property limits - Attachment limits.
+ *
+ * @example
+ * ```ts
+ * const adapter = CloudflareEmailAdapter({
+ *   connector: RESTConnector({ accountId, apiToken }),
+ * })
+ * ```
+ */
 export type CloudflareEmailAdapterOptions = {
   connector: CloudflareEmailConnector
   limits?: EmailAttachmentLimits
 }
 
+/**
+ * Error thrown by Cloudflare Email connectors when delivery cannot be completed.
+ *
+ * @example
+ * ```ts
+ * throw new CloudflareEmailConnectorError(['Cloudflare rejected the message.'])
+ * ```
+ */
 export class CloudflareEmailConnectorError extends Error {
   readonly errorMessages: string[]
   readonly rejected: string[] | undefined

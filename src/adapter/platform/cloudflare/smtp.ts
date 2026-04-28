@@ -67,6 +67,14 @@ const toSmtpSocket = (socket: CloudflareSocket): SmtpSocket => ({
   startTls: () => toSmtpSocket(socket.startTls()),
 })
 
+/**
+ * Cloudflare Workers SMTP connector backed by `cloudflare:sockets`.
+ *
+ * @example
+ * ```ts
+ * const transport = new SmtpTransport({ connector: cloudflareSmtpConnector, hostname, port })
+ * ```
+ */
 export const cloudflareSmtpConnector: SmtpConnector = {
   async connect(address: SmtpSocketAddress, options: SmtpConnectorOptions): Promise<SmtpSocket> {
     if (address.port === 25) {
@@ -83,6 +91,16 @@ export const cloudflareSmtpConnector: SmtpConnector = {
   },
 }
 
+/**
+ * Creates the Cloudflare Workers SMTP connector.
+ *
+ * @returns The Cloudflare Workers SMTP connector.
+ *
+ * @example
+ * ```ts
+ * const connector = createCloudflareSmtpConnector()
+ * ```
+ */
 export const createCloudflareSmtpConnector = (): SmtpConnector => cloudflareSmtpConnector
 
 export default cloudflareSmtpConnector

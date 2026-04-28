@@ -28,6 +28,15 @@ type HeadingProps = PropsWithChildren<
 type LinkProps = PropsWithChildren<Omit<ElementProps<'a'>, 'children' | 'href'> & { href: string }>
 
 type ImageProps = Omit<ElementProps<'img'>, 'src' | 'alt'> & { src: string; alt: string }
+type CodeInlineProps = PropsWithChildren<ElementProps<'code'>>
+type CodeBlockProps = PropsWithChildren<ElementProps<'pre'>>
+type ListProps = PropsWithChildren<
+  Omit<ElementProps<'ul'>, 'children'> & {
+    marker?: JSX.CSSProperties['listStyleType']
+    ordered?: boolean
+  }
+>
+type ListItemProps = PropsWithChildren<ElementProps<'li'>>
 
 type OutlookCssProperties = JSX.CSSProperties & {
   msoPaddingAlt?: string
@@ -146,6 +155,19 @@ const withMargin = ({ m, mx, my, mt, mr, mb, ml }: HeadingMarginProps): JSX.CSSP
   return styles
 }
 
+/**
+ * Paragraph text with email-friendly font size, line height, and vertical margins.
+ *
+ * @param props - Standard `<p>` attributes and children.
+ * @returns A styled paragraph.
+ *
+ * @example
+ * ```tsx
+ * <Text style={{ color: '#374151' }}>
+ *   Thanks for signing up.
+ * </Text>
+ * ```
+ */
 export const Text: FC<PropsWithChildren<ElementProps<'p'>>> = ({ style, ...props }) => {
   const styleObject = styleObjectFromUnknown(style) ?? {}
   const margins = expandBoxValues(styleObject.margin, {
@@ -171,6 +193,27 @@ export const Text: FC<PropsWithChildren<ElementProps<'p'>>> = ({ style, ...props
   )
 }
 
+/**
+ * Heading element with optional semantic level and margin shorthands.
+ *
+ * @param props - Heading props.
+ * @param props.as - Heading tag to render. Defaults to `h1`.
+ * @param props.m - Margin shorthand.
+ * @param props.mx - Horizontal margin shorthand.
+ * @param props.my - Vertical margin shorthand.
+ * @param props.mt - Top margin.
+ * @param props.mr - Right margin.
+ * @param props.mb - Bottom margin.
+ * @param props.ml - Left margin.
+ * @returns A heading element.
+ *
+ * @example
+ * ```tsx
+ * <Heading as="h2" mb={12}>
+ *   Account summary
+ * </Heading>
+ * ```
+ */
 export const Heading: FC<HeadingProps> = ({
   as = 'h1',
   children,
@@ -198,6 +241,24 @@ export const Heading: FC<HeadingProps> = ({
   )
 }
 
+/**
+ * Link rendered with button-friendly defaults and Outlook padding support.
+ *
+ * @param props - Button link props.
+ * @param props.href - Destination URL.
+ * @param props.target - Link target. Defaults to `_blank`.
+ * @returns An anchor styled as a button.
+ *
+ * @example
+ * ```tsx
+ * <Button
+ *   href="https://example.com/start"
+ *   style={{ backgroundColor: '#111827', color: '#ffffff', padding: '12px 16px' }}
+ * >
+ *   Get started
+ * </Button>
+ * ```
+ */
 export const Button: FC<LinkProps> = ({ children, style, target = '_blank', ...props }) => {
   const styleObject = styleObjectFromUnknown(style) ?? {}
   const padding = expandBoxValues(styleObject.padding, {
@@ -252,12 +313,168 @@ export const Button: FC<LinkProps> = ({ children, style, target = '_blank', ...p
   )
 }
 
+/**
+ * Anchor element that requires `href` and defaults to `target="_blank"`.
+ *
+ * @param props - Link props.
+ * @param props.href - Destination URL.
+ * @param props.target - Link target. Defaults to `_blank`.
+ * @returns An anchor element.
+ *
+ * @example
+ * ```tsx
+ * <Link href="https://example.com/account">
+ *   View your account
+ * </Link>
+ * ```
+ */
 export const Link: FC<LinkProps> = ({ target = '_blank', ...props }) => (
   <a {...props} target={target} />
 )
 
+/**
+ * Image element that requires both `src` and `alt`.
+ *
+ * @param props - Image props.
+ * @param props.src - Image URL.
+ * @param props.alt - Alternative text for accessibility and clients that block images.
+ * @returns An image element.
+ *
+ * @example
+ * ```tsx
+ * <Img src="https://example.com/logo.png" alt="Example" width="120" />
+ * ```
+ */
 export const Img: FC<ImageProps> = (props) => <img {...props} />
 
+/**
+ * Inline code text with email-friendly default styling.
+ *
+ * @param props - Standard `<code>` attributes and children.
+ * @returns A styled inline code element.
+ *
+ * @example
+ * ```tsx
+ * <Text>
+ *   Use <CodeInline>npm run build</CodeInline> before deploying.
+ * </Text>
+ * ```
+ */
+export const CodeInline: FC<CodeInlineProps> = ({ style, ...props }) => (
+  <code
+    {...props}
+    style={{
+      backgroundColor: '#f3f4f6',
+      color: '#111827',
+      fontFamily: 'Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
+      fontSize: '13px',
+      padding: '2px 4px',
+      ...styleObjectFromUnknown(style),
+    }}
+  />
+)
+
+/**
+ * Preformatted code block with wrapping and monospace defaults.
+ *
+ * @param props - Standard `<pre>` attributes and children.
+ * @returns A styled code block.
+ *
+ * @example
+ * ```tsx
+ * <CodeBlock>{`curl https://api.example.com/status`}</CodeBlock>
+ * ```
+ */
+export const CodeBlock: FC<CodeBlockProps> = ({ style, ...props }) => (
+  <pre
+    {...props}
+    style={{
+      backgroundColor: '#f3f4f6',
+      color: '#111827',
+      fontFamily: 'Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
+      fontSize: '13px',
+      lineHeight: '20px',
+      margin: '16px 0',
+      overflowX: 'auto',
+      padding: '12px',
+      whiteSpace: 'pre-wrap',
+      wordBreak: 'break-word',
+      ...styleObjectFromUnknown(style),
+    }}
+  />
+)
+
+/**
+ * Ordered or unordered list with email-oriented spacing defaults.
+ *
+ * @param props - List props.
+ * @param props.marker - CSS list marker style.
+ * @param props.ordered - Render an ordered list when `true`; otherwise renders an unordered list.
+ * @returns An ordered or unordered list.
+ *
+ * @example
+ * ```tsx
+ * <List ordered>
+ *   <ListItem>Confirm your address</ListItem>
+ *   <ListItem>Open the dashboard</ListItem>
+ * </List>
+ * ```
+ */
+export const List: FC<ListProps> = ({ marker, ordered, style, ...props }) => {
+  const Tag = ordered ? 'ol' : 'ul'
+
+  return (
+    <Tag
+      {...props}
+      style={{
+        margin: '16px 0',
+        paddingLeft: '24px',
+        ...(marker ? { listStyleType: marker } : {}),
+        ...styleObjectFromUnknown(style),
+      }}
+    />
+  )
+}
+
+/**
+ * List item with default text sizing and spacing.
+ *
+ * @param props - Standard `<li>` attributes and children.
+ * @returns A list item.
+ *
+ * @example
+ * ```tsx
+ * <List>
+ *   <ListItem>First step</ListItem>
+ * </List>
+ * ```
+ */
+export const ListItem: FC<ListItemProps> = ({ style, ...props }) => (
+  <li
+    {...props}
+    style={{
+      fontSize: '14px',
+      lineHeight: '24px',
+      marginBottom: '8px',
+      ...styleObjectFromUnknown(style),
+    }}
+  />
+)
+
+/**
+ * Hidden preview text that is relocated near the top of the rendered email.
+ *
+ * @param props - Preview props and preview text children.
+ * @returns A hidden preview text container.
+ *
+ * @example
+ * ```tsx
+ * <Html>
+ *   <Preview>Your receipt is ready.</Preview>
+ *   <Body>...</Body>
+ * </Html>
+ * ```
+ */
 export const Preview: FC<PropsWithChildren<ElementProps<'div'>>> = ({
   children,
   style,
@@ -279,6 +496,19 @@ export const Preview: FC<PropsWithChildren<ElementProps<'div'>>> = ({
   </div>
 )
 
+/**
+ * Horizontal rule with an email-safe border default.
+ *
+ * @param props - Standard `<hr>` attributes.
+ * @returns A horizontal rule.
+ *
+ * @example
+ * ```tsx
+ * <Text>Order details</Text>
+ * <Hr />
+ * <Text>Total: $42.00</Text>
+ * ```
+ */
 export const Hr: FC<ElementProps<'hr'>> = ({ style, ...props }) => (
   <hr
     {...props}

@@ -12,6 +12,24 @@ const RESOLVED_CSS_SUFFIX = '.css'
 const SOURCE_MODULE_FILTER: RegExp = /\.[cm]?[jt]sx?$/
 const TAILWIND_COMPONENT_OPEN_TAG_PATTERN: RegExp = /<Tailwind\b([^>]*?)(\/?)>/g
 
+/**
+ * Options for the `hono-email/plugin` Tailwind integration.
+ *
+ * @property configPath - Optional Tailwind config path to include in generated CSS.
+ * @property css - Additional CSS appended to the generated per-file Tailwind CSS module.
+ * @property packageNames - Package names whose `Tailwind` imports should be transformed.
+ * @property runtimeModuleSpecifier - Module specifier used when generated code imports runtime helpers.
+ * @property safelist - Tailwind classes to always include in the generated artifact.
+ *
+ * @example
+ * ```ts
+ * import { vitePlugin as EmailTailwind } from 'hono-email/plugin'
+ *
+ * export default {
+ *   plugins: [EmailTailwind({ safelist: ['text-brand'] })],
+ * }
+ * ```
+ */
 export type EmailTailwindPluginOptions = {
   configPath?: string
   css?: string
@@ -189,31 +207,170 @@ const factory: UnpluginFactory<EmailTailwindPluginOptions | undefined> = (option
 const EmailTailwind: UnpluginInstance<EmailTailwindPluginOptions | undefined, boolean> =
   createUnplugin(factory)
 
+/**
+ * Unplugin instance for advanced bundler integrations.
+ *
+ * @returns A bundler-specific plugin when calling one of the unplugin methods.
+ *
+ * @example
+ * ```ts
+ * import EmailTailwind from 'hono-email/plugin'
+ *
+ * export default EmailTailwind.vite()
+ * ```
+ */
 export default EmailTailwind
+
+/**
+ * Rollup plugin that injects Tailwind artifacts into `<Tailwind>` components.
+ *
+ * @param options - Tailwind plugin options.
+ * @returns A Rollup plugin.
+ *
+ * @example
+ * ```ts
+ * import { rollupPlugin as EmailTailwind } from 'hono-email/plugin'
+ *
+ * export default { plugins: [EmailTailwind()] }
+ * ```
+ */
 export const rollupPlugin: UnpluginInstance<
   EmailTailwindPluginOptions | undefined,
   boolean
 >['rollup'] = EmailTailwind.rollup
+
+/**
+ * Vite plugin that injects Tailwind artifacts into `<Tailwind>` components.
+ *
+ * @param options - Tailwind plugin options.
+ * @returns A Vite plugin.
+ *
+ * @example
+ * ```ts
+ * import { defineConfig } from 'vite'
+ * import { vitePlugin as EmailTailwind } from 'hono-email/plugin'
+ *
+ * export default defineConfig({ plugins: [EmailTailwind()] })
+ * ```
+ */
 export const vitePlugin: UnpluginInstance<EmailTailwindPluginOptions | undefined, boolean>['vite'] =
   EmailTailwind.vite
+
+/**
+ * Rolldown plugin that injects Tailwind artifacts into `<Tailwind>` components.
+ *
+ * @param options - Tailwind plugin options.
+ * @returns A Rolldown plugin.
+ *
+ * @example
+ * ```ts
+ * import { rolldownPlugin as EmailTailwind } from 'hono-email/plugin'
+ *
+ * export default { plugins: [EmailTailwind()] }
+ * ```
+ */
 export const rolldownPlugin: UnpluginInstance<
   EmailTailwindPluginOptions | undefined,
   boolean
 >['rolldown'] = EmailTailwind.rolldown
+
+/**
+ * Webpack plugin that injects Tailwind artifacts into `<Tailwind>` components.
+ *
+ * @param options - Tailwind plugin options.
+ * @returns A Webpack plugin.
+ *
+ * @example
+ * ```js
+ * const { webpackPlugin: EmailTailwind } = require('hono-email/plugin')
+ *
+ * module.exports = { plugins: [EmailTailwind()] }
+ * ```
+ */
 export const webpackPlugin: UnpluginInstance<
   EmailTailwindPluginOptions | undefined,
   boolean
 >['webpack'] = EmailTailwind.webpack
+
+/**
+ * Rspack plugin that injects Tailwind artifacts into `<Tailwind>` components.
+ *
+ * @param options - Tailwind plugin options.
+ * @returns An Rspack plugin.
+ *
+ * @example
+ * ```ts
+ * import { rspackPlugin as EmailTailwind } from 'hono-email/plugin'
+ *
+ * export default { plugins: [EmailTailwind()] }
+ * ```
+ */
 export const rspackPlugin: UnpluginInstance<
   EmailTailwindPluginOptions | undefined,
   boolean
 >['rspack'] = EmailTailwind.rspack
+
+/**
+ * Esbuild plugin that injects Tailwind artifacts into `<Tailwind>` components.
+ *
+ * @param options - Tailwind plugin options.
+ * @returns An esbuild plugin.
+ *
+ * @example
+ * ```ts
+ * import { esbuildPlugin as EmailTailwind } from 'hono-email/plugin'
+ *
+ * await esbuild.build({ plugins: [EmailTailwind()] })
+ * ```
+ */
 export const esbuildPlugin: UnpluginInstance<
   EmailTailwindPluginOptions | undefined,
   boolean
 >['esbuild'] = EmailTailwind.esbuild
+
+/**
+ * Farm plugin that injects Tailwind artifacts into `<Tailwind>` components.
+ *
+ * @param options - Tailwind plugin options.
+ * @returns A Farm plugin.
+ *
+ * @example
+ * ```ts
+ * import { farmPlugin as EmailTailwind } from 'hono-email/plugin'
+ *
+ * export default { plugins: [EmailTailwind()] }
+ * ```
+ */
 export const farmPlugin: UnpluginInstance<EmailTailwindPluginOptions | undefined, boolean>['farm'] =
   EmailTailwind.farm
+
+/**
+ * Bun plugin that injects Tailwind artifacts into `<Tailwind>` components.
+ *
+ * @param options - Tailwind plugin options.
+ * @returns A Bun plugin.
+ *
+ * @example
+ * ```ts
+ * import { bunPlugin as EmailTailwind } from 'hono-email/plugin'
+ *
+ * await Bun.build({ plugins: [EmailTailwind()] })
+ * ```
+ */
 export const bunPlugin: UnpluginInstance<EmailTailwindPluginOptions | undefined, boolean>['bun'] =
   EmailTailwind.bun
+
+/**
+ * Raw unplugin factory for custom plugin wiring.
+ *
+ * @param options - Tailwind plugin options.
+ * @returns An unplugin definition.
+ *
+ * @example
+ * ```ts
+ * import { unpluginFactory } from 'hono-email/plugin'
+ *
+ * const plugin = unpluginFactory({ safelist: ['text-brand'] })
+ * ```
+ */
 export const unpluginFactory: UnpluginFactory<EmailTailwindPluginOptions | undefined> = factory

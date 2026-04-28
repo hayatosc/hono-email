@@ -11,12 +11,39 @@ import {
   resolveCssVariables,
 } from './css'
 
+/**
+ * Compiled Tailwind CSS data consumed by `<Tailwind>`.
+ *
+ * @property classes - Class tokens known to the artifact.
+ * @property headCssByClass - Responsive or head-only CSS keyed by class token.
+ * @property inlineStylesByClass - Inline declarations keyed by class token.
+ *
+ * @example
+ * ```ts
+ * const artifact: TailwindBuildArtifact = buildTailwindArtifactFromCss({
+ *   css: '.text-brand { color: #111827; }',
+ * })
+ * ```
+ */
 export type TailwindBuildArtifact = {
   classes: string[]
   headCssByClass: Record<string, string>
   inlineStylesByClass: Record<string, Record<string, string>>
 }
 
+/**
+ * CSS input used to build a Tailwind artifact.
+ *
+ * @property css - CSS text to parse.
+ * @property classes - Optional explicit class list. When omitted, classes are discovered from CSS.
+ *
+ * @example
+ * ```ts
+ * buildTailwindArtifactFromCss({
+ *   css: '.px-4 { padding-left: 1rem; padding-right: 1rem; }',
+ * })
+ * ```
+ */
 export type BuildTailwindArtifactFromCssOptions = {
   css: string
   classes?: string[]
@@ -282,6 +309,19 @@ const uniqueClasses = (classes: string[]): string[] =>
     new Set(classes.map((className) => className.trim()).filter((className) => className !== '')),
   )
 
+/**
+ * Collects class tokens from an HTML string.
+ *
+ * @param html - HTML to scan.
+ * @returns Unique class tokens in document order.
+ *
+ * @example
+ * ```ts
+ * const classes = await collectTailwindClassesFromHtml(
+ *   '<p class="text-brand px-4">Hello</p>',
+ * )
+ * ```
+ */
 export const collectTailwindClassesFromHtml = async (html: string): Promise<string[]> => {
   const classTokens = new Set<string>()
 
@@ -299,6 +339,19 @@ export const collectTailwindClassesFromHtml = async (html: string): Promise<stri
   return Array.from(classTokens)
 }
 
+/**
+ * Builds a Tailwind artifact from CSS for explicit `<Tailwind artifact={...}>` usage.
+ *
+ * @param options - CSS and optional class list.
+ * @returns Tailwind build artifact consumed by `<Tailwind>`.
+ *
+ * @example
+ * ```ts
+ * const artifact = buildTailwindArtifactFromCss({
+ *   css: '.text-brand { color: #111827; }',
+ * })
+ * ```
+ */
 export const buildTailwindArtifactFromCss = ({
   classes,
   css,

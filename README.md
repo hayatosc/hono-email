@@ -250,18 +250,29 @@ if (receipt.successful && receipt.queued) {
 - `Html`
 - `Head`
 - `Body`
+- `Box`
+- `Card`
 - `Container`
+- `Flex`
+- `Grid`
 - `Section`
 - `Row`
 - `Column`
+- `Spacer`
 - `Text`
 - `Heading`
 - `Button`
 - `Link`
 - `Img`
+- `List`
+- `ListItem`
+- `CodeInline`
+- `CodeBlock`
 - `Preview`
 - `Hr`
 - `Font`
+- `ColorScheme`
+- `Conditional`
 - `Tailwind`
 - `Markdown`
 
@@ -272,6 +283,12 @@ Notes:
 - `Text` defaults to `font-size: 14px`, `line-height: 24px`, and vertical `16px` margins
 - `Hr` defaults to `border-top: 1px solid #eaeaea`
 - `Heading` accepts shorthand margin props such as `m`, `mx`, `my`, `mt`, `mr`, `mb`, and `ml`
+- `Flex` renders table-based layout instead of CSS `display:flex`
+- `Grid` renders table-based columns instead of CSS `display:grid`
+- `Card` renders a bordered table container with configurable padding and colors
+- `List` and `ListItem` provide email-oriented spacing defaults for ordered and unordered lists
+- `Spacer` renders explicit email-safe spacing
+- `Conditional` renders Outlook conditional comments and is still validated in strict mode
 
 ## Strict Mode
 

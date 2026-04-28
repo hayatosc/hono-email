@@ -4,6 +4,25 @@ type FontStyle = 'italic' | 'normal' | 'oblique'
 type FontWeight = 'bold' | 'bolder' | 'lighter' | 'normal' | number
 type FontFormat = 'embedded-opentype' | 'opentype' | 'svg' | 'truetype' | 'woff' | 'woff2'
 
+/**
+ * Options for rendering a web font declaration and fallback font family.
+ *
+ * @property fontFamily - Primary font-family name.
+ * @property fallbackFontFamily - Fallback family or families appended after `fontFamily`.
+ * @property fontStyle - Optional CSS font style.
+ * @property fontWeight - Optional CSS font weight.
+ * @property webFont - Optional remote web font source.
+ *
+ * @example
+ * ```tsx
+ * <Font
+ *   fallbackFontFamily={['Arial', 'sans-serif']}
+ *   fontFamily="Inter"
+ *   fontWeight={400}
+ *   webFont={{ url: 'https://example.com/inter.woff2', format: 'woff2' }}
+ * />
+ * ```
+ */
 export type FontProps = {
   fallbackFontFamily: string | string[]
   fontFamily: string

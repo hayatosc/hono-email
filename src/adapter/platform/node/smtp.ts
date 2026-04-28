@@ -124,6 +124,14 @@ const toSmtpSocket = (socket: Socket, opened: Promise<unknown>, hostname: string
   }
 }
 
+/**
+ * Node.js SMTP connector backed by `node:net` and `node:tls`.
+ *
+ * @example
+ * ```ts
+ * const transport = new SmtpTransport({ connector: nodeSmtpConnector, hostname, port })
+ * ```
+ */
 export const nodeSmtpConnector: SmtpConnector = {
   async connect(address: SmtpSocketAddress, options: SmtpConnectorOptions): Promise<SmtpSocket> {
     const [{ createConnection }, { connect: connectTls }] = await Promise.all([
@@ -146,6 +154,16 @@ export const nodeSmtpConnector: SmtpConnector = {
   },
 }
 
+/**
+ * Creates the Node.js SMTP connector.
+ *
+ * @returns The Node.js SMTP connector.
+ *
+ * @example
+ * ```ts
+ * const connector = createNodeSmtpConnector()
+ * ```
+ */
 export const createNodeSmtpConnector = (): SmtpConnector => nodeSmtpConnector
 
 export default nodeSmtpConnector
