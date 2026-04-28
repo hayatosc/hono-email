@@ -84,7 +84,7 @@ await build('runtime library entry points', {
   entrypoints: [...runtimeEntryPoints],
   root: './src',
   format: 'esm',
-  target: 'node',
+  target: 'browser',
 })
 
 await build('web platform connector entry points', {
