@@ -38,6 +38,18 @@ type MarkdownProps = MarkdownRenderOptions & {
   children: string
 }
 
+type ConditionalProps = PropsWithChildren<{
+  mso?: boolean
+  notMso?: boolean
+}>
+
+type ColorSchemeValue = 'dark' | 'light' | 'light dark'
+
+type ColorSchemeProps = {
+  colorScheme?: ColorSchemeValue
+  supportedColorSchemes?: ColorSchemeValue
+}
+
 export const Font = (props: FontProps) => renderFontStyleTag(props)
 
 export const Tailwind = async ({ artifact, children }: TailwindProps) => {
@@ -73,3 +85,28 @@ export const Markdown = async ({
       ...(sanitize !== undefined ? { sanitize } : {}),
     }),
   )
+
+export const Conditional = async ({ children, mso, notMso }: ConditionalProps) => {
+  const renderedChildren = await renderFragmentToHtml(<>{children}</>)
+
+  if (notMso) {
+    return raw(`<!--[if !mso]><!-->${renderedChildren}<!--<![endif]-->`)
+  }
+
+  if (mso === false) {
+    return raw(renderedChildren)
+  }
+
+  return raw(`<!--[if mso]>${renderedChildren}<![endif]-->`)
+}
+
+export const ColorScheme = ({
+  colorScheme = 'light dark',
+  supportedColorSchemes = colorScheme,
+}: ColorSchemeProps) => (
+  <>
+    <meta name="color-scheme" content={colorScheme} />
+    <meta name="supported-color-schemes" content={supportedColorSchemes} />
+    <style>{`:root { color-scheme: ${colorScheme}; supported-color-schemes: ${supportedColorSchemes}; }`}</style>
+  </>
+)

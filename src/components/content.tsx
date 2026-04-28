@@ -28,6 +28,15 @@ type HeadingProps = PropsWithChildren<
 type LinkProps = PropsWithChildren<Omit<ElementProps<'a'>, 'children' | 'href'> & { href: string }>
 
 type ImageProps = Omit<ElementProps<'img'>, 'src' | 'alt'> & { src: string; alt: string }
+type CodeInlineProps = PropsWithChildren<ElementProps<'code'>>
+type CodeBlockProps = PropsWithChildren<ElementProps<'pre'>>
+type ListProps = PropsWithChildren<
+  Omit<ElementProps<'ul'>, 'children'> & {
+    marker?: JSX.CSSProperties['listStyleType']
+    ordered?: boolean
+  }
+>
+type ListItemProps = PropsWithChildren<ElementProps<'li'>>
 
 type OutlookCssProperties = JSX.CSSProperties & {
   msoPaddingAlt?: string
@@ -257,6 +266,67 @@ export const Link: FC<LinkProps> = ({ target = '_blank', ...props }) => (
 )
 
 export const Img: FC<ImageProps> = (props) => <img {...props} />
+
+export const CodeInline: FC<CodeInlineProps> = ({ style, ...props }) => (
+  <code
+    {...props}
+    style={{
+      backgroundColor: '#f3f4f6',
+      color: '#111827',
+      fontFamily: 'Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
+      fontSize: '13px',
+      padding: '2px 4px',
+      ...styleObjectFromUnknown(style),
+    }}
+  />
+)
+
+export const CodeBlock: FC<CodeBlockProps> = ({ style, ...props }) => (
+  <pre
+    {...props}
+    style={{
+      backgroundColor: '#f3f4f6',
+      color: '#111827',
+      fontFamily: 'Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
+      fontSize: '13px',
+      lineHeight: '20px',
+      margin: '16px 0',
+      overflowX: 'auto',
+      padding: '12px',
+      whiteSpace: 'pre-wrap',
+      wordBreak: 'break-word',
+      ...styleObjectFromUnknown(style),
+    }}
+  />
+)
+
+export const List: FC<ListProps> = ({ marker, ordered, style, ...props }) => {
+  const Tag = ordered ? 'ol' : 'ul'
+
+  return (
+    <Tag
+      {...props}
+      style={{
+        margin: '16px 0',
+        paddingLeft: '24px',
+        ...(marker ? { listStyleType: marker } : {}),
+        ...styleObjectFromUnknown(style),
+      }}
+    />
+  )
+}
+
+export const ListItem: FC<ListItemProps> = ({ style, ...props }) => (
+  <li
+    {...props}
+    style={{
+      fontSize: '14px',
+      lineHeight: '24px',
+      marginBottom: '8px',
+      ...styleObjectFromUnknown(style),
+    }}
+  />
+)
 
 export const Preview: FC<PropsWithChildren<ElementProps<'div'>>> = ({
   children,
