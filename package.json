@@ -55,7 +55,8 @@
     },
     "./plugin": {
       "types": "./dist/unplugin.d.ts",
-      "import": "./dist/unplugin.js"
+      "import": "./dist/unplugin.js",
+      "require": "./dist/unplugin.cjs"
     }
   },
   "scripts": {
