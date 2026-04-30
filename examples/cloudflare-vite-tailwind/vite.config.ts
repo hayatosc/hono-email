@@ -2,9 +2,8 @@ import { fileURLToPath, URL } from 'node:url'
 
 import { cloudflare } from '@cloudflare/vite-plugin'
 import tailwindcss from '@tailwindcss/vite'
-import { defineConfig } from 'vite'
-
 import { vitePlugin as EmailTailwind } from 'hono-email/plugin'
+import { defineConfig } from 'vite'
 
 export default defineConfig({
   resolve: {
