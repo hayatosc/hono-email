@@ -45,34 +45,6 @@ type AttachmentContentSource = {
   contentType?: string
 }
 
-type BunFile = {
-  arrayBuffer(): Promise<ArrayBuffer>
-}
-
-type BunRuntime = {
-  file(path: string): BunFile
-}
-
-type DenoRuntime = {
-  readFile(path: string): Promise<Uint8Array>
-}
-
-type NodeFsPromises = {
-  readFile(path: string): Promise<Uint8Array>
-}
-
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null
-
-const isBunRuntime = (value: unknown): value is BunRuntime =>
-  isRecord(value) && typeof value.file === 'function'
-
-const isDenoRuntime = (value: unknown): value is DenoRuntime =>
-  isRecord(value) && typeof value.readFile === 'function'
-
-const isNodeFsPromises = (value: unknown): value is NodeFsPromises =>
-  isRecord(value) && typeof value.readFile === 'function'
-
 const isReadableStream = (value: unknown): value is ReadableStream<Uint8Array> =>
   value instanceof ReadableStream
 
@@ -250,26 +222,6 @@ const readReadableStream = async (
   return output
 }
 
-const readFileAttachment = async (path: string): Promise<Uint8Array> => {
-  const deno: unknown = Reflect.get(globalThis, 'Deno')
-  if (isDenoRuntime(deno)) {
-    return deno.readFile(path)
-  }
-
-  const bun: unknown = Reflect.get(globalThis, 'Bun')
-  if (isBunRuntime(bun)) {
-    return new Uint8Array(await bun.file(path).arrayBuffer())
-  }
-
-  const fsModuleSpecifier = 'node:fs/promises'
-  const fsModule: unknown = await import(fsModuleSpecifier)
-  if (isNodeFsPromises(fsModule)) {
-    return fsModule.readFile(path)
-  }
-
-  throw new Error('Reading attachment files is not supported in this runtime.')
-}
-
 const fetchAttachment = async (
   href: string,
   attachment: EmailAttachment,
@@ -345,7 +297,9 @@ const resolveAttachmentContent = async (
       return fetchAttachment(attachment.path, attachment, attachment.httpHeaders, limit)
     }
 
-    return { content: await readFileAttachment(attachment.path) }
+    throw new Error(
+      'Local attachment paths are not read by hono-email. Read the file in user code and pass it as attachment content instead.',
+    )
   }
 
   if (attachment.href !== undefined) {

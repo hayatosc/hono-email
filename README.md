@@ -137,7 +137,7 @@ try {
       },
       {
         filename: 'logo.png',
-        path: './assets/logo.png',
+        href: 'https://example.com/assets/logo.png',
         cid: 'logo',
         contentDisposition: 'inline',
       },
@@ -169,7 +169,7 @@ SMTP-specific delivery controls:
 - `dkim` can be configured on `SmtpTransport` or overridden per message to add a `DKIM-Signature` header before SMTP delivery.
 - `envelope` lets you override the SMTP envelope sender and recipients without changing the visible `From` / `To` headers.
 - `to`, `cc`, `bcc`, and `envelope.to` accept single addresses or arrays. SMTP sends one `RCPT TO` command per resolved recipient and reports partial recipient rejection in `receipt.rejected`.
-- `attachments` supports `content`, `path`, `href`, `ReadableStream`, `encoding`, inline `cid`, and explicit `contentType`. `limits.maxAttachmentSize` rejects oversized attachments before delivery.
+- `attachments` supports `content`, `href`, remote URL / data URI `path`, `ReadableStream`, `encoding`, inline `cid`, and explicit `contentType`. `hono-email` does not read local files; read local files in your app and pass the bytes as `content`. `limits.maxAttachmentSize` rejects oversized attachments before delivery.
 - `headers` is for custom headers only. Managed headers such as `From`, `To`, `Subject`, `Date`, `Message-ID`, `MIME-Version`, and `Content-Type` are rejected when passed as custom headers.
 - `connectionTimeout`, `greetingTimeout`, and `socketTimeout` bound SMTP connection and protocol waits. STARTTLS and AUTH are checked against EHLO capabilities before use.
 

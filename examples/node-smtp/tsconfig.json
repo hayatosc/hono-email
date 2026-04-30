@@ -3,9 +3,9 @@
   "compilerOptions": {
     "types": ["node"],
     "paths": {
-      "hono-email": ["../../src/index.ts"],
-      "hono-email/smtp": ["../../src/adapter/smtp/index.ts"],
-      "hono-email/smtp/node": ["../../src/adapter/platform/node/smtp.ts"]
+      "hono-email": ["../../dist/types/index.d.ts"],
+      "hono-email/smtp": ["../../dist/types/adapter/smtp/index.d.ts"],
+      "hono-email/smtp/node": ["../../dist/types/adapter/platform/node/smtp.d.ts"]
     }
   },
   "include": ["src"]

@@ -1,3 +1,6 @@
+import { CloudflareEmailAdapter } from './adapter'
+import { RESTConnector } from './rest'
+
 export type {
   EmailAddress,
   EmailAdapter,
@@ -34,6 +37,6 @@ export type {
   CloudflareEmailWorkerPayload,
   CloudflareEmailWorkersConnectorOptions,
 } from './types'
-export { RESTConnector } from './rest'
-export { CloudflareEmailAdapter } from './adapter'
-export { CloudflareEmailAdapter as default } from './adapter'
+
+export { CloudflareEmailAdapter, RESTConnector }
+export default CloudflareEmailAdapter
