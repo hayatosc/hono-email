@@ -4,7 +4,7 @@ import { cloudflare } from '@cloudflare/vite-plugin'
 import tailwindcss from '@tailwindcss/vite'
 import { defineConfig } from 'vite'
 
-import { vitePlugin as EmailTailwind } from '../../src/unplugin'
+import { vitePlugin as EmailTailwind } from 'hono-email/plugin'
 
 export default defineConfig({
   resolve: {
@@ -12,22 +12,22 @@ export default defineConfig({
       {
         find: 'hono-email/cloudflare-email/cloudflare',
         replacement: fileURLToPath(
-          new URL('../../src/adapter/platform/cloudflare/email-service.ts', import.meta.url),
+          new URL('../../dist/adapter/platform/cloudflare/email-service.js', import.meta.url),
         ),
       },
       {
         find: 'hono-email/cloudflare-email',
         replacement: fileURLToPath(
-          new URL('../../src/adapter/cloudflare-email/index.ts', import.meta.url),
+          new URL('../../dist/adapter/cloudflare-email/index.js', import.meta.url),
         ),
       },
       {
         find: 'hono-email/plugin',
-        replacement: fileURLToPath(new URL('../../src/unplugin.ts', import.meta.url)),
+        replacement: fileURLToPath(new URL('../../dist/unplugin.js', import.meta.url)),
       },
       {
         find: 'hono-email',
-        replacement: fileURLToPath(new URL('../../src/index.ts', import.meta.url)),
+        replacement: fileURLToPath(new URL('../../dist/index.js', import.meta.url)),
       },
     ],
   },

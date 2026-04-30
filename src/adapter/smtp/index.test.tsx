@@ -384,6 +384,25 @@ describe('SMTP message building', () => {
       globalThis.fetch = originalFetch
     }
   })
+
+  test('does not read local attachment paths', async () => {
+    await expect(
+      buildRawEmailMessageAsync({
+        attachments: [
+          {
+            path: './invoice.txt',
+          },
+        ],
+        from: 'sender@example.com',
+        html: '<p>Hello</p>',
+        subject: 'Local attachment',
+        text: 'Hello',
+        to: 'recipient@example.com',
+      }),
+    ).rejects.toThrow(
+      'Local attachment paths are not read by hono-email. Read the file in user code and pass it as attachment content instead.',
+    )
+  })
 })
 
 describe('sendEmail over SMTP', () => {

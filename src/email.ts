@@ -33,7 +33,8 @@ export type EmailAttachmentDisposition = 'attachment' | 'inline'
  *
  * @property filename - Attachment filename.
  * @property content - In-memory attachment content.
- * @property path - Local file path for runtimes that support file reads.
+ * @property path - Remote URL or data URI to resolve as attachment content. Local files must be
+ * read by user code and passed as `content`.
  * @property href - Remote URL to fetch as attachment content.
  * @property contentType - MIME content type.
  * @property contentDisposition - Attachment disposition. Defaults to `attachment`.
