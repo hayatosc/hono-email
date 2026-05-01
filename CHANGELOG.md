@@ -13,8 +13,6 @@
 - feat(smtp): add dkim envelope and verify support (#15)
 - fix: resolve CodeQL code scanning security alerts (#14)
 
-## [Unreleased]
-
 ## [0.3.0] - 2026-04-25
 
 ### Add SMTP Connector
