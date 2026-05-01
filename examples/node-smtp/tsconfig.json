@@ -1,12 +1,14 @@
 {
-  "extends": "../../tsconfig.json",
-  "compilerOptions": {
-    "types": ["node"],
-    "paths": {
-      "hono-email": ["../../dist/types/index.d.ts"],
-      "hono-email/smtp": ["../../dist/types/adapter/smtp/index.d.ts"],
-      "hono-email/smtp/node": ["../../dist/types/adapter/platform/node/smtp.d.ts"]
-    }
-  },
-  "include": ["src"]
+    "extends": "../../tsconfig.json",
+    "compilerOptions": {
+        "types": ["node"],
+        "paths": {
+            "hono-email": ["../../dist/index.d.ts"],
+            "hono-email/smtp": ["../../dist/adapter/smtp/index.d.ts"],
+            "hono-email/smtp/node": [
+                "../../dist/adapter/platform/node/smtp.d.ts"
+            ]
+        }
+    },
+    "include": ["src"]
 }

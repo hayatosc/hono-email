@@ -183,6 +183,46 @@ Runtime connector entry points:
 Bun's TCP API supports direct TLS connections, but this connector does not support STARTTLS upgrade.
 Use port `465` with `secure: true` on Bun.
 
+### Resend
+
+`hono-email/resend` provides `ResendAdapter` for the Resend Email API.
+
+```tsx
+import { Body, Html, Text, sendEmail } from 'hono-email'
+import { ResendAdapter } from 'hono-email/resend'
+
+const receipt = await sendEmail({
+  adapter: ResendAdapter({
+    apiKey: process.env.RESEND_API_KEY!,
+  }),
+  from: 'Sender <sender@example.com>',
+  to: ['recipient@example.com'],
+  subject: 'Welcome',
+  jsx: (
+    <Html>
+      <Body>
+        <Text>Hello from Resend.</Text>
+      </Body>
+    </Html>
+  ),
+  attachments: [
+    {
+      filename: 'invoice.txt',
+      content: 'Invoice text',
+      contentType: 'text/plain',
+    },
+  ],
+})
+
+if (!receipt.successful) {
+  console.error(receipt.errorMessages)
+}
+```
+
+The adapter calls Resend directly with `fetch`; the official Resend SDK is not required. Resend
+requires a `User-Agent` header for direct HTTP requests, so `ResendAdapter` sends one by default and
+also accepts a `userAgent` override.
+
 ### Cloudflare Email Service
 
 `hono-email/cloudflare` provides `CloudflareEmailAdapter` and connectors for Cloudflare Email Service.

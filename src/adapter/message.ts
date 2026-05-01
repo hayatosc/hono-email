@@ -112,7 +112,7 @@ export type ResolvedEmailEnvelope = {
   recipients: string[]
 }
 
-const formatAddress = (address: EmailAddress): string => {
+export const formatEmailAddress = (address: EmailAddress): string => {
   if (typeof address === 'string') {
     const safeAddress = ensureSafeHeaderValue(address, 'email address')
     if (!EMAIL_ADDRESS_PATTERN.test(safeAddress)) {
@@ -144,7 +144,7 @@ const formatAddressList = (addresses: EmailAddress | EmailAddress[], fieldName: 
     throw new Error(`${fieldName} must include at least one address.`)
   }
 
-  return addressList.map(formatAddress).join(', ')
+  return addressList.map(formatEmailAddress).join(', ')
 }
 
 const buildMessageId = (domain: string): string => {
@@ -295,17 +295,17 @@ const buildRawEmailMessageWithAttachments = (
   )
   const headers: string[] = []
 
-  appendHeader(headers, 'From', formatAddress(message.from))
+  appendHeader(headers, 'From', formatEmailAddress(message.from))
   appendHeader(headers, 'To', formatAddressList(message.to, 'to'))
 
   const cc = toAddressList(message.cc)
   if (cc.length > 0) {
-    appendHeader(headers, 'Cc', cc.map(formatAddress).join(', '))
+    appendHeader(headers, 'Cc', cc.map(formatEmailAddress).join(', '))
   }
 
   const replyTo = toAddressList(message.replyTo)
   if (replyTo.length > 0) {
-    appendHeader(headers, 'Reply-To', replyTo.map(formatAddress).join(', '))
+    appendHeader(headers, 'Reply-To', replyTo.map(formatEmailAddress).join(', '))
   }
 
   appendHeader(headers, 'Subject', encodeHeaderValue(message.subject, 'subject'))
