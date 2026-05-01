@@ -8,12 +8,12 @@ const runtimeEntryPoints = [
   './src/index.ts',
   './src/adapter/index.ts',
   './src/adapter/smtp/index.ts',
-  './src/adapter/cloudflare-email/index.ts',
-  './src/adapter/cloudflare-email/rest.ts',
+  './src/adapter/cloudflare/index.ts',
+  './src/adapter/cloudflare/rest.ts',
 ] as const
 
 const webPlatformEntryPoints = [
-  './src/adapter/platform/cloudflare/email-service.ts',
+  './src/adapter/platform/cloudflare/index.ts',
   './src/adapter/platform/cloudflare/smtp.ts',
   './src/adapter/platform/deno/smtp.ts',
 ] as const

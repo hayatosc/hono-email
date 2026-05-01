@@ -45,17 +45,17 @@
       "types": "./dist/types/adapter/platform/*/smtp.d.ts",
       "import": "./dist/adapter/platform/*/smtp.js"
     },
-    "./cloudflare-email": {
-      "types": "./dist/types/adapter/cloudflare-email/index.d.ts",
-      "import": "./dist/adapter/cloudflare-email/index.js"
+    "./cloudflare": {
+      "types": "./dist/types/adapter/cloudflare/index.d.ts",
+      "import": "./dist/adapter/cloudflare/index.js"
     },
-    "./cloudflare-email/cloudflare": {
-      "types": "./dist/types/adapter/platform/cloudflare/email-service.d.ts",
-      "import": "./dist/adapter/platform/cloudflare/email-service.js"
+    "./cloudflare/workers": {
+      "types": "./dist/types/adapter/platform/cloudflare/index.d.ts",
+      "import": "./dist/adapter/platform/cloudflare/index.js"
     },
-    "./cloudflare-email/rest": {
-      "types": "./dist/types/adapter/cloudflare-email/rest.d.ts",
-      "import": "./dist/adapter/cloudflare-email/rest.js"
+    "./cloudflare/rest": {
+      "types": "./dist/types/adapter/cloudflare/rest.d.ts",
+      "import": "./dist/adapter/cloudflare/rest.js"
     },
     "./plugin": {
       "types": "./dist/types/unplugin.d.ts",

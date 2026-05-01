@@ -4,10 +4,9 @@
     "types": ["bun", "vite/client"],
     "paths": {
       "hono-email": ["../../dist/types/index.d.ts"],
-      "hono-email/cloudflare-email": ["../../dist/types/adapter/cloudflare-email/index.d.ts"],
-      "hono-email/cloudflare-email/cloudflare": [
-        "../../dist/types/adapter/platform/cloudflare/email-service.d.ts"
-      ],
+      "hono-email/cloudflare": ["../../dist/types/adapter/cloudflare/index.d.ts"],
+      "hono-email/cloudflare/workers": ["../../dist/types/adapter/platform/cloudflare/index.d.ts"],
+      "hono-email/cloudflare/rest": ["../../dist/types/adapter/cloudflare/rest.d.ts"],
       "hono-email/plugin": ["../../dist/types/unplugin.d.ts"]
     }
   },

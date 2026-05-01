@@ -6,7 +6,7 @@ import type {
   CloudflareEmailConnectorRequest,
   CloudflareEmailConnectorResult,
   CloudflareEmailWorkersConnectorOptions,
-} from '../../cloudflare-email/types'
+} from '../../cloudflare/types'
 
 export type {
   CloudflareEmailBinding,
@@ -18,7 +18,7 @@ export type {
   CloudflareEmailWorkerNameAddress,
   CloudflareEmailWorkerAttachment,
   CloudflareEmailWorkerPayload,
-} from '../../cloudflare-email/types'
+} from '../../cloudflare/types'
 
 const createAcceptedResponse = (recipients: string[]): string =>
   `Cloudflare Email Service accepted ${recipients.length} recipient(s).`

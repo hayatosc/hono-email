@@ -2,11 +2,12 @@ import { connect } from 'cloudflare:sockets'
 import { withEnv } from 'cloudflare:workers'
 import { describe, expect, test } from 'vitest'
 
-import { CloudflareEmailAdapter } from '../../src/adapter/cloudflare-email/adapter'
-import type { CloudflareEmailBinding } from '../../src/adapter/platform/cloudflare/email-service'
-import WorkersConnector, {
+import { CloudflareEmailAdapter } from '../../src/adapter/cloudflare/adapter'
+import type { CloudflareEmailBinding } from '../../src/adapter/platform/cloudflare/index'
+import {
   createWorkersConnector,
-} from '../../src/adapter/platform/cloudflare/email-service'
+  WorkersConnector,
+} from '../../src/adapter/platform/cloudflare/index'
 import CloudflareConnector from '../../src/adapter/platform/cloudflare/smtp'
 import { SmtpTransport } from '../../src/adapter/smtp'
 
@@ -98,7 +99,9 @@ describe('Cloudflare email adapters in Workers runtime', () => {
 
     const receipt = await withEnv({ CUSTOM_EMAIL: binding }, () =>
       CloudflareEmailAdapter({
-        connector: createWorkersConnector({ bindingName: 'CUSTOM_EMAIL' }),
+        connector: createWorkersConnector({
+          bindingName: 'CUSTOM_EMAIL',
+        }),
       }).send({
         from: 'sender@example.com',
         html: '<p>Hello Workers</p>',

@@ -185,14 +185,14 @@ Use port `465` with `secure: true` on Bun.
 
 ### Cloudflare Email Service
 
-`hono-email/cloudflare-email` provides `CloudflareEmailAdapter` and connectors for Cloudflare Email Service.
+`hono-email/cloudflare` provides `CloudflareEmailAdapter` and connectors for Cloudflare Email Service.
 
 On Cloudflare Workers (using `WorkersConnector`):
 
 ```tsx
 import { Body, Html, Text, sendEmail } from 'hono-email'
-import { CloudflareEmailAdapter } from 'hono-email/cloudflare-email'
-import WorkersConnector from 'hono-email/cloudflare-email/cloudflare'
+import { CloudflareEmailAdapter } from 'hono-email/cloudflare'
+import WorkersConnector from 'hono-email/cloudflare/workers'
 
 export default {
   async fetch(_request: Request, env: Env): Promise<Response> {
@@ -219,7 +219,7 @@ REST API (other runtimes, using `RESTConnector`):
 
 ```tsx
 import { Body, Html, Text, sendEmail } from 'hono-email'
-import { CloudflareEmailAdapter, RESTConnector } from 'hono-email/cloudflare-email'
+import { CloudflareEmailAdapter, RESTConnector } from 'hono-email/cloudflare'
 
 const receipt = await sendEmail({
   adapter: CloudflareEmailAdapter({

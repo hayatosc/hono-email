@@ -17,7 +17,7 @@ import {
   type CloudflareEmailWorkerPayload,
 } from './types'
 
-const REST_MESSAGE_ID_PREFIX = 'cloudflare-email-rest'
+const REST_MESSAGE_ID_PREFIX = 'cloudflare-rest'
 
 const collectRecipients = (message: EmailMessage): string[] => {
   const recipients: EmailAddress[] = [

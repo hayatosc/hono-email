@@ -9,15 +9,15 @@ export default defineConfig({
   resolve: {
     alias: [
       {
-        find: 'hono-email/cloudflare-email/cloudflare',
+        find: 'hono-email/cloudflare/workers',
         replacement: fileURLToPath(
-          new URL('../../dist/adapter/platform/cloudflare/email-service.js', import.meta.url),
+          new URL('../../dist/adapter/platform/cloudflare/index.js', import.meta.url),
         ),
       },
       {
-        find: 'hono-email/cloudflare-email',
+        find: 'hono-email/cloudflare',
         replacement: fileURLToPath(
-          new URL('../../dist/adapter/cloudflare-email/index.js', import.meta.url),
+          new URL('../../dist/adapter/cloudflare/index.js', import.meta.url),
         ),
       },
       {

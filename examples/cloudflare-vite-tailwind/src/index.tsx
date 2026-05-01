@@ -1,9 +1,7 @@
 import { Hono } from 'hono'
 import { sendEmail, type EmailAddress } from 'hono-email'
-import { CloudflareEmailAdapter } from 'hono-email/cloudflare-email'
-import WorkersConnector, {
-  type CloudflareEmailBinding,
-} from 'hono-email/cloudflare-email/cloudflare'
+import { CloudflareEmailAdapter } from 'hono-email/cloudflare'
+import WorkersConnector, { type CloudflareEmailBinding } from 'hono-email/cloudflare/workers'
 import { env } from 'hono/adapter'
 
 import {

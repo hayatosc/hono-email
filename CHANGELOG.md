@@ -69,8 +69,8 @@ We have added an adapter for [Cloudflare Email Service](https://developers.cloud
 
 ```tsx
 import { Body, Html, Text, sendEmail } from 'hono-email'
-import { CloudflareEmailAdapter } from 'hono-email/cloudflare-email'
-import WorkersConnector from 'hono-email/cloudflare-email/cloudflare'
+import { CloudflareEmailAdapter } from 'hono-email/cloudflare'
+import WorkersConnector from 'hono-email/cloudflare/workers'
 
 export default {
   async fetch(_request: Request, env: Env): Promise<Response> {

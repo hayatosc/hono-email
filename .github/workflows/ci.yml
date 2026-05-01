@@ -62,7 +62,7 @@ jobs:
               - 'runtime-tests/bun/**'
             cloudflare:
               - 'src/adapter/platform/cloudflare/**'
-              - 'src/adapter/cloudflare-email/**'
+              - 'src/adapter/cloudflare/**'
               - 'src/adapter/smtp/**'
               - 'src/adapter/index.ts'
               - 'src/index.ts'
