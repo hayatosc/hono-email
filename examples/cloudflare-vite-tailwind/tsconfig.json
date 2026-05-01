@@ -1,20 +1,14 @@
 {
-    "extends": "../../tsconfig.json",
-    "compilerOptions": {
-        "types": ["bun", "vite/client"],
-        "paths": {
-            "hono-email": ["../../dist/index.d.ts"],
-            "hono-email/cloudflare": [
-                "../../dist/adapter/cloudflare/index.d.ts"
-            ],
-            "hono-email/cloudflare/workers": [
-                "../../dist/adapter/platform/cloudflare/index.d.ts"
-            ],
-            "hono-email/cloudflare/rest": [
-                "../../dist/adapter/cloudflare/rest.d.ts"
-            ],
-            "hono-email/plugin": ["../../dist/unplugin.d.mts"]
-        }
-    },
-    "include": ["src", "vite.config.ts", "worker-configuration.d.ts"]
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "types": ["bun", "vite/client"],
+    "paths": {
+      "hono-email": ["../../dist/index.d.ts"],
+      "hono-email/cloudflare": ["../../dist/adapter/cloudflare/index.d.ts"],
+      "hono-email/cloudflare/workers": ["../../dist/adapter/platform/cloudflare/index.d.ts"],
+      "hono-email/cloudflare/rest": ["../../dist/adapter/cloudflare/rest.d.ts"],
+      "hono-email/plugin": ["../../dist/unplugin.d.mts"]
+    }
+  },
+  "include": ["src", "vite.config.ts", "worker-configuration.d.ts"]
 }
