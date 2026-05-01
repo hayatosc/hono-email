@@ -34,7 +34,7 @@ export default defineConfig([
     },
     {
         entry: { unplugin: "./src/unplugin.ts" },
-        format: "esm",
+        format: ["esm", "cjs"],
         platform: "node",
         dts: true,
         outDir: "dist",
