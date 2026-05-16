@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 
-import { ResendAdapter, type ResendFetch, type ResendFetchInit } from '.'
+import ResendAdapter, { type ResendFetch, type ResendFetchInit } from '.'
 import { Body, Html, Text, sendEmail } from '../../index'
 
 const createMessage = () => ({

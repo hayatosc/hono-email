@@ -1,5 +1,9 @@
 # hono-email
 
+[![npm version](https://img.shields.io/npm/v/hono-email)](https://www.npmjs.com/package/hono-email)
+[![License](https://img.shields.io/npm/l/hono-email)](LICENSE)
+[![Node.js](https://img.shields.io/badge/node-%3E%3D20.0.0-brightgreen)](https://nodejs.org)
+
 `hono-email` is an ESM library for rendering HTML email and plain text from `hono/jsx`. It focuses on rendering, normalization, validation, and email-oriented primitives.
 
 > [!WARNING]
@@ -189,7 +193,7 @@ Use port `465` with `secure: true` on Bun.
 
 ```tsx
 import { Body, Html, Text, sendEmail } from 'hono-email'
-import { ResendAdapter } from 'hono-email/resend'
+import ResendAdapter from 'hono-email/resend'
 
 const receipt = await sendEmail({
   adapter: ResendAdapter({
