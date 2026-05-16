@@ -2,11 +2,22 @@
 
 ## [0.4.0] - 2026-05-16
 
+### Add Provider Adapters
+
+Added first-party email provider adapters for Resend, SendGrid, Postmark, and Mailgun. These adapters send directly with `fetch`, support the shared `sendEmail()` flow, and map provider responses into `SendEmailReceipt`.
+
+### Add Email Layout Helpers
+
+Added email-safe layout and content primitives including `Box`, `Card`, `Flex`, `Grid`, `Spacer`, `List`, `ListItem`, `CodeInline`, `CodeBlock`, `ColorScheme`, and `Conditional`. `Flex` and `Grid` render table-based layouts for email client compatibility, and Outlook conditional comments remain covered by strict validation.
+
+### Build and Plugin Updates
+
+Migrated the build to `tsdown`, added provider entry points, and changed the Tailwind plugin package to named exports such as `vitePlugin`, `webpackPlugin`, and `EmailTailwindUnplugin`.
+
 - feat: add email provider adapters (Resend, SendGrid, Postmark, Mailgun) (#24)
 - chore: fix cloudflare adapter file structure
 - chore: change build settings (#22)
 - feat: add email layout helper components (#21)
-
 
 ## [0.3.2] - 2026-04-28
 
