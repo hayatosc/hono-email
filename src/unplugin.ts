@@ -214,12 +214,12 @@ const EmailTailwind: UnpluginInstance<EmailTailwindPluginOptions | undefined, bo
  *
  * @example
  * ```ts
- * import EmailTailwind from 'hono-email/plugin'
+ * import { vitePlugin as EmailTailwind } from 'hono-email/plugin'
  *
- * export default EmailTailwind.vite()
+ * export default EmailTailwind()
  * ```
  */
-export default EmailTailwind
+export const EmailTailwindUnplugin = EmailTailwind
 
 /**
  * Rollup plugin that injects Tailwind artifacts into `<Tailwind>` components.

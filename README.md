@@ -1,5 +1,9 @@
 # hono-email
 
+[![npm version](https://img.shields.io/npm/v/hono-email)](https://www.npmjs.com/package/hono-email)
+[![License](https://img.shields.io/npm/l/hono-email)](LICENSE)
+[![Node.js](https://img.shields.io/badge/node-%3E%3D20.0.0-brightgreen)](https://nodejs.org)
+
 `hono-email` is an ESM library for rendering HTML email and plain text from `hono/jsx`. It focuses on rendering, normalization, validation, and email-oriented primitives.
 
 > [!WARNING]
@@ -182,6 +186,136 @@ Runtime connector entry points:
 
 Bun's TCP API supports direct TLS connections, but this connector does not support STARTTLS upgrade.
 Use port `465` with `secure: true` on Bun.
+
+### Resend
+
+`hono-email/resend` provides `ResendAdapter` for the Resend Email API.
+
+```tsx
+import { Body, Html, Text, sendEmail } from 'hono-email'
+import ResendAdapter from 'hono-email/resend'
+
+const receipt = await sendEmail({
+  adapter: ResendAdapter({
+    apiKey: process.env.RESEND_API_KEY!,
+  }),
+  from: 'Sender <sender@example.com>',
+  to: ['recipient@example.com'],
+  subject: 'Welcome',
+  jsx: (
+    <Html>
+      <Body>
+        <Text>Hello from Resend.</Text>
+      </Body>
+    </Html>
+  ),
+  attachments: [
+    {
+      filename: 'invoice.txt',
+      content: 'Invoice text',
+      contentType: 'text/plain',
+    },
+  ],
+})
+
+if (!receipt.successful) {
+  console.error(receipt.errorMessages)
+}
+```
+
+The adapter calls Resend directly with `fetch`; the official Resend SDK is not required. Resend
+requires a `User-Agent` header for direct HTTP requests, so `ResendAdapter` sends one by default and
+also accepts a `userAgent` override.
+
+### SendGrid
+
+`hono-email/sendgrid` provides `SendGridAdapter` for the Twilio SendGrid Mail Send API.
+
+```tsx
+import { Body, Html, Text, sendEmail } from 'hono-email'
+import { SendGridAdapter } from 'hono-email/sendgrid'
+
+const receipt = await sendEmail({
+  adapter: SendGridAdapter({
+    apiKey: process.env.SENDGRID_API_KEY!,
+  }),
+  from: { address: 'sender@example.com', name: 'Sender' },
+  to: ['recipient@example.com'],
+  subject: 'Welcome',
+  jsx: (
+    <Html>
+      <Body>
+        <Text>Hello from SendGrid.</Text>
+      </Body>
+    </Html>
+  ),
+})
+```
+
+The adapter sends JSON directly to `/v3/mail/send` and maps SendGrid error responses to
+`SendEmailReceipt`. Use `apiBaseUrl: 'https://api.eu.sendgrid.com'` for SendGrid EU regional
+sending.
+
+### Postmark
+
+`hono-email/postmark` provides `PostmarkAdapter` for the Postmark Email API.
+
+```tsx
+import { Body, Html, Text, sendEmail } from 'hono-email'
+import { PostmarkAdapter } from 'hono-email/postmark'
+
+const receipt = await sendEmail({
+  adapter: PostmarkAdapter({
+    serverToken: process.env.POSTMARK_SERVER_TOKEN!,
+    messageStream: 'outbound',
+  }),
+  from: 'sender@example.com',
+  to: 'recipient@example.com',
+  subject: 'Welcome',
+  jsx: (
+    <Html>
+      <Body>
+        <Text>Hello from Postmark.</Text>
+      </Body>
+    </Html>
+  ),
+})
+```
+
+Optional Postmark delivery controls include `messageStream`, `tag`, `trackOpens`, and `trackLinks`.
+
+### Mailgun
+
+`hono-email/mailgun` provides `MailgunAdapter` for the Mailgun Messages API.
+
+```tsx
+import { Body, Html, Text, sendEmail } from 'hono-email'
+import { MailgunAdapter } from 'hono-email/mailgun'
+
+const receipt = await sendEmail({
+  adapter: MailgunAdapter({
+    apiKey: process.env.MAILGUN_API_KEY!,
+    domain: process.env.MAILGUN_DOMAIN!,
+  }),
+  from: 'sender@example.com',
+  to: 'recipient@example.com',
+  subject: 'Welcome',
+  jsx: (
+    <Html>
+      <Body>
+        <Text>Hello from Mailgun.</Text>
+      </Body>
+    </Html>
+  ),
+})
+```
+
+The adapter sends a `multipart/form-data` request to `/v3/{domain}/messages`. Use
+`apiBaseUrl: 'https://api.eu.mailgun.net'` for Mailgun EU domains.
+
+All provider adapters support `to`, `cc`, `bcc`, `replyTo`, custom `headers`, and `attachments`.
+Inline attachments use `cid` when the provider supports content IDs. They call provider APIs with
+`fetch`, so official provider SDKs are not required.
 
 ### Cloudflare Email Service
 

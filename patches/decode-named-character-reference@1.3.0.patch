@@ -1,0 +1,13 @@
+diff --git a/package.json b/package.json
+index 7acaf6ce27ac9571c01dfee43b1db3590c9223cf..8d8c368466eaaff64a3c880c0b858cb70313da11 100644
+--- a/package.json
++++ b/package.json
+@@ -25,7 +25,7 @@
+     "react-native": "./index.js",
+     "worker": "./index.js",
+     "workerd": "./index.js",
+-    "browser": "./index.dom.js",
++    "browser": "./index.js",
+     "default": "./index.js"
+   },
+   "files": [

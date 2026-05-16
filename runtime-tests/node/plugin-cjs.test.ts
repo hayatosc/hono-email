@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 
-import plugin, {
+import {
+  EmailTailwindUnplugin,
   rollupPlugin,
   unpluginFactory,
   vitePlugin,
@@ -9,7 +10,7 @@ import plugin, {
 } from '../../src/unplugin.ts'
 
 void test('plugin entry exposes webpack-compatible public exports', () => {
-  assert.equal(typeof plugin, 'object')
+  assert.equal(typeof EmailTailwindUnplugin, 'object')
   assert.equal(typeof webpackPlugin, 'function')
   assert.equal(typeof vitePlugin, 'function')
   assert.equal(typeof rollupPlugin, 'function')
