@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.4.0] - 2026-05-16
+
+- feat: add email provider adapters (Resend, SendGrid, Postmark, Mailgun) (#24)
+- chore: fix cloudflare adapter file structure
+- chore: change build settings (#22)
+- feat: add email layout helper components (#21)
+
+
 ## [0.3.2] - 2026-04-28
 
 - feat: add commonjs plugin entry (#19)
