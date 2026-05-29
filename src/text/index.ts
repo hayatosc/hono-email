@@ -16,8 +16,73 @@ const DEFAULT_PLAIN_TEXT_RENDER_OPTIONS: Required<PlainTextRenderOptions> = {
 
 const stripDoctype = (html: string): string => html.replace(/<!DOCTYPE[^>]*>/gi, '')
 
+const stripHtmlComments = (html: string): string => html.replace(/<!--[\s\S]*?-->/g, '')
+
+const NAMED_ENTITIES: Record<string, string> = {
+  amp: '&',
+  apos: "'",
+  bull: '•',
+  cent: '¢',
+  copy: '©',
+  deg: '°',
+  divide: '÷',
+  euro: '€',
+  gt: '>',
+  hellip: '…',
+  laquo: '«',
+  ldquo: '“',
+  lsquo: '‘',
+  lt: '<',
+  mdash: '—',
+  middot: '·',
+  nbsp: ' ',
+  ndash: '–',
+  para: '¶',
+  pound: '£',
+  quot: '"',
+  raquo: '»',
+  rdquo: '”',
+  reg: '®',
+  rsquo: '’',
+  sect: '§',
+  shy: '',
+  times: '×',
+  trade: '™',
+  yen: '¥',
+  zwj: '',
+  zwnj: '',
+}
+
+const ZERO_WIDTH_CODE_POINTS = new Set([0x200b, 0x200c, 0x200d, 0x200e, 0x200f, 0xfeff])
+
+const ENTITY_PATTERN = /&(#x[0-9a-f]+|#\d+|[a-z][a-z0-9]*);/gi
+
+const decodeHtmlEntities = (text: string): string =>
+  text.replace(ENTITY_PATTERN, (entity, body: string) => {
+    if (body[0] === '#') {
+      const codePoint =
+        body[1] === 'x' || body[1] === 'X'
+          ? Number.parseInt(body.slice(2), 16)
+          : Number.parseInt(body.slice(1), 10)
+
+      if (Number.isNaN(codePoint) || codePoint > 0x10ffff) {
+        return entity
+      }
+
+      if (codePoint === 0xa0) {
+        return ' '
+      }
+
+      return ZERO_WIDTH_CODE_POINTS.has(codePoint) ? '' : String.fromCodePoint(codePoint)
+    }
+
+    return NAMED_ENTITIES[body.toLowerCase()] ?? entity
+  })
+
 const collapseWhitespace = (text: string): string => {
   return text
+    .replace(/[\u200b-\u200f\ufeff]/g, '')
+    .replace(/\u00a0/g, ' ')
     .replace(/[ \t]+\n/g, '\n')
     .replace(/\n{3,}/g, '\n\n')
     .replace(/[ \t]{2,}/g, ' ')
@@ -57,7 +122,7 @@ export const renderPlainText = (html: string, options: PlainTextRenderOptions = 
     ...options,
   }
 
-  let text = stripDoctype(html)
+  let text = stripHtmlComments(stripDoctype(html))
 
   let prev: string
   do {
@@ -88,7 +153,7 @@ export const renderPlainText = (html: string, options: PlainTextRenderOptions = 
     text = text.replace(/<[^>]+>/g, '')
   } while (text !== prev)
 
-  const collapsed = collapseWhitespace(text)
+  const collapsed = collapseWhitespace(decodeHtmlEntities(text))
 
   if (resolvedOptions.headingStyle !== 'uppercase') {
     return collapsed
