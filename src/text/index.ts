@@ -16,7 +16,17 @@ const DEFAULT_PLAIN_TEXT_RENDER_OPTIONS: Required<PlainTextRenderOptions> = {
 
 const stripDoctype = (html: string): string => html.replace(/<!DOCTYPE[^>]*>/gi, '')
 
-const stripHtmlComments = (html: string): string => html.replace(/<!--[\s\S]*?-->/g, '')
+const stripHtmlComments = (html: string): string => {
+  let previous: string
+  let current = html
+
+  do {
+    previous = current
+    current = current.replace(/<!--[\s\S]*?-->/g, '')
+  } while (current !== previous)
+
+  return current
+}
 
 const NAMED_ENTITIES: Record<string, string> = {
   amp: '&',
