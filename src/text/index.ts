@@ -1,3 +1,7 @@
+import { decodeNamedCharacterReference } from 'decode-named-character-reference'
+
+import { stripHtmlComments } from '../validate/tags'
+
 export type PlainTextRenderOptions = {
   headingStyle?: 'preserve' | 'uppercase'
   hrSeparator?: string
@@ -16,8 +20,31 @@ const DEFAULT_PLAIN_TEXT_RENDER_OPTIONS: Required<PlainTextRenderOptions> = {
 
 const stripDoctype = (html: string): string => html.replace(/<!DOCTYPE[^>]*>/gi, '')
 
+// Named references are case-sensitive, so the captured name is looked up as-is
+// via the full HTML entity table; unknown references are left untouched.
+const ENTITY_PATTERN = /&(#x[0-9a-f]+|#\d+|[a-z][a-z0-9]*);/gi
+
+const decodeHtmlEntities = (text: string): string =>
+  text.replace(ENTITY_PATTERN, (entity: string, body: string) => {
+    if (body[0] === '#') {
+      const codePoint =
+        body[1] === 'x' || body[1] === 'X'
+          ? Number.parseInt(body.slice(2), 16)
+          : Number.parseInt(body.slice(1), 10)
+
+      if (!Number.isFinite(codePoint) || codePoint < 1 || codePoint > 0x10ffff) {
+        return entity
+      }
+
+      return String.fromCodePoint(codePoint)
+    }
+
+    return decodeNamedCharacterReference(body) || entity
+  })
+
 const collapseWhitespace = (text: string): string => {
   return text
+    .replace(/\u00a0/g, ' ')
     .replace(/[ \t]+\n/g, '\n')
     .replace(/\n{3,}/g, '\n\n')
     .replace(/[ \t]{2,}/g, ' ')
@@ -57,7 +84,7 @@ export const renderPlainText = (html: string, options: PlainTextRenderOptions = 
     ...options,
   }
 
-  let text = stripDoctype(html)
+  let text = stripHtmlComments(stripDoctype(html))
 
   let prev: string
   do {
@@ -88,7 +115,7 @@ export const renderPlainText = (html: string, options: PlainTextRenderOptions = 
     text = text.replace(/<[^>]+>/g, '')
   } while (text !== prev)
 
-  const collapsed = collapseWhitespace(text)
+  const collapsed = collapseWhitespace(decodeHtmlEntities(text))
 
   if (resolvedOptions.headingStyle !== 'uppercase') {
     return collapsed
