@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 
-import { Body, Button, Html, render, Text } from '../index'
+import { Body, Button, Html, Preview, render, Text } from '../index'
 
 describe('render output', () => {
   test('returns plain text with render options', async () => {
@@ -156,5 +156,20 @@ describe('render output', () => {
     expect(text).toContain('Welcome aboard')
     expect(text).not.toContain('WELCOME ABOARD')
     expect(text).not.toMatch(/[]/)
+  })
+  test('excludes hidden preview content and padding from plain text', async () => {
+    const { text } = await render(
+      <Html>
+        <Body>
+          <Preview>Hidden preheader text</Preview>
+          <Text>Visible body</Text>
+        </Body>
+      </Html>,
+      { doctype: false },
+    )
+
+    expect(text).toContain('Visible body')
+    expect(text).not.toContain('Hidden preheader text')
+    expect(text).not.toMatch(/[\u200b\u200c\u200d]/)
   })
 })
