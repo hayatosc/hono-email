@@ -1,5 +1,5 @@
 import { raw } from 'hono/html'
-import type { FC, JSX, PropsWithChildren } from 'hono/jsx'
+import type { Child, FC, JSX, PropsWithChildren } from 'hono/jsx'
 
 import { styleObjectFromUnknown } from '../style'
 
@@ -44,6 +44,32 @@ type OutlookCssProperties = JSX.CSSProperties & {
 }
 
 const BOX_DIRECTIONS = ['Top', 'Right', 'Bottom', 'Left'] as const
+
+// Trailing filler that pushes following body content out of the inbox preview
+// snippet. Mirrors react-email: a run of non-breaking and zero-width characters
+// sized to approach a fixed preview length.
+const PREVIEW_MAX_LENGTH = 200
+const PREVIEW_WHITESPACE = '\u00a0\u200c\u200b\u200d\u200e\u200f\ufeff'
+
+const previewChildrenLength = (children: Child | undefined): number => {
+  if (typeof children === 'string') {
+    return children.length
+  }
+
+  if (Array.isArray(children)) {
+    return children.reduce<number>(
+      (total, child) => total + (typeof child === 'string' ? child.length : 0),
+      0,
+    )
+  }
+
+  return 0
+}
+
+const buildPreviewPadding = (children: Child | undefined): string => {
+  const remaining = PREVIEW_MAX_LENGTH - previewChildrenLength(children)
+  return remaining > 0 ? PREVIEW_WHITESPACE.repeat(remaining) : ''
+}
 
 const isNumericString = (value: string): boolean => /^-?\d+(\.\d+)?$/.test(value.trim())
 
@@ -493,6 +519,7 @@ export const Preview: FC<PropsWithChildren<ElementProps<'div'>>> = ({
     }}
   >
     {children}
+    {buildPreviewPadding(children)}
   </div>
 )
 

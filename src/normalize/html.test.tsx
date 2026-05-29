@@ -22,6 +22,20 @@ describe('document semantics', () => {
     expect(html).toContain('</div><p>Hello</p></body>')
   })
 
+  test('pads preview text so following content stays out of the inbox snippet', async () => {
+    const { html } = await render(
+      <Html>
+        <Preview>Short preview</Preview>
+        <Body>
+          <p>Hello</p>
+        </Body>
+      </Html>,
+    )
+
+    // Zero-width non-joiner only originates from the preview whitespace padding.
+    expect(html).toContain('\u200c')
+  })
+
   test('keeps preview hidden styles intact after relocation', async () => {
     const { html } = await render(
       <Html>

@@ -26,6 +26,20 @@ const HEADING_START = '\uE000'
 const HEADING_END = '\uE001'
 const stripHeadingMarkers = (text: string): string => text.replace(/[\uE000\uE001]/g, '')
 
+const PREVIEW_BLOCK_PATTERN = /<div\b[^>]*data-hono-email-preview="true"[\s\S]*?<\/div>/gi
+
+// Hidden preview/preheader blocks carry whitespace-padding characters meant only
+// for the inbox snippet, so they are dropped from the plain-text output.
+const stripPreviewBlocks = (html: string): string => {
+  let result = html
+  let prev: string
+  do {
+    prev = result
+    result = result.replace(PREVIEW_BLOCK_PATTERN, '')
+  } while (result !== prev)
+  return result
+}
+
 // Named references are case-sensitive, so the captured name is looked up as-is
 // via the full HTML entity table; unknown references are left untouched.
 const ENTITY_PATTERN = /&(#x[0-9a-f]+|#\d+|[a-z][a-z0-9]*);/gi
@@ -90,7 +104,7 @@ export const renderPlainText = (html: string, options: PlainTextRenderOptions = 
     ...options,
   }
 
-  let text = stripHtmlComments(stripDoctype(html))
+  let text = stripPreviewBlocks(stripHtmlComments(stripDoctype(html)))
 
   let prev: string
   do {
