@@ -16,6 +16,12 @@ const DEFAULT_PLAIN_TEXT_RENDER_OPTIONS: Required<PlainTextRenderOptions> = {
 
 const stripDoctype = (html: string): string => html.replace(/<!DOCTYPE[^>]*>/gi, '')
 
+// Private-use sentinels used to remember real heading boundaries through tag
+// removal, so `headingStyle: 'uppercase'` only affects `<h1>`–`<h6>` content.
+const HEADING_START = '\uE000'
+const HEADING_END = '\uE001'
+const stripHeadingMarkers = (text: string): string => text.replace(/[\uE000\uE001]/g, '')
+
 const stripHtmlComments = (html: string): string => html.replace(/<!--[\s\S]*?-->/g, '')
 
 const NAMED_ENTITIES: Record<string, string> = {
@@ -138,7 +144,8 @@ export const renderPlainText = (html: string, options: PlainTextRenderOptions = 
   text = text.replace(/<br\s*\/?>/gi, '\n')
   text = text.replace(/<\/p>/gi, '\n\n')
   text = text.replace(/<\/div>/gi, '\n')
-  text = text.replace(/<\/h[1-6]>/gi, '\n\n')
+  text = text.replace(/<h[1-6]\b[^>]*>/gi, `\n\n${HEADING_START}`)
+  text = text.replace(/<\/h[1-6]>/gi, `${HEADING_END}\n\n`)
   text = text.replace(/<li[^>]*>/gi, `\n${resolvedOptions.listBullet} `)
   text = text.replace(/<\/li>/gi, '')
   text = text.replace(/<img\b([^>]*)\/?>/gi, (_match, attributes: string) =>
@@ -156,14 +163,11 @@ export const renderPlainText = (html: string, options: PlainTextRenderOptions = 
   const collapsed = collapseWhitespace(decodeHtmlEntities(text))
 
   if (resolvedOptions.headingStyle !== 'uppercase') {
-    return collapsed
+    return stripHeadingMarkers(collapsed)
   }
 
-  return collapsed.replace(/(^|\n)([^\n]+)(\n\n)/g, (match, start, line, end) => {
-    if (/^[A-Za-z0-9 _-]+$/.test(line) && line === line.trim() && line.length <= 80) {
-      return `${start}${line.toUpperCase()}${end}`
-    }
-
-    return match
-  })
+  const headingPattern = new RegExp(`${HEADING_START}([\\s\\S]*?)${HEADING_END}`, 'g')
+  return stripHeadingMarkers(
+    collapsed.replace(headingPattern, (_match, heading: string) => heading.toUpperCase()),
+  )
 }

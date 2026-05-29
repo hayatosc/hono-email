@@ -93,4 +93,39 @@ describe('render output', () => {
     expect(text).not.toContain('&#8203;')
     expect(text).not.toContain('[if mso]')
   })
+
+  test('uppercases only real headings, not ordinary paragraphs', async () => {
+    const { text } = await render(
+      <Html>
+        <Body>
+          <h2>Account summary</h2>
+          <Text>See you soon</Text>
+          <Text>Best regards</Text>
+        </Body>
+      </Html>,
+      { doctype: false },
+    )
+
+    expect(text).toContain('ACCOUNT SUMMARY')
+    expect(text).toContain('See you soon')
+    expect(text).not.toContain('SEE YOU SOON')
+    expect(text).toContain('Best regards')
+    expect(text).not.toMatch(/[]/)
+  })
+
+  test('preserves heading casing under headingStyle: preserve', async () => {
+    const { text } = await render(
+      <Html>
+        <Body>
+          <h1>Welcome aboard</h1>
+          <Text>Glad you are here</Text>
+        </Body>
+      </Html>,
+      { doctype: false, text: { headingStyle: 'preserve' } },
+    )
+
+    expect(text).toContain('Welcome aboard')
+    expect(text).not.toContain('WELCOME ABOARD')
+    expect(text).not.toMatch(/[]/)
+  })
 })
