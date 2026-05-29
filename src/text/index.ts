@@ -1,3 +1,7 @@
+import { decodeNamedCharacterReference } from 'decode-named-character-reference'
+
+import { stripHtmlComments } from '../validate/tags'
+
 export type PlainTextRenderOptions = {
   headingStyle?: 'preserve' | 'uppercase'
   hrSeparator?: string
@@ -16,82 +20,30 @@ const DEFAULT_PLAIN_TEXT_RENDER_OPTIONS: Required<PlainTextRenderOptions> = {
 
 const stripDoctype = (html: string): string => html.replace(/<!DOCTYPE[^>]*>/gi, '')
 
-const stripHtmlComments = (html: string): string => {
-  let previous: string
-  let current = html
-
-  do {
-    previous = current
-    current = current.replace(/<!--[\s\S]*?-->/g, '')
-  } while (current !== previous)
-
-  return current
-}
-
-const NAMED_ENTITIES: Record<string, string> = {
-  amp: '&',
-  apos: "'",
-  bull: '•',
-  cent: '¢',
-  copy: '©',
-  deg: '°',
-  divide: '÷',
-  euro: '€',
-  gt: '>',
-  hellip: '…',
-  laquo: '«',
-  ldquo: '“',
-  lsquo: '‘',
-  lt: '<',
-  mdash: '—',
-  middot: '·',
-  nbsp: ' ',
-  ndash: '–',
-  para: '¶',
-  pound: '£',
-  quot: '"',
-  raquo: '»',
-  rdquo: '”',
-  reg: '®',
-  rsquo: '’',
-  sect: '§',
-  shy: '',
-  times: '×',
-  trade: '™',
-  yen: '¥',
-  zwj: '',
-  zwnj: '',
-}
-
-const ZERO_WIDTH_CODE_POINTS = new Set([0x200b, 0x200c, 0x200d, 0x200e, 0x200f, 0xfeff])
-
+// Named references are case-sensitive, so the captured name is looked up as-is
+// via the full HTML entity table; unknown references are left untouched.
 const ENTITY_PATTERN = /&(#x[0-9a-f]+|#\d+|[a-z][a-z0-9]*);/gi
 
 const decodeHtmlEntities = (text: string): string =>
-  text.replace(ENTITY_PATTERN, (entity, body: string) => {
+  text.replace(ENTITY_PATTERN, (entity: string, body: string) => {
     if (body[0] === '#') {
       const codePoint =
         body[1] === 'x' || body[1] === 'X'
           ? Number.parseInt(body.slice(2), 16)
           : Number.parseInt(body.slice(1), 10)
 
-      if (Number.isNaN(codePoint) || codePoint > 0x10ffff) {
+      if (!Number.isFinite(codePoint) || codePoint < 1 || codePoint > 0x10ffff) {
         return entity
       }
 
-      if (codePoint === 0xa0) {
-        return ' '
-      }
-
-      return ZERO_WIDTH_CODE_POINTS.has(codePoint) ? '' : String.fromCodePoint(codePoint)
+      return String.fromCodePoint(codePoint)
     }
 
-    return NAMED_ENTITIES[body.toLowerCase()] ?? entity
+    return decodeNamedCharacterReference(body) || entity
   })
 
 const collapseWhitespace = (text: string): string => {
   return text
-    .replace(/[\u200b-\u200f\ufeff]/g, '')
     .replace(/\u00a0/g, ' ')
     .replace(/[ \t]+\n/g, '\n')
     .replace(/\n{3,}/g, '\n\n')

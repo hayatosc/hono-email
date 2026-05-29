@@ -76,6 +76,35 @@ describe('render output', () => {
     expect(text).not.toContain('&copy;')
   })
 
+  test('decodes named entities beyond the common subset', async () => {
+    const { text } = await render(
+      <Html>
+        <Body>
+          <Text>caf&eacute; &rarr; t&ouml;r</Text>
+          <Text>&frac12; &amp; &#x1F600;</Text>
+        </Body>
+      </Html>,
+      { doctype: false, strict: false },
+    )
+
+    expect(text).toContain('café → tör')
+    expect(text).toContain('½ & 😀')
+    expect(text).not.toMatch(/&[a-z]+;/i)
+  })
+
+  test('preserves author-provided zero-width and bidi characters', async () => {
+    const { text } = await render(
+      <Html>
+        <Body>
+          <Text>{'a‍b‎c'}</Text>
+        </Body>
+      </Html>,
+      { doctype: false, strict: false },
+    )
+
+    expect(text).toContain('a‍b‎c')
+  })
+
   test('strips HTML comments and Outlook MSO markup from plain text', async () => {
     const { text } = await render(
       <Html>
