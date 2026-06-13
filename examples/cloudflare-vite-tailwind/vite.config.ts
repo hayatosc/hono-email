@@ -22,9 +22,8 @@ export default defineConfig({
       },
       {
         find: '@hono-email/tailwind-plugin',
-        replacement: fileURLToPath(
-          new URL('../../packages/tailwind-plugin', import.meta.url),
-        ),
+        replacement: fileURLToPath(new URL('../../packages/tailwind-plugin', import.meta.url)),
+      },
       {
         find: 'hono-email',
         replacement: fileURLToPath(new URL('../../packages/core/dist/index.js', import.meta.url)),

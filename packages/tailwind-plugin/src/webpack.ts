@@ -11,7 +11,7 @@ import type { EmailTailwindPluginOptions } from './types'
  *
  * @example
  * ```js
- * import EmailTailwind from '@hono-email/tailwind-plugin/webpack'
+ * const EmailTailwind = require('@hono-email/tailwind-plugin/webpack').default
  *
  * module.exports = { plugins: [EmailTailwind()] }
  * ```
