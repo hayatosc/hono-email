@@ -17,6 +17,7 @@ describe('render', () => {
     expect(result).toEqual({
       html: '<html><body><h1>Welcome</h1><p>Hello world</p></body></html>',
       text: 'WELCOME\n\nHello world',
+      warnings: [],
     })
   })
 
@@ -57,5 +58,50 @@ describe('render', () => {
     )
 
     expect(html).toContain('<p>Done</p>')
+  })
+
+  describe('warnings', () => {
+    const WithWarning = () => (
+      <html>
+        <body>
+          <p style={{ display: 'flex' }}>Hello</p>
+        </body>
+      </html>
+    )
+
+    test('collects compatibility warnings on the result', async () => {
+      const { warnings } = await render(<WithWarning />, { onWarning: 'silent' })
+
+      expect(warnings.length).toBeGreaterThan(0)
+      expect(warnings.some((warning) => warning.includes('display:flex'))).toBe(true)
+    })
+
+    test('throws when onWarning is "error"', async () => {
+      await expect(render(<WithWarning />, { onWarning: 'error' })).rejects.toThrow(
+        'email warning(s)',
+      )
+    })
+
+    test('routes each warning to a callback', async () => {
+      const collected: string[] = []
+      const { warnings } = await render(<WithWarning />, {
+        onWarning: (warning) => collected.push(warning),
+      })
+
+      expect(collected).toEqual(warnings)
+    })
+
+    test('returns no warnings for compatible markup', async () => {
+      const { warnings } = await render(
+        <html>
+          <body>
+            <p>Hello</p>
+          </body>
+        </html>,
+        { onWarning: 'silent' },
+      )
+
+      expect(warnings).toEqual([])
+    })
   })
 })

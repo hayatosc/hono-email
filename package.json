@@ -20,6 +20,9 @@
     "type": "git",
     "url": "git+https://github.com/hayatosc/hono-email.git"
   },
+  "workspaces": [
+    "examples/*"
+  ],
   "files": [
     "dist"
   ],

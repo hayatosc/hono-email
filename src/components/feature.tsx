@@ -11,6 +11,7 @@ import {
 } from '../markdown'
 import { renderFragmentToHtml } from '../render/html'
 import {
+  encodeTailwindWarnings,
   transformTailwindHtml,
   type TailwindBuildArtifact,
   wrapGeneratedHeadCss,
@@ -96,7 +97,9 @@ export const Tailwind = async ({ artifact, children }: TailwindProps) => {
   const transformed = await transformTailwindHtml(renderedChildren, artifact, {
     ignoreMissingClass: (className) => className.startsWith('css-'),
   })
-  return raw(`${wrapGeneratedHeadCss(transformed.headCss)}${transformed.html}`)
+  return raw(
+    `${encodeTailwindWarnings(transformed.warnings)}${wrapGeneratedHeadCss(transformed.headCss)}${transformed.html}`,
+  )
 }
 
 /**

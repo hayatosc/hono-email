@@ -3,12 +3,13 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "send": "tsx src/send.ts",
+    "send": "tsx src/send.tsx",
     "typecheck": "tsgo --noEmit"
   },
   "dependencies": {
     "dotenv": "^16.4.7",
-    "hono": "^4.12.14"
+    "hono": "^4.12.14",
+    "hono-email": "file:../.."
   },
   "devDependencies": {
     "@types/node": "^22.0.0",

@@ -171,7 +171,7 @@ Paragraph with \`code\`
     expect(html).not.toContain('javascript:alert')
     expect(html).not.toContain('style="color: red; background-image')
     expect(html).not.toContain('<custom-tag')
-    expect(html).toContain('\n  Click\n')
+    expect(html).toContain('> Click <')
     expect(html).toContain('href="https://example.com"')
     expect(html).toContain('target="_blank"')
     expect(html).toContain('rel="external nofollow"')

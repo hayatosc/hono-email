@@ -1,12 +1,12 @@
 {
   "extends": "../../tsconfig.json",
   "compilerOptions": {
+    "jsx": "react-jsx",
+    "jsxImportSource": "hono/jsx",
     "types": ["node"],
-    "paths": {
-      "hono-email": ["../../dist/index.d.ts"],
-      "hono-email/smtp": ["../../dist/adapter/smtp/index.d.ts"],
-      "hono-email/smtp/node": ["../../dist/adapter/platform/node/smtp.d.ts"]
-    }
+    // Drop the library's dev path mappings inherited from the root tsconfig so
+    // `hono-email` resolves to the built package (dist) via node_modules.
+    "paths": {}
   },
   "include": ["src"]
 }

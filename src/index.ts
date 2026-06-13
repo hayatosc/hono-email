@@ -75,6 +75,10 @@ import { relocatePreview } from './normalize/preview'
 import { transformHonoCssOutput } from './render/hono-css'
 import { renderFragmentToHtml } from './render/html'
 import { prettyPrintHtml } from './render/pretty'
+import { extractTailwindWarnings } from './tailwind'
+import { minifyHtml } from './transform/minify'
+import { preventWidows } from './transform/prevent-widows'
+import { ensureSixHex } from './transform/six-hex'
 export { buildTailwindArtifactFromCss, collectTailwindClassesFromHtml } from './tailwind'
 export type { BuildTailwindArtifactFromCssOptions } from './tailwind'
 import { renderPlainText, type PlainTextRenderOptions } from './text'
@@ -84,8 +88,13 @@ import { validateHtml } from './validate/html'
  * Shared HTML render options.
  *
  * @property doctype - Doctype to prepend. Defaults to HTML5.
- * @property pretty - Pretty-print the rendered HTML when `true`.
+ * @property pretty - Pretty-print the rendered HTML when `true`. Takes precedence over `minify`.
+ * @property minify - Minify the rendered HTML. Defaults to `true`. Ignored when `pretty` is `true`.
+ * @property widows - Join the last two words of each text node with `&nbsp;` when `true`.
  * @property strict - Run strict email validation when `true`. Defaults to `true`.
+ * @property onWarning - How compatibility warnings are handled. `'warn'` (default) logs to `console.warn`,
+ *   `'error'` throws when any warning is collected, `'silent'` suppresses logging, or pass a callback to
+ *   receive each warning. Warnings are always available on `RenderResult.warnings`.
  *
  * @example
  * ```tsx
@@ -98,8 +107,21 @@ import { validateHtml } from './validate/html'
 type BaseRenderOptions = {
   doctype?: 'html5' | 'xhtml-transitional' | false
   pretty?: boolean
+  minify?: boolean
+  widows?: boolean
   strict?: boolean
+  onWarning?: WarningHandler
 }
+
+/**
+ * Controls how compatibility warnings raised during render are handled.
+ *
+ * - `'warn'`: log each warning with `console.warn` (default)
+ * - `'error'`: throw an aggregated error when any warning is collected
+ * - `'silent'`: collect warnings without logging
+ * - `(warning) => void`: receive each warning (collect, route, or throw)
+ */
+export type WarningHandler = 'warn' | 'error' | 'silent' | ((warning: string) => void)
 
 /**
  * Options for rendering JSX into HTML and derived plain text.
@@ -122,16 +144,18 @@ export type RenderOptions = BaseRenderOptions & {
  *
  * @property html - Rendered HTML email, including the configured doctype.
  * @property text - Plain-text output derived from the rendered HTML.
+ * @property warnings - Compatibility warnings collected during render.
  *
  * @example
  * ```tsx
  * const result: RenderResult = await render(<WelcomeEmail />)
- * console.log(result.html, result.text)
+ * console.log(result.html, result.text, result.warnings)
  * ```
  */
 export type RenderResult = {
   html: string
   text: string
+  warnings: string[]
 }
 
 export type { BaseRenderOptions }
@@ -152,10 +176,43 @@ const resolveDoctype = (doctype: BaseRenderOptions['doctype']): string => {
   return HTML5_DOCTYPE
 }
 
-const renderHtml = async (jsx: Child, options: BaseRenderOptions = {}): Promise<string> => {
+const dispatchWarnings = (warnings: string[], onWarning: WarningHandler): void => {
+  if (warnings.length === 0) {
+    return
+  }
+
+  if (onWarning === 'silent') {
+    return
+  }
+
+  if (onWarning === 'error') {
+    throw new Error(
+      `[hono-email] ${warnings.length} email warning(s):\n${warnings.map((warning) => `- ${warning}`).join('\n')}`,
+    )
+  }
+
+  if (typeof onWarning === 'function') {
+    for (const warning of warnings) {
+      onWarning(warning)
+    }
+    return
+  }
+
+  for (const warning of warnings) {
+    console.warn(`[hono-email] ${warning}`)
+  }
+}
+
+const renderHtml = async (
+  jsx: Child,
+  options: BaseRenderOptions = {},
+): Promise<{ html: string; warnings: string[] }> => {
   const strict = options.strict ?? true
   let html = relocateHeadStyles(relocatePreview(normalizeHtml(await renderFragmentToHtml(jsx))))
   html = relocateHeadStyles(await transformHonoCssOutput(html))
+
+  const tailwindWarnings = extractTailwindWarnings(html)
+  html = tailwindWarnings.html
 
   if (html.includes(MARKDOWN_TAILWIND_PARENT_REQUIRED_ATTRIBUTE_NAME)) {
     throw new Error(MARKDOWN_TAILWIND_PARENT_REQUIRED_ERROR_MESSAGE)
@@ -165,11 +222,14 @@ const renderHtml = async (jsx: Child, options: BaseRenderOptions = {}): Promise<
     throw new Error(TAILWIND_ARTIFACT_REQUIRED_ERROR_MESSAGE)
   }
 
-  if (strict) {
-    const warnings = validateHtml(html)
-    for (const warning of warnings) {
-      console.warn(`[hono-email] ${warning}`)
-    }
+  const warnings = [...tailwindWarnings.warnings, ...(strict ? validateHtml(html) : [])]
+  const dedupedWarnings = Array.from(new Set(warnings))
+  dispatchWarnings(dedupedWarnings, options.onWarning ?? 'warn')
+
+  html = ensureSixHex(html)
+
+  if (options.widows) {
+    html = preventWidows(html)
   }
 
   const doctype = resolveDoctype(options.doctype)
@@ -180,9 +240,11 @@ const renderHtml = async (jsx: Child, options: BaseRenderOptions = {}): Promise<
 
   if (options.pretty) {
     html = prettyPrintHtml(html)
+  } else if (options.minify !== false) {
+    html = minifyHtml(html)
   }
 
-  return html
+  return { html, warnings: dedupedWarnings }
 }
 
 /**
@@ -204,11 +266,12 @@ const renderHtml = async (jsx: Child, options: BaseRenderOptions = {}): Promise<
  * ```
  */
 export async function render(jsx: Child, options: RenderOptions = {}): Promise<RenderResult> {
-  const html = await renderHtml(jsx, options)
+  const { html, warnings } = await renderHtml(jsx, options)
 
   return {
     html,
     text: renderPlainText(html, options.text),
+    warnings,
   }
 }
 

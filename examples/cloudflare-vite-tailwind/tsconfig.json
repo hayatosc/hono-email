@@ -10,5 +10,5 @@
       "hono-email/plugin": ["../../dist/unplugin.d.mts"]
     }
   },
-  "include": ["src", "vite.config.ts", "worker-configuration.d.ts"]
+  "include": ["src", "test", "vite.config.ts", "worker-configuration.d.ts"]
 }
