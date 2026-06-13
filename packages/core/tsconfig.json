@@ -7,6 +7,9 @@
     "strict": true,
     "jsx": "react-jsx",
     "jsxImportSource": "hono/jsx",
+    "paths": {
+      "hono-email": ["./src/index.ts"]
+    },
     "verbatimModuleSyntax": true,
     "noEmit": true,
     "skipLibCheck": true,
@@ -15,5 +18,5 @@
     "noImplicitOverride": true,
     "types": ["bun", "@cloudflare/workers-types"]
   },
-  "include": ["packages/*/src", "runtime-tests"]
+  "include": ["src"]
 }

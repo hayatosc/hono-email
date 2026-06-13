@@ -8,7 +8,7 @@ An example using `hono-email` in a Cloudflare Workers environment.
   - Using Cloudflare Email Sending
 - `sendEmail` from `hono-email`
 - `CloudflareEmailAdapter` from `hono-email/cloudflare` with `WorkersConnector` from `hono-email/cloudflare/workers`
-- Tailwind plugin (with `EmailTailwind` on `hono-email`)
+- Tailwind plugin (with `EmailTailwind` from `@hono-email/tailwind-plugin/vite`)
 
 ## Commands
 

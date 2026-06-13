@@ -19,7 +19,7 @@
 - Use `hono/css` class-based CSS-in-JS as a styling option
 - Apply Tailwind utility output through `Tailwind` build artifacts
 - Send rendered email through transport adapters (SMTP, Resend, SendGrid, Postmark, Mailgun, Cloudflare Email)
-- Expose bundler integrations through `hono-email/plugin`
+- Expose bundler integrations through `@hono-email/tailwind-plugin`
 
 ## Setup
 
@@ -563,18 +563,18 @@ If you are using `<Tailwind>` component, we recommend using a bundler (Vite, Rol
 // vite.config.ts
 import { defineConfig } from 'vite'
 import tailwindcss from '@tailwindcss/vite'
-import { vitePlugin as EmailTailwind } from 'hono-email/plugin'
+import EmailTailwind from '@hono-email/tailwind-plugin/vite'
 
 export default defineConfig({
   plugins: [tailwindcss(), EmailTailwind()],
 })
 ```
 
-For CommonJS Webpack config files, use the named `webpackPlugin` export.
+For CommonJS Webpack config files, use the webpack subpath export.
 
 ```js
 // webpack.config.cjs
-const { webpackPlugin: EmailTailwind } = require('hono-email/plugin')
+const EmailTailwind = require('@hono-email/tailwind-plugin/webpack').default
 
 module.exports = {
   plugins: [EmailTailwind()],

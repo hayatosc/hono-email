@@ -1,5 +1,5 @@
-import DenoConnector from '../../src/adapter/platform/deno/smtp.ts'
-import { runSmtpSession } from '../../src/adapter/smtp/protocol.ts'
+import DenoConnector from '../../packages/core/src/adapter/platform/deno/smtp.ts'
+import { runSmtpSession } from '../../packages/core/src/adapter/smtp/protocol.ts'
 
 const CRLF = '\r\n'
 

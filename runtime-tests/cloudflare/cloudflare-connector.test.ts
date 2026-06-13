@@ -2,14 +2,14 @@ import { connect } from 'cloudflare:sockets'
 import { withEnv } from 'cloudflare:workers'
 import { describe, expect, test } from 'vitest'
 
-import { CloudflareEmailAdapter } from '../../src/adapter/cloudflare/adapter'
-import type { CloudflareEmailBinding } from '../../src/adapter/platform/cloudflare/index'
+import { CloudflareEmailAdapter } from '../../packages/core/src/adapter/cloudflare/adapter'
+import type { CloudflareEmailBinding } from '../../packages/core/src/adapter/platform/cloudflare/index'
 import {
   createWorkersConnector,
   WorkersConnector,
-} from '../../src/adapter/platform/cloudflare/index'
-import CloudflareConnector from '../../src/adapter/platform/cloudflare/smtp'
-import { SmtpTransport } from '../../src/adapter/smtp'
+} from '../../packages/core/src/adapter/platform/cloudflare/index'
+import CloudflareConnector from '../../packages/core/src/adapter/platform/cloudflare/smtp'
+import { SmtpTransport } from '../../packages/core/src/adapter/smtp'
 
 describe('cloudflareSmtpConnector runtime smoke', () => {
   test('resolves cloudflare:sockets in the Workers test runtime', () => {

@@ -13,10 +13,11 @@
   },
   "dependencies": {
     "hono": "^4.12.14",
-    "hono-email": "file:../.."
+    "hono-email": "workspace:*"
   },
   "devDependencies": {
     "@cloudflare/vite-plugin": "^1.32.3",
+    "@hono-email/tailwind-plugin": "workspace:*",
     "@tailwindcss/vite": "^4.2.2",
     "@typescript/native-preview": "^7.0.0-dev.20260419.1",
     "tailwindcss": "^4.2.2",

@@ -1,8 +1,8 @@
 import { describe, expect, test } from 'bun:test'
 
-import BunConnector from '../../src/adapter/platform/bun/smtp'
-import { SmtpTransport } from '../../src/adapter/smtp'
-import { runSmtpSession } from '../../src/adapter/smtp/protocol'
+import BunConnector from '../../packages/core/src/adapter/platform/bun/smtp'
+import { SmtpTransport } from '../../packages/core/src/adapter/smtp'
+import { runSmtpSession } from '../../packages/core/src/adapter/smtp/protocol'
 
 const CRLF = '\r\n'
 

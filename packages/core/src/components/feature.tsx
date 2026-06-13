@@ -27,7 +27,7 @@ export type {
 
 export const TAILWIND_ARTIFACT_REQUIRED_ERROR_MESSAGE =
   '<Tailwind> requires a build artifact. Either:\n' +
-  '  1. Use the bundler plugin (hono-email/plugin) — it injects the artifact automatically per email file.\n' +
+  '  1. Use the bundler plugin (@hono-email/tailwind-plugin) — it injects the artifact automatically per email file.\n' +
   '  2. Pass it explicitly: <Tailwind artifact={buildTailwindArtifactFromCss({ css })}>'
 export const TAILWIND_ARTIFACT_REQUIRED_TAG_NAME = 'hono-email-internal-tailwind-artifact-required'
 
