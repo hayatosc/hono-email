@@ -21,7 +21,7 @@
   },
   "overrides": [
     {
-      "files": ["src/**/*.test.ts", "src/**/*.test.tsx"],
+      "files": ["packages/*/src/**/*.test.ts", "packages/*/src/**/*.test.tsx"],
       "rules": {
         "typescript/await-thenable": "off"
       }

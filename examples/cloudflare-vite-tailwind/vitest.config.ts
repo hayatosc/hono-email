@@ -1,16 +1,15 @@
 import { fileURLToPath, URL } from 'node:url'
 
+import EmailTailwind from '@hono-email/tailwind-plugin/vite'
 import tailwindcss from '@tailwindcss/vite'
 import { defineConfig } from 'vitest/config'
-
-import { vitePlugin as EmailTailwind } from '../../dist/unplugin.mjs'
 
 export default defineConfig({
   resolve: {
     alias: [
       {
         find: 'hono-email',
-        replacement: fileURLToPath(new URL('../../dist/index.js', import.meta.url)),
+        replacement: fileURLToPath(new URL('../../packages/core/dist/index.js', import.meta.url)),
       },
     ],
     dedupe: ['hono'],

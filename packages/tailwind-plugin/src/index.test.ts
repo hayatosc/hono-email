@@ -5,7 +5,7 @@ import {
   buildPerFileArtifactModule,
   buildPerFileCssModule,
   transformTailwindComponentSource,
-} from './unplugin'
+} from './index'
 
 const TEST_FILE_ID = '/abs/emails/welcome.tsx'
 const ENCODED_TEST_FILE_ID = encodeURIComponent(TEST_FILE_ID)
