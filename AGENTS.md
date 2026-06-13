@@ -9,31 +9,39 @@ It focuses on:
 2. Output normalization (semantic tag normalization, preview relocation, head-style relocation)
 3. Strict email validation with fail-fast errors and compatibility warnings
 4. Tailwind artifact generation/consumption for email-safe style output
-
-Transport/provider integration (SES, Resend, SMTP, etc.) is intentionally out of scope.
+5. Output transforms (three-digit hex expansion, optional widow control, default minification)
+6. Transport adapters for sending rendered email via `sendEmail()` (SMTP, Resend, SendGrid, Postmark, Mailgun, Cloudflare Email)
 
 ## Entry points
 
-- `hono-email` → runtime/components (`src/index.ts`)
+- `hono-email` → runtime/components/`sendEmail` (`src/index.ts`)
 - `hono-email/plugin` → Tailwind build-time plugin (`src/unplugin.ts`)
+- `hono-email/adapter` → shared adapter and `sendEmail` types (`src/adapter/index.ts`)
+- `hono-email/smtp`, `hono-email/smtp/*` → SMTP transport and runtime connectors (`src/adapter/smtp/*`, `src/adapter/platform/*`)
+- `hono-email/resend`, `/sendgrid`, `/postmark`, `/mailgun` → provider HTTP adapters (`src/adapter/*`)
+- `hono-email/cloudflare`, `/cloudflare/workers`, `/cloudflare/rest` → Cloudflare Email Service adapter (`src/adapter/cloudflare/*`)
 
 ## High-level render flow
 
 `render()` (in `src/index.ts`) roughly does:
 
 1. JSX fragment → HTML string (`src/render/html.ts`)
-2. Normalize HTML (`src/normalize/*`)
+2. Normalize HTML — semantic tags, preview/head-style relocation (`src/normalize/*`), then inline `hono/css` and `<Tailwind>` output (`src/render/hono-css.ts`, `src/tailwind/`)
 3. Strict validation (`src/validate/html.ts`) unless `strict: false`
-4. Add doctype / optional pretty output
-5. Optional plain-text conversion (`src/text/index.ts`) when `output: 'text'`
+4. Output transforms (`src/transform/*`): expand three-digit hex (always), optional widow control (`widows`), then add doctype and either pretty-print (`pretty`) or minify (default)
+5. Always derive plain text from the HTML (`src/text/index.ts`); `render()` returns `{ html, text }`
 
 ## Key directories
 
 - `src/components/index.tsx`: email primitives and higher-level components
+- `src/render/`: JSX→HTML rendering, `hono/css` inlining, pretty-print
 - `src/normalize/`: HTML normalization passes
 - `src/validate/`: strict-mode validation and warnings
+- `src/transform/`: output transforms (six-hex, prevent-widows, minify) and the shared text walker
 - `src/markdown/`: Markdown rendering + sanitization
 - `src/tailwind/`: Tailwind artifact handling and HTML transformation
+- `src/text/`: plain-text conversion
+- `src/adapter/`: transport adapters and `sendEmail` (SMTP, Resend, SendGrid, Postmark, Mailgun, Cloudflare Email)
 - `src/unplugin.ts`: bundler plugin (Vite/Rollup/Webpack/etc.)
 - Tests live next to the source files they cover as `*.test.ts` / `*.test.tsx`
 

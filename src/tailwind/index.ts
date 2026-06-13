@@ -15,8 +15,9 @@ import {
  * Compiled Tailwind CSS data consumed by `<Tailwind>`.
  *
  * @property classes - Class tokens known to the artifact.
- * @property headCssByClass - Responsive or head-only CSS keyed by class token.
+ * @property headCssByClass - Responsive, pseudo, or head-only CSS keyed by class token.
  * @property inlineStylesByClass - Inline declarations keyed by class token.
+ * @property renamedClasses - Email-safe class tokens keyed by original token, for pseudo-class variants.
  *
  * @example
  * ```ts
@@ -29,6 +30,7 @@ export type TailwindBuildArtifact = {
   classes: string[]
   headCssByClass: Record<string, string>
   inlineStylesByClass: Record<string, Record<string, string>>
+  renamedClasses: Record<string, string>
 }
 
 /**
@@ -68,21 +70,23 @@ const getParams = (node: csstree.Atrule): string =>
 
 const decodeEscapedClassToken = (value: string): string => value.replace(/\\(.)/g, '$1')
 
-const extractSimpleClassToken = (selector: string): string | undefined => {
-  const trimmed = selector.trim()
-  if (!trimmed.startsWith('.')) {
-    return undefined
-  }
+const CLASS_TOKEN_TERMINATORS = new Set([':', ' ', '>', '+', '~', '[', ',', '.'])
+const PSEUDO_SUFFIX_PATTERN = /^(?::[a-zA-Z][a-zA-Z-]*(?:\([^)]*\))?)+$/
 
+const readClassToken = (
+  selector: string,
+  start: number,
+): { token: string; end: number } | undefined => {
   let token = ''
-  for (let index = 1; index < trimmed.length; index += 1) {
-    const character = trimmed[index]
+  let index = start + 1
+  for (; index < selector.length; index += 1) {
+    const character = selector[index]
     if (!character) {
       break
     }
 
     if (character === '\\') {
-      const escaped = trimmed[index + 1]
+      const escaped = selector[index + 1]
       if (!escaped) {
         return undefined
       }
@@ -91,22 +95,60 @@ const extractSimpleClassToken = (selector: string): string | undefined => {
       continue
     }
 
-    if (
-      character === ':' ||
-      character === ' ' ||
-      character === '>' ||
-      character === '+' ||
-      character === '~' ||
-      character === '['
-    ) {
-      return undefined
+    if (CLASS_TOKEN_TERMINATORS.has(character)) {
+      break
     }
 
     token += character
   }
 
-  return token === '' ? undefined : decodeEscapedClassToken(token)
+  return token === '' ? undefined : { token: decodeEscapedClassToken(token), end: index }
 }
+
+const extractLastClassToken = (selector: string): string | undefined => {
+  let last: string | undefined
+  for (let index = 0; index < selector.length; index += 1) {
+    if (selector[index] !== '.' || selector[index - 1] === '\\') {
+      continue
+    }
+    const read = readClassToken(selector, index)
+    if (read) {
+      last = read.token
+      index = read.end - 1
+    }
+  }
+  return last
+}
+
+type ParsedSelector =
+  | { kind: 'simple'; token: string }
+  | { kind: 'pseudo'; token: string; pseudo: string }
+  | { kind: 'unsupported'; token: string | undefined }
+
+const parseSelector = (selector: string): ParsedSelector => {
+  const trimmed = selector.trim()
+  if (!trimmed.startsWith('.')) {
+    return { kind: 'unsupported', token: extractLastClassToken(trimmed) }
+  }
+
+  const read = readClassToken(trimmed, 0)
+  if (!read) {
+    return { kind: 'unsupported', token: extractLastClassToken(trimmed) }
+  }
+
+  const rest = trimmed.slice(read.end)
+  if (rest === '') {
+    return { kind: 'simple', token: read.token }
+  }
+
+  if (PSEUDO_SUFFIX_PATTERN.test(rest)) {
+    return { kind: 'pseudo', token: read.token, pseudo: rest }
+  }
+
+  return { kind: 'unsupported', token: extractLastClassToken(trimmed) }
+}
+
+const renameVariantToken = (token: string): string => token.replaceAll(':', '-')
 
 const extractDeclarationsFromNodes = (nodes: csstree.CssNode[]): Record<string, string> => {
   const declarations: Record<string, string> = {}
@@ -144,6 +186,17 @@ const appendMediaRuleByClass = (
 ): void => {
   const mediaRule = `@media ${mediaQuery}{.${escapeSelector(classToken)}{${serializeDeclarations(declarations, true)}}}`
   target[classToken] = `${target[classToken] ?? ''}${mediaRule}`
+}
+
+const appendPseudoRuleByClass = (
+  target: Record<string, string>,
+  classToken: string,
+  renamedToken: string,
+  pseudo: string,
+  declarations: Record<string, string>,
+): void => {
+  const pseudoRule = `.${escapeSelector(renamedToken)}${pseudo}{${serializeDeclarations(declarations, true)}}`
+  target[classToken] = `${target[classToken] ?? ''}${pseudoRule}`
 }
 
 const collectCssVariables = (nodes: csstree.CssNode[]): Record<string, string> => {
@@ -219,8 +272,10 @@ const buildArtifactFromCss = (cssText: string, classes?: string[]): TailwindBuil
   const cssVariables = collectCssVariables(rootNodes)
   const inlineStylesByClass: Record<string, Record<string, string>> = {}
   const headCssByClass: Record<string, string> = {}
+  const renamedClasses: Record<string, string> = {}
   const discoveredClasses: string[] = []
   const discoveredClassSet = new Set<string>()
+  const warnedUnsupported = new Set<string>()
 
   const registerClass = (classToken: string): void => {
     if (!discoveredClassSet.has(classToken)) {
@@ -244,11 +299,21 @@ const buildArtifactFromCss = (cssText: string, classes?: string[]): TailwindBuil
         continue
       }
 
-      const classToken = extractSimpleClassToken(csstree.generate(node.prelude))
-      if (!classToken) {
+      const selector = parseSelector(csstree.generate(node.prelude))
+      if (selector.kind === 'unsupported') {
+        if (selector.token) {
+          registerClass(selector.token)
+          if (!warnedUnsupported.has(selector.token)) {
+            warnedUnsupported.add(selector.token)
+            console.warn(
+              `[hono-email] Tailwind class '${selector.token}' uses an unsupported selector (combinator or pseudo-element) and was dropped.`,
+            )
+          }
+        }
         continue
       }
 
+      const classToken = selector.token
       registerClass(classToken)
 
       const directDeclarations: Record<string, string> = {}
@@ -272,6 +337,19 @@ const buildArtifactFromCss = (cssText: string, classes?: string[]): TailwindBuil
 
       const normalizedDirectDeclarations = normalizeDeclarations(directDeclarations, cssVariables)
       if (Object.keys(normalizedDirectDeclarations).length === 0) {
+        continue
+      }
+
+      if (selector.kind === 'pseudo') {
+        const renamedToken = renameVariantToken(classToken)
+        renamedClasses[classToken] = renamedToken
+        appendPseudoRuleByClass(
+          headCssByClass,
+          classToken,
+          renamedToken,
+          selector.pseudo,
+          normalizedDirectDeclarations,
+        )
         continue
       }
 
@@ -301,6 +379,7 @@ const buildArtifactFromCss = (cssText: string, classes?: string[]): TailwindBuil
     classes: classes ?? discoveredClasses,
     headCssByClass,
     inlineStylesByClass,
+    renamedClasses,
   }
 }
 
@@ -387,9 +466,12 @@ export const transformTailwindHtml = async (
       element(el) {
         const tokens = (el.getAttribute('class') ?? '').split(/\s+/).filter(Boolean)
         const mergedInlineStyle: Record<string, string> = {}
+        const outputTokens: string[] = []
+        let renamed = false
 
         for (const token of tokens) {
           if (!knownClasses.has(token)) {
+            outputTokens.push(token)
             if (ignoreMissingClass?.(token)) {
               continue
             }
@@ -401,6 +483,14 @@ export const transformTailwindHtml = async (
             continue
           }
 
+          const renamedToken = artifact.renamedClasses[token]
+          if (renamedToken) {
+            outputTokens.push(renamedToken)
+            renamed = true
+          } else {
+            outputTokens.push(token)
+          }
+
           const inlineStyle = artifact.inlineStylesByClass[token]
           if (inlineStyle) {
             Object.assign(mergedInlineStyle, inlineStyle)
@@ -410,6 +500,10 @@ export const transformTailwindHtml = async (
           if (mediaRule) {
             responsiveCss.add(mediaRule)
           }
+        }
+
+        if (renamed) {
+          el.setAttribute('class', outputTokens.join(' '))
         }
 
         if (Object.keys(mergedInlineStyle).length > 0) {

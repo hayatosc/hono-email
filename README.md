@@ -14,9 +14,11 @@
 - Render HTML email from `hono/jsx`
 - Render plain text from the same JSX tree through `render()`
 - Keep strict email validation enabled by default
+- Minify output by default, with optional pretty printing and widow control
 - Style markdown content with the `Markdown` component
 - Use `hono/css` class-based CSS-in-JS as a styling option
 - Apply Tailwind utility output through `Tailwind` build artifacts
+- Send rendered email through transport adapters (SMTP, Resend, SendGrid, Postmark, Mailgun, Cloudflare Email)
 - Expose bundler integrations through `hono-email/plugin`
 
 ## Setup
@@ -63,6 +65,9 @@ const { html, text } = await render(<WelcomeEmail />, {
 - Returns HTML and plain text as `{ html, text }`
 - Uses `strict: true` by default
 - Accepts `doctype: 'html5' | 'xhtml-transitional' | false`
+- Minifies the HTML by default. Set `pretty: true` for readable output, or `minify: false` for unprocessed HTML. `pretty` takes precedence over `minify`.
+- Set `widows: true` to join the last two words of each text block with a non-breaking space
+- Always expands three-digit hex colors (`#abc` → `#aabbcc`) inside `style` attributes and `<style>` blocks
 - Accepts plain-text options through the `text` field
 
 ```tsx
@@ -564,6 +569,8 @@ const { html } = await render(
   </Html>,
 )
 ```
+
+Base utilities are inlined as `style` attributes, and responsive (`sm:`) styles are relocated into `<head>`. Single-element pseudo-class variants such as `hover:` and `focus:` are kept in `<head>` with email-safe renamed class names (`hover:bg-blue-500` → `hover-bg-blue-500`). Combinator variants such as `group-hover:` and `peer-*` are not supported and are dropped with a warning.
 
 When using Tailwind for frontend styling, we recommend using `@source` with `not` to exclude emails from being scanned by the frontend Tailwind build.
 

@@ -75,6 +75,9 @@ import { relocatePreview } from './normalize/preview'
 import { transformHonoCssOutput } from './render/hono-css'
 import { renderFragmentToHtml } from './render/html'
 import { prettyPrintHtml } from './render/pretty'
+import { minifyHtml } from './transform/minify'
+import { preventWidows } from './transform/prevent-widows'
+import { ensureSixHex } from './transform/six-hex'
 export { buildTailwindArtifactFromCss, collectTailwindClassesFromHtml } from './tailwind'
 export type { BuildTailwindArtifactFromCssOptions } from './tailwind'
 import { renderPlainText, type PlainTextRenderOptions } from './text'
@@ -84,7 +87,9 @@ import { validateHtml } from './validate/html'
  * Shared HTML render options.
  *
  * @property doctype - Doctype to prepend. Defaults to HTML5.
- * @property pretty - Pretty-print the rendered HTML when `true`.
+ * @property pretty - Pretty-print the rendered HTML when `true`. Takes precedence over `minify`.
+ * @property minify - Minify the rendered HTML. Defaults to `true`. Ignored when `pretty` is `true`.
+ * @property widows - Join the last two words of each text node with `&nbsp;` when `true`.
  * @property strict - Run strict email validation when `true`. Defaults to `true`.
  *
  * @example
@@ -98,6 +103,8 @@ import { validateHtml } from './validate/html'
 type BaseRenderOptions = {
   doctype?: 'html5' | 'xhtml-transitional' | false
   pretty?: boolean
+  minify?: boolean
+  widows?: boolean
   strict?: boolean
 }
 
@@ -172,6 +179,12 @@ const renderHtml = async (jsx: Child, options: BaseRenderOptions = {}): Promise<
     }
   }
 
+  html = ensureSixHex(html)
+
+  if (options.widows) {
+    html = preventWidows(html)
+  }
+
   const doctype = resolveDoctype(options.doctype)
 
   if (doctype !== '') {
@@ -180,6 +193,8 @@ const renderHtml = async (jsx: Child, options: BaseRenderOptions = {}): Promise<
 
   if (options.pretty) {
     html = prettyPrintHtml(html)
+  } else if (options.minify !== false) {
+    html = minifyHtml(html)
   }
 
   return html
