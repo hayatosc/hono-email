@@ -134,6 +134,9 @@
   "dependencies": {
     "unplugin": "^3.0.0"
   },
+  "peerDependencies": {
+    "hono-email": "^0.4.0"
+  },
   "devDependencies": {
     "hono-email": "workspace:*"
   }
