@@ -18,6 +18,7 @@ import {
  * @property headCssByClass - Responsive, pseudo, or head-only CSS keyed by class token.
  * @property inlineStylesByClass - Inline declarations keyed by class token.
  * @property renamedClasses - Email-safe class tokens keyed by original token, for pseudo-class variants.
+ * @property droppedClasses - Class tokens dropped because their selector is unsupported (combinator/pseudo-element).
  *
  * @example
  * ```ts
@@ -31,6 +32,7 @@ export type TailwindBuildArtifact = {
   headCssByClass: Record<string, string>
   inlineStylesByClass: Record<string, Record<string, string>>
   renamedClasses: Record<string, string>
+  droppedClasses: string[]
 }
 
 /**
@@ -54,6 +56,7 @@ export type BuildTailwindArtifactFromCssOptions = {
 type TailwindRenderResult = {
   html: string
   headCss: string
+  warnings: string[]
 }
 
 export type TransformTailwindHtmlOptions = {
@@ -149,6 +152,41 @@ const parseSelector = (selector: string): ParsedSelector => {
 }
 
 const renameVariantToken = (token: string): string => token.replaceAll(':', '-')
+
+const droppedClassWarning = (classToken: string): string =>
+  `Tailwind class '${classToken}' uses an unsupported selector (combinator or pseudo-element) and was dropped.`
+
+const TAILWIND_WARNING_COMMENT_PREFIX = 'hono-email-tw-warning:'
+const TAILWIND_WARNING_COMMENT_PATTERN = /<!--hono-email-tw-warning:([\s\S]*?)-->/g
+
+/**
+ * Encodes Tailwind render warnings as HTML comment markers.
+ *
+ * Markers travel with the rendered fragment until `render()` extracts them, so
+ * warnings raised inside the `<Tailwind>` component reach the render pipeline.
+ *
+ * @param warnings - Warning messages to encode.
+ * @returns Concatenated comment markers, or an empty string.
+ */
+export const encodeTailwindWarnings = (warnings: string[]): string =>
+  warnings
+    .map((warning) => `<!--${TAILWIND_WARNING_COMMENT_PREFIX}${encodeURIComponent(warning)}-->`)
+    .join('')
+
+/**
+ * Extracts and removes Tailwind warning markers from HTML.
+ *
+ * @param html - HTML that may contain warning markers.
+ * @returns The HTML without markers and the decoded warnings.
+ */
+export const extractTailwindWarnings = (html: string): { html: string; warnings: string[] } => {
+  const warnings: string[] = []
+  const stripped = html.replace(TAILWIND_WARNING_COMMENT_PATTERN, (_match, encoded: string) => {
+    warnings.push(decodeURIComponent(encoded))
+    return ''
+  })
+  return { html: stripped, warnings }
+}
 
 const extractDeclarationsFromNodes = (nodes: csstree.CssNode[]): Record<string, string> => {
   const declarations: Record<string, string> = {}
@@ -275,7 +313,7 @@ const buildArtifactFromCss = (cssText: string, classes?: string[]): TailwindBuil
   const renamedClasses: Record<string, string> = {}
   const discoveredClasses: string[] = []
   const discoveredClassSet = new Set<string>()
-  const warnedUnsupported = new Set<string>()
+  const droppedClassSet = new Set<string>()
 
   const registerClass = (classToken: string): void => {
     if (!discoveredClassSet.has(classToken)) {
@@ -303,12 +341,7 @@ const buildArtifactFromCss = (cssText: string, classes?: string[]): TailwindBuil
       if (selector.kind === 'unsupported') {
         if (selector.token) {
           registerClass(selector.token)
-          if (!warnedUnsupported.has(selector.token)) {
-            warnedUnsupported.add(selector.token)
-            console.warn(
-              `[hono-email] Tailwind class '${selector.token}' uses an unsupported selector (combinator or pseudo-element) and was dropped.`,
-            )
-          }
+          droppedClassSet.add(selector.token)
         }
         continue
       }
@@ -380,6 +413,7 @@ const buildArtifactFromCss = (cssText: string, classes?: string[]): TailwindBuil
     headCssByClass,
     inlineStylesByClass,
     renamedClasses,
+    droppedClasses: Array.from(droppedClassSet),
   }
 }
 
@@ -445,11 +479,13 @@ export const transformTailwindHtml = async (
   options: TransformTailwindHtmlOptions = {},
 ): Promise<TailwindRenderResult> => {
   const knownClasses = new Set(artifact.classes)
+  const droppedClasses = new Set(artifact.droppedClasses)
   const throwOnMissingClass = options.throwOnMissingClass ?? true
   const ignoreMissingClass = options.ignoreMissingClass
   const preserveMarkdownTailwindParentRequiredAttribute =
     options.preserveMarkdownTailwindParentRequiredAttribute ?? false
   const responsiveCss = new Set<string>()
+  const usedDroppedClasses = new Set<string>()
 
   let rewriter = new HTMLRewriter()
 
@@ -481,6 +517,10 @@ export const transformTailwindHtml = async (
               )
             }
             continue
+          }
+
+          if (droppedClasses.has(token)) {
+            usedDroppedClasses.add(token)
           }
 
           const renamedToken = artifact.renamedClasses[token]
@@ -520,6 +560,7 @@ export const transformTailwindHtml = async (
   return {
     html: transformed,
     headCss: Array.from(responsiveCss).join(''),
+    warnings: Array.from(usedDroppedClasses, droppedClassWarning),
   }
 }
 

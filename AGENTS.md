@@ -50,6 +50,8 @@ It focuses on:
 - Strict mode is enabled by default.
 - Validation checks include unsupported tags, risky CSS declarations/properties, style placement, anchor href requirements, stylesheet links, and image alt warnings.
 - HTML comments are ignored for normal comments, but Outlook conditional-comment payloads are still validated.
+- Errors throw and reject `render()`; warnings are collected on `RenderResult.warnings`. `onWarning` (`'warn'` default | `'error'` | `'silent'` | callback) controls how warnings are surfaced, so tests can fail on them.
+- Tailwind combinator/pseudo-element variants that get dropped are reported as warnings through the same channel (markers encoded in `src/tailwind/`, extracted in `render()`).
 
 ## Development commands
 

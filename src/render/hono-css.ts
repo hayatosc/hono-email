@@ -1,5 +1,6 @@
 import {
   buildTailwindArtifactFromCss,
+  encodeTailwindWarnings,
   transformTailwindHtml,
   wrapGeneratedHeadCss,
 } from '../tailwind'
@@ -116,5 +117,5 @@ export const transformHonoCssOutput = async (html: string): Promise<string> => {
     throwOnMissingClass: false,
   })
 
-  return `${wrapGeneratedHeadCss(transformed.headCss)}${transformed.html}`
+  return `${encodeTailwindWarnings(transformed.warnings)}${wrapGeneratedHeadCss(transformed.headCss)}${transformed.html}`
 }

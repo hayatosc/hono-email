@@ -62,12 +62,13 @@ const { html, text } = await render(<WelcomeEmail />, {
 
 `render()` is the primary runtime API.
 
-- Returns HTML and plain text as `{ html, text }`
+- Returns HTML, plain text, and collected warnings as `{ html, text, warnings }`
 - Uses `strict: true` by default
 - Accepts `doctype: 'html5' | 'xhtml-transitional' | false`
 - Minifies the HTML by default. Set `pretty: true` for readable output, or `minify: false` for unprocessed HTML. `pretty` takes precedence over `minify`.
 - Set `widows: true` to join the last two words of each text block with a non-breaking space
 - Always expands three-digit hex colors (`#abc` → `#aabbcc`) inside `style` attributes and `<style>` blocks
+- Controls warning handling through `onWarning: 'warn' | 'error' | 'silent' | (warning) => void` (default `'warn'`)
 - Accepts plain-text options through the `text` field
 
 ```tsx
@@ -452,6 +453,33 @@ Representative compatibility-sensitive cases include:
 - `@font-face`
 - `@media`
 - `<img>` without `alt`
+
+## Testing
+
+Strict-mode **errors** (unsupported tags, unsafe URLs, risky CSS) already reject the `render()` promise, so they fail tests as-is.
+
+Compatibility **warnings** are returned on `result.warnings` and, by default, logged with `console.warn`. To make warnings fail a test, pass `onWarning: 'error'` so `render()` throws when any warning is collected.
+
+```ts
+import { expect, test } from 'vitest'
+import { render } from 'hono-email'
+import { WelcomeEmail } from './welcome-email'
+
+// Fail the test on any compatibility warning.
+const renderEmail = (jsx: Parameters<typeof render>[0]) => render(jsx, { onWarning: 'error' })
+
+test('welcome email renders without warnings', async () => {
+  await expect(renderEmail(<WelcomeEmail />)).resolves.toBeDefined()
+})
+
+// Or assert on the collected warnings directly.
+test('welcome email has no warnings', async () => {
+  const { warnings } = await render(<WelcomeEmail />, { onWarning: 'silent' })
+  expect(warnings).toEqual([])
+})
+```
+
+Use `onWarning: 'silent'` to inspect `result.warnings` without console output, or pass a callback to route warnings into your own collector.
 
 ## Font
 
