@@ -1,5 +1,14 @@
 # Changelog
 
+## [undefined] - 2026-06-13
+
+- refactor: split into core and tailwind-plugin monorepo packages (#34)
+- feat: output transforms, Tailwind pseudo-class support, and testable render warnings (#33)
+- feat(preview): pad preheader and keep it out of plain text (#31)
+- fix(text): uppercase only real headings in plain-text output (#32)
+- fix(text): decode entities and strip comments in plain-text output (#29)
+
+
 ## [0.4.0] - 2026-05-16
 
 ### Add Provider Adapters
