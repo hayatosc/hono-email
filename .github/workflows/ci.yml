@@ -79,6 +79,9 @@ jobs:
       - name: Test
         run: bun run test
 
+      - name: Build
+        run: bun run build
+
       - name: Runtime Test (Node)
         if: steps.filter.outputs.node == 'true'
         run: bun run test:runtime:node
@@ -94,6 +97,3 @@ jobs:
       - name: Runtime Test (Cloudflare)
         if: steps.filter.outputs.cloudflare == 'true'
         run: bun run test:runtime:cloudflare
-
-      - name: Build
-        run: bun run build
