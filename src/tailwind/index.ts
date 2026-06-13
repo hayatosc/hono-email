@@ -521,6 +521,8 @@ export const transformTailwindHtml = async (
 
           if (droppedClasses.has(token)) {
             usedDroppedClasses.add(token)
+            renamed = true
+            continue
           }
 
           const renamedToken = artifact.renamedClasses[token]
@@ -543,7 +545,11 @@ export const transformTailwindHtml = async (
         }
 
         if (renamed) {
-          el.setAttribute('class', outputTokens.join(' '))
+          if (outputTokens.length > 0) {
+            el.setAttribute('class', outputTokens.join(' '))
+          } else {
+            el.removeAttribute('class')
+          }
         }
 
         if (Object.keys(mergedInlineStyle).length > 0) {

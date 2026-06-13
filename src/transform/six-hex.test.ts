@@ -14,6 +14,17 @@ describe('expandShortHex', () => {
   test('leaves four-digit hex untouched', () => {
     expect(expandShortHex('color:#abcd')).toBe('color:#abcd')
   })
+
+  test('does not expand hash fragments inside url()', () => {
+    expect(expandShortHex('filter:url(#abc)')).toBe('filter:url(#abc)')
+    expect(expandShortHex("src:url('font.woff2#abc')")).toBe("src:url('font.woff2#abc')")
+  })
+
+  test('expands colors but leaves url() fragments alone in the same value', () => {
+    expect(expandShortHex('color:#abc;background:url(#def)')).toBe(
+      'color:#aabbcc;background:url(#def)',
+    )
+  })
 })
 
 describe('ensureSixHex', () => {

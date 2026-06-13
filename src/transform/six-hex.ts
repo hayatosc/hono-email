@@ -1,17 +1,23 @@
-const SHORT_HEX_PATTERN = /#([0-9a-fA-F])([0-9a-fA-F])([0-9a-fA-F])(?![0-9a-fA-F])/g
+// Match either a `url(...)` token (left untouched) or a three-digit hex color.
+// Putting `url(...)` first means hash fragments inside URLs — e.g. SVG refs like
+// `url(#abc)` or `url('font.woff2#abc')` — are consumed and never expanded.
+const SHORT_HEX_OR_URL_PATTERN =
+  /url\([^)]*\)|#([0-9a-fA-F])([0-9a-fA-F])([0-9a-fA-F])(?![0-9a-fA-F])/gi
 const STYLE_BLOCK_PATTERN = /(<style\b[^>]*>)([\s\S]*?)(<\/style>)/gi
 const STYLE_ATTRIBUTE_PATTERN = /(\bstyle=)("[^"]*"|'[^']*')/gi
 
 /**
  * Expands three-digit hex colors to six digits within a CSS string.
  *
+ * `url(...)` tokens are skipped so URL hash fragments are not mistaken for hex
+ * colors.
+ *
  * @param css - CSS text to process.
  * @returns CSS with `#abc` rewritten to `#aabbcc`.
  */
 export const expandShortHex = (css: string): string =>
-  css.replace(
-    SHORT_HEX_PATTERN,
-    (_match, red, green, blue) => `#${red}${red}${green}${green}${blue}${blue}`,
+  css.replace(SHORT_HEX_OR_URL_PATTERN, (match, red, green, blue) =>
+    red ? `#${red}${red}${green}${green}${blue}${blue}` : match,
   )
 
 /**
