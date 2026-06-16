@@ -31,6 +31,36 @@ function detectPostCssConfig(rootDir: string): boolean {
   return CONFIG_EXTENSIONS.some((ext) => existsSync(resolve(rootDir, `postcss.config.${ext}`)))
 }
 
+function detectViteConfigHasTailwind(rootDir: string): boolean {
+  for (const ext of CONFIG_EXTENSIONS) {
+    const path = resolve(rootDir, `vite.config.${ext}`)
+    if (existsSync(path)) {
+      try {
+        const content = readFileSync(path, 'utf-8')
+        if (content.includes('tailwindcss') || content.includes('@tailwindcss/vite')) {
+          return true
+        }
+      } catch {}
+    }
+  }
+  return false
+}
+
+function detectTailwindInPackageJson(rootDir: string): boolean {
+  try {
+    const pkgPath = resolve(rootDir, 'package.json')
+    if (existsSync(pkgPath)) {
+      const pkg = JSON.parse(readFileSync(pkgPath, 'utf-8')) as Record<string, unknown>
+      const deps = {
+        ...(pkg.dependencies as Record<string, string> | undefined),
+        ...(pkg.devDependencies as Record<string, string> | undefined),
+      }
+      return 'tailwindcss' in deps || '@tailwindcss/vite' in deps
+    }
+  } catch {}
+  return false
+}
+
 function resolvePackageRoot(): string {
   let dir = fileURLToPath(new URL('..', import.meta.url))
   while (dir !== dirname(dir)) {
@@ -68,7 +98,11 @@ export async function startPreviewServer(options: PreviewServerOptions): Promise
   const plugins: PluginOption[] = []
 
   const tailwindConfigPath = detectTailwindConfig(rootDir)
-  const hasTailwind = tailwindConfigPath !== null || detectPostCssConfig(rootDir)
+  const hasTailwind =
+    tailwindConfigPath !== null ||
+    detectPostCssConfig(rootDir) ||
+    detectViteConfigHasTailwind(rootDir) ||
+    detectTailwindInPackageJson(rootDir)
 
   if (hasTailwind) {
     const { unplugin, transformTailwindComponentSource } =

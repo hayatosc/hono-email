@@ -1,6 +1,20 @@
 import { defineConfig } from 'tsdown'
 
-const neverBundle = [/^hono(\/.*)?$/, /^hono-email(\/.*)?$/, /^node:/, /^vite(\/.*)?$/]
+// Dependencies to bundle (listed in devDependencies):
+// - @hono-email/tailwind-plugin (bundled as a dynamic import chunk)
+//
+// Dependencies to NEVER bundle (externalized):
+// - production dependencies (@hono/node-server, citty, vite, hono)
+// - peer dependencies (hono-email)
+// - node built-ins
+const neverBundle = [
+  /^node:/,
+  /^hono(\/.*)?$/,
+  /^hono-email(\/.*)?$/,
+  /^vite(\/.*)?$/,
+  '@hono/node-server',
+  'citty',
+]
 
 export default defineConfig({
   entry: {
