@@ -2,7 +2,7 @@ import { Hono } from 'hono'
 import type { ViteDevServer } from 'vite'
 
 import { discoverTemplates } from '../discovery/index.js'
-import { extractPropsSchema, mergePropsWithDefaults } from '../props/index.js'
+import { extractPropsSchema, mergePropsWithDefaults, resolveComponent } from '../props/index.js'
 import { renderTemplate } from './renderer.js'
 
 function isObject(value: unknown): value is Record<string, unknown> {
@@ -14,7 +14,7 @@ export function createApiRoutes(vite: ViteDevServer, templateDir: string) {
 
   app.get('/templates', (c) => {
     const templates = discoverTemplates(templateDir)
-    return c.json(templates)
+    return c.json(templates.map((t) => ({ name: t.name })))
   })
 
   app.get('/templates/:name/props', async (c) => {
@@ -26,12 +26,12 @@ export function createApiRoutes(vite: ViteDevServer, templateDir: string) {
     }
 
     try {
-      const mod = await vite.ssrLoadModule(entry.filePath)
-      const component = (mod as Record<string, unknown>).default
-      if (typeof component !== 'function') {
-        return c.json({})
+      const mod = (await vite.ssrLoadModule(entry.filePath)) as Record<string, unknown>
+      const component = resolveComponent(mod)
+      if (!component) {
+        return c.json({ error: 'No exported component function found' }, 400)
       }
-      const schema = extractPropsSchema(component)
+      const schema = extractPropsSchema(mod)
       return c.json(schema)
     } catch (err) {
       console.error('Failed to load template props:', err)
@@ -51,13 +51,13 @@ export function createApiRoutes(vite: ViteDevServer, templateDir: string) {
     const props = isObject(body) && isObject(body.props) ? body.props : {}
 
     try {
-      const mod = await vite.ssrLoadModule(entry.filePath)
-      const component = (mod as Record<string, unknown>).default
-      if (typeof component !== 'function') {
-        return c.json({ error: 'No default export function' }, 400)
+      const mod = (await vite.ssrLoadModule(entry.filePath)) as Record<string, unknown>
+      const component = resolveComponent(mod)
+      if (!component) {
+        return c.json({ error: 'No exported component function found' }, 400)
       }
 
-      const schema = extractPropsSchema(component)
+      const schema = extractPropsSchema(mod)
       const mergedProps = mergePropsWithDefaults(schema, props)
       const result = await renderTemplate(component, mergedProps)
       return c.json(result)

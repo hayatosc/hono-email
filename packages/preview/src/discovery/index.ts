@@ -17,9 +17,10 @@ function toPascalCase(filename: string): string {
 function templateName(absDir: string, filePath: string): string {
   const rel = relative(absDir, filePath)
   const dir = rel.slice(0, rel.length - basename(rel).length)
-  const segments = dir.split(/[/\\]/).filter((s) => s.length > 0)
+  const dirSegments = dir.split(/[/\\]/).filter((s) => s.length > 0)
   const base = basename(filePath, '.tsx')
-  return toPascalCase([...segments, base].join('-'))
+  const all = [...dirSegments, base].map(toPascalCase)
+  return all.length > 1 ? all.join('/') : all[0] ?? ''
 }
 
 export function discoverTemplates(dir: string): TemplateEntry[] {

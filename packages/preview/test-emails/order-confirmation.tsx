@@ -1,11 +1,20 @@
 import { Html, Body, Text, Button } from 'hono-email'
 
+import type { PreviewPropsConfig } from '../src/props/index.js'
+
 type Props = {
   customerName?: string
   orderId?: string
   items?: string[]
   showButton?: boolean
 }
+
+export const previewProps = {
+  customerName: { type: 'string', default: 'Guest' },
+  orderId: { type: 'string', default: '0000' },
+  items: { type: 'array', default: ['Widget A', 'Widget B'] },
+  showButton: { type: 'boolean', default: true },
+} satisfies PreviewPropsConfig
 
 export default function OrderConfirmation({
   customerName = 'Guest',

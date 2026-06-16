@@ -1,7 +1,7 @@
 /** @jsxImportSource hono/jsx/dom */
 import { render, useState, useEffect, useCallback, useRef } from 'hono/jsx/dom'
 
-import type { TemplateEntry } from '../discovery/index.js'
+type TemplateSummary = { name: string }
 import type { PropsSchema } from '../props/index.js'
 import { PreviewPanel } from './components/PreviewPanel.js'
 import { PropsForm } from './components/PropsForm.js'
@@ -12,7 +12,7 @@ function isObject(value: unknown): value is Record<string, unknown> {
 }
 
 function App() {
-  const [templates, setTemplates] = useState<TemplateEntry[]>([])
+  const [templates, setTemplates] = useState<TemplateSummary[]>([])
   const [selected, setSelected] = useState<string | null>(null)
   const [schema, setSchema] = useState<PropsSchema>({})
   const [propValues, setPropValues] = useState<Record<string, unknown>>({})
@@ -117,12 +117,11 @@ function App() {
       const response = await fetchApi('/api/templates')
       if (!response || !response.ok) return
       const data = await response.json()
-      const templates: TemplateEntry[] = Array.isArray(data)
+      const templates: TemplateSummary[] = Array.isArray(data)
         ? data
             .filter(isObject)
             .map((item) => ({
               name: typeof item.name === 'string' ? item.name : '',
-              filePath: typeof item.filePath === 'string' ? item.filePath : '',
             }))
             .filter((item) => item.name !== '')
         : []

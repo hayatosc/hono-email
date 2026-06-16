@@ -20,6 +20,18 @@ function inputValue(value: unknown): string {
   return ''
 }
 
+function arrayDisplayValue(value: unknown): string {
+  if (Array.isArray(value)) {
+    return value.map(String).join(', ')
+  }
+  return ''
+}
+
+function parseArrayValue(input: string): string[] {
+  if (input.trim() === '') return []
+  return input.split(',').map((s) => s.trim())
+}
+
 function asInputElement(target: EventTarget | null): HTMLInputElement | undefined {
   return target instanceof HTMLInputElement ? target : undefined
 }
@@ -108,6 +120,25 @@ function Field({
     )
   }
 
+  if (spec.type === 'array') {
+    return (
+      <div class="field">
+        <label class="field-label">{label}</label>
+        <input
+          class="field-input"
+          type="text"
+          value={arrayDisplayValue(value)}
+          placeholder="comma-separated values"
+          onInput={(e) => {
+            const el = asInputElement(e.currentTarget)
+            if (el) onChange(name, parseArrayValue(el.value))
+          }}
+        />
+        <span class="field-hint">Comma-separated</span>
+      </div>
+    )
+  }
+
   return (
     <div class="field">
       <label class="field-label">{label}</label>
@@ -160,7 +191,13 @@ export function PropsForm({
             <Field key={key} name={key} spec={spec} value={values[key]} onChange={onChange} />
           ))
         ) : (
-          <div class="empty-state">No editable props</div>
+          <div class="empty-state">
+            No editable props.
+            <br />
+            <span class="empty-state-hint">
+              Export a <code>previewProps</code> object from your template to enable form editing.
+            </span>
+          </div>
         )}
       </div>
 

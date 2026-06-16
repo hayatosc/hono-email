@@ -1,8 +1,9 @@
 /** @jsxImportSource hono/jsx/dom */
-import type { TemplateEntry } from '../../discovery/index.js'
+
+type TemplateSummary = { name: string }
 
 export type TemplateListProps = {
-  templates: TemplateEntry[]
+  templates: TemplateSummary[]
   selected: string | null
   onSelect: (name: string) => void
 }

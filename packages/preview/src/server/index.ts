@@ -46,14 +46,19 @@ function detectViteConfigHasTailwind(rootDir: string): boolean {
   return false
 }
 
+function isObject(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === 'object' && !Array.isArray(value)
+}
+
 function detectTailwindInPackageJson(rootDir: string): boolean {
   try {
     const pkgPath = resolve(rootDir, 'package.json')
     if (existsSync(pkgPath)) {
-      const pkg = JSON.parse(readFileSync(pkgPath, 'utf-8')) as Record<string, unknown>
+      const pkg: unknown = JSON.parse(readFileSync(pkgPath, 'utf-8'))
+      if (!isObject(pkg)) return false
       const deps = {
-        ...(pkg.dependencies as Record<string, string> | undefined),
-        ...(pkg.devDependencies as Record<string, string> | undefined),
+        ...(isObject(pkg.dependencies) ? pkg.dependencies : {}),
+        ...(isObject(pkg.devDependencies) ? pkg.devDependencies : {}),
       }
       return 'tailwindcss' in deps || '@tailwindcss/vite' in deps
     }
