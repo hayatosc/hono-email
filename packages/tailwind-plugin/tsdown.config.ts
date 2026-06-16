@@ -7,11 +7,7 @@ import { defineConfig } from 'tsdown'
 // - production dependencies (unplugin)
 // - peer dependencies (hono-email)
 // - node built-ins
-const neverBundle = [
-  /^node:/,
-  'unplugin',
-  /^hono-email(\/.*)?$/,
-]
+const neverBundle = [/^node:/, 'unplugin', /^hono-email(\/.*)?$/]
 
 export default defineConfig({
   entry: {

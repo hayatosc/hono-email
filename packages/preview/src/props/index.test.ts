@@ -86,10 +86,10 @@ describe('extractPropsSchema', () => {
     }
 
     const schema = extractPropsSchema(mod)
-    expect(schema.name!.type).toBe('string')
-    expect(schema.count!.type).toBe('number')
-    expect(schema.active!.type).toBe('boolean')
-    expect(schema.tags!.type).toBe('array')
+    expect(schema.name?.type).toBe('string')
+    expect(schema.count?.type).toBe('number')
+    expect(schema.active?.type).toBe('boolean')
+    expect(schema.tags?.type).toBe('array')
   })
 
   test('skips non-object entries in previewProps', () => {

@@ -20,7 +20,7 @@ function templateName(absDir: string, filePath: string): string {
   const dirSegments = dir.split(/[/\\]/).filter((s) => s.length > 0)
   const base = basename(filePath, '.tsx')
   const all = [...dirSegments, base].map(toPascalCase)
-  return all.length > 1 ? all.join('/') : all[0] ?? ''
+  return all.length > 1 ? all.join('/') : (all[0] ?? '')
 }
 
 export function discoverTemplates(dir: string): TemplateEntry[] {

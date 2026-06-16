@@ -40,6 +40,10 @@ function isObject(value: unknown): value is Record<string, unknown> {
 
 const VALID_TYPES = new Set(['string', 'number', 'boolean', 'select', 'array'])
 
+function isValidType(type: unknown): type is 'string' | 'number' | 'boolean' | 'select' | 'array' {
+  return typeof type === 'string' && VALID_TYPES.has(type)
+}
+
 function inferType(value: unknown): PreviewPropSpec['type'] {
   if (typeof value === 'boolean') return 'boolean'
   if (typeof value === 'number') return 'number'
@@ -65,10 +69,7 @@ export function extractPropsSchema(mod: Record<string, unknown>): PropsSchema {
       continue
     }
 
-    const explicitType =
-      typeof spec.type === 'string' && VALID_TYPES.has(spec.type)
-        ? (spec.type as PreviewPropSpec['type'])
-        : undefined
+    const explicitType = isValidType(spec.type) ? spec.type : undefined
     const type = explicitType ?? inferType(spec.default) ?? 'string'
 
     schema[key] = {
@@ -90,13 +91,13 @@ export function extractPropsSchema(mod: Record<string, unknown>): PropsSchema {
  */
 export function resolveComponent(mod: Record<string, unknown>): Function | null {
   if (typeof mod.default === 'function') {
-    return mod.default as Function
+    return mod.default
   }
 
   for (const [key, value] of Object.entries(mod)) {
     if (key === 'previewProps') continue
     if (typeof value === 'function') {
-      return value as Function
+      return value
     }
   }
 
