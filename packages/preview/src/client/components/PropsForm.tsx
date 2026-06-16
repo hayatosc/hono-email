@@ -82,7 +82,9 @@ function Field({
           }}
         >
           {spec.options.map((option) => (
-            <option key={option} value={option}>{option}</option>
+            <option key={option} value={option}>
+              {option}
+            </option>
           ))}
         </select>
       </div>
