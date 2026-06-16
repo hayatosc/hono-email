@@ -1,9 +1,0 @@
-{
-  "name": "@hono-email/preview-test-emails",
-  "private": true,
-  "type": "module",
-  "dependencies": {
-    "hono-email": "workspace:*",
-    "tailwindcss": "4.3.1"
-  }
-}

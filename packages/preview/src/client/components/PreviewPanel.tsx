@@ -61,7 +61,7 @@ export function PreviewPanel({
         style={{ display: tab === 'html' ? '' : 'none' }}
       >
         {html ? (
-          <iframe srcdoc={html} title="preview" />
+          <iframe srcdoc={html} title="preview" sandbox="" />
         ) : (
           <div class="empty-state">No preview</div>
         )}
@@ -72,11 +72,16 @@ export function PreviewPanel({
       </pre>
 
       <div class="warnings-panel" style={{ display: hasWarnings ? '' : 'none' }}>
-        <div class="warnings-header" onClick={onToggleWarnings}>
+        <button
+          type="button"
+          class="warnings-header"
+          onClick={onToggleWarnings}
+          aria-expanded={warningsOpen}
+        >
           <span>Warnings</span>
           <span class="warnings-badge">{warnings.length}</span>
           <span class="warnings-arrow">{warningsOpen ? '▾' : '▸'}</span>
-        </div>
+        </button>
         <div class="warnings-list" style={{ display: warningsOpen ? '' : 'none' }}>
           {warnings.map((warning, i) => (
             <p key={i}>{warning}</p>

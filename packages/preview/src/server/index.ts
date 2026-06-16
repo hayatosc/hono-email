@@ -53,9 +53,10 @@ function resolveClientDir(): string {
 
 function prepareClientHtml(clientDir: string, html: string): string {
   const fsPath = clientDir.replace(/\\/g, '/')
+  const base = `/@fs${fsPath.startsWith('/') ? '' : '/'}${fsPath}`
   return html
-    .replace('href="./styles.css"', `href="/@fs${fsPath}/styles.css"`)
-    .replace('src="./app.tsx"', `src="/@fs${fsPath}/app.tsx"`)
+    .replace('href="./styles.css"', `href="${base}/styles.css"`)
+    .replace('src="./app.tsx"', `src="${base}/app.tsx"`)
 }
 
 export async function startPreviewServer(options: PreviewServerOptions): Promise<PreviewServer> {
@@ -100,7 +101,7 @@ export async function startPreviewServer(options: PreviewServerOptions): Promise
       middlewareMode: true,
       hmr: { server },
       fs: {
-        allow: [rootDir, clientDir, resolvePackageRoot()],
+        allow: [rootDir, templateDir, clientDir, resolvePackageRoot()],
       },
     },
     ssr: { noExternal: true },
@@ -109,7 +110,7 @@ export async function startPreviewServer(options: PreviewServerOptions): Promise
     plugins,
   })
 
-  const honoApp = createApiRoutes(vite, dir)
+  const honoApp = createApiRoutes(vite, templateDir)
   const honoHandler = getRequestListener(honoApp.fetch.bind(honoApp))
 
   server.on('request', (req, res) => {
@@ -144,7 +145,7 @@ export async function startPreviewServer(options: PreviewServerOptions): Promise
     })
   })
 
-  await new Promise<void>((resolve) => server.listen(port, () => resolve()))
+  await new Promise<void>((resolve) => server.listen(port, '127.0.0.1', () => resolve()))
 
   console.log(`\n  hono-email preview → http://localhost:${port}\n`)
 

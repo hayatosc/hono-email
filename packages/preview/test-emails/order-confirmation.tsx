@@ -20,8 +20,8 @@ export default function OrderConfirmation({
         <Text>Your order #{orderId} has been confirmed.</Text>
         <Text style={{ fontWeight: 'bold' }}>Items:</Text>
         <ul>
-          {items.map((item) => (
-            <li>{item}</li>
+          {items.map((item, i) => (
+            <li key={i}>{item}</li>
           ))}
         </ul>
         {showButton && <Button href={`https://example.com/orders/${orderId}`}>View Order</Button>}

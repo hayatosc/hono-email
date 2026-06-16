@@ -235,6 +235,10 @@ body {
   cursor: pointer;
   font-size: 12px;
   color: var(--warn-text);
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: 0;
 }
 
 .warnings-badge {

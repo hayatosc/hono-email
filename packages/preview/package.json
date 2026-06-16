@@ -35,11 +35,10 @@
     }
   },
   "scripts": {
-    "build": "tsdown && node -e \"require('fs').cpSync('src/client','dist/client',{recursive:true})\"",
+    "build": "tsdown",
     "dev": "tsdown --watch",
-    "dev:server": "cd test-emails && node ../dist/cli.mjs --dir . --port 3333",
-    "dev:example": "bun run build && bun run dev:server",
     "typecheck": "tsgo --noEmit",
+    "typecheck:compat": "tsc --noEmit",
     "test": "bun test ./src"
   },
   "dependencies": {

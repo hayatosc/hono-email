@@ -17,4 +17,11 @@ export default defineConfig({
   banner: {
     cli: '#!/usr/bin/env node',
   },
+  copy: [
+    {
+      from: 'src/client/**',
+      to: 'dist',
+      flatten: false,
+    },
+  ],
 })
