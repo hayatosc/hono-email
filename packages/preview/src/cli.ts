@@ -23,6 +23,11 @@ const main = defineCommand({
   },
   async run({ args }) {
     const port = Number(args.port)
+    if (!Number.isInteger(port) || port < 1 || port > 65535) {
+      console.error(`Invalid port: ${args.port}`)
+      process.exit(1)
+    }
+
     const server = await startPreviewServer({
       dir: args.dir,
       port,

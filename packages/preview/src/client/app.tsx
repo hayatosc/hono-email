@@ -111,6 +111,7 @@ function App() {
     [loadSchema],
   )
 
+  // fetchApi and selectTemplate are stable via useCallback; empty deps is intentional for mount-only
   useEffect(() => {
     const load = async () => {
       const response = await fetchApi('/api/templates')
@@ -147,6 +148,10 @@ function App() {
     setJsonValue(value)
     try {
       const parsed = JSON.parse(value)
+      if (!isObject(parsed) || Array.isArray(parsed)) {
+        setJsonError('JSON must be an object')
+        return
+      }
       setJsonError(null)
       setPropValues(parsed)
     } catch {

@@ -34,7 +34,8 @@ export function createApiRoutes(vite: ViteDevServer, templateDir: string) {
       const schema = extractPropsSchema(component)
       return c.json(schema)
     } catch (err) {
-      return c.json({ error: String(err) }, 500)
+      console.error('Failed to load template props:', err)
+      return c.json({ error: 'Internal server error' }, 500)
     }
   })
 
@@ -61,7 +62,8 @@ export function createApiRoutes(vite: ViteDevServer, templateDir: string) {
       const result = await renderTemplate(component, mergedProps)
       return c.json(result)
     } catch (err) {
-      return c.json({ error: String(err) }, 500)
+      console.error('Failed to render template:', err)
+      return c.json({ error: 'Internal server error' }, 500)
     }
   })
 

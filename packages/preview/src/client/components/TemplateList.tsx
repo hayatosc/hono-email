@@ -12,6 +12,7 @@ export function TemplateList({ templates, selected, onSelect }: TemplateListProp
     <div class="template-list">
       {templates.map((template) => (
         <button
+          key={template.name}
           class={'template-item' + (template.name === selected ? ' active' : '')}
           onClick={() => onSelect(template.name)}
         >

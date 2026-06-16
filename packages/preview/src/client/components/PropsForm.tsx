@@ -82,7 +82,7 @@ function Field({
           }}
         >
           {spec.options.map((option) => (
-            <option value={option}>{option}</option>
+            <option key={option} value={option}>{option}</option>
           ))}
         </select>
       </div>
@@ -99,7 +99,7 @@ function Field({
           value={inputValue(value)}
           onInput={(e) => {
             const el = asInputElement(e.currentTarget)
-            if (el) onChange(name, el.valueAsNumber)
+            if (el && !Number.isNaN(el.valueAsNumber)) onChange(name, el.valueAsNumber)
           }}
         />
       </div>

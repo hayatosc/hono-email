@@ -78,9 +78,6 @@ export async function startPreviewServer(options: PreviewServerOptions): Promise
         runtimeModuleSpecifier: 'hono-email',
       }),
     )
-    // The unplugin transform hook does not run for Vite SSR modules in this
-    // environment, so intercept the raw source load and apply the Tailwind
-    // source transform before Vite's JSX transform sees the code.
     plugins.push({
       name: 'hono-email-preview-loader',
       enforce: 'pre',
@@ -116,15 +113,23 @@ export async function startPreviewServer(options: PreviewServerOptions): Promise
   const honoHandler = getRequestListener(honoApp.fetch.bind(honoApp))
 
   server.on('request', (req, res) => {
-    const url = new URL(req.url ?? '/', `http://${req.headers.host}`)
+    const host = req.headers.host ?? 'localhost'
+    const url = new URL(req.url ?? '/', `http://${host}`)
 
     if (url.pathname === '/' || url.pathname === '') {
       const html = readFileSync(resolve(clientDir, 'index.html'), 'utf-8')
       const prepared = prepareClientHtml(clientDir, html)
-      void vite.transformIndexHtml(url.pathname, prepared).then((transformed) => {
-        res.writeHead(200, { 'Content-Type': 'text/html' })
-        res.end(transformed)
-      })
+      vite
+        .transformIndexHtml(url.pathname, prepared)
+        .then((transformed) => {
+          res.writeHead(200, { 'Content-Type': 'text/html' })
+          res.end(transformed)
+        })
+        .catch((err: unknown) => {
+          console.error('Failed to transform index.html:', err)
+          res.writeHead(500, { 'Content-Type': 'text/plain' })
+          res.end('Internal server error')
+        })
       return
     }
 
@@ -145,7 +150,9 @@ export async function startPreviewServer(options: PreviewServerOptions): Promise
 
   return {
     close: async () => {
-      server.close()
+      await new Promise<void>((resolve, reject) => {
+        server.close((err) => (err ? reject(err) : resolve()))
+      })
       await vite.close()
     },
   }

@@ -18,7 +18,11 @@ export function mergePropsWithDefaults(
 ): Record<string, unknown> {
   const merged: Record<string, unknown> = {}
   for (const [key, spec] of Object.entries(schema)) {
-    merged[key] = key in userProps ? userProps[key] : spec.defaultValue
+    if (key in userProps) {
+      merged[key] = userProps[key]
+    } else if (spec.defaultValue !== undefined) {
+      merged[key] = spec.defaultValue
+    }
   }
   for (const [key, value] of Object.entries(userProps)) {
     if (!(key in merged)) {

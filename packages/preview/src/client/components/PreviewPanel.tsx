@@ -78,8 +78,8 @@ export function PreviewPanel({
           <span class="warnings-arrow">{warningsOpen ? '▾' : '▸'}</span>
         </div>
         <div class="warnings-list" style={{ display: warningsOpen ? '' : 'none' }}>
-          {warnings.map((warning) => (
-            <p>{warning}</p>
+          {warnings.map((warning, i) => (
+            <p key={i}>{warning}</p>
           ))}
         </div>
       </div>

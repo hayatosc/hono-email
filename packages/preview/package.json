@@ -35,7 +35,7 @@
     }
   },
   "scripts": {
-    "build": "tsdown && cp -r src/client dist/client",
+    "build": "tsdown && node -e \"require('fs').cpSync('src/client','dist/client',{recursive:true})\"",
     "dev": "tsdown --watch",
     "dev:server": "cd test-emails && node ../dist/cli.mjs --dir . --port 3333",
     "dev:example": "bun run build && bun run dev:server",
