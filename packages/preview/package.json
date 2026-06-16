@@ -1,0 +1,59 @@
+{
+  "name": "@hono-email/preview",
+  "version": "0.1.0",
+  "description": "Live preview server for hono-email templates with real-time props editing.",
+  "keywords": [
+    "cli",
+    "dev",
+    "email",
+    "hono",
+    "preview"
+  ],
+  "homepage": "https://github.com/hayatosc/hono-email#readme",
+  "bugs": {
+    "url": "https://github.com/hayatosc/hono-email/issues"
+  },
+  "license": "MIT",
+  "author": "hayatosc",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hayatosc/hono-email.git"
+  },
+  "bin": {
+    "hono-email-preview": "./dist/cli.mjs"
+  },
+  "files": [
+    "dist"
+  ],
+  "type": "module",
+  "main": "./dist/index.mjs",
+  "types": "./dist/index.d.mts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.mts",
+      "import": "./dist/index.mjs"
+    }
+  },
+  "scripts": {
+    "build": "tsdown && cp -r src/client dist/client",
+    "dev": "tsdown --watch",
+    "dev:server": "cd test-emails && node ../dist/cli.mjs --dir . --port 3333",
+    "dev:example": "bun run build && bun run dev:server",
+    "typecheck": "tsgo --noEmit",
+    "test": "bun test ./src"
+  },
+  "dependencies": {
+    "@hono/node-server": "^1.14.4",
+    "citty": "^0.1.6",
+    "hono": "^4.12.14",
+    "vite": "^6.3.5"
+  },
+  "devDependencies": {
+    "@hono-email/tailwind-plugin": "workspace:*",
+    "@types/bun": "^1.3.12",
+    "hono-email": "workspace:*"
+  },
+  "peerDependencies": {
+    "hono-email": "^0.4.0"
+  }
+}
