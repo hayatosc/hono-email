@@ -5,6 +5,8 @@ import { defineConfig } from 'tsdown'
 //
 // Dependencies to NEVER bundle (externalized):
 // - production dependencies (@hono/node-server, citty, vite, hono)
+// - Tailwind compiler (@tailwindcss/vite, tailwindcss) — pulls in native
+//   lightningcss binaries that cannot be bundled
 // - peer dependencies (hono-email)
 // - node built-ins
 const neverBundle = [
@@ -12,6 +14,8 @@ const neverBundle = [
   /^hono(\/.*)?$/,
   /^hono-email(\/.*)?$/,
   /^vite(\/.*)?$/,
+  /^@tailwindcss\/.*$/,
+  /^tailwindcss(\/.*)?$/,
   '@hono/node-server',
   'citty',
 ]

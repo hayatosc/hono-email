@@ -28,19 +28,24 @@ const main = defineCommand({
       process.exit(1)
     }
 
-    const server = await startPreviewServer({
-      dir: args.dir,
-      port,
-    })
+    try {
+      const server = await startPreviewServer({
+        dir: args.dir,
+        port,
+      })
 
-    const shutdown = async () => {
-      console.log('\nShutting down...')
-      await server.close()
-      process.exit(0)
+      const shutdown = async () => {
+        console.log('\nShutting down...')
+        await server.close()
+        process.exit(0)
+      }
+
+      process.on('SIGINT', shutdown)
+      process.on('SIGTERM', shutdown)
+    } catch (err: any) {
+      console.error(`Error: ${err.message ?? err}`)
+      process.exit(1)
     }
-
-    process.on('SIGINT', shutdown)
-    process.on('SIGTERM', shutdown)
   },
 })
 

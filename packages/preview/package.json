@@ -36,15 +36,17 @@
   },
   "scripts": {
     "build": "tsdown",
-    "dev": "tsdown --watch",
+    "dev": "tsdown && node ./dist/cli.mjs --dir test-emails",
     "typecheck": "tsgo --noEmit",
     "typecheck:compat": "tsc --noEmit",
     "test": "bun test ./src"
   },
   "dependencies": {
     "@hono/node-server": "^1.14.4",
+    "@tailwindcss/vite": "^4.2.2",
     "citty": "^0.1.6",
     "hono": "^4.12.14",
+    "tailwindcss": "^4.2.2",
     "vite": "^6.3.5"
   },
   "devDependencies": {

@@ -83,7 +83,7 @@
       "name": "@hono-email/preview",
       "version": "0.1.0",
       "bin": {
-        "hono-email-preview": "./dist/cli.mjs",
+        "": "./dist/cli.mjs",
       },
       "dependencies": {
         "@hono/node-server": "^1.14.4",
@@ -93,8 +93,10 @@
       },
       "devDependencies": {
         "@hono-email/tailwind-plugin": "workspace:*",
+        "@tailwindcss/vite": "^4.2.2",
         "@types/bun": "^1.3.12",
         "hono-email": "workspace:*",
+        "tailwindcss": "^4.2.2",
       },
       "peerDependencies": {
         "hono-email": "^0.4.0",

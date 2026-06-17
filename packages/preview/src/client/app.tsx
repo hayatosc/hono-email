@@ -139,6 +139,15 @@ function App() {
     scheduleRender()
   }, [propValues])
 
+  // Templates render server-side, so Vite HMR can't update the browser on its
+  // own. Re-render the current template when the dev server signals a change.
+  useEffect(() => {
+    if (!import.meta.hot) return
+    const handler = () => renderRef.current?.()
+    import.meta.hot.on('hono-email:template-update', handler)
+    return () => import.meta.hot?.off('hono-email:template-update', handler)
+  }, [])
+
   const handlePropChange = useCallback((key: string, value: unknown) => {
     setPropValues((prev) => ({ ...prev, [key]: value }))
   }, [])
@@ -177,8 +186,20 @@ function App() {
       </div>
       <div class="layout">
         <div class="sidebar">
-          <h2 class="panel-title">Templates</h2>
-          <TemplateList templates={templates} selected={selected} onSelect={selectTemplate} />
+          <div class="sidebar-section">
+            <h2 class="panel-title">Templates</h2>
+            <TemplateList templates={templates} selected={selected} onSelect={selectTemplate} />
+          </div>
+          <PropsForm
+            schema={schema}
+            values={propValues}
+            onChange={handlePropChange}
+            mode={mode}
+            onSwitchMode={switchMode}
+            jsonValue={jsonValue}
+            jsonError={jsonError}
+            onJsonChange={handleJsonChange}
+          />
         </div>
         <PreviewPanel
           tab={tab}
@@ -191,16 +212,6 @@ function App() {
           warnings={warnings}
           warningsOpen={warningsOpen}
           onToggleWarnings={() => setWarningsOpen((v) => !v)}
-        />
-        <PropsForm
-          schema={schema}
-          values={propValues}
-          onChange={handlePropChange}
-          mode={mode}
-          onSwitchMode={switchMode}
-          jsonValue={jsonValue}
-          jsonError={jsonError}
-          onJsonChange={handleJsonChange}
         />
       </div>
     </>

@@ -33,6 +33,11 @@ describe('discoverTemplates', () => {
     expect(reset).toBeDefined()
     expect(reset?.filePath).toBe(join(tempDir, 'auth/reset-password.tsx'))
   })
+
+  test('returns empty array if directory does not exist', () => {
+    const templates = discoverTemplates(join(tempDir, 'non-existent-directory'))
+    expect(templates).toEqual([])
+  })
 })
 
 describe('discoverTemplates name collision', () => {

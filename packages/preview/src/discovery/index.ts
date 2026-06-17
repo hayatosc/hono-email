@@ -1,4 +1,4 @@
-import { readdirSync } from 'node:fs'
+import { existsSync, readdirSync } from 'node:fs'
 import { basename, relative, resolve } from 'node:path'
 
 export type TemplateEntry = {
@@ -25,6 +25,9 @@ function templateName(absDir: string, filePath: string): string {
 
 export function discoverTemplates(dir: string): TemplateEntry[] {
   const absDir = resolve(dir)
+  if (!existsSync(absDir)) {
+    return []
+  }
   const files = readdirSync(absDir, { recursive: true })
     .map((f) => resolve(absDir, f.toString()))
     .filter((f) => f.endsWith('.tsx'))

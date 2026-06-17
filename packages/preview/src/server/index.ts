@@ -1,6 +1,6 @@
 import { existsSync, readFileSync } from 'node:fs'
 import { createServer as createHttpServer } from 'node:http'
-import { dirname, resolve } from 'node:path'
+import { dirname, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import { getRequestListener } from '@hono/node-server'
@@ -99,6 +99,11 @@ export async function startPreviewServer(options: PreviewServerOptions): Promise
 
   const rootDir = process.cwd()
   const templateDir = resolve(rootDir, dir)
+
+  if (!existsSync(templateDir)) {
+    throw new Error(`Template directory "${templateDir}" does not exist.`)
+  }
+
   const clientDir = resolveClientDir()
   const plugins: PluginOption[] = []
 
@@ -110,6 +115,9 @@ export async function startPreviewServer(options: PreviewServerOptions): Promise
     detectTailwindInPackageJson(rootDir)
 
   if (hasTailwind) {
+    const { default: tailwindcss } = await import('@tailwindcss/vite')
+    plugins.push(tailwindcss())
+
     const { unplugin, transformTailwindComponentSource } =
       await import('@hono-email/tailwind-plugin')
     plugins.push(
@@ -132,6 +140,21 @@ export async function startPreviewServer(options: PreviewServerOptions): Promise
     })
   }
 
+  // Templates are evaluated server-side via ssrLoadModule, so they never enter
+  // the browser module graph and Vite's HMR can't reach the client on its own.
+  // Notify the client with a custom event so it re-renders the current template.
+  plugins.push({
+    name: 'hono-email-preview-hmr',
+    handleHotUpdate(ctx) {
+      if (ctx.file.startsWith(templateDir) && /\.(tsx|jsx)$/.test(ctx.file)) {
+        ctx.server.ws.send({ type: 'custom', event: 'hono-email:template-update' })
+        ctx.server.config.logger.info(`template updated: ${relative(rootDir, ctx.file)}`, {
+          timestamp: true,
+        })
+      }
+    },
+  })
+
   const server = createHttpServer()
 
   const vite = await createViteServer({
@@ -145,7 +168,7 @@ export async function startPreviewServer(options: PreviewServerOptions): Promise
     },
     ssr: { noExternal: true },
     appType: 'custom',
-    logLevel: 'warn',
+    logLevel: 'info',
     plugins,
   })
 
@@ -186,12 +209,20 @@ export async function startPreviewServer(options: PreviewServerOptions): Promise
 
   await new Promise<void>((resolve) => server.listen(port, '127.0.0.1', () => resolve()))
 
-  console.log(`\n  hono-email preview → http://localhost:${port}\n`)
+  vite.config.logger.info(`\n  hono-email preview ready → http://localhost:${port}\n`, {
+    timestamp: false,
+  })
 
   return {
     close: async () => {
       await new Promise<void>((resolve, reject) => {
-        server.close((err) => (err ? reject(err) : resolve()))
+        server.close((err) => {
+          if (err && (err as any).code !== 'ERR_SERVER_NOT_RUNNING') {
+            reject(err)
+          } else {
+            resolve()
+          }
+        })
       })
       await vite.close()
     },
