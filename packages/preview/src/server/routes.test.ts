@@ -3,32 +3,29 @@ import { mkdtempSync, writeFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
-import type { ViteDevServer } from 'vite'
-
 import { createApiRoutes } from './routes'
 
 describe('createApiRoutes', () => {
   let tempDir: string
-  let mockVite: ViteDevServer
+  let mockVite: { ssrLoadModule: (_filePath: string) => Promise<Record<string, unknown>> }
   let app: ReturnType<typeof createApiRoutes>
 
   beforeAll(() => {
     tempDir = mkdtempSync(join(tmpdir(), 'hono-email-routes-'))
     writeFileSync(join(tempDir, 'welcome.tsx'), 'export default {}')
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
     mockVite = {
       ssrLoadModule: async (_filePath: string) => {
         return {
           default: (_props: unknown) => {
-            return {}
+            return null
           },
           previewProps: {
             name: { type: 'string', default: 'Guest' },
           },
         }
       },
-    } as unknown as ViteDevServer
+    }
 
     app = createApiRoutes(mockVite, tempDir)
   })
@@ -64,23 +61,22 @@ describe('createApiRoutes', () => {
 
 describe('createApiRoutes with named export', () => {
   let tempDir: string
-  let mockVite: ViteDevServer
+  let mockVite: { ssrLoadModule: (_filePath: string) => Promise<Record<string, unknown>> }
   let app: ReturnType<typeof createApiRoutes>
 
   beforeAll(() => {
     tempDir = mkdtempSync(join(tmpdir(), 'hono-email-routes-named-'))
     writeFileSync(join(tempDir, 'notification.tsx'), 'export const Notification = () => {}')
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
     mockVite = {
       ssrLoadModule: async (_filePath: string) => {
         return {
           Notification: (_props: unknown) => {
-            return {}
+            return null
           },
         }
       },
-    } as unknown as ViteDevServer
+    }
 
     app = createApiRoutes(mockVite, tempDir)
   })
@@ -95,8 +91,8 @@ describe('createApiRoutes with named export', () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ props: {} }),
     })
-    // The mock component returns {} which isn't valid JSX, so render will fail
-    // but we verify we get past the "No exported component function found" check
+    // The mock component returns null so render may fail, but we verify we get past
+    // the "No exported component function found" check
     expect(res.status).not.toBe(400)
   })
 })

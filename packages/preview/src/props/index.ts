@@ -1,3 +1,5 @@
+import type { Child } from 'hono/jsx'
+
 /**
  * User-facing prop spec for a single prop in the `previewProps` export.
  *
@@ -89,14 +91,20 @@ export function extractPropsSchema(mod: Record<string, unknown>): PropsSchema {
  * Checks `default` first, then falls back to the first exported function
  * (skipping `previewProps` and non-function exports).
  */
-export function resolveComponent(mod: Record<string, unknown>): Function | null {
-  if (typeof mod.default === 'function') {
+type EmailComponent = (props: Record<string, unknown>) => Child
+
+function isEmailComponent(v: unknown): v is EmailComponent {
+  return typeof v === 'function'
+}
+
+export function resolveComponent(mod: Record<string, unknown>): EmailComponent | null {
+  if (isEmailComponent(mod.default)) {
     return mod.default
   }
 
   for (const [key, value] of Object.entries(mod)) {
     if (key === 'previewProps') continue
-    if (typeof value === 'function') {
+    if (isEmailComponent(value)) {
       return value
     }
   }

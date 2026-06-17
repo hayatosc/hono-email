@@ -109,7 +109,7 @@ describe('extractPropsSchema', () => {
 
 describe('resolveComponent', () => {
   test('returns default export when it is a function', () => {
-    const fn = () => {}
+    const fn = () => null
     const mod = { default: fn }
     expect(resolveComponent(mod)).toBe(fn)
   })
@@ -120,7 +120,7 @@ describe('resolveComponent', () => {
   })
 
   test('falls back to named function export when no default', () => {
-    const MyEmail = () => {}
+    const MyEmail = () => null
     const mod = { MyEmail, previewProps: {} }
     expect(resolveComponent(mod)).toBe(MyEmail)
   })
