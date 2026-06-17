@@ -1,11 +1,25 @@
-import { Html, Body, Container, Head, Heading, Preview, Tailwind, Text, Button, Section, Hr, Column, Link } from 'hono-email'
+import {
+  Html,
+  Body,
+  Container,
+  Head,
+  Heading,
+  Preview,
+  Tailwind,
+  Text,
+  Button,
+  Section,
+  Hr,
+  Column,
+  Link,
+} from 'hono-email'
 
 import type { PreviewPropsConfig } from '../src/props/index.js'
 
 export const previewProps = {
   name: { type: 'string', default: 'Taro' },
   appName: { type: 'string', default: 'Acme' },
-  trialDays: { type: 'number', default: 14 }
+  trialDays: { type: 'number', default: 14 },
 } satisfies PreviewPropsConfig
 
 type Props = {
@@ -17,25 +31,27 @@ type Props = {
 const steps = [
   {
     title: 'Complete your profile',
-    description: 'Add a photo and a few details so your teammates can recognize you.'
+    description: 'Add a photo and a few details so your teammates can recognize you.',
   },
   {
     title: 'Invite your team',
-    description: 'Collaboration is better together. Bring in the people you work with.'
+    description: 'Collaboration is better together. Bring in the people you work with.',
   },
   {
     title: 'Create your first project',
-    description: 'Start from a template or a blank canvas — whatever fits your workflow.'
-  }
+    description: 'Start from a template or a blank canvas — whatever fits your workflow.',
+  },
 ]
 
-export default function WelcomeEmail({ name = 'Hayato', appName = 'Acme', trialDays = 14 }: Props) {
+export default function WelcomeEmail({ name = 'Taro', appName = 'Acme', trialDays = 14 }: Props) {
   return (
     <Html>
       <Head>
         <title>Welcome to {appName}</title>
       </Head>
-      <Preview>You have {trialDays} days of full access — here's how to get the most out of {appName}.</Preview>
+      <Preview>
+        You have {trialDays} days of full access — here's how to get the most out of {appName}.
+      </Preview>
       <Tailwind>
         <Body className="bg-slate-100 py-10 px-4 font-sans text-slate-700">
           <Container className="mx-auto w-full max-w-[600px]">
@@ -45,10 +61,15 @@ export default function WelcomeEmail({ name = 'Hayato', appName = 'Acme', trialD
                 <span className="inline-block h-8 w-8 rounded-lg bg-indigo-600 text-center text-lg font-bold leading-8 text-white">
                   {appName.charAt(0)}
                 </span>
-                <span className="ml-3 align-middle text-lg font-semibold tracking-tight text-slate-900">{appName}</span>
+                <span className="ml-3 align-middle text-lg font-semibold tracking-tight text-slate-900">
+                  {appName}
+                </span>
               </Column>
               <Column className="px-2 py-6 text-right align-middle">
-                <Link href="https://example.com/app" className="text-sm font-medium text-indigo-600 no-underline">
+                <Link
+                  href="https://example.com/app"
+                  className="text-sm font-medium text-indigo-600 no-underline"
+                >
                   Open app →
                 </Link>
               </Column>
@@ -64,7 +85,8 @@ export default function WelcomeEmail({ name = 'Hayato', appName = 'Acme', trialD
                   </Heading>
                   <Text className="mt-4 mb-0 text-base leading-relaxed text-slate-600">
                     We're glad you're here. Your account is ready and you've unlocked a{' '}
-                    <strong className="text-slate-900">{trialDays}-day free trial</strong> with full access to every feature — no credit card required.
+                    <strong className="text-slate-900">{trialDays}-day free trial</strong> with full
+                    access to every feature — no credit card required.
                   </Text>
                 </Column>
               </Section>
@@ -95,8 +117,12 @@ export default function WelcomeEmail({ name = 'Hayato', appName = 'Acme', trialD
                         </span>
                       </Column>
                       <Column className="pb-5 pl-2 align-top">
-                        <Text className="m-0 text-sm font-semibold text-slate-900">{step.title}</Text>
-                        <Text className="mt-1 mb-0 text-sm leading-relaxed text-slate-500">{step.description}</Text>
+                        <Text className="m-0 text-sm font-semibold text-slate-900">
+                          {step.title}
+                        </Text>
+                        <Text className="mt-1 mb-0 text-sm leading-relaxed text-slate-500">
+                          {step.description}
+                        </Text>
                       </Column>
                     </Section>
                   ))}
@@ -109,8 +135,12 @@ export default function WelcomeEmail({ name = 'Hayato', appName = 'Acme', trialD
               <Section>
                 <Column className="px-10 py-7">
                   <Text className="m-0 text-sm leading-relaxed text-slate-500">
-                    Questions? Just reply to this email — a real person on our team will help you out. You can also browse our{' '}
-                    <Link href="https://example.com/docs" className="font-medium text-indigo-600 underline">
+                    Questions? Just reply to this email — a real person on our team will help you
+                    out. You can also browse our{' '}
+                    <Link
+                      href="https://example.com/docs"
+                      className="font-medium text-indigo-600 underline"
+                    >
                       help center
                     </Link>
                     .
@@ -138,7 +168,9 @@ export default function WelcomeEmail({ name = 'Hayato', appName = 'Acme', trialD
                     Privacy
                   </Link>
                 </Text>
-                <Text className="mt-3 mb-0 text-xs text-slate-300">© 2026 {appName}, Inc. All rights reserved.</Text>
+                <Text className="mt-3 mb-0 text-xs text-slate-300">
+                  © 2026 {appName}, Inc. All rights reserved.
+                </Text>
               </Column>
             </Section>
           </Container>

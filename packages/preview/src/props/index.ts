@@ -44,7 +44,7 @@ function isValidType(type: unknown): type is 'string' | 'number' | 'boolean' | '
   return typeof type === 'string' && VALID_TYPES.has(type)
 }
 
-function inferType(value: unknown): PreviewPropSpec['type'] {
+function inferType(value: unknown): 'string' | 'number' | 'boolean' | 'array' {
   if (typeof value === 'boolean') return 'boolean'
   if (typeof value === 'number') return 'number'
   if (Array.isArray(value)) return 'array'

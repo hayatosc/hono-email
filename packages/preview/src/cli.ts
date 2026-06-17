@@ -42,8 +42,14 @@ const main = defineCommand({
 
       process.on('SIGINT', shutdown)
       process.on('SIGTERM', shutdown)
-    } catch (err: any) {
-      console.error(`Error: ${err.message ?? err}`)
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        console.error(`Error: ${err.message}`)
+      } else if (typeof err === 'object' && err !== null && 'message' in err) {
+        console.error(`Error: ${String(err.message)}`)
+      } else {
+        console.error(`Error: ${String(err)}`)
+      }
       process.exit(1)
     }
   },

@@ -217,8 +217,12 @@ export async function startPreviewServer(options: PreviewServerOptions): Promise
     close: async () => {
       await new Promise<void>((resolve, reject) => {
         server.close((err) => {
-          if (err && (err as any).code !== 'ERR_SERVER_NOT_RUNNING') {
-            reject(err)
+          if (err) {
+            if (typeof err === 'object' && 'code' in err && err.code === 'ERR_SERVER_NOT_RUNNING') {
+              resolve()
+            } else {
+              reject(err)
+            }
           } else {
             resolve()
           }

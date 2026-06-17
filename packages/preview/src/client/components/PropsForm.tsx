@@ -29,7 +29,10 @@ function arrayDisplayValue(value: unknown): string {
 
 function parseArrayValue(input: string): string[] {
   if (input.trim() === '') return []
-  return input.split(',').map((s) => s.trim())
+  return input
+    .split(',')
+    .map((s) => s.trim())
+    .filter((s) => s !== '')
 }
 
 function asInputElement(target: EventTarget | null): HTMLInputElement | undefined {

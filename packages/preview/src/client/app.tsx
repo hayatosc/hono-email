@@ -78,7 +78,10 @@ function App() {
         if (isObject(value)) {
           schema[key] = {
             type:
-              value.type === 'number' || value.type === 'boolean' || value.type === 'select'
+              value.type === 'number' ||
+              value.type === 'boolean' ||
+              value.type === 'select' ||
+              value.type === 'array'
                 ? value.type
                 : 'string',
             required: value.required === true,
