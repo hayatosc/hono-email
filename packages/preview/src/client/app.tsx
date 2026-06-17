@@ -140,8 +140,7 @@ function App() {
   useEffect(() => {
     if (!selected) return
     scheduleRender()
-  }, [propValues])
-
+  }, [selected, propValues, scheduleRender])
   // Templates render server-side, so Vite HMR can't update the browser on its
   // own. Re-render the current template when the dev server signals a change.
   useEffect(() => {
