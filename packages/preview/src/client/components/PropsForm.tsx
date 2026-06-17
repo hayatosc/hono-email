@@ -116,7 +116,12 @@ function Field({
           value={inputValue(value)}
           onInput={(e) => {
             const el = asInputElement(e.currentTarget)
-            if (el && !Number.isNaN(el.valueAsNumber)) onChange(name, el.valueAsNumber)
+            if (!el) return
+            if (el.value === '') {
+              onChange(name, undefined)
+              return
+            }
+            if (!Number.isNaN(el.valueAsNumber)) onChange(name, el.valueAsNumber)
           }}
         />
       </div>
