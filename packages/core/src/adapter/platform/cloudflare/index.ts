@@ -46,7 +46,6 @@ const buildConnector = (bindingName: string): CloudflareEmailConnector => ({
 
     return {
       delivered: request.recipients,
-      // Local preview bindings may accept the send but omit EmailSendResult.
       messageId: result?.messageId,
       permanentBounces: [],
       queued: [],

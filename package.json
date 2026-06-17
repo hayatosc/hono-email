@@ -8,16 +8,18 @@
   "type": "module",
   "scripts": {
     "build": "bun run --filter './packages/*' build",
-    "format": "oxfmt --write .",
+    "format": "oxfmt .",
     "format:check": "oxfmt --check .",
-    "lint": "oxlint --type-aware .",
-    "test": "bun test packages/core/src packages/tailwind-plugin/src",
+    "lint": "oxlint .",
+    "lint:types": "oxlint --type-aware .",
+    "test": "bun test packages/core/src packages/tailwind-plugin/src packages/preview/src",
     "test:runtime": "bun run test:runtime:node && bun run test:runtime:deno && bun run test:runtime:bun && bun run test:runtime:cloudflare",
     "test:runtime:node": "node --test runtime-tests/node/*.test.ts",
     "test:runtime:deno": "deno test --allow-net --allow-read runtime-tests/deno",
     "test:runtime:bun": "bun test runtime-tests/bun",
     "test:runtime:cloudflare": "vitest --run --config runtime-tests/cloudflare/vitest.config.ts",
-    "typecheck": "bun run --filter './packages/*' typecheck"
+    "typecheck": "bun run --filter './packages/*' typecheck",
+    "typecheck:compat": "bun run --filter './packages/*' typecheck:compat"
   },
   "devDependencies": {
     "@cloudflare/vitest-pool-workers": "^0.14.9",

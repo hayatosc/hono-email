@@ -5,6 +5,7 @@ const neverBundle = [
   'cloudflare:workers',
   /^hono(\/.*)?$/,
   'htmlrewriter',
+  'decode-named-character-reference',
   /^node:/,
 ]
 

@@ -32,7 +32,6 @@ describe('document semantics', () => {
       </Html>,
     )
 
-    // Zero-width non-joiner only originates from the preview whitespace padding.
     expect(html).toContain('\u200c')
   })
 

@@ -1,6 +1,3 @@
-// Match either a `url(...)` token (left untouched) or a three-digit hex color.
-// Putting `url(...)` first means hash fragments inside URLs — e.g. SVG refs like
-// `url(#abc)` or `url('font.woff2#abc')` — are consumed and never expanded.
 const SHORT_HEX_OR_URL_PATTERN =
   /url\([^)]*\)|#([0-9a-fA-F])([0-9a-fA-F])([0-9a-fA-F])(?![0-9a-fA-F])/gi
 const STYLE_BLOCK_PATTERN = /(<style\b[^>]*>)([\s\S]*?)(<\/style>)/gi

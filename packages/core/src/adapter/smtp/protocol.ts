@@ -320,7 +320,6 @@ class ReusableSmtpSession implements SmtpSession {
     try {
       await this.#client.tryCommand('QUIT')
     } catch {
-      // Closing should be best-effort; the socket close below is authoritative.
     } finally {
       await this.#client.close()
     }
