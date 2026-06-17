@@ -140,9 +140,6 @@ export async function startPreviewServer(options: PreviewServerOptions): Promise
     })
   }
 
-  // Templates are evaluated server-side via ssrLoadModule, so they never enter
-  // the browser module graph and Vite's HMR can't reach the client on its own.
-  // Notify the client with a custom event so it re-renders the current template.
   plugins.push({
     name: 'hono-email-preview-hmr',
     handleHotUpdate(ctx) {

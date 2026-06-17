@@ -45,9 +45,6 @@ type OutlookCssProperties = JSX.CSSProperties & {
 
 const BOX_DIRECTIONS = ['Top', 'Right', 'Bottom', 'Left'] as const
 
-// Trailing filler that pushes following body content out of the inbox preview
-// snippet. Mirrors react-email: a run of non-breaking and zero-width characters
-// sized to approach a fixed preview length.
 const PREVIEW_MAX_LENGTH = 200
 const PREVIEW_WHITESPACE = '\u00a0\u200c\u200b\u200d\u200e\u200f\ufeff'
 

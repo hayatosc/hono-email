@@ -1,12 +1,5 @@
 import { defineConfig } from 'tsdown'
 
-// Dependencies to bundle:
-// - none (this plugin is fully externalized)
-//
-// Dependencies to NEVER bundle (externalized):
-// - production dependencies (unplugin)
-// - peer dependencies (hono-email)
-// - node built-ins
 const neverBundle = [/^node:/, 'unplugin', /^hono-email(\/.*)?$/]
 
 export default defineConfig({

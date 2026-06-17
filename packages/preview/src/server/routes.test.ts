@@ -91,8 +91,6 @@ describe('createApiRoutes with named export', () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ props: {} }),
     })
-    // The mock component returns null so render may fail, but we verify we get past
-    // the "No exported component function found" check
     expect(res.status).not.toBe(400)
   })
 })

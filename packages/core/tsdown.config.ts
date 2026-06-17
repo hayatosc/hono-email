@@ -1,15 +1,5 @@
 import { defineConfig } from 'tsdown'
 
-// Dependencies to bundle (listed in devDependencies):
-// - css-tree
-// - rehype-raw, rehype-sanitize, rehype-stringify
-// - remark-gfm, remark-parse, remark-rehype
-// - unified
-//
-// Dependencies to NEVER bundle (externalized):
-// - production dependencies (htmlrewriter, decode-named-character-reference)
-// - peer dependencies (hono)
-// - node and platform runtime built-ins
 const neverBundle = [
   'cloudflare:sockets',
   'cloudflare:workers',

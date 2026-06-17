@@ -114,7 +114,6 @@ function App() {
     [loadSchema],
   )
 
-  // fetchApi and selectTemplate are stable via useCallback; empty deps is intentional for mount-only
   useEffect(() => {
     const load = async () => {
       const response = await fetchApi('/api/templates')
@@ -141,8 +140,6 @@ function App() {
     if (!selected) return
     scheduleRender()
   }, [selected, propValues, scheduleRender])
-  // Templates render server-side, so Vite HMR can't update the browser on its
-  // own. Re-render the current template when the dev server signals a change.
   useEffect(() => {
     if (!import.meta.hot) return
     const handler = () => renderRef.current?.()

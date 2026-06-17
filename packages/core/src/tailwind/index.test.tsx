@@ -255,7 +255,6 @@ describe('Tailwind', () => {
     expect(html).toContain('color:#0f172a')
     expect(html).not.toContain('color:#ffffff')
     expect(html).not.toContain('hono-email-tw-warning')
-    // The dropped class is removed from the output instead of left as a dead token.
     expect(html).not.toContain('group-hover:text-white')
     expect(warnings.some((warning) => warning.includes('group-hover:text-white'))).toBe(true)
   })

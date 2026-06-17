@@ -46,7 +46,6 @@ describe('discoverTemplates name collision', () => {
   beforeAll(() => {
     tempDir = mkdtempSync(join(tmpdir(), 'hono-email-collision-'))
 
-    // dir1/dir2/component.tsx vs dir1-dir2/component.tsx
     mkdirSync(join(tempDir, 'dir1', 'dir2'), { recursive: true })
     writeFileSync(join(tempDir, 'dir1', 'dir2', 'component.tsx'), 'export default {}')
 
@@ -61,11 +60,8 @@ describe('discoverTemplates name collision', () => {
   test('directory separators and hyphens produce distinct names', () => {
     const templates = discoverTemplates(tempDir)
     const names = templates.map((t) => t.name)
-    // All names must be unique
     expect(new Set(names).size).toBe(names.length)
-    // dir1/dir2/component → Dir1/Dir2/Component
     expect(names).toContain('Dir1/Dir2/Component')
-    // dir1-dir2/component → Dir1Dir2/Component
     expect(names).toContain('Dir1Dir2/Component')
   })
 })
