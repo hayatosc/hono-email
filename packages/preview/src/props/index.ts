@@ -129,5 +129,14 @@ export function mergePropsWithDefaults(
       merged[key] = value
     }
   }
+
+  const missing = Object.entries(schema)
+    .filter(([, spec]) => spec.required)
+    .map(([key]) => key)
+    .filter((key) => !(key in merged))
+  if (missing.length > 0) {
+    throw new Error(`Missing required props: ${missing.join(', ')}`)
+  }
+
   return merged
 }

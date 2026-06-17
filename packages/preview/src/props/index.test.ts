@@ -171,4 +171,34 @@ describe('mergePropsWithDefaults', () => {
     const merged = mergePropsWithDefaults(schema, {})
     expect(merged).toEqual({ items: ['a', 'b'] })
   })
+
+  test('throws when required field without default is missing', () => {
+    const schema = {
+      email: { type: 'string' as const, required: true },
+    }
+
+    expect(() => mergePropsWithDefaults(schema, {})).toThrow(
+      'Missing required props: email',
+    )
+  })
+
+  test('throws listing all missing required fields', () => {
+    const schema = {
+      email: { type: 'string' as const, required: true },
+      name: { type: 'string' as const, required: true },
+    }
+
+    expect(() => mergePropsWithDefaults(schema, {})).toThrow(
+      'Missing required props: email, name',
+    )
+  })
+
+  test('does not throw when required field with default is omitted', () => {
+    const schema = {
+      email: { type: 'string' as const, required: true, defaultValue: 'a@b.com' },
+    }
+
+    const merged = mergePropsWithDefaults(schema, {})
+    expect(merged).toEqual({ email: 'a@b.com' })
+  })
 })
