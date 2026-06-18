@@ -23,6 +23,19 @@ jobs:
       - name: Check format
         run: bun run format:check
 
+  changeset:
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - name: Check for changeset
+        run: |
+          if ! git diff --name-only origin/main...HEAD | grep -q "^\.changeset/"; then
+            echo "::warning::No changeset found. If this PR changes a package, run 'bun run changeset' to add one."
+          fi
+
   test:
     runs-on: ubuntu-latest
     steps:

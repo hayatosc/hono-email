@@ -1,0 +1,11 @@
+{
+  "$schema": "https://unpkg.com/@changesets/config@3.0.0/schema.json",
+  "changelog": ["@changesets/changelog-github", { "repo": "hayatosc/hono-email" }],
+  "commit": false,
+  "fixed": [["hono-email", "@hono-email/tailwind-plugin", "@hono-email/preview"]],
+  "linked": [],
+  "access": "public",
+  "baseBranch": "main",
+  "updateInternalDependencies": "patch",
+  "ignore": ["hono-email-cloudflare-vite-tailwind-example", "hono-email-node-smtp-css-example"]
+}

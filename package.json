@@ -8,6 +8,9 @@
   "type": "module",
   "scripts": {
     "build": "bun run --filter './packages/*' build",
+    "changeset": "changeset",
+    "version": "changeset version",
+    "release": "changeset publish",
     "format": "oxfmt .",
     "format:check": "oxfmt --check .",
     "lint": "oxlint .",
@@ -22,6 +25,8 @@
     "typecheck:compat": "bun run --filter './packages/*' typecheck:compat"
   },
   "devDependencies": {
+    "@changesets/changelog-github": "^0.5.0",
+    "@changesets/cli": "^2.27.0",
     "@cloudflare/vitest-pool-workers": "^0.14.9",
     "@cloudflare/workers-types": "^4.20260424.1",
     "@types/bun": "^1.3.12",

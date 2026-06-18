@@ -34,6 +34,10 @@
       "import": "./dist/index.mjs"
     }
   },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
   "scripts": {
     "build": "tsdown",
     "dev": "tsdown && node ./dist/cli.mjs --dir test-emails",

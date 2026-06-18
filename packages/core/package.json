@@ -78,6 +78,10 @@
       "import": "./dist/adapter/mailgun/index.js"
     }
   },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
   "scripts": {
     "build": "tsdown",
     "typecheck": "tsgo --noEmit",
