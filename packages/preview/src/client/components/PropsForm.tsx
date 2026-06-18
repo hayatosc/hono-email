@@ -1,4 +1,6 @@
 /** @jsxImportSource hono/jsx/dom */
+import type { Child } from 'hono/jsx'
+
 import type { PropsSchema } from '../../props/index.js'
 
 export type PropsFormProps = {
@@ -20,19 +22,26 @@ function inputValue(value: unknown): string {
   return ''
 }
 
-function arrayDisplayValue(value: unknown): string {
-  if (Array.isArray(value)) {
-    return value.map(String).join(', ')
-  }
-  return ''
+function asArray(value: unknown): unknown[] {
+  return Array.isArray(value) ? value : []
 }
 
-function parseArrayValue(input: string): string[] {
-  if (input.trim() === '') return []
-  return input
-    .split(',')
-    .map((s) => s.trim())
-    .filter((s) => s !== '')
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === 'object' && !Array.isArray(value)
+}
+
+function buildItemDefault(itemSchema: PropsSchema): Record<string, unknown> {
+  const item: Record<string, unknown> = {}
+  for (const [key, spec] of Object.entries(itemSchema)) {
+    if (spec.defaultValue !== undefined) item[key] = spec.defaultValue
+    else if (spec.type === 'boolean') item[key] = false
+    else if (spec.type === 'number') item[key] = 0
+    else if (spec.type === 'array') item[key] = []
+    else if (spec.type === 'select' && spec.options && spec.options.length > 0)
+      item[key] = spec.options[0]
+    else item[key] = ''
+  }
+  return item
 }
 
 function asInputElement(target: EventTarget | null): HTMLInputElement | undefined {
@@ -129,20 +138,21 @@ function Field({
   }
 
   if (spec.type === 'array') {
+    return <ArrayField name={name} label={label} spec={spec} value={value} onChange={onChange} />
+  }
+
+  if (spec.multiline) {
     return (
       <div class="field">
         <label class="field-label">{label}</label>
-        <input
-          class="field-input"
-          type="text"
-          value={arrayDisplayValue(value)}
-          placeholder="comma-separated values"
+        <textarea
+          class="field-textarea"
+          value={inputValue(value)}
           onInput={(e) => {
-            const el = asInputElement(e.currentTarget)
-            if (el) onChange(name, parseArrayValue(el.value))
+            const el = asTextAreaElement(e.currentTarget)
+            if (el) onChange(name, el.value)
           }}
         />
-        <span class="field-hint">Comma-separated</span>
       </div>
     )
   }
@@ -159,6 +169,83 @@ function Field({
           if (el) onChange(name, el.value)
         }}
       />
+    </div>
+  )
+}
+
+function ArrayField({
+  name,
+  label,
+  spec,
+  value,
+  onChange,
+}: {
+  name: string
+  label: Child
+  spec: PropsSchema[string]
+  value: unknown
+  onChange: (key: string, value: unknown) => void
+}) {
+  const items = asArray(value)
+  const itemSchema = spec.item
+
+  const replaceItem = (index: number, next: unknown) => {
+    onChange(
+      name,
+      items.map((item, i) => (i === index ? next : item)),
+    )
+  }
+  const removeItem = (index: number) => {
+    onChange(
+      name,
+      items.filter((_, i) => i !== index),
+    )
+  }
+  const addItem = () => {
+    onChange(name, [...items, itemSchema ? buildItemDefault(itemSchema) : ''])
+  }
+
+  return (
+    <div class="field">
+      <label class="field-label">{label}</label>
+      <div class="array-field">
+        {items.map((item, index) => (
+          <div class="array-item" key={index}>
+            <button class="array-item-remove" type="button" onClick={() => removeItem(index)}>
+              ×
+            </button>
+            {itemSchema ? (
+              <div class="array-item-fields">
+                {Object.entries(itemSchema).map(([fieldKey, fieldSpec]) => {
+                  const record = isRecord(item) ? item : {}
+                  return (
+                    <Field
+                      key={fieldKey}
+                      name={fieldKey}
+                      spec={fieldSpec}
+                      value={record[fieldKey]}
+                      onChange={(k, v) => replaceItem(index, { ...record, [k]: v })}
+                    />
+                  )
+                })}
+              </div>
+            ) : (
+              <input
+                class="field-input"
+                type="text"
+                value={inputValue(item)}
+                onInput={(e) => {
+                  const el = asInputElement(e.currentTarget)
+                  if (el) replaceItem(index, el.value)
+                }}
+              />
+            )}
+          </div>
+        ))}
+        <button class="array-add" type="button" onClick={addItem}>
+          + Add item
+        </button>
+      </div>
     </div>
   )
 }

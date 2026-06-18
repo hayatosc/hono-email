@@ -21,6 +21,12 @@ export const previewProps = {
   date: { type: 'string', default: 'June 16, 2026' },
   items: {
     type: 'array',
+    item: {
+      name: { type: 'string' },
+      variant: { type: 'string' },
+      price: { type: 'string' },
+      qty: { type: 'number' },
+    },
     default: [
       { name: 'Mechanical Keyboard', variant: 'Tactile · Walnut', price: '$120.00', qty: 1 },
       { name: 'Wireless Mouse', variant: 'Graphite', price: '$55.00', qty: 2 },
@@ -32,6 +38,7 @@ export const previewProps = {
   total: { type: 'string', default: '$257.04' },
   shippingAddress: {
     type: 'string',
+    multiline: true,
     default: 'Taro Sasaki\n123 Market Street, Suite 400\nSan Francisco, CA 94103',
   },
   estimatedDelivery: { type: 'string', default: 'Jun 20 – Jun 23' },

@@ -8,7 +8,29 @@ import { PropsForm } from './components/PropsForm.js'
 import { TemplateList } from './components/TemplateList.js'
 
 function isObject(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === 'object'
+  return value !== null && typeof value === 'object' && !Array.isArray(value)
+}
+
+function coerceSchema(raw: Record<string, unknown>): PropsSchema {
+  const schema: PropsSchema = {}
+  for (const [key, value] of Object.entries(raw)) {
+    if (!isObject(value)) continue
+    schema[key] = {
+      type:
+        value.type === 'number' ||
+        value.type === 'boolean' ||
+        value.type === 'select' ||
+        value.type === 'array'
+          ? value.type
+          : 'string',
+      required: value.required === true,
+      ...(value.defaultValue !== undefined ? { defaultValue: value.defaultValue } : {}),
+      ...(Array.isArray(value.options) ? { options: value.options.map(String) } : {}),
+      ...(value.multiline === true ? { multiline: true } : {}),
+      ...(isObject(value.item) ? { item: coerceSchema(value.item) } : {}),
+    }
+  }
+  return schema
 }
 
 function App() {
@@ -73,29 +95,16 @@ function App() {
       if (!response || !response.ok) return
       const newSchema = await response.json()
       if (!isObject(newSchema)) return
-      const schema: PropsSchema = {}
-      for (const [key, value] of Object.entries(newSchema)) {
-        if (isObject(value)) {
-          schema[key] = {
-            type:
-              value.type === 'number' ||
-              value.type === 'boolean' ||
-              value.type === 'select' ||
-              value.type === 'array'
-                ? value.type
-                : 'string',
-            required: value.required === true,
-            ...(value.defaultValue !== undefined ? { defaultValue: value.defaultValue } : {}),
-            ...(Array.isArray(value.options) ? { options: value.options.map(String) } : {}),
-          }
-        }
-      }
+      const schema = coerceSchema(newSchema)
       setSchema(schema)
       const defaults: Record<string, unknown> = {}
       for (const [key, spec] of Object.entries(schema)) {
         if (spec.defaultValue !== undefined) defaults[key] = spec.defaultValue
         else if (spec.type === 'boolean') defaults[key] = false
         else if (spec.type === 'number') defaults[key] = 0
+        else if (spec.type === 'array') defaults[key] = []
+        else if (spec.type === 'select' && spec.options && spec.options.length > 0)
+          defaults[key] = spec.options[0]
         else defaults[key] = ''
       }
       setPropValues(defaults)

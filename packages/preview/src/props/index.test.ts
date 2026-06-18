@@ -74,6 +74,68 @@ describe('extractPropsSchema', () => {
     })
   })
 
+  test('extracts nested item schema for object arrays', () => {
+    const mod = {
+      default: () => {},
+      previewProps: {
+        items: {
+          type: 'array',
+          item: {
+            name: { type: 'string' },
+            qty: { type: 'number' },
+          },
+          default: [{ name: 'A', qty: 1 }],
+        },
+      },
+    }
+
+    expect(extractPropsSchema(mod)).toEqual({
+      items: {
+        type: 'array',
+        required: false,
+        defaultValue: [{ name: 'A', qty: 1 }],
+        item: {
+          name: { type: 'string', required: false },
+          qty: { type: 'number', required: false },
+        },
+      },
+    })
+  })
+
+  test('ignores item schema for non-array types', () => {
+    const mod = {
+      default: () => {},
+      previewProps: {
+        name: { type: 'string', item: { foo: { type: 'string' } } },
+      },
+    }
+
+    expect(extractPropsSchema(mod)).toEqual({
+      name: { type: 'string', required: false },
+    })
+  })
+
+  test('carries multiline flag for string props', () => {
+    const mod = {
+      default: () => {},
+      previewProps: {
+        address: { type: 'string', multiline: true, default: 'a\nb' },
+        name: { type: 'string', default: 'x' },
+        count: { type: 'number', multiline: true },
+      },
+    }
+
+    const schema = extractPropsSchema(mod)
+    expect(schema.address).toEqual({
+      type: 'string',
+      required: false,
+      defaultValue: 'a\nb',
+      multiline: true,
+    })
+    expect(schema.name?.multiline).toBeUndefined()
+    expect(schema.count?.multiline).toBeUndefined()
+  })
+
   test('infers type from default value when type is omitted', () => {
     const mod = {
       default: () => {},
