@@ -37,6 +37,8 @@ function buildItemDefault(itemSchema: PropsSchema): Record<string, unknown> {
     else if (spec.type === 'boolean') item[key] = false
     else if (spec.type === 'number') item[key] = 0
     else if (spec.type === 'array') item[key] = []
+    else if (spec.type === 'select' && spec.options && spec.options.length > 0)
+      item[key] = spec.options[0]
     else item[key] = ''
   }
   return item

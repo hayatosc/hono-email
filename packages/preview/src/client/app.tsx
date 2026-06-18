@@ -8,7 +8,7 @@ import { PropsForm } from './components/PropsForm.js'
 import { TemplateList } from './components/TemplateList.js'
 
 function isObject(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === 'object'
+  return value !== null && typeof value === 'object' && !Array.isArray(value)
 }
 
 function coerceSchema(raw: Record<string, unknown>): PropsSchema {
@@ -103,6 +103,8 @@ function App() {
         else if (spec.type === 'boolean') defaults[key] = false
         else if (spec.type === 'number') defaults[key] = 0
         else if (spec.type === 'array') defaults[key] = []
+        else if (spec.type === 'select' && spec.options && spec.options.length > 0)
+          defaults[key] = spec.options[0]
         else defaults[key] = ''
       }
       setPropValues(defaults)
