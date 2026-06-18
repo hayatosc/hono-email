@@ -126,6 +126,10 @@
       }
     }
   },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
   "scripts": {
     "build": "tsdown",
     "typecheck": "tsgo --noEmit",
@@ -140,9 +144,5 @@
   },
   "peerDependencies": {
     "hono-email": "^0.4.0"
-  },
-  "publishConfig": {
-    "access": "public",
-    "provenance": true
   }
 }
