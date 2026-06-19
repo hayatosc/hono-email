@@ -53,7 +53,7 @@
 
 ## Development commands
 
-Use `actrun workflow run .github/workflows/ci.yml` to run the full CI check locally (format, lint, typecheck, test, build). This is equivalent to the GitHub Actions CI.
+Use `mise run ci` to run the full CI check locally (format, lint, typecheck, test, build). This is equivalent to the GitHub Actions CI.
 
 Individual commands for quick checks:
 
