@@ -55,4 +55,11 @@
 
 Use `actrun workflow run .github/workflows/ci.yml` to run the full CI check locally (format, lint, typecheck, test, build). This is equivalent to the GitHub Actions CI.
 
+Individual commands for quick checks:
+- `bun test` (runs unit tests across all packages)
+- `bun run typecheck` (typechecks all packages with `tsgo`)
+- `bun run build` (builds all packages in the monorepo)
+- `bun run lint`
+- `bun run format`
+
 When changing runtime behavior, update/add colocated tests next to the source file and keep README examples aligned with exported entry points.
