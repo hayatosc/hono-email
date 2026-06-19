@@ -1,4 +1,3 @@
 workspace_mode = "worktree"
 include_dirty = true
-trust_actions = true
-local_skip_actions = ["actions/checkout", "jdx/mise-action"]
+local_skip_actions = ["actions/checkout", "jdx/mise-action", "dorny/paths-filter"]
