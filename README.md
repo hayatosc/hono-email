@@ -737,6 +737,7 @@ bunx hono-email-preview --dir ./emails
 ```
 
 Options:
+
 - `-d, --dir <path>`: The directory to search for email templates recursively (defaults to `./emails`).
 - `-p, --port <port>`: The port to run the server on (defaults to `3000`).
 
@@ -765,7 +766,9 @@ export default function WelcomeEmail({ name, appName, trialDays }: WelcomeEmailP
     <Html>
       <Body>
         <Container>
-          <Heading>Welcome to {appName}, {name}!</Heading>
+          <Heading>
+            Welcome to {appName}, {name}!
+          </Heading>
           <Text>You have {trialDays} days remaining in your free trial.</Text>
         </Container>
       </Body>
@@ -778,15 +781,16 @@ export default function WelcomeEmail({ name, appName, trialDays }: WelcomeEmailP
 
 The `previewProps` object maps prop names to field definitions. The following configurations are supported:
 
-| Property Type | Description | Schema Properties |
-| --- | --- | --- |
-| `'string'` | Single-line or multi-line text input | `default`, `required`, `multiline: boolean` |
-| `'number'` | Number input field | `default`, `required` |
-| `'boolean'` | Toggle switch or checkbox | `default`, `required` |
-| `'select'` | Dropdown choice selection | `default`, `required`, `options: string[]` |
-| `'array'` | Dynamic list editor. Renders object fields if `item` is provided, otherwise falls back to a list of strings. | `default`, `required`, `item: PreviewPropsConfig` |
+| Property Type | Description                                                                                                  | Schema Properties                                 |
+| ------------- | ------------------------------------------------------------------------------------------------------------ | ------------------------------------------------- |
+| `'string'`    | Single-line or multi-line text input                                                                         | `default`, `required`, `multiline: boolean`       |
+| `'number'`    | Number input field                                                                                           | `default`, `required`                             |
+| `'boolean'`   | Toggle switch or checkbox                                                                                    | `default`, `required`                             |
+| `'select'`    | Dropdown choice selection                                                                                    | `default`, `required`, `options: string[]`        |
+| `'array'`     | Dynamic list editor. Renders object fields if `item` is provided, otherwise falls back to a list of strings. | `default`, `required`, `item: PreviewPropsConfig` |
 
 Example of an array prop schema:
+
 ```tsx
 export const previewProps = {
   items: {
