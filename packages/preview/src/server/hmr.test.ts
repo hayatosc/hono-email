@@ -18,7 +18,9 @@ describe('isAffectedByChange', () => {
   test('shared component imported by a template is affected via importer chain', () => {
     const template = node(`${templateDir}/welcome.tsx`)
     const shared = node('/project/components/Button.tsx', [template])
-    expect(isAffectedByChange('/project/components/Button.tsx', [shared], isTemplateFile)).toBe(true)
+    expect(isAffectedByChange('/project/components/Button.tsx', [shared], isTemplateFile)).toBe(
+      true,
+    )
   })
 
   test('resolves transitively through multiple importer levels', () => {

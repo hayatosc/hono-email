@@ -4,11 +4,7 @@ import { dirname, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import { getRequestListener } from '@hono/node-server'
-import {
-  createServer as createViteServer,
-  isRunnableDevEnvironment,
-  type PluginOption,
-} from 'vite'
+import { createServer as createViteServer, isRunnableDevEnvironment, type PluginOption } from 'vite'
 
 import { isAffectedByChange } from './hmr.js'
 import { createApiRoutes } from './routes.js'
