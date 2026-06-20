@@ -4,7 +4,12 @@ import { dirname, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import { getRequestListener } from '@hono/node-server'
-import { createServer as createViteServer, isRunnableDevEnvironment, type PluginOption } from 'vite'
+import {
+  createServer as createViteServer,
+  isRunnableDevEnvironment,
+  normalizePath,
+  type PluginOption,
+} from 'vite'
 
 import { isAffectedByChange } from './hmr.js'
 import { createApiRoutes } from './routes.js'
@@ -100,6 +105,9 @@ export async function startPreviewServer(options: PreviewServerOptions): Promise
 
   const rootDir = process.cwd()
   const templateDir = resolve(rootDir, dir)
+  // Vite normalizes module paths to forward slashes; `templateDir` uses the
+  // OS separator. Compare both in posix form so path checks work on Windows.
+  const normalizedTemplateDir = normalizePath(templateDir)
 
   if (!existsSync(templateDir)) {
     throw new Error(`Template directory "${templateDir}" does not exist.`)
@@ -131,7 +139,7 @@ export async function startPreviewServer(options: PreviewServerOptions): Promise
       name: 'hono-email-preview-loader',
       enforce: 'pre',
       load(id) {
-        if (!id.startsWith(templateDir) || !/\.(tsx|jsx)$/.test(id)) {
+        if (!normalizePath(id).startsWith(normalizedTemplateDir) || !/\.(tsx|jsx)$/.test(id)) {
           return null
         }
         this.addWatchFile(id)
@@ -151,7 +159,9 @@ export async function startPreviewServer(options: PreviewServerOptions): Promise
       }
 
       const isTemplateFile = (file: string | null): boolean =>
-        typeof file === 'string' && file.startsWith(templateDir) && /\.(tsx|jsx)$/.test(file)
+        typeof file === 'string' &&
+        normalizePath(file).startsWith(normalizedTemplateDir) &&
+        /\.(tsx|jsx)$/.test(file)
 
       // `options.file` covers direct template edits even when the template is
       // not yet in the module graph; the importer walk covers shared components
@@ -164,9 +174,10 @@ export async function startPreviewServer(options: PreviewServerOptions): Promise
         type: 'custom',
         event: 'hono-email:template-update',
       })
-      options.server.config.logger.info(`template updated: ${relative(rootDir, options.file)}`, {
-        timestamp: true,
-      })
+      options.server.config.logger.info(
+        `template updated: ${relative(rootDir, resolve(options.file))}`,
+        { timestamp: true },
+      )
       // Return nothing so Vite still applies its default SSR invalidation; the
       // module runner then re-evaluates on the next `runner.import`.
     },
