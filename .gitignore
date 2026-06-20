@@ -47,3 +47,4 @@ desktop.ini
 # Tool specific
 .claude/
 .codex/
+_build/
