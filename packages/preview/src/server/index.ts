@@ -4,8 +4,13 @@ import { dirname, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import { getRequestListener } from '@hono/node-server'
-import { createServer as createViteServer, type PluginOption } from 'vite'
+import {
+  createServer as createViteServer,
+  isRunnableDevEnvironment,
+  type PluginOption,
+} from 'vite'
 
+import { isAffectedByChange } from './hmr.js'
 import { createApiRoutes } from './routes.js'
 
 export type PreviewServerOptions = {
@@ -142,13 +147,32 @@ export async function startPreviewServer(options: PreviewServerOptions): Promise
 
   plugins.push({
     name: 'hono-email-preview-hmr',
-    handleHotUpdate(ctx) {
-      if (ctx.file.startsWith(templateDir) && /\.(tsx|jsx)$/.test(ctx.file)) {
-        ctx.server.ws.send({ type: 'custom', event: 'hono-email:template-update' })
-        ctx.server.config.logger.info(`template updated: ${relative(rootDir, ctx.file)}`, {
-          timestamp: true,
-        })
+    hotUpdate(options) {
+      // Only react to SSR module-graph changes. Edits to the preview shell live
+      // in the client environment and are handled by Vite's normal client HMR.
+      if (this.environment.name !== 'ssr') {
+        return
       }
+
+      const isTemplateFile = (file: string | null): boolean =>
+        typeof file === 'string' && file.startsWith(templateDir) && /\.(tsx|jsx)$/.test(file)
+
+      // `options.file` covers direct template edits even when the template is
+      // not yet in the module graph; the importer walk covers shared components
+      // a template imports (which live outside `templateDir`).
+      if (!isAffectedByChange(options.file, options.modules, isTemplateFile)) {
+        return
+      }
+
+      options.server.environments.client.hot.send({
+        type: 'custom',
+        event: 'hono-email:template-update',
+      })
+      options.server.config.logger.info(`template updated: ${relative(rootDir, options.file)}`, {
+        timestamp: true,
+      })
+      // Return nothing so Vite still applies its default SSR invalidation; the
+      // module runner then re-evaluates on the next `runner.import`.
     },
   })
 
@@ -169,7 +193,11 @@ export async function startPreviewServer(options: PreviewServerOptions): Promise
     plugins,
   })
 
-  const honoApp = createApiRoutes(vite, templateDir)
+  const ssrEnv = vite.environments.ssr
+  if (!isRunnableDevEnvironment(ssrEnv)) {
+    throw new Error('Vite SSR environment is not runnable')
+  }
+  const honoApp = createApiRoutes((url) => ssrEnv.runner.import(url), templateDir)
   const honoHandler = getRequestListener(honoApp.fetch.bind(honoApp))
 
   server.on('request', (req, res) => {

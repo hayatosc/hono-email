@@ -7,27 +7,25 @@ import { createApiRoutes } from './routes'
 
 describe('createApiRoutes', () => {
   let tempDir: string
-  let mockVite: { ssrLoadModule: (_filePath: string) => Promise<Record<string, unknown>> }
+  let loadModule: (_filePath: string) => Promise<Record<string, unknown>>
   let app: ReturnType<typeof createApiRoutes>
 
   beforeAll(() => {
     tempDir = mkdtempSync(join(tmpdir(), 'hono-email-routes-'))
     writeFileSync(join(tempDir, 'welcome.tsx'), 'export default {}')
 
-    mockVite = {
-      ssrLoadModule: async (_filePath: string) => {
-        return {
-          default: (_props: unknown) => {
-            return null
-          },
-          previewProps: {
-            name: { type: 'string', default: 'Guest' },
-          },
-        }
-      },
+    loadModule = async (_filePath: string) => {
+      return {
+        default: (_props: unknown) => {
+          return null
+        },
+        previewProps: {
+          name: { type: 'string', default: 'Guest' },
+        },
+      }
     }
 
-    app = createApiRoutes(mockVite, tempDir)
+    app = createApiRoutes(loadModule, tempDir)
   })
 
   afterAll(() => {
@@ -61,24 +59,22 @@ describe('createApiRoutes', () => {
 
 describe('createApiRoutes with named export', () => {
   let tempDir: string
-  let mockVite: { ssrLoadModule: (_filePath: string) => Promise<Record<string, unknown>> }
+  let loadModule: (_filePath: string) => Promise<Record<string, unknown>>
   let app: ReturnType<typeof createApiRoutes>
 
   beforeAll(() => {
     tempDir = mkdtempSync(join(tmpdir(), 'hono-email-routes-named-'))
     writeFileSync(join(tempDir, 'notification.tsx'), 'export const Notification = () => {}')
 
-    mockVite = {
-      ssrLoadModule: async (_filePath: string) => {
-        return {
-          Notification: (_props: unknown) => {
-            return null
-          },
-        }
-      },
+    loadModule = async (_filePath: string) => {
+      return {
+        Notification: (_props: unknown) => {
+          return null
+        },
+      }
     }
 
-    app = createApiRoutes(mockVite, tempDir)
+    app = createApiRoutes(loadModule, tempDir)
   })
 
   afterAll(() => {
