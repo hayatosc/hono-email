@@ -7,5 +7,8 @@
   "access": "public",
   "baseBranch": "main",
   "updateInternalDependencies": "patch",
-  "ignore": ["hono-email-cloudflare-vite-tailwind-example", "hono-email-node-smtp-css-example"]
+  "ignore": ["hono-email-cloudflare-vite-tailwind-example", "hono-email-node-smtp-css-example"],
+  "___experimentalUnsafeOptions_WILL_CHANGE_IN_PATCH": {
+    "onlyUpdatePeerDependentsWhenOutOfRange": true
+  }
 }
