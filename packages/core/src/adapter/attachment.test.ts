@@ -67,7 +67,7 @@ describe('decodeStringContent via resolveEmailAttachments', () => {
   })
 
   test('invalid base64 throws', async () => {
-    expect(
+    await expect(
       resolveEmailAttachments([
         { content: '!!!invalid!!!', encoding: 'base64', filename: 'test.txt' },
       ]),
@@ -89,13 +89,13 @@ describe('decodeStringContent via resolveEmailAttachments', () => {
   })
 
   test('invalid hex characters throw', async () => {
-    expect(
+    await expect(
       resolveEmailAttachments([{ content: 'ZZZZ', encoding: 'hex', filename: 'test.txt' }]),
     ).rejects.toThrow('invalid hex')
   })
 
   test('odd-length hex throws', async () => {
-    expect(
+    await expect(
       resolveEmailAttachments([{ content: '48656c6c6', encoding: 'hex', filename: 'test.txt' }]),
     ).rejects.toThrow('invalid hex')
   })
@@ -345,9 +345,9 @@ describe('resolveEmailAttachments - fetch', () => {
       return new Response('not found', { status: 404, statusText: 'Not Found' })
     })
     try {
-      expect(resolveEmailAttachments([{ href: 'https://example.com/missing' }])).rejects.toThrow(
-        '404',
-      )
+      await expect(
+        resolveEmailAttachments([{ href: 'https://example.com/missing' }]),
+      ).rejects.toThrow('404')
     } finally {
       globalThis.fetch = originalFetch
     }
@@ -362,7 +362,7 @@ describe('resolveEmailAttachments - fetch', () => {
       })
     })
     try {
-      expect(
+      await expect(
         resolveEmailAttachments([{ href: 'https://example.com/large' }], {
           maxAttachmentSize: 100,
         }),
@@ -393,9 +393,9 @@ describe('resolveEmailAttachments - fetch', () => {
     // @ts-expect-error testing missing fetch
     globalThis.fetch = undefined
     try {
-      expect(resolveEmailAttachments([{ href: 'https://example.com/file.txt' }])).rejects.toThrow(
-        'fetch implementation',
-      )
+      await expect(
+        resolveEmailAttachments([{ href: 'https://example.com/file.txt' }]),
+      ).rejects.toThrow('fetch implementation')
     } finally {
       globalThis.fetch = originalFetch
     }
@@ -404,13 +404,13 @@ describe('resolveEmailAttachments - fetch', () => {
 
 describe('resolveEmailAttachments - errors', () => {
   test('local file path throws', async () => {
-    expect(resolveEmailAttachments([{ path: '/tmp/local-file.pdf' }])).rejects.toThrow(
+    await expect(resolveEmailAttachments([{ path: '/tmp/local-file.pdf' }])).rejects.toThrow(
       'Local attachment paths',
     )
   })
 
   test('missing content/path/href throws', async () => {
-    expect(resolveEmailAttachments([{ filename: 'test.txt' }])).rejects.toThrow(
+    await expect(resolveEmailAttachments([{ filename: 'test.txt' }])).rejects.toThrow(
       'content, path, or href',
     )
   })
@@ -428,25 +428,25 @@ describe('resolveEmailAttachments - errors', () => {
 
 describe('resolveEmailAttachments - maxAttachmentSize', () => {
   test('invalid maxAttachmentSize (zero) throws', async () => {
-    expect(
+    await expect(
       resolveEmailAttachments([{ content: 'x', filename: 'test.txt' }], { maxAttachmentSize: 0 }),
     ).rejects.toThrow('positive integer')
   })
 
   test('invalid maxAttachmentSize (negative) throws', async () => {
-    expect(
+    await expect(
       resolveEmailAttachments([{ content: 'x', filename: 'test.txt' }], { maxAttachmentSize: -1 }),
     ).rejects.toThrow('positive integer')
   })
 
   test('invalid maxAttachmentSize (float) throws', async () => {
-    expect(
+    await expect(
       resolveEmailAttachments([{ content: 'x', filename: 'test.txt' }], { maxAttachmentSize: 1.5 }),
     ).rejects.toThrow('positive integer')
   })
 
   test('content exceeding limit throws', async () => {
-    expect(
+    await expect(
       resolveEmailAttachments([{ content: 'Hello World', filename: 'test.txt' }], {
         maxAttachmentSize: 5,
       }),
