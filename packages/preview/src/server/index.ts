@@ -4,8 +4,14 @@ import { dirname, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import { getRequestListener } from '@hono/node-server'
-import { createServer as createViteServer, type PluginOption } from 'vite'
+import {
+  createServer as createViteServer,
+  isRunnableDevEnvironment,
+  normalizePath,
+  type PluginOption,
+} from 'vite'
 
+import { isAffectedByChange } from './hmr.js'
 import { createApiRoutes } from './routes.js'
 
 export type PreviewServerOptions = {
@@ -94,11 +100,25 @@ function prepareClientHtml(clientDir: string, html: string): string {
     .replace('src="./app.tsx"', `src="${base}/app.tsx"`)
 }
 
+const TEMPLATE_EXTENSION = /\.(tsx|jsx)$/
+
 export async function startPreviewServer(options: PreviewServerOptions): Promise<PreviewServer> {
   const { dir, port } = options
 
   const rootDir = process.cwd()
   const templateDir = resolve(rootDir, dir)
+  // Vite normalizes module paths to forward slashes; `templateDir` uses the
+  // OS separator. Compare both in posix form so path checks work on Windows.
+  const normalizedTemplateDir = normalizePath(templateDir)
+  // Match on the directory boundary so a sibling like `emails-backup/` whose
+  // path shares the prefix is not mistaken for a template.
+  const templateDirPrefix = normalizedTemplateDir.endsWith('/')
+    ? normalizedTemplateDir
+    : `${normalizedTemplateDir}/`
+  const isTemplateFile = (file: string | null): boolean =>
+    typeof file === 'string' &&
+    normalizePath(file).startsWith(templateDirPrefix) &&
+    TEMPLATE_EXTENSION.test(file)
 
   if (!existsSync(templateDir)) {
     throw new Error(`Template directory "${templateDir}" does not exist.`)
@@ -130,7 +150,7 @@ export async function startPreviewServer(options: PreviewServerOptions): Promise
       name: 'hono-email-preview-loader',
       enforce: 'pre',
       load(id) {
-        if (!id.startsWith(templateDir) || !/\.(tsx|jsx)$/.test(id)) {
+        if (!isTemplateFile(id)) {
           return null
         }
         this.addWatchFile(id)
@@ -142,13 +162,30 @@ export async function startPreviewServer(options: PreviewServerOptions): Promise
 
   plugins.push({
     name: 'hono-email-preview-hmr',
-    handleHotUpdate(ctx) {
-      if (ctx.file.startsWith(templateDir) && /\.(tsx|jsx)$/.test(ctx.file)) {
-        ctx.server.ws.send({ type: 'custom', event: 'hono-email:template-update' })
-        ctx.server.config.logger.info(`template updated: ${relative(rootDir, ctx.file)}`, {
-          timestamp: true,
-        })
+    hotUpdate(options) {
+      // Only react to SSR module-graph changes. Edits to the preview shell live
+      // in the client environment and are handled by Vite's normal client HMR.
+      if (this.environment.name !== 'ssr') {
+        return
       }
+
+      // `options.file` covers direct template edits even when the template is
+      // not yet in the module graph; the importer walk covers shared components
+      // a template imports (which live outside `templateDir`).
+      if (!isAffectedByChange(options.file, options.modules, isTemplateFile)) {
+        return
+      }
+
+      options.server.environments.client.hot.send({
+        type: 'custom',
+        event: 'hono-email:template-update',
+      })
+      options.server.config.logger.info(
+        `template updated: ${relative(rootDir, resolve(options.file))}`,
+        { timestamp: true },
+      )
+      // Return nothing so Vite still applies its default SSR invalidation; the
+      // module runner then re-evaluates on the next `runner.import`.
     },
   })
 
@@ -169,7 +206,11 @@ export async function startPreviewServer(options: PreviewServerOptions): Promise
     plugins,
   })
 
-  const honoApp = createApiRoutes(vite, templateDir)
+  const ssrEnv = vite.environments.ssr
+  if (!isRunnableDevEnvironment(ssrEnv)) {
+    throw new Error('Vite SSR environment is not runnable')
+  }
+  const honoApp = createApiRoutes((url) => ssrEnv.runner.import(url), templateDir)
   const honoHandler = getRequestListener(honoApp.fetch.bind(honoApp))
 
   server.on('request', (req, res) => {
