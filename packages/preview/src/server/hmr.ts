@@ -25,9 +25,9 @@ export function isAffectedByChange(
   }
 
   const seen = new Set<ImporterNode>()
-  const queue: ImporterNode[] = [...modules]
-  while (queue.length > 0) {
-    const node = queue.pop()
+  const stack: ImporterNode[] = [...modules]
+  while (stack.length > 0) {
+    const node = stack.pop()
     if (!node || seen.has(node)) {
       continue
     }
@@ -36,7 +36,7 @@ export function isAffectedByChange(
       return true
     }
     for (const importer of node.importers) {
-      queue.push(importer)
+      stack.push(importer)
     }
   }
 

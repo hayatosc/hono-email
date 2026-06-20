@@ -100,6 +100,8 @@ function prepareClientHtml(clientDir: string, html: string): string {
     .replace('src="./app.tsx"', `src="${base}/app.tsx"`)
 }
 
+const TEMPLATE_EXTENSION = /\.(tsx|jsx)$/
+
 export async function startPreviewServer(options: PreviewServerOptions): Promise<PreviewServer> {
   const { dir, port } = options
 
@@ -108,6 +110,10 @@ export async function startPreviewServer(options: PreviewServerOptions): Promise
   // Vite normalizes module paths to forward slashes; `templateDir` uses the
   // OS separator. Compare both in posix form so path checks work on Windows.
   const normalizedTemplateDir = normalizePath(templateDir)
+  const isTemplateFile = (file: string | null): boolean =>
+    typeof file === 'string' &&
+    normalizePath(file).startsWith(normalizedTemplateDir) &&
+    TEMPLATE_EXTENSION.test(file)
 
   if (!existsSync(templateDir)) {
     throw new Error(`Template directory "${templateDir}" does not exist.`)
@@ -139,7 +145,7 @@ export async function startPreviewServer(options: PreviewServerOptions): Promise
       name: 'hono-email-preview-loader',
       enforce: 'pre',
       load(id) {
-        if (!normalizePath(id).startsWith(normalizedTemplateDir) || !/\.(tsx|jsx)$/.test(id)) {
+        if (!isTemplateFile(id)) {
           return null
         }
         this.addWatchFile(id)
@@ -157,11 +163,6 @@ export async function startPreviewServer(options: PreviewServerOptions): Promise
       if (this.environment.name !== 'ssr') {
         return
       }
-
-      const isTemplateFile = (file: string | null): boolean =>
-        typeof file === 'string' &&
-        normalizePath(file).startsWith(normalizedTemplateDir) &&
-        /\.(tsx|jsx)$/.test(file)
 
       // `options.file` covers direct template edits even when the template is
       // not yet in the module graph; the importer walk covers shared components
