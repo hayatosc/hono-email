@@ -540,4 +540,54 @@ describe('render strict mode', () => {
       warnings.filter((message) => message.includes("The CSS property 'box-shadow'")),
     ).toHaveLength(1)
   })
+
+  test('decodes hex HTML entities in href attributes', () => {
+    expect(() =>
+      validateHtml(
+        '<html><body><a href="&#x6A;&#x61;&#x76;&#x61;&#x73;&#x63;&#x72;&#x69;&#x70;&#x74;&#x3A;alert(1)">Open</a></body></html>',
+      ),
+    ).toThrow("unsafe 'javascript:' URL scheme")
+  })
+
+  test('decodes decimal HTML entities in href attributes', () => {
+    expect(() =>
+      validateHtml(
+        '<html><body><a href="&#106;&#97;&#118;&#97;&#115;&#99;&#114;&#105;&#112;&#116;&#58;alert(1)">Open</a></body></html>',
+      ),
+    ).toThrow("unsafe 'javascript:' URL scheme")
+  })
+
+  test('decodes named colon entity in href attributes', () => {
+    expect(() =>
+      validateHtml('<html><body><a href="javascript&colon;alert(1)">Open</a></body></html>'),
+    ).toThrow("unsafe 'javascript:' URL scheme")
+  })
+
+  test('rejects data URL in anchor href', async () => {
+    await expect(
+      render(
+        <html>
+          <body>
+            <a href="data:text/html,<h1>Hi</h1>">Open</a>
+          </body>
+        </html>,
+      ),
+    ).rejects.toThrow("unsafe 'data:' URL scheme")
+  })
+
+  test('rejects javascript URL in CSS background-image', () => {
+    expect(() =>
+      validateHtml(
+        "<html><head><style>body { background: url('javascript:alert(1)') }</style></head><body><p>Hello</p></body></html>",
+      ),
+    ).toThrow("unsafe 'javascript:' URL scheme")
+  })
+
+  test('warns about data URL in CSS background-image', () => {
+    const warnings = validateHtml(
+      "<html><head><style>body { background: url('data:image/png,abc') }</style></head><body><p>Hello</p></body></html>",
+    )
+
+    expect(warnings.some((m) => m.includes('data URL'))).toBe(true)
+  })
 })

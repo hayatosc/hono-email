@@ -25,7 +25,7 @@ export type PreviewServer = {
 
 const CONFIG_EXTENSIONS = ['js', 'ts', 'mjs', 'cjs'] as const
 
-function detectTailwindConfig(rootDir: string): string | null {
+export function detectTailwindConfig(rootDir: string): string | null {
   for (const ext of CONFIG_EXTENSIONS) {
     const path = resolve(rootDir, `tailwind.config.${ext}`)
     if (existsSync(path)) return path
@@ -33,11 +33,11 @@ function detectTailwindConfig(rootDir: string): string | null {
   return null
 }
 
-function detectPostCssConfig(rootDir: string): boolean {
+export function detectPostCssConfig(rootDir: string): boolean {
   return CONFIG_EXTENSIONS.some((ext) => existsSync(resolve(rootDir, `postcss.config.${ext}`)))
 }
 
-function detectViteConfigHasTailwind(rootDir: string): boolean {
+export function detectViteConfigHasTailwind(rootDir: string): boolean {
   for (const ext of CONFIG_EXTENSIONS) {
     const path = resolve(rootDir, `vite.config.${ext}`)
     if (existsSync(path)) {
@@ -52,11 +52,11 @@ function detectViteConfigHasTailwind(rootDir: string): boolean {
   return false
 }
 
-function isObject(value: unknown): value is Record<string, unknown> {
+export function isObject(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object' && !Array.isArray(value)
 }
 
-function detectTailwindInPackageJson(rootDir: string): boolean {
+export function detectTailwindInPackageJson(rootDir: string): boolean {
   try {
     const pkgPath = resolve(rootDir, 'package.json')
     if (existsSync(pkgPath)) {
@@ -92,7 +92,7 @@ function resolveClientDir(): string {
   return resolve(packageRoot, 'dist/client')
 }
 
-function prepareClientHtml(clientDir: string, html: string): string {
+export function prepareClientHtml(clientDir: string, html: string): string {
   const fsPath = clientDir.replace(/\\/g, '/')
   const base = `/@fs${fsPath.startsWith('/') ? '' : '/'}${fsPath}`
   return html

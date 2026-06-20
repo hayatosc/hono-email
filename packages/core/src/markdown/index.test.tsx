@@ -209,4 +209,89 @@ Paragraph with \`code\`
     expect(html).not.toContain('style="be/**/havior:url(test.htc); color: blue"')
     expect(html).toContain('Styled')
   })
+
+  test('removes links without href and images without src after sanitization', async () => {
+    const { html } = await render(
+      <Html>
+        <Head />
+        <Body>
+          <Markdown>{`
+<a>Link without href</a>
+<a href="https://example.com">Link with href</a>
+<img />
+<img src="https://example.com/img.png" alt="safe" />
+          `}</Markdown>
+        </Body>
+      </Html>,
+    )
+
+    expect(html).toContain('Link without href')
+    expect(html).not.toContain('<a>')
+    expect(html).toContain('href="https://example.com"')
+    expect(html).toContain('Link with href')
+    expect(html).toContain('src="https://example.com/img.png"')
+    const imgTags = html.match(/<img /g) ?? []
+    expect(imgTags).toHaveLength(1)
+  })
+
+  test('applies custom styles merged with defaults in inline mode', async () => {
+    const { html } = await render(
+      <Html>
+        <Head />
+        <Body>
+          <Markdown
+            markdownCustomStyles={{
+              p: { color: 'red' },
+              blockquote: { borderLeft: '2px solid blue' },
+            }}
+          >{`
+Paragraph
+
+> Blockquote
+          `}</Markdown>
+        </Body>
+      </Html>,
+    )
+
+    expect(html).toContain('color:red')
+    expect(html).toContain('margin:0 0 16px')
+    expect(html).toContain('border-left:2px solid blue')
+    expect(html).toContain('margin:16px 0')
+  })
+
+  test('applies tailwind mode with container styles and no inline defaults', async () => {
+    const artifact = buildTailwindArtifactFromCss({
+      css: `
+@layer utilities {
+  .wrapper { padding: 8px; }
+  .heading { font-size: 2rem; }
+}
+`,
+    })
+
+    const { html } = await render(
+      <Html>
+        <Head />
+        <Tailwind artifact={artifact}>
+          <Body>
+            <Markdown
+              markdownStyleMode="tailwind"
+              markdownContainerStyles={{ padding: '8px' }}
+              markdownContainerClassName="wrapper"
+              markdownCustomClassNames={{ h1: 'heading' }}
+            >{`
+# Heading
+            `}</Markdown>
+          </Body>
+        </Tailwind>
+      </Html>,
+    )
+
+    expect(html).toContain('padding:8px')
+    expect(html).not.toContain('color:#0f172a')
+    expect(html).not.toContain('font-size:14px')
+    expect(html).toContain('class="wrapper"')
+    expect(html).toContain('class="heading"')
+    expect(html).not.toContain('font-size:30px')
+  })
 })

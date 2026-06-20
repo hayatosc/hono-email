@@ -2,7 +2,7 @@ import { defineCommand, runMain } from 'citty'
 
 import { startPreviewServer } from './server/index.js'
 
-const main = defineCommand({
+export const main = defineCommand({
   meta: {
     name: 'hono-email-preview',
     description: 'Live preview server for hono-email templates',
@@ -55,4 +55,6 @@ const main = defineCommand({
   },
 })
 
-void runMain(main)
+if (import.meta.main) {
+  void runMain(main)
+}
