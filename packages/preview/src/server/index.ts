@@ -110,9 +110,14 @@ export async function startPreviewServer(options: PreviewServerOptions): Promise
   // Vite normalizes module paths to forward slashes; `templateDir` uses the
   // OS separator. Compare both in posix form so path checks work on Windows.
   const normalizedTemplateDir = normalizePath(templateDir)
+  // Match on the directory boundary so a sibling like `emails-backup/` whose
+  // path shares the prefix is not mistaken for a template.
+  const templateDirPrefix = normalizedTemplateDir.endsWith('/')
+    ? normalizedTemplateDir
+    : `${normalizedTemplateDir}/`
   const isTemplateFile = (file: string | null): boolean =>
     typeof file === 'string' &&
-    normalizePath(file).startsWith(normalizedTemplateDir) &&
+    normalizePath(file).startsWith(templateDirPrefix) &&
     TEMPLATE_EXTENSION.test(file)
 
   if (!existsSync(templateDir)) {

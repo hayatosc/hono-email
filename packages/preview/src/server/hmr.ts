@@ -16,7 +16,7 @@ export interface ImporterNode {
  * template imports — found by walking the importer chain up to a template.
  */
 export function isAffectedByChange(
-  changedFile: string | null,
+  changedFile: string,
   modules: Iterable<ImporterNode>,
   isTemplateFile: (file: string | null) => boolean,
 ): boolean {

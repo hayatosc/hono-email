@@ -3,8 +3,9 @@ import { describe, expect, test } from 'bun:test'
 import { type ImporterNode, isAffectedByChange } from './hmr'
 
 const templateDir = '/project/emails'
+const templateDirPrefix = `${templateDir}/`
 const isTemplateFile = (file: string | null): boolean =>
-  typeof file === 'string' && file.startsWith(templateDir) && /\.(tsx|jsx)$/.test(file)
+  typeof file === 'string' && file.startsWith(templateDirPrefix) && /\.(tsx|jsx)$/.test(file)
 
 function node(file: string | null, importers: ImporterNode[] = []): ImporterNode {
   return { file, importers }
@@ -35,10 +36,14 @@ describe('isAffectedByChange', () => {
     expect(isAffectedByChange('/project/lib/util.ts', [other], isTemplateFile)).toBe(false)
   })
 
+  test('sibling directory sharing the prefix is not treated as a template', () => {
+    expect(isAffectedByChange('/project/emails-backup/welcome.tsx', [], isTemplateFile)).toBe(false)
+  })
+
   test('skips nodes with null file without throwing', () => {
     const template = node(`${templateDir}/welcome.tsx`)
     const virtual = node(null, [template])
-    expect(isAffectedByChange(null, [virtual], isTemplateFile)).toBe(true)
+    expect(isAffectedByChange('/project/virtual-module', [virtual], isTemplateFile)).toBe(true)
   })
 
   test('handles importer cycles without infinite loop', () => {
