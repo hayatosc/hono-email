@@ -115,11 +115,14 @@ describe('SendGrid adapter', () => {
       to: 'recipient@example.com',
     })
 
-    const body = JSON.parse(String(requests[0]?.init.body)) as {
-      personalizations: [{ to: unknown; cc?: unknown; bcc?: unknown }]
-    }
-    expect(body.personalizations[0].cc).toEqual([{ email: 'copy@example.com', name: 'Copy' }])
-    expect(body.personalizations[0].bcc).toEqual([{ email: 'hidden@example.com' }])
+    expect(JSON.parse(String(requests[0]?.init.body)) as unknown).toMatchObject({
+      personalizations: [
+        {
+          bcc: [{ email: 'hidden@example.com' }],
+          cc: [{ email: 'copy@example.com', name: 'Copy' }],
+        },
+      ],
+    })
   })
 
   test('sends multiple reply_to addresses as reply_to_list', async () => {
@@ -138,12 +141,12 @@ describe('SendGrid adapter', () => {
       to: 'recipient@example.com',
     })
 
-    const body = JSON.parse(String(requests[0]?.init.body)) as Record<string, unknown>
-    expect(body.reply_to).toBeUndefined()
-    expect(body.reply_to_list).toEqual([
-      { email: 'reply1@example.com' },
-      { email: 'reply2@example.com', name: 'Reply Two' },
-    ])
+    expect(JSON.parse(String(requests[0]?.init.body)) as unknown).toMatchObject({
+      reply_to_list: [
+        { email: 'reply1@example.com' },
+        { email: 'reply2@example.com', name: 'Reply Two' },
+      ],
+    })
   })
 
   test('falls back to message ID when x-message-id header is absent', async () => {

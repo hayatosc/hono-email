@@ -115,9 +115,10 @@ describe('Postmark adapter', () => {
       to: 'recipient@example.com',
     })
 
-    const body = JSON.parse(String(requests[0]?.init.body)) as Record<string, unknown>
-    expect(body.Cc).toBe('"Copy" <copy@example.com>')
-    expect(body.Bcc).toBe('hidden1@example.com, hidden2@example.com')
+    expect(JSON.parse(String(requests[0]?.init.body)) as unknown).toMatchObject({
+      Bcc: 'hidden1@example.com, hidden2@example.com',
+      Cc: '"Copy" <copy@example.com>',
+    })
   })
 
   test('sends TrackLinks option', async () => {
@@ -141,8 +142,9 @@ describe('Postmark adapter', () => {
       to: 'recipient@example.com',
     })
 
-    const body = JSON.parse(String(requests[0]?.init.body)) as Record<string, unknown>
-    expect(body.TrackLinks).toBe('HtmlAndText')
+    expect(JSON.parse(String(requests[0]?.init.body)) as unknown).toMatchObject({
+      TrackLinks: 'HtmlAndText',
+    })
   })
 
   test('inline attachment uses ContentID without ContentDisposition', async () => {
@@ -171,17 +173,14 @@ describe('Postmark adapter', () => {
       to: 'recipient@example.com',
     })
 
-    const body = JSON.parse(String(requests[0]?.init.body)) as {
-      Attachments: Record<string, unknown>[]
-    }
-    expect(body.Attachments).toHaveLength(1)
-    expect(body.Attachments[0]).toMatchObject({
-      ContentID: 'cid:img.png',
-      ContentType: 'image/png',
-      Name: 'img.png',
+    const parsed = JSON.parse(String(requests[0]?.init.body)) as unknown
+    expect(parsed).toMatchObject({
+      Attachments: [{ ContentID: 'cid:img.png', ContentType: 'image/png', Name: 'img.png' }],
     })
     // Postmark does not use a ContentDisposition field
-    expect(body.Attachments[0]).not.toHaveProperty('ContentDisposition')
+    expect(parsed).not.toMatchObject({
+      Attachments: [{ ContentDisposition: expect.anything() }],
+    })
   })
 
   test('maps Postmark API errors to a failed receipt', async () => {

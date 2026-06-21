@@ -104,10 +104,11 @@ describe('Resend adapter', () => {
       to: 'recipient@example.com',
     })
 
-    const body = JSON.parse(String(requests[0]?.init.body)) as Record<string, unknown>
-    expect(body.to).toBe('recipient@example.com')
-    expect(body.cc).toBe('"Copy" <copy@example.com>')
-    expect(body.bcc).toBe('hidden@example.com')
+    expect(JSON.parse(String(requests[0]?.init.body)) as unknown).toMatchObject({
+      bcc: 'hidden@example.com',
+      cc: '"Copy" <copy@example.com>',
+      to: 'recipient@example.com',
+    })
   })
 
   test('sends multiple reply_to addresses as an array', async () => {
@@ -126,8 +127,9 @@ describe('Resend adapter', () => {
       to: 'recipient@example.com',
     })
 
-    const body = JSON.parse(String(requests[0]?.init.body)) as Record<string, unknown>
-    expect(body.reply_to).toEqual(['reply1@example.com', 'reply2@example.com'])
+    expect(JSON.parse(String(requests[0]?.init.body)) as unknown).toMatchObject({
+      reply_to: ['reply1@example.com', 'reply2@example.com'],
+    })
   })
 
   test('maps Resend API errors to a failed receipt', async () => {
