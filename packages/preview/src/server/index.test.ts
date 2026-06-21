@@ -9,6 +9,7 @@ import {
   detectViteConfigHasTailwind,
   detectTailwindInPackageJson,
   prepareClientHtml,
+  serveStaticAsset,
   isObject,
 } from './index'
 
@@ -185,5 +186,54 @@ describe('prepareClientHtml', () => {
     const html = '<link href="./styles.css" rel="stylesheet">'
     const result = prepareClientHtml('C:\\Users\\test\\client', html)
     expect(result).toContain('href="/@fs/C:/Users/test/client/styles.css"')
+  })
+})
+
+describe('serveStaticAsset', () => {
+  let rootDir: string
+
+  type MockRes = {
+    statusCode: number | null
+    headers: Record<string, string> | null
+    body: string | null
+  }
+
+  const createRes = (mock: MockRes) => ({
+    writeHead(status: number, headers?: Record<string, string>) {
+      mock.statusCode = status
+      mock.headers = headers ?? null
+    },
+    end(chunk?: string | Buffer) {
+      mock.body = chunk == null ? '' : chunk.toString()
+    },
+  })
+
+  beforeAll(() => {
+    rootDir = mkdtempSync(join(tmpdir(), 'preview-static-'))
+    writeFileSync(join(rootDir, 'app.js'), 'console.log(1)')
+  })
+
+  afterAll(() => {
+    rmSync(rootDir, { recursive: true, force: true })
+  })
+
+  test('serves an existing file with the matching content type', () => {
+    const mock: MockRes = { statusCode: null, headers: null, body: null }
+    serveStaticAsset(rootDir, '/app.js', createRes(mock))
+    expect(mock.statusCode).toBe(200)
+    expect(mock.headers).toEqual({ 'Content-Type': 'text/javascript' })
+    expect(mock.body).toBe('console.log(1)')
+  })
+
+  test('returns 404 for a missing file', () => {
+    const mock: MockRes = { statusCode: null, headers: null, body: null }
+    serveStaticAsset(rootDir, '/missing.js', createRes(mock))
+    expect(mock.statusCode).toBe(404)
+  })
+
+  test('rejects path traversal outside the root', () => {
+    const mock: MockRes = { statusCode: null, headers: null, body: null }
+    serveStaticAsset(rootDir, '/../../etc/passwd', createRes(mock))
+    expect(mock.statusCode).toBe(404)
   })
 })

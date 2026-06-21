@@ -23,14 +23,4 @@ export default defineConfig({
   clean: true,
   deps: { neverBundle },
   shims: true,
-  banner: {
-    cli: '#!/usr/bin/env node',
-  },
-  copy: [
-    {
-      from: 'src/client/**',
-      to: 'dist',
-      flatten: false,
-    },
-  ],
 })

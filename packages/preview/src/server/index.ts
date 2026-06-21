@@ -1,6 +1,6 @@
-import { existsSync, readFileSync } from 'node:fs'
-import { createServer as createHttpServer } from 'node:http'
-import { dirname, relative, resolve } from 'node:path'
+import { existsSync, readFileSync, statSync } from 'node:fs'
+import { createServer as createHttpServer, type ServerResponse } from 'node:http'
+import { dirname, extname, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import { getRequestListener } from '@hono/node-server'
@@ -83,13 +83,16 @@ function resolvePackageRoot(): string {
   throw new Error('Could not resolve preview package root')
 }
 
-function resolveClientDir(): string {
+// `prebuilt` is false when serving raw client sources from `src/client` (this
+// repo's dev workflow, where Vite transforms `.tsx` on the fly), and true when
+// serving the compiled assets shipped in `dist/client` (the published package).
+function resolveClient(): { dir: string; prebuilt: boolean } {
   const packageRoot = resolvePackageRoot()
   const srcClient = resolve(packageRoot, 'src/client')
   if (existsSync(resolve(srcClient, 'index.html'))) {
-    return srcClient
+    return { dir: srcClient, prebuilt: false }
   }
-  return resolve(packageRoot, 'dist/client')
+  return { dir: resolve(packageRoot, 'dist/client'), prebuilt: true }
 }
 
 export function prepareClientHtml(clientDir: string, html: string): string {
@@ -98,6 +101,40 @@ export function prepareClientHtml(clientDir: string, html: string): string {
   return html
     .replace('href="./styles.css"', `href="${base}/styles.css"`)
     .replace('src="./app.tsx"', `src="${base}/app.tsx"`)
+}
+
+const STATIC_MIME: Record<string, string> = {
+  '.js': 'text/javascript',
+  '.mjs': 'text/javascript',
+  '.css': 'text/css',
+  '.html': 'text/html',
+  '.json': 'application/json',
+  '.svg': 'image/svg+xml',
+  '.ico': 'image/x-icon',
+  '.woff2': 'font/woff2',
+  '.woff': 'font/woff',
+}
+
+// The subset of `ServerResponse` that `serveStaticAsset` writes to, kept minimal
+// so it can be exercised with a plain object in tests.
+type AssetResponse = {
+  writeHead(status: number, headers?: Record<string, string>): void
+  end(chunk?: string | Buffer): void
+}
+
+// Serve a compiled client asset from `dist/client`. `resolve` normalizes any
+// `..` segments, and the prefix check rejects paths that escape the root.
+export function serveStaticAsset(rootDir: string, pathname: string, res: AssetResponse): void {
+  const filePath = resolve(rootDir, `.${pathname}`)
+  if (!filePath.startsWith(rootDir) || !existsSync(filePath) || !statSync(filePath).isFile()) {
+    res.writeHead(404)
+    res.end('Not found')
+    return
+  }
+  res.writeHead(200, {
+    'Content-Type': STATIC_MIME[extname(filePath)] ?? 'application/octet-stream',
+  })
+  res.end(readFileSync(filePath))
 }
 
 const TEMPLATE_EXTENSION = /\.(tsx|jsx)$/
@@ -124,7 +161,11 @@ export async function startPreviewServer(options: PreviewServerOptions): Promise
     throw new Error(`Template directory "${templateDir}" does not exist.`)
   }
 
-  const clientDir = resolveClientDir()
+  const { dir: clientDir, prebuilt: clientPrebuilt } = resolveClient()
+  // Open SSE connections used to push template-update events to the browser.
+  // This replaces Vite's HMR channel so the published (compiled) client, which
+  // has no `import.meta.hot`, still live-reloads when a template changes.
+  const liveClients = new Set<ServerResponse>()
   const plugins: PluginOption[] = []
 
   const tailwindConfigPath = detectTailwindConfig(rootDir)
@@ -176,10 +217,9 @@ export async function startPreviewServer(options: PreviewServerOptions): Promise
         return
       }
 
-      options.server.environments.client.hot.send({
-        type: 'custom',
-        event: 'hono-email:template-update',
-      })
+      for (const res of liveClients) {
+        res.write('data: update\n\n')
+      }
       options.server.config.logger.info(
         `template updated: ${relative(rootDir, resolve(options.file))}`,
         { timestamp: true },
@@ -217,8 +257,25 @@ export async function startPreviewServer(options: PreviewServerOptions): Promise
     const host = req.headers.host ?? 'localhost'
     const url = new URL(req.url ?? '/', `http://${host}`)
 
+    if (url.pathname === '/__live') {
+      res.writeHead(200, {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        Connection: 'keep-alive',
+      })
+      res.write(':ok\n\n')
+      liveClients.add(res)
+      req.on('close', () => liveClients.delete(res))
+      return
+    }
+
     if (url.pathname === '/' || url.pathname === '') {
       const html = readFileSync(resolve(clientDir, 'index.html'), 'utf-8')
+      if (clientPrebuilt) {
+        res.writeHead(200, { 'Content-Type': 'text/html' })
+        res.end(html)
+        return
+      }
       const prepared = prepareClientHtml(clientDir, html)
       vite
         .transformIndexHtml(url.pathname, prepared)
@@ -239,6 +296,11 @@ export async function startPreviewServer(options: PreviewServerOptions): Promise
       return
     }
 
+    if (clientPrebuilt) {
+      serveStaticAsset(clientDir, url.pathname, res)
+      return
+    }
+
     vite.middlewares(req, res, () => {
       res.writeHead(404)
       res.end('Not found')
@@ -253,6 +315,8 @@ export async function startPreviewServer(options: PreviewServerOptions): Promise
 
   return {
     close: async () => {
+      for (const res of liveClients) res.end()
+      liveClients.clear()
       await new Promise<void>((resolve, reject) => {
         server.close((err) => {
           if (err) {

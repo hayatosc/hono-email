@@ -150,10 +150,10 @@ function App() {
     scheduleRender()
   }, [selected, propValues, scheduleRender])
   useEffect(() => {
-    if (!import.meta.hot) return
+    const source = new EventSource('/__live')
     const handler = () => renderRef.current?.()
-    import.meta.hot.on('hono-email:template-update', handler)
-    return () => import.meta.hot?.off('hono-email:template-update', handler)
+    source.addEventListener('message', handler)
+    return () => source.close()
   }, [])
 
   const handlePropChange = useCallback((key: string, value: unknown) => {

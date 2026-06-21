@@ -1,3 +1,7 @@
+#!/usr/bin/env node
+import { realpathSync } from 'node:fs'
+import { pathToFileURL } from 'node:url'
+
 import { defineCommand, runMain } from 'citty'
 
 import { startPreviewServer } from './server/index.js'
@@ -55,6 +59,7 @@ export const main = defineCommand({
   },
 })
 
-if (import.meta.main) {
+const entry = process.argv[1]
+if (entry && import.meta.url === pathToFileURL(realpathSync(entry)).href) {
   void runMain(main)
 }

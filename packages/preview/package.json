@@ -39,7 +39,7 @@
     "provenance": true
   },
   "scripts": {
-    "build": "tsdown",
+    "build": "tsdown && vite build --config vite.client.config.ts",
     "dev": "tsdown && node ./dist/cli.mjs --dir test-emails",
     "typecheck": "tsgo --noEmit",
     "typecheck:compat": "tsc --noEmit",
