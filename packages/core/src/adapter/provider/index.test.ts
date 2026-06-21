@@ -31,6 +31,7 @@ describe('provider email helpers', () => {
         {
           content: 'bG9nby1ieXRlcw==',
           contentId: 'logo',
+          contentType: 'image/png',
           filename: 'logo.png',
         },
       ],

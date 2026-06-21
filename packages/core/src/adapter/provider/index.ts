@@ -28,6 +28,7 @@ export type ProviderEmailAddressField = string | string[]
 
 export type ProviderEmailAttachment = {
   content: string
+  contentType: string
   filename: string
   contentId?: string
 }
@@ -77,6 +78,7 @@ const buildProviderAttachment = (attachment: ResolvedEmailAttachment): ProviderE
 
   return {
     content: encodeAttachmentContentBase64(attachment.content),
+    contentType: attachment.contentType,
     filename: attachment.filename,
     ...(attachment.cid !== undefined ? { contentId: attachment.cid } : {}),
   }

@@ -2,6 +2,7 @@ import type { EmailAdapter, EmailMessage, SendEmailReceipt } from '../index'
 import { buildProviderEmailPayload, collectProviderRecipients } from '../provider'
 import type {
   ResendAdapterOptions,
+  ResendAttachment,
   ResendErrorResponse,
   ResendFetch,
   ResendPayload,
@@ -94,15 +95,10 @@ const asErrorMessage = (value: unknown, response: Response, body: string): strin
   if (isRecord(value)) {
     const error = value as ResendErrorResponse
     const message = typeof error.message === 'string' ? error.message : undefined
-    const type =
-      typeof error.type === 'string'
-        ? error.type
-        : typeof error.name === 'string'
-          ? error.name
-          : undefined
+    const name = typeof error.name === 'string' ? error.name : undefined
 
-    if (type !== undefined && message !== undefined) {
-      return `${type}: ${message}`
+    if (name !== undefined && message !== undefined) {
+      return `${name}: ${message}`
     }
 
     if (message !== undefined) {
@@ -125,10 +121,21 @@ const buildResendPayload = async (
     message,
     options.limits === undefined ? {} : { limits: options.limits },
   )
-  const { replyTo, ...rest } = providerPayload
+  const { replyTo, attachments, ...rest } = providerPayload
+
+  const resendAttachments = attachments?.map(
+    ({ contentId, contentType, ...attachment }): ResendAttachment => ({
+      ...attachment,
+      content_type: contentType,
+      ...(contentId !== undefined ? { content_id: contentId } : {}),
+    }),
+  )
 
   return {
     ...rest,
+    ...(resendAttachments !== undefined && resendAttachments.length > 0
+      ? { attachments: resendAttachments }
+      : {}),
     ...(replyTo !== undefined ? { reply_to: replyTo } : {}),
   }
 }

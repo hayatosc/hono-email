@@ -98,6 +98,73 @@ describe('SendGrid adapter', () => {
     })
   })
 
+  test('sends cc and bcc inside the personalizations object', async () => {
+    const requests: { input: string; init: SendGridFetchInit }[] = []
+    const fetchImplementation: SendGridFetch = async (input, init) => {
+      requests.push({ input, init })
+      return new Response('', { headers: { 'x-message-id': 'msg-id' }, status: 202 })
+    }
+
+    await SendGridAdapter({ apiKey: 'SG.test', fetch: fetchImplementation }).send({
+      bcc: 'hidden@example.com',
+      cc: { address: 'copy@example.com', name: 'Copy' },
+      from: 'sender@example.com',
+      html: '<p>Hello</p>',
+      subject: 'CC and BCC Test',
+      text: 'Hello',
+      to: 'recipient@example.com',
+    })
+
+    const body = JSON.parse(String(requests[0]?.init.body)) as {
+      personalizations: [{ to: unknown; cc?: unknown; bcc?: unknown }]
+    }
+    expect(body.personalizations[0].cc).toEqual([{ email: 'copy@example.com', name: 'Copy' }])
+    expect(body.personalizations[0].bcc).toEqual([{ email: 'hidden@example.com' }])
+  })
+
+  test('sends multiple reply_to addresses as reply_to_list', async () => {
+    const requests: { input: string; init: SendGridFetchInit }[] = []
+    const fetchImplementation: SendGridFetch = async (input, init) => {
+      requests.push({ input, init })
+      return new Response('', { headers: { 'x-message-id': 'msg-id' }, status: 202 })
+    }
+
+    await SendGridAdapter({ apiKey: 'SG.test', fetch: fetchImplementation }).send({
+      from: 'sender@example.com',
+      html: '<p>Hello</p>',
+      replyTo: ['reply1@example.com', { address: 'reply2@example.com', name: 'Reply Two' }],
+      subject: 'Multi Reply-To',
+      text: 'Hello',
+      to: 'recipient@example.com',
+    })
+
+    const body = JSON.parse(String(requests[0]?.init.body)) as Record<string, unknown>
+    expect(body.reply_to).toBeUndefined()
+    expect(body.reply_to_list).toEqual([
+      { email: 'reply1@example.com' },
+      { email: 'reply2@example.com', name: 'Reply Two' },
+    ])
+  })
+
+  test('falls back to message ID when x-message-id header is absent', async () => {
+    const fetchImplementation: SendGridFetch = async () =>
+      new Response('', { status: 202 })
+
+    const receipt = await SendGridAdapter({ apiKey: 'SG.test', fetch: fetchImplementation }).send({
+      from: 'sender@example.com',
+      html: '<p>Hello</p>',
+      messageId: '<custom-message-id@example.com>',
+      subject: 'No Header Test',
+      text: 'Hello',
+      to: 'recipient@example.com',
+    })
+
+    expect(receipt.successful).toBe(true)
+    if (receipt.successful) {
+      expect(receipt.messageId).toBe('<custom-message-id@example.com>')
+    }
+  })
+
   test('maps SendGrid API errors to a failed receipt', async () => {
     const fetchImplementation: SendGridFetch = async () =>
       new Response(

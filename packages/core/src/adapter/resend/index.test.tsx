@@ -58,11 +58,13 @@ describe('Resend adapter', () => {
       attachments: [
         {
           content: 'SW52b2ljZQ==',
+          content_type: 'text/plain',
           filename: 'invoice.txt',
         },
         {
           content: 'bG9nby1ieXRlcw==',
-          contentId: 'logo',
+          content_id: 'logo',
+          content_type: 'image/png',
           filename: 'logo.png',
         },
       ],
@@ -85,12 +87,56 @@ describe('Resend adapter', () => {
     })
   })
 
+  test('sends cc and bcc as separate address fields', async () => {
+    const requests: { input: string; init: ResendFetchInit }[] = []
+    const fetchImplementation: ResendFetch = async (input, init) => {
+      requests.push({ input, init })
+      return new Response(JSON.stringify({ id: 'cc-bcc-test-id' }), { status: 200 })
+    }
+
+    await ResendAdapter({ apiKey: 're_test', fetch: fetchImplementation }).send({
+      bcc: 'hidden@example.com',
+      cc: { address: 'copy@example.com', name: 'Copy' },
+      from: 'sender@example.com',
+      html: '<p>Hello</p>',
+      subject: 'CC and BCC Test',
+      text: 'Hello',
+      to: 'recipient@example.com',
+    })
+
+    const body = JSON.parse(String(requests[0]?.init.body)) as Record<string, unknown>
+    expect(body.to).toBe('recipient@example.com')
+    expect(body.cc).toBe('"Copy" <copy@example.com>')
+    expect(body.bcc).toBe('hidden@example.com')
+  })
+
+  test('sends multiple reply_to addresses as an array', async () => {
+    const requests: { input: string; init: ResendFetchInit }[] = []
+    const fetchImplementation: ResendFetch = async (input, init) => {
+      requests.push({ input, init })
+      return new Response(JSON.stringify({ id: 'reply-to-test-id' }), { status: 200 })
+    }
+
+    await ResendAdapter({ apiKey: 're_test', fetch: fetchImplementation }).send({
+      from: 'sender@example.com',
+      html: '<p>Hello</p>',
+      replyTo: ['reply1@example.com', 'reply2@example.com'],
+      subject: 'Multi Reply-To',
+      text: 'Hello',
+      to: 'recipient@example.com',
+    })
+
+    const body = JSON.parse(String(requests[0]?.init.body)) as Record<string, unknown>
+    expect(body.reply_to).toEqual(['reply1@example.com', 'reply2@example.com'])
+  })
+
   test('maps Resend API errors to a failed receipt', async () => {
     const fetchImplementation: ResendFetch = async () =>
       new Response(
         JSON.stringify({
           message: 'Invalid from field.',
           name: 'validation_error',
+          statusCode: 422,
         }),
         { status: 422 },
       )
@@ -105,6 +151,28 @@ describe('Resend adapter', () => {
       expect(receipt.accepted).toEqual([])
       expect(receipt.rejected).toEqual(['first@example.com', 'second@example.com'])
       expect(receipt.errorMessages).toEqual(['validation_error: Invalid from field.'])
+    }
+  })
+
+  test('maps Resend 401 unauthorized to a failed receipt', async () => {
+    const fetchImplementation: ResendFetch = async () =>
+      new Response(
+        JSON.stringify({
+          message: 'API key is invalid.',
+          name: 'missing_api_key',
+          statusCode: 401,
+        }),
+        { status: 401 },
+      )
+
+    const receipt = await ResendAdapter({
+      apiKey: 're_invalid',
+      fetch: fetchImplementation,
+    }).send(createMessage())
+
+    expect(receipt.successful).toBe(false)
+    if (!receipt.successful) {
+      expect(receipt.errorMessages).toEqual(['missing_api_key: API key is invalid.'])
     }
   })
 
