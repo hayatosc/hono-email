@@ -163,9 +163,7 @@ describe('Mailgun adapter', () => {
     })
 
     // Authorization must be Basic base64("api:my-secret-key")
-    expect(requests[0]?.init.headers.Authorization).toBe(
-      `Basic ${btoa('api:my-secret-key')}`,
-    )
+    expect(requests[0]?.init.headers.Authorization).toBe(`Basic ${btoa('api:my-secret-key')}`)
   })
 
   test('maps Mailgun API errors to a failed receipt', async () => {

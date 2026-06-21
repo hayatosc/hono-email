@@ -147,8 +147,7 @@ describe('SendGrid adapter', () => {
   })
 
   test('falls back to message ID when x-message-id header is absent', async () => {
-    const fetchImplementation: SendGridFetch = async () =>
-      new Response('', { status: 202 })
+    const fetchImplementation: SendGridFetch = async () => new Response('', { status: 202 })
 
     const receipt = await SendGridAdapter({ apiKey: 'SG.test', fetch: fetchImplementation }).send({
       from: 'sender@example.com',

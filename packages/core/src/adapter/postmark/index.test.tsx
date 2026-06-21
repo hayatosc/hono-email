@@ -100,10 +100,9 @@ describe('Postmark adapter', () => {
     const requests: { input: string; init: PostmarkFetchInit }[] = []
     const fetchImplementation: PostmarkFetch = async (input, init) => {
       requests.push({ input, init })
-      return new Response(
-        JSON.stringify({ ErrorCode: 0, Message: 'OK', MessageID: 'msg-id' }),
-        { status: 200 },
-      )
+      return new Response(JSON.stringify({ ErrorCode: 0, Message: 'OK', MessageID: 'msg-id' }), {
+        status: 200,
+      })
     }
 
     await PostmarkAdapter({ serverToken: 'postmark-token', fetch: fetchImplementation }).send({
@@ -125,10 +124,9 @@ describe('Postmark adapter', () => {
     const requests: { input: string; init: PostmarkFetchInit }[] = []
     const fetchImplementation: PostmarkFetch = async (input, init) => {
       requests.push({ input, init })
-      return new Response(
-        JSON.stringify({ ErrorCode: 0, Message: 'OK', MessageID: 'msg-id' }),
-        { status: 200 },
-      )
+      return new Response(JSON.stringify({ ErrorCode: 0, Message: 'OK', MessageID: 'msg-id' }), {
+        status: 200,
+      })
     }
 
     await PostmarkAdapter({
@@ -151,10 +149,9 @@ describe('Postmark adapter', () => {
     const requests: { input: string; init: PostmarkFetchInit }[] = []
     const fetchImplementation: PostmarkFetch = async (input, init) => {
       requests.push({ input, init })
-      return new Response(
-        JSON.stringify({ ErrorCode: 0, Message: 'OK', MessageID: 'msg-id' }),
-        { status: 200 },
-      )
+      return new Response(JSON.stringify({ ErrorCode: 0, Message: 'OK', MessageID: 'msg-id' }), {
+        status: 200,
+      })
     }
 
     await PostmarkAdapter({ serverToken: 'postmark-token', fetch: fetchImplementation }).send({
