@@ -1,6 +1,6 @@
 import { existsSync, readFileSync, statSync } from 'node:fs'
 import { createServer as createHttpServer, type ServerResponse } from 'node:http'
-import { dirname, extname, relative, resolve } from 'node:path'
+import { dirname, extname, isAbsolute, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import { getRequestListener } from '@hono/node-server'
@@ -123,10 +123,17 @@ type AssetResponse = {
 }
 
 // Serve a compiled client asset from `dist/client`. `resolve` normalizes any
-// `..` segments, and the prefix check rejects paths that escape the root.
+// `..` segments; the relative-path check rejects anything that escapes the root
+// (including sibling directories that merely share its prefix).
 export function serveStaticAsset(rootDir: string, pathname: string, res: AssetResponse): void {
   const filePath = resolve(rootDir, `.${pathname}`)
-  if (!filePath.startsWith(rootDir) || !existsSync(filePath) || !statSync(filePath).isFile()) {
+  const rel = relative(rootDir, filePath)
+  if (
+    rel.startsWith('..') ||
+    isAbsolute(rel) ||
+    !existsSync(filePath) ||
+    !statSync(filePath).isFile()
+  ) {
     res.writeHead(404)
     res.end('Not found')
     return

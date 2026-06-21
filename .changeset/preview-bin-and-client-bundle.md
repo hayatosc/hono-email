@@ -1,5 +1,5 @@
 ---
-"@hono-email/preview": patch
+'@hono-email/preview': patch
 ---
 
 Fix the `hono-email-preview` binary and stop shipping raw `.tsx` sources.

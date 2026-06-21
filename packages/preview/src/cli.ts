@@ -59,7 +59,17 @@ export const main = defineCommand({
   },
 })
 
-const entry = process.argv[1]
-if (entry && import.meta.url === pathToFileURL(realpathSync(entry)).href) {
+const isMainModule = (): boolean => {
+  const entry = process.argv[1]
+  if (!entry) return false
+  // `realpathSync` throws when argv[1] is not a real file path (e.g. `node -e`).
+  try {
+    return import.meta.url === pathToFileURL(realpathSync(entry)).href
+  } catch {
+    return false
+  }
+}
+
+if (isMainModule()) {
   void runMain(main)
 }

@@ -1,7 +1,7 @@
 import { describe, expect, test, beforeAll, afterAll } from 'bun:test'
-import { mkdtempSync, writeFileSync, rmSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, writeFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { basename, join } from 'node:path'
 
 import {
   detectTailwindConfig,
@@ -235,5 +235,18 @@ describe('serveStaticAsset', () => {
     const mock: MockRes = { statusCode: null, headers: null, body: null }
     serveStaticAsset(rootDir, '/../../etc/passwd', createRes(mock))
     expect(mock.statusCode).toBe(404)
+  })
+
+  test('rejects a sibling directory that shares the root prefix', () => {
+    const siblingDir = `${rootDir}-evil`
+    mkdirSync(siblingDir, { recursive: true })
+    writeFileSync(join(siblingDir, 'secret.txt'), 'secret')
+    try {
+      const mock: MockRes = { statusCode: null, headers: null, body: null }
+      serveStaticAsset(rootDir, `/../${basename(siblingDir)}/secret.txt`, createRes(mock))
+      expect(mock.statusCode).toBe(404)
+    } finally {
+      rmSync(siblingDir, { recursive: true, force: true })
+    }
   })
 })
