@@ -6,7 +6,7 @@
 
 1. **`hono-email` (`packages/core`)**: The core library providing email-oriented JSX primitives, output normalization, strict email validation, output transforms, and transport adapters.
 2. **`@hono-email/tailwind-plugin` (`packages/tailwind-plugin`)**: A build-time bundler plugin (supporting Vite, Rollup, Rolldown, Webpack, Rspack, Esbuild, Farm, and Bun) that precompiles and injects Tailwind CSS artifacts into components.
-3. **`@hono-email/preview` (`packages/preview`)**: A live preview server and CLI (`hono-email-preview`) that recursively discovers templates and provides real-time props editing via a structured form.
+3. **`@hono-email/preview` (`packages/preview`)**: A live preview server and CLI (`hono-email preview`) that recursively discovers templates and provides real-time props editing via a structured form.
 
 ## Entry points
 

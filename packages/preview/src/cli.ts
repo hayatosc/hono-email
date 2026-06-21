@@ -1,10 +1,14 @@
+#!/usr/bin/env node
+import { realpathSync } from 'node:fs'
+import { pathToFileURL } from 'node:url'
+
 import { defineCommand, runMain } from 'citty'
 
 import { startPreviewServer } from './server/index.js'
 
-export const main = defineCommand({
+export const preview = defineCommand({
   meta: {
-    name: 'hono-email-preview',
+    name: 'preview',
     description: 'Live preview server for hono-email templates',
   },
   args: {
@@ -55,6 +59,27 @@ export const main = defineCommand({
   },
 })
 
-if (import.meta.main) {
+export const main = defineCommand({
+  meta: {
+    name: 'hono-email',
+    description: 'hono-email command line interface',
+  },
+  subCommands: {
+    preview,
+  },
+})
+
+const isMainModule = (): boolean => {
+  const entry = process.argv[1]
+  if (!entry) return false
+  // `realpathSync` throws when argv[1] is not a real file path (e.g. `node -e`).
+  try {
+    return import.meta.url === pathToFileURL(realpathSync(entry)).href
+  } catch {
+    return false
+  }
+}
+
+if (isMainModule()) {
   void runMain(main)
 }

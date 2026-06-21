@@ -20,7 +20,7 @@
     "url": "git+https://github.com/hayatosc/hono-email.git"
   },
   "bin": {
-    "hono-email-preview": "./dist/cli.mjs"
+    "hono-email": "./dist/cli.mjs"
   },
   "files": [
     "dist"
@@ -39,8 +39,8 @@
     "provenance": true
   },
   "scripts": {
-    "build": "tsdown",
-    "dev": "tsdown && node ./dist/cli.mjs --dir test-emails",
+    "build": "tsdown && vite build --config vite.client.config.ts",
+    "dev": "tsdown && node ./dist/cli.mjs preview --dir test-emails",
     "typecheck": "tsgo --noEmit",
     "typecheck:compat": "tsc --noEmit",
     "test": "bun test ./src"

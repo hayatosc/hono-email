@@ -2,7 +2,7 @@ import { describe, expect, test, beforeEach, afterEach } from 'bun:test'
 
 import type { CommandContext } from 'citty'
 
-import { main } from './cli'
+import { main, preview } from './cli'
 
 type CliArgs = {
   dir: { alias: string; type: 'string'; description: string; default: string }
@@ -14,30 +14,44 @@ type MockCommandContext = CommandContext<CliArgs>
 const createMockContext = (port: string): MockCommandContext => ({
   rawArgs: [],
   args: { _: [], dir: './emails', port },
-  cmd: main,
+  cmd: preview,
 })
 
 describe('cli main command', () => {
   test('has correct meta', () => {
     expect(main.meta).toBeDefined()
-    expect(main.meta).toHaveProperty('name', 'hono-email-preview')
-    expect(main.meta).toHaveProperty('description', 'Live preview server for hono-email templates')
+    expect(main.meta).toHaveProperty('name', 'hono-email')
+  })
+
+  test('registers the preview subcommand', () => {
+    expect(main.subCommands).toHaveProperty('preview')
+  })
+})
+
+describe('cli preview command', () => {
+  test('has correct meta', () => {
+    expect(preview.meta).toBeDefined()
+    expect(preview.meta).toHaveProperty('name', 'preview')
+    expect(preview.meta).toHaveProperty(
+      'description',
+      'Live preview server for hono-email templates',
+    )
   })
 
   test('has correct default args', () => {
-    expect(main.args).toBeDefined()
-    expect(main.args).toHaveProperty('dir.default', './emails')
-    expect(main.args).toHaveProperty('port.default', '3000')
+    expect(preview.args).toBeDefined()
+    expect(preview.args).toHaveProperty('dir.default', './emails')
+    expect(preview.args).toHaveProperty('port.default', '3000')
   })
 
   test('port arg is string type', () => {
-    expect(main.args).toBeDefined()
-    expect(main.args).toHaveProperty('port.type', 'string')
+    expect(preview.args).toBeDefined()
+    expect(preview.args).toHaveProperty('port.type', 'string')
   })
 
   test('dir arg is string type', () => {
-    expect(main.args).toBeDefined()
-    expect(main.args).toHaveProperty('dir.type', 'string')
+    expect(preview.args).toBeDefined()
+    expect(preview.args).toHaveProperty('dir.type', 'string')
   })
 })
 
@@ -46,7 +60,7 @@ describe('cli port validation', () => {
   let exitCode: number | null = null
 
   beforeEach(() => {
-    expect(main.run).toBeDefined()
+    expect(preview.run).toBeDefined()
     originalExit = process.exit.bind(process)
     process.exit = ((code?: number) => {
       exitCode = code ?? 0
@@ -61,7 +75,7 @@ describe('cli port validation', () => {
 
   test('invalid port (non-integer) calls process.exit(1)', async () => {
     try {
-      await main.run!(createMockContext('abc'))
+      await preview.run!(createMockContext('abc'))
     } catch {
       // expected
     }
@@ -70,7 +84,7 @@ describe('cli port validation', () => {
 
   test('invalid port (< 1) calls process.exit(1)', async () => {
     try {
-      await main.run!(createMockContext('0'))
+      await preview.run!(createMockContext('0'))
     } catch {
       // expected
     }
@@ -79,7 +93,7 @@ describe('cli port validation', () => {
 
   test('invalid port (> 65535) calls process.exit(1)', async () => {
     try {
-      await main.run!(createMockContext('70000'))
+      await preview.run!(createMockContext('70000'))
     } catch {
       // expected
     }
@@ -88,7 +102,7 @@ describe('cli port validation', () => {
 
   test('invalid port (float) calls process.exit(1)', async () => {
     try {
-      await main.run!(createMockContext('3000.5'))
+      await preview.run!(createMockContext('3000.5'))
     } catch {
       // expected
     }

@@ -724,16 +724,16 @@ npm i -D @hono-email/preview
 
 ### Running the Preview Server
 
-Start the preview server by running the `hono-email-preview` CLI:
+Start the preview server with the `hono-email` CLI's `preview` command:
 
 ```sh
-npx hono-email-preview --dir ./emails
+npx hono-email preview --dir ./emails
 ```
 
 If you are using Bun, you can run:
 
 ```sh
-bunx hono-email-preview --dir ./emails
+bunx hono-email preview --dir ./emails
 ```
 
 Options:
