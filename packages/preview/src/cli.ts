@@ -6,9 +6,9 @@ import { defineCommand, runMain } from 'citty'
 
 import { startPreviewServer } from './server/index.js'
 
-export const main = defineCommand({
+export const preview = defineCommand({
   meta: {
-    name: 'hono-email-preview',
+    name: 'preview',
     description: 'Live preview server for hono-email templates',
   },
   args: {
@@ -56,6 +56,16 @@ export const main = defineCommand({
       }
       process.exit(1)
     }
+  },
+})
+
+export const main = defineCommand({
+  meta: {
+    name: 'hono-email',
+    description: 'hono-email command line interface',
+  },
+  subCommands: {
+    preview,
   },
 })
 
