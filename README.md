@@ -813,6 +813,14 @@ bun run test
 bun run typecheck
 ```
 
+### Local CI Execution
+
+To run the full CI check (format, lint, typecheck, test, build) locally using [actrun](https://github.com/mizchi/actrun), run:
+
+```sh
+mise run ci
+```
+
 ## Credits
 
 This project is inspired by [react-email](https://github.com/resend/react-email) and [jsx-email](https://github.com/shellscape/jsx-email). Thanks to everyone involved in these projects.

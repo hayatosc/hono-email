@@ -53,7 +53,7 @@
 
 ## Development commands
 
-Use `mise run ci` to run the full CI check locally (format, lint, typecheck, test, build). This is equivalent to the GitHub Actions CI.
+Use `mise run ci` to run the full CI check locally (format, lint, typecheck, test, build). This uses `actrun` under the hood to replay the GitHub Actions CI workflow locally using the configurations in `actrun.toml`.
 
 Individual commands for quick checks:
 
