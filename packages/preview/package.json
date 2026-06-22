@@ -23,7 +23,8 @@
     "hono-email": "./dist/cli.mjs"
   },
   "files": [
-    "dist"
+    "dist",
+    "README.md"
   ],
   "type": "module",
   "main": "./dist/index.mjs",

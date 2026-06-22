@@ -21,7 +21,8 @@
     "url": "git+https://github.com/hayatosc/hono-email.git"
   },
   "files": [
-    "dist"
+    "dist",
+    "README.md"
   ],
   "type": "module",
   "sideEffects": false,
