@@ -1,5 +1,5 @@
 ---
-'@hono-email/preview': minor
+'@hono-email/preview': patch
 ---
 
 Rename the CLI and fix the binary, and stop shipping raw `.tsx` sources.
