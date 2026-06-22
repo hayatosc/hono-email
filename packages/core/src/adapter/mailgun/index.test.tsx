@@ -86,6 +86,86 @@ describe('Mailgun adapter', () => {
     })
   })
 
+  test('sends cc and bcc as separate form fields', async () => {
+    const requests: { input: string; init: MailgunFetchInit }[] = []
+    const fetchImplementation: MailgunFetch = async (input, init) => {
+      requests.push({ input, init })
+      return new Response(
+        JSON.stringify({ id: '<msg-id@example.com>', message: 'Queued. Thank you.' }),
+        { status: 200 },
+      )
+    }
+
+    await MailgunAdapter({
+      apiKey: 'mailgun-key',
+      domain: 'mg.example.com',
+      fetch: fetchImplementation,
+    }).send({
+      bcc: ['hidden1@example.com', 'hidden2@example.com'],
+      cc: { address: 'copy@example.com', name: 'Copy' },
+      from: 'sender@example.com',
+      html: '<p>Hello</p>',
+      subject: 'CC and BCC Test',
+      text: 'Hello',
+      to: 'recipient@example.com',
+    })
+
+    const form = requests[0]?.init.body
+    expect(form?.getAll('cc')).toEqual(['"Copy" <copy@example.com>'])
+    expect(form?.getAll('bcc')).toEqual(['hidden1@example.com', 'hidden2@example.com'])
+  })
+
+  test('uses domain in URL path with proper encoding', async () => {
+    const requests: { input: string; init: MailgunFetchInit }[] = []
+    const fetchImplementation: MailgunFetch = async (input, init) => {
+      requests.push({ input, init })
+      return new Response(
+        JSON.stringify({ id: '<msg@mg.example.com>', message: 'Queued. Thank you.' }),
+        { status: 200 },
+      )
+    }
+
+    await MailgunAdapter({
+      apiKey: 'mailgun-key',
+      domain: 'mg.example.com',
+      fetch: fetchImplementation,
+    }).send({
+      from: 'sender@example.com',
+      html: '<p>Hello</p>',
+      subject: 'Domain Test',
+      text: 'Hello',
+      to: 'recipient@example.com',
+    })
+
+    expect(requests[0]?.input).toBe('https://api.mailgun.net/v3/mg.example.com/messages')
+  })
+
+  test('encodes Authorization header as Basic base64(api:key)', async () => {
+    const requests: { input: string; init: MailgunFetchInit }[] = []
+    const fetchImplementation: MailgunFetch = async (input, init) => {
+      requests.push({ input, init })
+      return new Response(
+        JSON.stringify({ id: '<msg@mg.example.com>', message: 'Queued. Thank you.' }),
+        { status: 200 },
+      )
+    }
+
+    await MailgunAdapter({
+      apiKey: 'my-secret-key',
+      domain: 'mg.example.com',
+      fetch: fetchImplementation,
+    }).send({
+      from: 'sender@example.com',
+      html: '<p>Hello</p>',
+      subject: 'Auth Test',
+      text: 'Hello',
+      to: 'recipient@example.com',
+    })
+
+    // Authorization must be Basic base64("api:my-secret-key")
+    expect(requests[0]?.init.headers.Authorization).toBe(`Basic ${btoa('api:my-secret-key')}`)
+  })
+
   test('maps Mailgun API errors to a failed receipt', async () => {
     const fetchImplementation: MailgunFetch = async () =>
       new Response(JSON.stringify({ message: 'parameter is not a valid address' }), { status: 400 })

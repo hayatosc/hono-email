@@ -96,6 +96,93 @@ describe('Postmark adapter', () => {
     })
   })
 
+  test('sends Cc and Bcc as comma-separated address strings', async () => {
+    const requests: { input: string; init: PostmarkFetchInit }[] = []
+    const fetchImplementation: PostmarkFetch = async (input, init) => {
+      requests.push({ input, init })
+      return new Response(JSON.stringify({ ErrorCode: 0, Message: 'OK', MessageID: 'msg-id' }), {
+        status: 200,
+      })
+    }
+
+    await PostmarkAdapter({ serverToken: 'postmark-token', fetch: fetchImplementation }).send({
+      bcc: ['hidden1@example.com', 'hidden2@example.com'],
+      cc: { address: 'copy@example.com', name: 'Copy' },
+      from: 'sender@example.com',
+      html: '<p>Hello</p>',
+      subject: 'CC and BCC Test',
+      text: 'Hello',
+      to: 'recipient@example.com',
+    })
+
+    expect(JSON.parse(String(requests[0]?.init.body)) as unknown).toMatchObject({
+      Bcc: 'hidden1@example.com, hidden2@example.com',
+      Cc: '"Copy" <copy@example.com>',
+    })
+  })
+
+  test('sends TrackLinks option', async () => {
+    const requests: { input: string; init: PostmarkFetchInit }[] = []
+    const fetchImplementation: PostmarkFetch = async (input, init) => {
+      requests.push({ input, init })
+      return new Response(JSON.stringify({ ErrorCode: 0, Message: 'OK', MessageID: 'msg-id' }), {
+        status: 200,
+      })
+    }
+
+    await PostmarkAdapter({
+      serverToken: 'postmark-token',
+      fetch: fetchImplementation,
+      trackLinks: 'HtmlAndText',
+    }).send({
+      from: 'sender@example.com',
+      html: '<p>Hello</p>',
+      subject: 'Track Links Test',
+      text: 'Hello',
+      to: 'recipient@example.com',
+    })
+
+    expect(JSON.parse(String(requests[0]?.init.body)) as unknown).toMatchObject({
+      TrackLinks: 'HtmlAndText',
+    })
+  })
+
+  test('inline attachment uses ContentID without ContentDisposition', async () => {
+    const requests: { input: string; init: PostmarkFetchInit }[] = []
+    const fetchImplementation: PostmarkFetch = async (input, init) => {
+      requests.push({ input, init })
+      return new Response(JSON.stringify({ ErrorCode: 0, Message: 'OK', MessageID: 'msg-id' }), {
+        status: 200,
+      })
+    }
+
+    await PostmarkAdapter({ serverToken: 'postmark-token', fetch: fetchImplementation }).send({
+      attachments: [
+        {
+          cid: 'img.png',
+          content: 'image-bytes',
+          contentDisposition: 'inline' as const,
+          contentType: 'image/png',
+          filename: 'img.png',
+        },
+      ],
+      from: 'sender@example.com',
+      html: '<img src="cid:img.png">',
+      subject: 'Inline Attachment',
+      text: 'See image',
+      to: 'recipient@example.com',
+    })
+
+    const parsed = JSON.parse(String(requests[0]?.init.body)) as unknown
+    expect(parsed).toMatchObject({
+      Attachments: [{ ContentID: 'cid:img.png', ContentType: 'image/png', Name: 'img.png' }],
+    })
+    // Postmark does not use a ContentDisposition field
+    expect(parsed).not.toMatchObject({
+      Attachments: [{ ContentDisposition: expect.anything() }],
+    })
+  })
+
   test('maps Postmark API errors to a failed receipt', async () => {
     const fetchImplementation: PostmarkFetch = async () =>
       new Response(

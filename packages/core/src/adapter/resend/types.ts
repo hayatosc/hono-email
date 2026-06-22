@@ -1,5 +1,5 @@
 import type { EmailAttachmentLimits } from '../index'
-import type { ProviderEmailAddressField, ProviderEmailAttachment } from '../provider'
+import type { ProviderEmailAddressField } from '../provider'
 
 export type ResendFetchInit = {
   body: string
@@ -9,7 +9,12 @@ export type ResendFetchInit = {
 
 export type ResendFetch = (input: string, init: ResendFetchInit) => Promise<Response>
 
-export type ResendAttachment = ProviderEmailAttachment
+export type ResendAttachment = {
+  content: string
+  content_type: string
+  filename: string
+  content_id?: string
+}
 
 export type ResendPayload = {
   attachments?: ResendAttachment[]
@@ -40,5 +45,4 @@ export type ResendErrorResponse = {
   message?: string
   name?: string
   statusCode?: number
-  type?: string
 }
