@@ -9,7 +9,7 @@
   "scripts": {
     "build": "bun run --filter './packages/*' build",
     "changeset": "changeset",
-    "version": "changeset version",
+    "version": "changeset version && bun run format",
     "release": "changeset publish",
     "format": "oxfmt .",
     "format:check": "oxfmt --check .",
