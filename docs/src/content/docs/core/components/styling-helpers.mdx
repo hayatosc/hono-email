@@ -1,0 +1,80 @@
+---
+title: Styling Helpers
+description: Styling helpers like Font, Tailwind, ColorScheme, Conditional, and Markdown.
+---
+
+import { Badge } from '@astrojs/starlight/components';
+
+These components provide utilities for styling, dark mode, conditional comments, and Markdown conversion. They are imported from `hono-email`:
+
+```tsx
+import { Font, Tailwind, ColorScheme, Conditional, Markdown } from 'hono-email'
+```
+
+---
+
+## `<Font>`
+
+Renders `@font-face` and fallback `font-family` CSS inside `<Head>`. See [Font](/styling/font/).
+
+```tsx
+<Head>
+  <Font
+    fontFamily="Inter"
+    fallbackFontFamily={['Arial', 'sans-serif']}
+    webFont={{ url: 'https://fonts.gstatic.com/s/inter/...', format: 'woff2' }}
+  />
+</Head>
+```
+
+## `<Tailwind>`
+
+Applies a Tailwind build artifact to descendant class names. See [Tailwind](/styling/tailwind/).
+
+### `artifact` <Badge text="Optional" variant="note" size="small" />
+
+Build artifact from `buildTailwindArtifactFromCss()` or injected automatically by the bundler plugin. If omitted at runtime, `render()` throws.
+
+## `<ColorScheme>`
+
+Declares light and dark color scheme support inside `<Head>`.
+
+### `colorScheme` <Badge text="Optional" variant="note" size="small" />
+
+**Type:** `'light' | 'dark' | 'light dark'` · **Default:** `'light dark'`
+
+### `supportedColorSchemes` <Badge text="Optional" variant="note" size="small" />
+
+**Type:** `'light' | 'dark' | 'light dark'` · **Default:** value of `colorScheme`
+
+```tsx
+<Head>
+  <ColorScheme colorScheme="light dark" />
+</Head>
+```
+
+## `<Conditional>`
+
+Renders Outlook conditional comment branches.
+
+### `mso` <Badge text="Optional" variant="note" size="small" />
+
+**Type:** `boolean` · **Default:** `true`
+
+Wrap children in `<!--[if mso]>...<![endif]-->`.
+
+### `notMso` <Badge text="Optional" variant="note" size="small" />
+
+**Type:** `boolean`
+
+Wrap children in `<!--[if !mso]><!--> ... <!--<![endif]-->`.
+
+```tsx
+<Conditional mso>
+  <Text>This appears only in Outlook for Windows.</Text>
+</Conditional>
+```
+
+## `<Markdown>`
+
+Converts GFM Markdown into sanitized, email-friendly HTML. See [Markdown](/markdown/overview/).

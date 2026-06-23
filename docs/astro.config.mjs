@@ -38,7 +38,15 @@ export default defineConfig({
           label: 'Core',
           items: [
             { label: 'render()', slug: 'core/render' },
-            { label: 'Components', slug: 'core/components' },
+            {
+              label: 'Components',
+              items: [
+                { label: 'Document Structure', slug: 'core/components/document-structure' },
+                { label: 'Layout', slug: 'core/components/layout' },
+                { label: 'Typography', slug: 'core/components/typography' },
+                { label: 'Styling Helpers', slug: 'core/components/styling-helpers' },
+              ],
+            },
             { label: 'Strict Mode', slug: 'core/strict-mode' },
             { label: 'Testing', slug: 'core/testing' },
           ],
