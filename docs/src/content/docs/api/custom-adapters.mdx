@@ -1,0 +1,95 @@
+---
+title: Custom Adapters
+description: Implementation guide for building custom email delivery adapters.
+---
+
+import { Badge } from '@astrojs/starlight/components'
+
+You can build a custom adapter by implementing the `EmailAdapter` interface. This is useful when your preferred email service provider does not have a built-in adapter.
+
+---
+
+## EmailAdapter Interface
+
+An adapter is an object that implements a `send` method:
+
+```ts
+type EmailAdapter = {
+  send(message: EmailMessage): Promise<SendEmailReceipt>
+}
+```
+
+The `send` method receives a fully rendered `EmailMessage` (containing HTML and plain-text outputs, attachments, headers, etc.) and returns a `SendEmailReceipt` promise.
+
+---
+
+## Example Implementation
+
+Below is a dummy adapter that logs the output to the console instead of sending it:
+
+```tsx
+import type { EmailAdapter, EmailMessage, SendEmailReceipt } from 'hono-email/adapter'
+
+export const LogAdapter = (): EmailAdapter => ({
+  async send(message: EmailMessage): Promise<SendEmailReceipt> {
+    try {
+      console.log(`Sending email to ${message.to}...`)
+      console.log(`Subject: ${message.subject}`)
+      console.log(`HTML length: ${message.html.length} chars`)
+      console.log(`Plain text length: ${message.text.length} chars`)
+
+      // Return a successful receipt
+      return {
+        successful: true,
+        messageId: `log-${Date.now()}`,
+        accepted: Array.isArray(message.to)
+          ? message.to.map((t) => (typeof t === 'string' ? t : t.address))
+          : [typeof message.to === 'string' ? message.to : message.to.address],
+        rejected: [],
+        response: 'Email logged successfully.',
+      }
+    } catch (error) {
+      // Return a failed receipt
+      return {
+        successful: false,
+        accepted: [],
+        rejected: Array.isArray(message.to)
+          ? message.to.map((t) => (typeof t === 'string' ? t : t.address))
+          : [typeof message.to === 'string' ? message.to : message.to.address],
+        errorMessages: [error instanceof Error ? error.message : String(error)],
+      }
+    }
+  },
+})
+```
+
+---
+
+## Handling Drafts and Custom Rendering
+
+If you need to intercept rendering or inspect the output before sending, use `renderEmailMessage()`:
+
+```tsx
+import { renderEmailMessage } from 'hono-email/adapter'
+import type { EmailMessageDraft } from 'hono-email/adapter'
+import { LogAdapter } from './log-adapter'
+
+const draft: EmailMessageDraft = {
+  from: 'sender@example.com',
+  to: 'recipient@example.com',
+  subject: 'Hello',
+  jsx: <WelcomeEmail />,
+}
+
+// Convert JSX draft into fully rendered EmailMessage
+const renderedMessage = await renderEmailMessage(draft)
+
+// Custom checks
+if (renderedMessage.html.includes('unsafe-word')) {
+  throw new Error('Unsafe content detected')
+}
+
+// Deliver via adapter
+const adapter = LogAdapter()
+const receipt = await adapter.send(renderedMessage)
+```

@@ -1,0 +1,52 @@
+---
+title: Plugin Options
+description: API options for the @hono-email/tailwind-plugin.
+---
+
+import { Badge } from '@astrojs/starlight/components'
+
+Configuration options for `@hono-email/tailwind-plugin`. Passed to the bundler plugin factory functions (Vite, Rollup, Webpack, Esbuild, etc.).
+
+---
+
+## EmailTailwindPluginOptions
+
+```ts
+export type EmailTailwindPluginOptions = {
+  configPath?: string
+  css?: string
+  packageNames?: string[]
+  runtimeModuleSpecifier?: string
+  safelist?: string[]
+}
+```
+
+#### `configPath` <Badge text="Optional" variant="note" size="small" />
+
+**Type:** `string`
+
+Path to a custom Tailwind Configuration file (e.g., `'./tailwind.config.js'`). If omitted, the plugin resolves config files from the workspace root automatically.
+
+#### `css` <Badge text="Optional" variant="note" size="small" />
+
+**Type:** `string`
+
+Additional raw CSS appended to the generated Tailwind CSS artifacts. Useful for injecting base variables or custom layer directives.
+
+#### `packageNames` <Badge text="Optional" variant="note" size="small" />
+
+**Type:** `string[]`
+
+Specifies the package names containing the `<Tailwind>` component that the plugin should scan for transformation. Defaults to `['hono-email']`.
+
+#### `runtimeModuleSpecifier` <Badge text="Optional" variant="note" size="small" />
+
+**Type:** `string`
+
+Specifies a custom module path for importing runtime helpers injected by the plugin. Primarily used for advanced monorepo setups or testing.
+
+#### `safelist` <Badge text="Optional" variant="note" size="small" />
+
+**Type:** `string[]`
+
+An array of Tailwind classes to always generate and include in the build output, even if they are not statically detected in email templates.

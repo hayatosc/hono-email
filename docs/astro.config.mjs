@@ -90,7 +90,12 @@ export default defineConfig({
         },
         {
           label: 'API Reference',
-          items: [{ label: 'Email Types', slug: 'api/email-types' }],
+          items: [
+            { label: 'Email Types', slug: 'api/email-types' },
+            { label: 'Adapter Options', slug: 'api/adapter-options' },
+            { label: 'Plugin Options', slug: 'api/plugin-options' },
+            { label: 'Custom Adapters', slug: 'api/custom-adapters' },
+          ],
         },
       ],
     }),

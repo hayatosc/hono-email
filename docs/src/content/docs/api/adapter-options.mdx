@@ -1,0 +1,306 @@
+---
+title: Adapter Options
+description: Detailed API options for each email delivery adapter in hono-email.
+---
+
+import { Badge } from '@astrojs/starlight/components'
+
+Each delivery adapter has specific configuration options passed when initializing the transport or adapter function.
+
+---
+
+## SMTP Options
+
+SMTP settings used with `SmtpTransport`.
+
+### SmtpTransportOptions
+
+```ts
+type SmtpTransportOptions = {
+  connector: SmtpConnector
+  hostname: string
+  port: number
+  secure?: boolean | 'starttls'
+  auth?: SmtpAuth
+  dkim?: EmailDkimOptions
+  clientName?: string
+  connectionTimeout?: number
+  greetingTimeout?: number
+  socketTimeout?: number
+  limits?: EmailAttachmentLimits
+  pool?: {
+    maxConnections?: number
+    maxMessages?: number
+  }
+}
+```
+
+#### `connector` <Badge text="Required" variant="caution" size="small" />
+
+**Type:** `SmtpConnector`
+
+Runtime-specific socket connector. Built-in connectors are available for different runtimes (e.g. `nodeSmtpConnector` for Node.js, `cloudflareSmtpConnector` for Cloudflare Workers).
+
+#### `hostname` <Badge text="Required" variant="caution" size="small" />
+
+**Type:** `string`
+
+SMTP server host name (e.g., `'smtp.gmail.com'`).
+
+#### `port` <Badge text="Required" variant="caution" size="small" />
+
+**Type:** `number`
+
+SMTP server port (e.g., `587` or `465`).
+
+#### `secure` <Badge text="Optional" variant="note" size="small" />
+
+**Type:** `boolean | 'starttls'`
+
+TLS mode. `true` uses implicit TLS (usually on port 465), `'starttls'` upgrades the connection using STARTTLS after the initial handshake (usually on port 587).
+
+#### `auth` <Badge text="Optional" variant="note" size="small" />
+
+**Type:** `SmtpAuth`
+
+Authentication configuration. See [SmtpAuth](#smtpauth).
+
+#### `dkim` <Badge text="Optional" variant="note" size="small" />
+
+**Type:** `EmailDkimOptions`
+
+Default DKIM signing options for all outgoing messages on this transport. See [EmailDkimOptions](/api/email-types/#emaildkimoptions).
+
+#### `clientName` <Badge text="Optional" variant="note" size="small" />
+
+**Type:** `string` · **Default:** `'localhost'`
+
+Name sent during the SMTP `EHLO`/`HELO` handshake.
+
+#### `connectionTimeout` <Badge text="Optional" variant="note" size="small" />
+
+**Type:** `number`
+
+Connection timeout in milliseconds.
+
+#### `greetingTimeout` <Badge text="Optional" variant="note" size="small" />
+
+**Type:** `number`
+
+Greeting timeout in milliseconds.
+
+#### `socketTimeout` <Badge text="Optional" variant="note" size="small" />
+
+**Type:** `number`
+
+Socket idle timeout in milliseconds.
+
+#### `limits` <Badge text="Optional" variant="note" size="small" />
+
+**Type:** `EmailAttachmentLimits`
+
+Attachment size limits.
+
+#### `pool` <Badge text="Optional" variant="note" size="small" />
+
+- `maxConnections`: Maximum number of concurrent connections in the pool (Default: `1`).
+- `maxMessages`: Maximum number of messages to send over a single connection before retiring it.
+
+---
+
+### SmtpAuth
+
+```ts
+type SmtpAuth =
+  | {
+      type?: 'plain'
+      username: string
+      password: string
+    }
+  | {
+      type: 'login'
+      username: string
+      password: string
+    }
+```
+
+- `type`: Mechanism used for SMTP authentication (`'plain'` or `'login'`).
+- `username`: Username credential.
+- `password`: Password credential.
+
+---
+
+## Resend Options
+
+Options passed to `ResendAdapter`.
+
+### ResendAdapterOptions
+
+```ts
+type ResendAdapterOptions = {
+  apiKey: string
+  apiBaseUrl?: string
+  fetch?: ResendFetch
+  limits?: EmailAttachmentLimits
+  userAgent?: string
+}
+```
+
+#### `apiKey` <Badge text="Required" variant="caution" size="small" />
+
+**Type:** `string`
+
+Resend API Key.
+
+#### `apiBaseUrl` <Badge text="Optional" variant="note" size="small" />
+
+**Type:** `string` · **Default:** `'https://api.resend.com'`
+
+Custom API base URL override.
+
+#### `fetch` <Badge text="Optional" variant="note" size="small" />
+
+**Type:** `ResendFetch`
+
+Custom `fetch` implementation. If omitted, uses the global `fetch` of the current environment.
+
+#### `limits` <Badge text="Optional" variant="note" size="small" />
+
+**Type:** `EmailAttachmentLimits`
+
+Attachment limits.
+
+---
+
+## SendGrid Options
+
+Options passed to `SendGridAdapter`.
+
+### SendGridAdapterOptions
+
+```ts
+type SendGridAdapterOptions = {
+  apiKey: string
+  apiBaseUrl?: string
+  fetch?: SendGridFetch
+  limits?: EmailAttachmentLimits
+  userAgent?: string
+}
+```
+
+#### `apiKey` <Badge text="Required" variant="caution" size="small" />
+
+**Type:** `string`
+
+SendGrid API Key (Bearer Token).
+
+#### `apiBaseUrl` <Badge text="Optional" variant="note" size="small" />
+
+**Type:** `string` · **Default:** `'https://api.sendgrid.com'`
+
+Custom API base URL override.
+
+---
+
+## Postmark Options
+
+Options passed to `PostmarkAdapter`.
+
+### PostmarkAdapterOptions
+
+```ts
+type PostmarkAdapterOptions = {
+  serverToken: string
+  apiBaseUrl?: string
+  fetch?: PostmarkFetch
+  limits?: EmailAttachmentLimits
+  messageStream?: string
+  tag?: string
+  trackLinks?: 'HtmlAndText' | 'HtmlOnly' | 'None' | 'TextOnly'
+  trackOpens?: boolean
+  userAgent?: string
+}
+```
+
+#### `serverToken` <Badge text="Required" variant="caution" size="small" />
+
+**Type:** `string`
+
+Postmark Server Token.
+
+#### `messageStream` <Badge text="Optional" variant="note" size="small" />
+
+**Type:** `string`
+
+Specifies the Postmark Message Stream ID to send through (e.g., `'outbound'`).
+
+#### `tag` <Badge text="Optional" variant="note" size="small" />
+
+**Type:** `string`
+
+Default category/tag for emails sent via this adapter.
+
+#### `trackLinks` / `trackOpens` <Badge text="Optional" variant="note" size="small" />
+
+Enable link tracking or open tracking behavior at the adapter level.
+
+---
+
+## Mailgun Options
+
+Options passed to `MailgunAdapter`.
+
+### MailgunAdapterOptions
+
+```ts
+type MailgunAdapterOptions = {
+  apiKey: string
+  domain: string
+  apiBaseUrl?: string
+  fetch?: MailgunFetch
+  limits?: EmailAttachmentLimits
+  userAgent?: string
+}
+```
+
+#### `apiKey` <Badge text="Required" variant="caution" size="small" />
+
+**Type:** `string`
+
+Mailgun API key.
+
+#### `domain` <Badge text="Required" variant="caution" size="small" />
+
+**Type:** `string`
+
+Mailgun verified sending domain (e.g., `'mg.example.com'`).
+
+#### `apiBaseUrl` <Badge text="Optional" variant="note" size="small" />
+
+**Type:** `string` · **Default:** `'https://api.mailgun.net'`
+
+For EU region domains, set this to `'https://api.eu.mailgun.net'`.
+
+---
+
+## Cloudflare Email Options
+
+Options passed to `CloudflareEmailAdapter`.
+
+### CloudflareEmailAdapterOptions
+
+```ts
+type CloudflareEmailAdapterOptions = {
+  connector: CloudflareEmailConnector
+  limits?: EmailAttachmentLimits
+}
+```
+
+#### `connector` <Badge text="Required" variant="caution" size="small" />
+
+**Type:** `CloudflareEmailConnector`
+
+Connector targeting the specific Cloudflare infrastructure.
+
+- `RESTConnector({ accountId, apiToken })`: Calls the Cloudflare Email REST API.
+- `WorkersConnector({ bindingName })`: Sends through a native Cloudflare Workers Email Routing binding (default binding name is `'EMAIL'`).
