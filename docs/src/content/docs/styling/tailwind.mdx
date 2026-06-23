@@ -3,7 +3,44 @@ title: Tailwind
 description: Use Tailwind utility classes in hono-email templates.
 ---
 
+import { Tabs, TabItem } from '@astrojs/starlight/components'
+
 If you are using the `<Tailwind>` component, we recommend using a bundler (Vite, Rolldown, Webpack, Esbuild, and others) together with the `EmailTailwind` plugin from `@hono-email/tailwind-plugin`.
+
+## Installation
+
+Install the tailwind-plugin package:
+
+<Tabs syncKey="package-manager">
+  <TabItem label="npm">
+
+    ```sh
+    npm i -D @hono-email/tailwind-plugin
+    ```
+
+  </TabItem>
+  <TabItem label="yarn">
+
+    ```sh
+    yarn add -D @hono-email/tailwind-plugin
+    ```
+
+  </TabItem>
+  <TabItem label="pnpm">
+
+    ```sh
+    pnpm add -D @hono-email/tailwind-plugin
+    ```
+
+  </TabItem>
+  <TabItem label="bun">
+
+    ```sh
+    bun i -D @hono-email/tailwind-plugin
+    ```
+
+  </TabItem>
+</Tabs>
 
 ## Bundler setup
 
