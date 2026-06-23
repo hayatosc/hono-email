@@ -5,8 +5,6 @@ description: Send email through Cloudflare Email Service with hono-email.
 
 `hono-email/cloudflare` provides `CloudflareEmailAdapter` and connectors for Cloudflare Email Service.
 
-For the full list of configuration options, see the [Cloudflare Email Options API Reference](/api/adapter-options/#cloudflare-email-options).
-
 ## On Cloudflare Workers
 
 Use `WorkersConnector` when running inside a Cloudflare Worker:
@@ -68,6 +66,8 @@ if (receipt.successful && receipt.queued) {
   console.log('Queued recipients:', receipt.queuedRecipients)
 }
 ```
+
+For the full list of configuration options, see the [Cloudflare Email Options API Reference](/api/adapter-options/#cloudflare-email-options).
 
 ## Shared adapter features
 

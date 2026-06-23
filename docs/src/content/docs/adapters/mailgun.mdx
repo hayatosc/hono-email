@@ -5,8 +5,6 @@ description: Send email through the Mailgun Messages API with hono-email.
 
 `hono-email/mailgun` provides `MailgunAdapter` for the Mailgun Messages API. The adapter sends a `multipart/form-data` request to `/v3/{domain}/messages`.
 
-For the full list of configuration options, see the [Mailgun Options API Reference](/api/adapter-options/#mailgun-options).
-
 ## Example
 
 ```tsx
@@ -30,6 +28,8 @@ const receipt = await sendEmail({
   ),
 })
 ```
+
+For the full list of configuration options, see the [Mailgun Options API Reference](/api/adapter-options/#mailgun-options).
 
 ## Regional sending
 

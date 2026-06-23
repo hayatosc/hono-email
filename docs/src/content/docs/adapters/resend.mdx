@@ -5,8 +5,6 @@ description: Send email through the Resend API with hono-email.
 
 `hono-email/resend` provides `ResendAdapter` for the Resend Email API. The adapter calls Resend directly with `fetch`; the official Resend SDK is not required.
 
-For the full list of configuration options, see the [Resend Options API Reference](/api/adapter-options/#resend-options).
-
 ## Example
 
 ```tsx
@@ -40,6 +38,8 @@ if (!receipt.successful) {
   console.error(receipt.errorMessages)
 }
 ```
+
+For the full list of configuration options, see the [Resend Options API Reference](/api/adapter-options/#resend-options).
 
 ## User-Agent
 

@@ -5,7 +5,9 @@ description: Use Tailwind utility classes in hono-email templates.
 
 import { Tabs, TabItem } from '@astrojs/starlight/components'
 
-If you are using the `<Tailwind>` component, we recommend using a bundler (Vite, Rolldown, Webpack, Esbuild, and others) together with the `EmailTailwind` plugin from `@hono-email/tailwind-plugin`.
+If you are using the `<Tailwind>` component, we recommend using a bundler together with the `EmailTailwind` plugin from `@hono-email/tailwind-plugin`.
+
+The plugin is built using [unplugin](https://github.com/unjs/unplugin), which allows it to support arbitrary bundlers out of the box, including Vite, Webpack, Rollup, Esbuild, Rolldown, Farm, Rspack, and Bun.
 
 ## Installation
 
