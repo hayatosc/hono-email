@@ -130,6 +130,41 @@ type SmtpAuth =
 
 ---
 
+### SMTP Connector Interfaces
+
+When using `SmtpTransport`, the runtime-specific socket creation is handled by a connector.
+
+#### SmtpConnector
+
+```ts
+type SmtpConnector = {
+  connect(
+    address: SmtpSocketAddress,
+    options: SmtpConnectorOptions,
+  ): SmtpSocket | Promise<SmtpSocket>
+}
+```
+
+- `SmtpSocketAddress`: An object containing `{ hostname: string, port: number }`.
+- `SmtpConnectorOptions`: Contains `{ secureTransport: 'off' | 'on' | 'starttls' }`.
+
+#### SmtpSocket
+
+An abstraction layer for the underlying TCP connection:
+
+```ts
+type SmtpSocket = {
+  readable: ReadableStream<Uint8Array>
+  writable: WritableStream<Uint8Array>
+  opened?: Promise<unknown>
+  closed?: Promise<void>
+  startTls?: () => SmtpSocket | Promise<SmtpSocket>
+  close?: () => Promise<void> | void
+}
+```
+
+---
+
 ## Resend Options
 
 Options passed to `ResendAdapter`.
@@ -304,3 +339,42 @@ Connector targeting the specific Cloudflare infrastructure.
 
 - `RESTConnector({ accountId, apiToken })`: Calls the Cloudflare Email REST API.
 - `WorkersConnector({ bindingName })`: Sends through a native Cloudflare Workers Email Routing binding (default binding name is `'EMAIL'`).
+
+---
+
+### Cloudflare Email Connector Interfaces
+
+`CloudflareEmailAdapter` requires a connector implementing the `CloudflareEmailConnector` interface.
+
+#### CloudflareEmailConnector
+
+```ts
+type CloudflareEmailConnector = {
+  send(
+    request: CloudflareEmailConnectorRequest,
+  ): CloudflareEmailConnectorResult | Promise<CloudflareEmailConnectorResult>
+}
+```
+
+#### CloudflareEmailRestConnectorOptions
+
+Options for configuring the `RESTConnector`:
+
+```ts
+type CloudflareEmailRestConnectorOptions = {
+  accountId: string
+  apiBaseUrl?: string
+  apiToken: string
+  fetch?: CloudflareEmailFetch
+}
+```
+
+#### CloudflareEmailWorkersConnectorOptions
+
+Options for configuring the `WorkersConnector`:
+
+```ts
+type CloudflareEmailWorkersConnectorOptions = {
+  bindingName?: string
+}
+```

@@ -79,6 +79,7 @@ export default defineConfig({
             { label: 'Postmark', slug: 'adapters/postmark' },
             { label: 'Mailgun', slug: 'adapters/mailgun' },
             { label: 'Cloudflare Email', slug: 'adapters/cloudflare' },
+            { label: 'Custom Adapters', slug: 'api/custom-adapters' },
           ],
         },
         {
@@ -94,7 +95,6 @@ export default defineConfig({
             { label: 'Email Types', slug: 'api/email-types' },
             { label: 'Adapter Options', slug: 'api/adapter-options' },
             { label: 'Plugin Options', slug: 'api/plugin-options' },
-            { label: 'Custom Adapters', slug: 'api/custom-adapters' },
           ],
         },
       ],
