@@ -135,3 +135,14 @@ const { html } = await render(
   </Html>,
 )
 ```
+
+## API Reference
+
+### Props
+
+`<Tailwind>` accepts the following props:
+
+| Prop       | Type                    | Description                                                                                                                                                                         |
+| :--------- | :---------------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `artifact` | `TailwindBuildArtifact` | **Optional.** Build artifact containing parsed utility CSS rules. When not using the bundler plugin, you must pass this artifact explicitly using `buildTailwindArtifactFromCss()`. |
+| `children` | `Child`                 | The child elements to style.                                                                                                                                                        |
