@@ -4,17 +4,20 @@ import starlight from '@astrojs/starlight'
 import { defineConfig } from 'astro/config'
 
 import { markdownExport } from './src/integrations/markdown-export'
-import { prerenderDocs } from './src/integrations/prerender-docs'
 
 // https://astro.build/config
 export default defineConfig({
   output: 'server',
   // Docs are pure static content, so prerender in Node rather than spinning up
   // workerd at build time. The deployed worker still runs on Cloudflare.
-  adapter: cloudflare({ prerenderEnvironment: 'node' }),
+  adapter: cloudflare({ prerenderEnvironment: 'workerd' }),
+  vite: {
+    ssr: {
+      noExternal: ['zod'],
+    },
+  },
   integrations: [
     markdownExport(),
-    prerenderDocs(),
     starlight({
       title: 'hono-email',
       pagefind: false,

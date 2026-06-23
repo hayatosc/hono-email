@@ -1,5 +1,4 @@
-import { cf } from '@astrojs/cloudflare/hono'
-import { astro } from 'astro/hono'
+import { handle } from '@astrojs/cloudflare/handler'
 import { Hono } from 'hono'
 import { accepts } from 'hono/accepts'
 
@@ -68,13 +67,16 @@ function matchAccept(entries: AcceptEntry[]): string {
   return best
 }
 
-const app = new Hono()
+const app = new Hono<{ Bindings: Env }>()
 
-// Content negotiation runs before `cf()` so a markdown request wins over the
-// prerendered HTML asset the Cloudflare ASSETS binding would otherwise serve.
+// Content negotiation runs before `handle()`. This is the Cloudflare adapter's
+// custom entrypoint (wrangler `main`), and `run_worker_first` makes it run
+// before the ASSETS binding — so a markdown request wins over the prerendered
+// HTML asset that `handle()` would otherwise serve.
 app.use(async (c, next) => {
   const url = new URL(c.req.url)
   let pathname = url.pathname
+  console.log(`[worker.ts] Incoming: ${pathname}`)
 
   let chosen = accepts(c, {
     header: 'Accept',
@@ -115,18 +117,37 @@ app.use(async (c, next) => {
   await next()
 
   // HTML path: make sure caches vary on Accept.
-  const headers = new Headers(c.res.headers)
-  addVaryAccept(headers)
-  c.res = new Response(c.res.body, {
-    status: c.res.status,
-    statusText: c.res.statusText,
-    headers,
-  })
+  const contentType = c.res.headers.get('content-type') ?? ''
+  if (contentType.includes('text/html')) {
+    const headers = new Headers(c.res.headers)
+    addVaryAccept(headers)
+    c.res = new Response(c.res.body, {
+      status: c.res.status,
+      statusText: c.res.statusText,
+      headers,
+    })
+  }
 })
 
-// Cloudflare setup + static (prerendered) asset serving via the ASSETS binding,
-// then Astro's pipeline for any on-demand route.
-app.use(cf())
-app.use(astro())
+// Hand off to Astro via the Cloudflare adapter handler. The custom entrypoint
+// receives the real worker env + executionCtx that `handle()` requires.
+app.all('*', async (c) => {
+  const url = new URL(c.req.url)
+  const pathname = url.pathname
+
+  if (
+    import.meta.env.DEV &&
+    (pathname.startsWith('/@fs/') ||
+      pathname.startsWith('/@id/') ||
+      pathname.startsWith('/@vite/') ||
+      pathname.startsWith('/node_modules/') ||
+      pathname.startsWith('/src/') ||
+      pathname.startsWith('/_astro/'))
+  ) {
+    return c.env.ASSETS.fetch(c.req.raw)
+  }
+
+  return handle(c.req.raw, c.env, c.executionCtx)
+})
 
 export default app

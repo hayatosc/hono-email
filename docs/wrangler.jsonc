@@ -3,4 +3,12 @@
   "name": "hono-email-docs",
   "compatibility_date": "2026-04-15",
   "compatibility_flags": ["nodejs_compat"],
+  // Custom entrypoint: src/worker.ts handles content negotiation, then delegates
+  // to Astro via `@astrojs/cloudflare/handler`.
+  "main": "./src/worker.ts",
+  // Run the Worker before static assets so Accept: text/markdown content
+  // negotiation in src/worker.ts works for all routes (including prerendered ones).
+  "assets": {
+    "run_worker_first": true,
+  },
 }
