@@ -1,0 +1,200 @@
+---
+title: Adapters
+description: API reference for all hono-email delivery adapters.
+---
+
+import { Badge } from '@astrojs/starlight/components';
+
+All adapters implement the `EmailAdapter` interface and are passed to `sendEmail()` via the `adapter` option.
+
+---
+
+## ResendAdapter
+
+```ts
+import ResendAdapter from 'hono-email/resend'
+
+const adapter = ResendAdapter(options)
+```
+
+#### `apiKey` <Badge text="Required" variant="caution" size="small" />
+
+Your Resend API key.
+
+#### `apiBaseUrl` <Badge text="Optional" variant="note" size="small" />
+
+Override the Resend API base URL. Defaults to `https://api.resend.com`.
+
+#### `fetch` <Badge text="Optional" variant="note" size="small" />
+
+Custom `fetch` implementation. Defaults to `globalThis.fetch`.
+
+#### `userAgent` <Badge text="Optional" variant="note" size="small" />
+
+Override the `User-Agent` header. Defaults to `'hono-email'`.
+
+#### `limits.maxAttachmentSize` <Badge text="Optional" variant="note" size="small" />
+
+Maximum attachment size in bytes.
+
+See [Resend guide](/adapters/resend/) for a full example.
+
+---
+
+## SendGridAdapter
+
+```ts
+import { SendGridAdapter } from 'hono-email/sendgrid'
+
+const adapter = SendGridAdapter(options)
+```
+
+#### `apiKey` <Badge text="Required" variant="caution" size="small" />
+
+Your SendGrid API key.
+
+#### `apiBaseUrl` <Badge text="Optional" variant="note" size="small" />
+
+Override the SendGrid API base URL. Defaults to `https://api.sendgrid.com`.
+
+#### `fetch` <Badge text="Optional" variant="note" size="small" />
+
+Custom `fetch` implementation. Defaults to `globalThis.fetch`.
+
+#### `limits.maxAttachmentSize` <Badge text="Optional" variant="note" size="small" />
+
+Maximum attachment size in bytes.
+
+See [SendGrid guide](/adapters/sendgrid/) for a full example.
+
+---
+
+## PostmarkAdapter
+
+```ts
+import { PostmarkAdapter } from 'hono-email/postmark'
+
+const adapter = PostmarkAdapter(options)
+```
+
+#### `serverToken` <Badge text="Required" variant="caution" size="small" />
+
+Your Postmark server token.
+
+#### `messageStream` <Badge text="Optional" variant="note" size="small" />
+
+Postmark message stream ID. Defaults to `'outbound'`.
+
+#### `apiBaseUrl` <Badge text="Optional" variant="note" size="small" />
+
+Override the Postmark API base URL.
+
+#### `fetch` <Badge text="Optional" variant="note" size="small" />
+
+Custom `fetch` implementation.
+
+#### `limits.maxAttachmentSize` <Badge text="Optional" variant="note" size="small" />
+
+Maximum attachment size in bytes.
+
+See [Postmark guide](/adapters/postmark/) for a full example.
+
+---
+
+## MailgunAdapter
+
+```ts
+import { MailgunAdapter } from 'hono-email/mailgun'
+
+const adapter = MailgunAdapter(options)
+```
+
+#### `apiKey` <Badge text="Required" variant="caution" size="small" />
+
+Your Mailgun API key.
+
+#### `domain` <Badge text="Required" variant="caution" size="small" />
+
+Your Mailgun sending domain.
+
+#### `apiBaseUrl` <Badge text="Optional" variant="note" size="small" />
+
+Override the Mailgun API base URL. Defaults to `https://api.mailgun.net`.
+
+#### `fetch` <Badge text="Optional" variant="note" size="small" />
+
+Custom `fetch` implementation.
+
+#### `limits.maxAttachmentSize` <Badge text="Optional" variant="note" size="small" />
+
+Maximum attachment size in bytes.
+
+See [Mailgun guide](/adapters/mailgun/) for a full example.
+
+---
+
+## CloudflareEmailAdapter
+
+```ts
+import CloudflareEmailAdapter, { RESTConnector } from 'hono-email/cloudflare'
+
+const adapter = CloudflareEmailAdapter(options)
+```
+
+#### `connector` <Badge text="Required" variant="caution" size="small" />
+
+Cloudflare connector. Pass `RESTConnector(...)` for REST API access or a Workers Email binding connector.
+
+See [Cloudflare Email guide](/adapters/cloudflare/) for connector setup.
+
+---
+
+## SmtpTransport
+
+```ts
+import { SmtpTransport } from 'hono-email/smtp'
+
+const smtp = new SmtpTransport(options)
+```
+
+#### `connector` <Badge text="Required" variant="caution" size="small" />
+
+Runtime socket connector. Import one of:
+- `import NodeConnector from 'hono-email/smtp/node'`
+- `import BunConnector from 'hono-email/smtp/bun'`
+- `import DenoConnector from 'hono-email/smtp/deno'`
+- `import CloudflareConnector from 'hono-email/smtp/cloudflare'`
+
+#### `hostname` <Badge text="Required" variant="caution" size="small" />
+
+SMTP server hostname.
+
+#### `port` <Badge text="Optional" variant="note" size="small" />
+
+SMTP server port. Defaults to `587`.
+
+#### `secure` <Badge text="Optional" variant="note" size="small" />
+
+TLS mode: `'starttls'` | `'tls'` | `false`. Defaults to `'starttls'`.
+
+#### `auth` <Badge text="Optional" variant="note" size="small" />
+
+Authentication credentials: `{ username: string; password: string }`.
+
+#### `dkim` <Badge text="Optional" variant="note" size="small" />
+
+DKIM signing options. See [EmailDkimOptions](/api/email-types/#emaildkimoptions).
+
+#### `pool` <Badge text="Optional" variant="note" size="small" />
+
+Connection pool settings: `{ maxConnections?: number; maxMessages?: number }`.
+
+#### `connectionTimeout` / `greetingTimeout` / `socketTimeout` <Badge text="Optional" variant="note" size="small" />
+
+Timeout values in milliseconds.
+
+#### `limits.maxAttachmentSize` <Badge text="Optional" variant="note" size="small" />
+
+Maximum attachment size in bytes.
+
+See [SMTP guide](/adapters/smtp/) for a full example.

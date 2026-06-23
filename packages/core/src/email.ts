@@ -20,12 +20,44 @@ export type EmailAddress =
       name?: string
     }
 
+/**
+ * Custom email header map passed to transport adapters.
+ *
+ * @example
+ * ```ts
+ * const headers: EmailHeaders = { 'X-Campaign-ID': 'welcome-2024' }
+ * ```
+ */
 export type EmailHeaders = Record<string, string>
 
+/**
+ * In-memory attachment content accepted by adapters.
+ *
+ * @example
+ * ```ts
+ * const content: EmailAttachmentContent = new Uint8Array([0x25, 0x50, 0x44, 0x46])
+ * ```
+ */
 export type EmailAttachmentContent = string | Uint8Array | ArrayBuffer | ReadableStream<Uint8Array>
 
+/**
+ * Encoding applied to string attachment content.
+ *
+ * @example
+ * ```ts
+ * const encoding: EmailAttachmentEncoding = 'base64'
+ * ```
+ */
 export type EmailAttachmentEncoding = 'base64' | 'hex' | 'utf8'
 
+/**
+ * Content disposition for email attachments.
+ *
+ * @example
+ * ```ts
+ * const disposition: EmailAttachmentDisposition = 'inline'
+ * ```
+ */
 export type EmailAttachmentDisposition = 'attachment' | 'inline'
 
 /**
@@ -63,10 +95,26 @@ export type EmailAttachment = {
   headers?: EmailHeaders
 }
 
+/**
+ * Size limits applied to attachments during transport.
+ *
+ * @example
+ * ```ts
+ * const limits: EmailAttachmentLimits = { maxAttachmentSize: 10 * 1024 * 1024 }
+ * ```
+ */
 export type EmailAttachmentLimits = {
   maxAttachmentSize?: number
 }
 
+/**
+ * SMTP envelope override for bounce routing or envelope-sender divergence.
+ *
+ * @example
+ * ```ts
+ * const envelope: EmailEnvelope = { from: 'bounces@example.com' }
+ * ```
+ */
 export type EmailEnvelope = {
   from?: EmailAddress
   to?: EmailAddress | EmailAddress[]
@@ -161,6 +209,16 @@ export type EmailMessageDraft = Omit<EmailMessage, 'html' | 'text'> & {
   render?: RenderOptions
 }
 
+/**
+ * Receipt returned by an adapter after successful delivery.
+ *
+ * @example
+ * ```ts
+ * if (receipt.successful) {
+ *   console.log('Delivered to:', receipt.accepted)
+ * }
+ * ```
+ */
 export type SuccessfulSendReceipt = {
   successful: true
   messageId: string
@@ -171,6 +229,16 @@ export type SuccessfulSendReceipt = {
   response: string
 }
 
+/**
+ * Receipt returned by an adapter when delivery fails.
+ *
+ * @example
+ * ```ts
+ * if (!receipt.successful) {
+ *   console.error(receipt.errorMessages)
+ * }
+ * ```
+ */
 export type FailedSendReceipt = {
   successful: false
   accepted: string[]
@@ -180,6 +248,17 @@ export type FailedSendReceipt = {
   cause?: unknown
 }
 
+/**
+ * Union of {@link SuccessfulSendReceipt} and {@link FailedSendReceipt}. Narrow on `receipt.successful`.
+ *
+ * @example
+ * ```ts
+ * const receipt: SendEmailReceipt = await sendEmail({ ... })
+ * if (!receipt.successful) {
+ *   console.error(receipt.errorMessages)
+ * }
+ * ```
+ */
 export type SendEmailReceipt = SuccessfulSendReceipt | FailedSendReceipt
 
 /**
@@ -200,6 +279,11 @@ export type EmailAdapter = {
   send(message: EmailMessage): Promise<SendEmailReceipt>
 }
 
+/**
+ * Alias for {@link EmailAdapter}. Use `EmailAdapter` in new code.
+ *
+ * @deprecated Use `EmailAdapter` instead.
+ */
 export type EmailTransport = EmailAdapter
 
 /**

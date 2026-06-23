@@ -2,15 +2,9 @@ import cloudflare from '@astrojs/cloudflare'
 import starlight from '@astrojs/starlight'
 // @ts-check
 import { defineConfig } from 'astro/config'
-import { createStarlightTypeDocPlugin } from 'starlight-typedoc'
 
 import { markdownExport } from './src/integrations/markdown-export'
 import { prerenderDocs } from './src/integrations/prerender-docs'
-
-const [coreStarlightTypeDoc, coreTypeDocSidebarGroup] = createStarlightTypeDocPlugin()
-const [previewStarlightTypeDoc, previewTypeDocSidebarGroup] = createStarlightTypeDocPlugin()
-const [tailwindPluginStarlightTypeDoc, tailwindPluginTypeDocSidebarGroup] =
-  createStarlightTypeDocPlugin()
 
 // https://astro.build/config
 export default defineConfig({
@@ -30,42 +24,6 @@ export default defineConfig({
           label: 'GitHub',
           href: 'https://github.com/hayatosc/hono-email',
         },
-      ],
-      plugins: [
-        coreStarlightTypeDoc({
-          entryPoints: [
-            '../packages/core/src/index.ts',
-            '../packages/core/src/adapter/index.ts',
-            '../packages/core/src/adapter/smtp/index.ts',
-            '../packages/core/src/adapter/cloudflare/index.ts',
-            '../packages/core/src/adapter/provider/index.ts',
-            '../packages/core/src/adapter/resend/index.ts',
-            '../packages/core/src/adapter/sendgrid/index.ts',
-            '../packages/core/src/adapter/postmark/index.ts',
-            '../packages/core/src/adapter/mailgun/index.ts',
-          ],
-          output: 'api/core',
-          tsconfig: '../packages/core/tsconfig.json',
-          typeDoc: {
-            includeVersion: true,
-          },
-        }),
-        previewStarlightTypeDoc({
-          entryPoints: ['../packages/preview/src/index.ts'],
-          output: 'api/preview',
-          tsconfig: '../packages/preview/tsconfig.json',
-          typeDoc: {
-            includeVersion: true,
-          },
-        }),
-        tailwindPluginStarlightTypeDoc({
-          entryPoints: ['../packages/tailwind-plugin/src/index.ts'],
-          output: 'api/tailwind-plugin',
-          tsconfig: '../packages/tailwind-plugin/tsconfig.json',
-          typeDoc: {
-            includeVersion: true,
-          },
-        }),
       ],
       sidebar: [
         {
@@ -122,9 +80,10 @@ export default defineConfig({
         {
           label: 'API Reference',
           items: [
-            coreTypeDocSidebarGroup,
-            previewTypeDocSidebarGroup,
-            tailwindPluginTypeDocSidebarGroup,
+            { label: 'render()', slug: 'api/render' },
+            { label: 'Components', slug: 'api/components' },
+            { label: 'Email Types', slug: 'api/email-types' },
+            { label: 'Adapters', slug: 'api/adapters' },
           ],
         },
       ],

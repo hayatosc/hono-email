@@ -1,0 +1,133 @@
+---
+title: render()
+description: API reference for the render() function and its options.
+---
+
+import { Badge } from '@astrojs/starlight/components';
+
+## `render(jsx, options?)`
+
+Renders a `hono/jsx` email tree into HTML and plain text.
+
+```ts
+function render(jsx: Child, options?: RenderOptions): Promise<RenderResult>
+```
+
+### Parameters
+
+#### `jsx` <Badge text="Required" variant="caution" size="small" />
+
+The `hono/jsx` email tree to render. Typically a JSX expression like `<WelcomeEmail />`.
+
+#### `options` <Badge text="Optional" variant="note" size="small" />
+
+See [RenderOptions](#renderoptions) below.
+
+### Returns
+
+A `Promise<RenderResult>` — see [RenderResult](#renderresult).
+
+### Example
+
+```tsx
+const { html, text, warnings } = await render(
+  <Html>
+    <Body>
+      <Text>Hello from hono-email.</Text>
+    </Body>
+  </Html>,
+)
+```
+
+---
+
+## RenderOptions
+
+```ts
+type RenderOptions = {
+  doctype?: 'html5' | 'xhtml-transitional' | false
+  pretty?: boolean
+  minify?: boolean
+  widows?: boolean
+  strict?: boolean
+  onWarning?: WarningHandler
+  text?: PlainTextRenderOptions
+}
+```
+
+#### `doctype` <Badge text="Optional" variant="note" size="small" />
+
+Doctype to prepend to the output. Defaults to `'html5'`. Pass `false` to omit the doctype entirely.
+
+#### `pretty` <Badge text="Optional" variant="note" size="small" />
+
+Pretty-print the rendered HTML. Takes precedence over `minify`.
+
+#### `minify` <Badge text="Optional" variant="note" size="small" />
+
+Minify the rendered HTML. Defaults to `true`. Ignored when `pretty` is `true`.
+
+#### `widows` <Badge text="Optional" variant="note" size="small" />
+
+Join the last two words of each text block with `&nbsp;` to prevent orphaned single words.
+
+#### `strict` <Badge text="Optional" variant="note" size="small" />
+
+Enable strict email validation. Defaults to `true`. See [Strict Mode](/core/strict-mode/).
+
+#### `onWarning` <Badge text="Optional" variant="note" size="small" />
+
+Controls how compatibility warnings are surfaced. See [WarningHandler](#warninghandler).
+
+#### `text` <Badge text="Optional" variant="note" size="small" />
+
+Plain-text conversion options passed to the text renderer.
+
+---
+
+## RenderResult
+
+```ts
+type RenderResult = {
+  html: string
+  text: string
+  warnings: string[]
+}
+```
+
+| Property   | Type       | Description                                            |
+| ---------- | ---------- | ------------------------------------------------------ |
+| `html`     | `string`   | Rendered HTML email, including the configured doctype. |
+| `text`     | `string`   | Plain-text version derived from the rendered HTML.     |
+| `warnings` | `string[]` | Compatibility warnings collected during rendering.     |
+
+---
+
+## WarningHandler
+
+```ts
+type WarningHandler =
+  | 'warn'
+  | 'error'
+  | 'silent'
+  | ((warning: string) => void)
+```
+
+| Value      | Behavior                                                                     |
+| ---------- | ---------------------------------------------------------------------------- |
+| `'warn'`   | Log each warning with `console.warn` and collect it in `warnings`. (default) |
+| `'error'`  | Throw an aggregated error when any warning is collected.                      |
+| `'silent'` | Collect warnings without logging.                                             |
+| `callback` | Call a custom function for each warning.                                      |
+
+---
+
+## `sendEmail(options)`
+
+Renders and sends a JSX email draft through the provided adapter.
+
+```ts
+function sendEmail(options: SendEmailOptions): Promise<SendEmailReceipt>
+```
+
+See [Email Types](/api/email-types/) for `SendEmailOptions` and `SendEmailReceipt`.
