@@ -12,7 +12,7 @@ Pass `onWarning: 'error'` so `render()` throws when any warning is collected:
 ```ts
 import { expect, test } from 'vitest'
 import { render } from 'hono-email'
-import { WelcomeEmail } from './welcome-email'
+import WelcomeEmail from './welcome-email'
 
 // Fail the test on any compatibility warning.
 const renderEmail = (jsx: Parameters<typeof render>[0]) => render(jsx, { onWarning: 'error' })

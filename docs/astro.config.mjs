@@ -43,7 +43,6 @@ export default defineConfig({
           items: [
             { label: 'render()', slug: 'core/render' },
             { label: 'Strict Mode', slug: 'core/strict-mode' },
-            { label: 'Testing', slug: 'core/testing' },
           ],
         },
         {
@@ -86,7 +85,7 @@ export default defineConfig({
           label: 'Tooling',
           items: [
             { label: 'Live Preview', slug: 'tooling/live-preview' },
-            { label: 'Development', slug: 'tooling/development' },
+            { label: 'Testing', slug: 'tooling/testing' },
           ],
         },
         {

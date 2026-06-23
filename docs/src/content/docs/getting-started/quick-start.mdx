@@ -49,7 +49,7 @@ Create a JSX component that uses the email primitives from `hono-email`:
 ```tsx
 import { Body, Button, Container, Head, Heading, Html, Preview, Text, render } from 'hono-email'
 
-function WelcomeEmail() {
+export default function WelcomeEmail() {
   return (
     <Html lang="en">
       <Head>
