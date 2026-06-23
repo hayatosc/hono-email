@@ -18,6 +18,9 @@ export default defineConfig({
     starlight({
       title: 'hono-email',
       pagefind: false,
+      components: {
+        PageTitle: './src/components/PageTitle.astro',
+      },
       tableOfContents: {
         minHeadingLevel: 2,
         maxHeadingLevel: 4,

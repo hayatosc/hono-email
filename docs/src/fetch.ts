@@ -73,15 +73,22 @@ const app = new Hono()
 // Content negotiation runs before `cf()` so a markdown request wins over the
 // prerendered HTML asset the Cloudflare ASSETS binding would otherwise serve.
 app.use(async (c, next) => {
-  const chosen = accepts(c, {
+  const url = new URL(c.req.url)
+  let pathname = url.pathname
+
+  let chosen = accepts(c, {
     header: 'Accept',
     supports: [...PRODUCES],
     default: DEFAULT,
     match: (entries) => matchAccept(entries),
   })
 
+  if (pathname.endsWith('.md')) {
+    chosen = 'text/markdown'
+    pathname = pathname.replace(/\.md$/, '')
+  }
+
   if (chosen === 'text/markdown') {
-    const pathname = new URL(c.req.url).pathname
     const markdown = lookupMarkdown(pathname)
 
     if (markdown !== undefined) {

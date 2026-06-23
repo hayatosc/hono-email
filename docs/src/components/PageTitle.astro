@@ -1,0 +1,39 @@
+---
+import Default from '@astrojs/starlight/components/PageTitle.astro';
+import type { Props } from '@astrojs/starlight/props';
+
+const { url } = Astro;
+const pathname = url.pathname.replace(/\/$/, '');
+const markdownUrl = `${pathname}.md`;
+---
+
+<Default {...Astro.props} />
+
+<div class="markdown-available">
+  <span class="label">text/markdown Available</span>
+  <a href={markdownUrl}>See Markdown</a>
+</div>
+
+<style>
+  .markdown-available {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    margin-top: -1rem;
+    margin-bottom: 2rem;
+    font-size: 0.875rem;
+  }
+  .label {
+    background-color: var(--sl-color-bg-inline-code);
+    padding: 0.2rem 0.4rem;
+    border-radius: 0.25rem;
+    font-family: var(--sl-font-mono);
+  }
+  a {
+    color: var(--sl-color-text-accent);
+    text-decoration: none;
+  }
+  a:hover {
+    text-decoration: underline;
+  }
+</style>
