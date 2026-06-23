@@ -49,19 +49,25 @@ Table row (`<tr>`) and table cell (`<td>`) helpers for manual layouts.
 
 Generic email-safe block wrapper.
 
-### `as` <Badge text="Optional" variant="note" size="small" />
-
-**Type:** `'div' | 'span' | 'table' | 'tbody' | 'tr' | 'td'` · **Default:** `'div'`
-
 ```tsx
 <Box as="td" style={{ padding: '16px' }}>
   <Text>Content</Text>
 </Box>
 ```
 
+### `as` <Badge text="Optional" variant="note" size="small" />
+
+**Type:** `'div' | 'span' | 'table' | 'tbody' | 'tr' | 'td'` · **Default:** `'div'`
+
 ## `<Spacer>`
 
 Explicit email-safe spacing block.
+
+```tsx
+<Text>First paragraph</Text>
+<Spacer height={24} />
+<Text>Second paragraph</Text>
+```
 
 ### `height` <Badge text="Optional" variant="note" size="small" />
 
@@ -75,15 +81,16 @@ Spacer height. Numbers are converted to pixels.
 
 Spacer width. Numbers are converted to pixels.
 
-```tsx
-<Text>First paragraph</Text>
-<Spacer height={24} />
-<Text>Second paragraph</Text>
-```
-
 ## `<Flex>`
 
 Table-based layout for horizontal or vertical arrangements. Does **not** use CSS `display: flex`.
+
+```tsx
+<Flex align="middle" gap={12} justify="center">
+  <Img src="logo.png" alt="Logo" width={32} height={32} />
+  <Text>hono-email</Text>
+</Flex>
+```
 
 ### `direction` <Badge text="Optional" variant="note" size="small" />
 
@@ -107,16 +114,23 @@ Horizontal alignment of the table or space distribution.
 
 Space between children. Numbers are converted to pixels.
 
-```tsx
-<Flex align="middle" gap={12} justify="center">
-  <Img src="logo.png" alt="Logo" width={32} height={32} />
-  <Text>hono-email</Text>
-</Flex>
-```
-
 ## `<Grid>`
 
 Table-based grid with a fixed column count. Does **not** use CSS `display: grid`.
+
+```tsx
+<Grid columns={3} gap={16}>
+  <Card>
+    <Text>Feature A</Text>
+  </Card>
+  <Card>
+    <Text>Feature B</Text>
+  </Card>
+  <Card>
+    <Text>Feature C</Text>
+  </Card>
+</Grid>
+```
 
 ### `columns` <Badge text="Optional" variant="note" size="small" />
 
@@ -134,23 +148,16 @@ Number of columns per row.
 
 Space between grid cells. Numbers are converted to pixels.
 
-```tsx
-<Grid columns={3} gap={16}>
-  <Card>
-    <Text>Feature A</Text>
-  </Card>
-  <Card>
-    <Text>Feature B</Text>
-  </Card>
-  <Card>
-    <Text>Feature C</Text>
-  </Card>
-</Grid>
-```
-
 ## `<Card>`
 
 Bordered table container with email-safe background and padding defaults.
+
+```tsx
+<Card padding={32} borderColor="#d1d5db" backgroundColor="#f9fafb">
+  <Heading as="h3">Invoice #1234</Heading>
+  <Text>Due: January 1, 2026</Text>
+</Card>
+```
 
 ### `backgroundColor` <Badge text="Optional" variant="note" size="small" />
 
@@ -181,10 +188,3 @@ Inline style applied to the inner content cell.
 ### `width` <Badge text="Optional" variant="note" size="small" />
 
 **Type:** `number | string` · **Default:** `'100%'`
-
-```tsx
-<Card padding={32} borderColor="#d1d5db" backgroundColor="#f9fafb">
-  <Heading as="h3">Invoice #1234</Heading>
-  <Text>Due: January 1, 2026</Text>
-</Card>
-```

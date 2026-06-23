@@ -1,14 +1,14 @@
 ---
 title: Styling Helpers
-description: Styling helpers like Font, Tailwind, ColorScheme, Conditional, and Markdown.
+description: Styling helpers like Font, ColorScheme, and Conditional.
 ---
 
 import { Badge } from '@astrojs/starlight/components'
 
-These components provide utilities for styling, dark mode, conditional comments, and Markdown conversion. They are imported from `hono-email`:
+These components provide utilities for styling, dark mode, and conditional comments. They are imported from `hono-email`:
 
 ```tsx
-import { Font, Tailwind, ColorScheme, Conditional, Markdown } from 'hono-email'
+import { Font, ColorScheme, Conditional } from 'hono-email'
 ```
 
 ---
@@ -27,17 +27,15 @@ Renders `@font-face` and fallback `font-family` CSS inside `<Head>`. See [Font](
 </Head>
 ```
 
-## `<Tailwind>`
-
-Applies a Tailwind build artifact to descendant class names. See [Tailwind](/styling/tailwind/).
-
-### `artifact` <Badge text="Optional" variant="note" size="small" />
-
-Build artifact from `buildTailwindArtifactFromCss()` or injected automatically by the bundler plugin. If omitted at runtime, `render()` throws.
-
 ## `<ColorScheme>`
 
 Declares light and dark color scheme support inside `<Head>`.
+
+```tsx
+<Head>
+  <ColorScheme colorScheme="light dark" />
+</Head>
+```
 
 ### `colorScheme` <Badge text="Optional" variant="note" size="small" />
 
@@ -47,15 +45,15 @@ Declares light and dark color scheme support inside `<Head>`.
 
 **Type:** `'light' | 'dark' | 'light dark'` · **Default:** value of `colorScheme`
 
-```tsx
-<Head>
-  <ColorScheme colorScheme="light dark" />
-</Head>
-```
-
 ## `<Conditional>`
 
 Renders Outlook conditional comment branches.
+
+```tsx
+<Conditional mso>
+  <Text>This appears only in Outlook for Windows.</Text>
+</Conditional>
+```
 
 ### `mso` <Badge text="Optional" variant="note" size="small" />
 
@@ -68,13 +66,3 @@ Wrap children in `<!--[if mso]>...<![endif]-->`.
 **Type:** `boolean`
 
 Wrap children in `<!--[if !mso]><!--> ... <!--<![endif]-->`.
-
-```tsx
-<Conditional mso>
-  <Text>This appears only in Outlook for Windows.</Text>
-</Conditional>
-```
-
-## `<Markdown>`
-
-Converts GFM Markdown into sanitized, email-friendly HTML. See [Markdown](/markdown/overview/).

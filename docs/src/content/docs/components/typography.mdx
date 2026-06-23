@@ -40,6 +40,12 @@ Accepts all standard `<p>` attributes and `style` to override defaults.
 
 Heading element with shorthand margin props.
 
+```tsx
+<Heading as="h2" mt={0} mb={16}>
+  Account summary
+</Heading>
+```
+
 ### `as` <Badge text="Optional" variant="note" size="small" />
 
 **Type:** `'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6'` · **Default:** `'h1'`
@@ -48,32 +54,14 @@ Heading element with shorthand margin props.
 
 `m`, `mx`, `my`, `mt`, `mr`, `mb`, `ml` — shorthand margin props. Numbers are converted to pixels.
 
-```tsx
-<Heading as="h2" mt={0} mb={16}>
-  Account summary
-</Heading>
-```
-
 ## `<Link>`
 
 Anchor element. Requires `href`.
-
-### `href` <Badge text="Required" variant="caution" size="small" />
-
-**Type:** `string`
-
-### `target` <Badge text="Optional" variant="note" size="small" />
-
-**Type:** `string` · **Default:** `'_blank'`
 
 ```tsx
 <Link href="https://example.com/account">View your account</Link>
 ```
 
-## `<Button>`
-
-Call-to-action link rendered with Outlook-compatible button padding.
-
 ### `href` <Badge text="Required" variant="caution" size="small" />
 
 **Type:** `string`
@@ -81,6 +69,10 @@ Call-to-action link rendered with Outlook-compatible button padding.
 ### `target` <Badge text="Optional" variant="note" size="small" />
 
 **Type:** `string` · **Default:** `'_blank'`
+
+## `<Button>`
+
+Call-to-action link rendered with Outlook-compatible button padding.
 
 ```tsx
 <Button
@@ -96,9 +88,21 @@ Call-to-action link rendered with Outlook-compatible button padding.
 </Button>
 ```
 
+### `href` <Badge text="Required" variant="caution" size="small" />
+
+**Type:** `string`
+
+### `target` <Badge text="Optional" variant="note" size="small" />
+
+**Type:** `string` · **Default:** `'_blank'`
+
 ## `<Img>`
 
 Image element. `src` and `alt` are both required.
+
+```tsx
+<Img src="https://example.com/logo.png" alt="Company Logo" width={120} height={40} />
+```
 
 ### `src` <Badge text="Required" variant="caution" size="small" />
 
@@ -109,10 +113,6 @@ Image element. `src` and `alt` are both required.
 **Type:** `string`
 
 Descriptive alt text for accessibility and clients that block images.
-
-```tsx
-<Img src="https://example.com/logo.png" alt="Company Logo" width={120} height={40} />
-```
 
 ## `<Hr>`
 
@@ -152,6 +152,14 @@ Preformatted code block.
 
 Ordered or unordered lists.
 
+```tsx
+<List ordered>
+  <ListItem>Confirm your email address</ListItem>
+  <ListItem>Set up your profile</ListItem>
+  <ListItem>Invite your team</ListItem>
+</List>
+```
+
 ### `ordered` <Badge text="Optional" variant="note" size="small" />
 
 **Type:** `boolean`
@@ -163,11 +171,3 @@ Render an `<ol>` when `true`, `<ul>` otherwise.
 **Type:** `string`
 
 CSS `list-style-type` value (e.g. `'disc'`, `'decimal'`, `'"→ "'`).
-
-```tsx
-<List ordered>
-  <ListItem>Confirm your email address</ListItem>
-  <ListItem>Set up your profile</ListItem>
-  <ListItem>Invite your team</ListItem>
-</List>
-```
