@@ -8,8 +8,6 @@ astro dev --background
 
 Manage the background server with `astro dev stop`, `astro dev status`, and `astro dev logs`.
 
-The `build` script runs `bun --bun astro build` (not plain `astro build`) on purpose: under Node the build fails because `css-tree` imports `data/patch.json` without an import attribute. The bun runtime tolerates it, so keep the `bun --bun` prefix.
-
 ## Documentation
 
 Full documentation: https://docs.astro.build
