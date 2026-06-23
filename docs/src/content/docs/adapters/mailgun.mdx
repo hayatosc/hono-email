@@ -1,0 +1,38 @@
+---
+title: Mailgun
+description: Send email through the Mailgun Messages API with hono-email.
+---
+
+`hono-email/mailgun` provides `MailgunAdapter` for the Mailgun Messages API. The adapter sends a `multipart/form-data` request to `/v3/{domain}/messages`.
+
+## Example
+
+```tsx
+import { Body, Html, Text, sendEmail } from 'hono-email'
+import { MailgunAdapter } from 'hono-email/mailgun'
+
+const receipt = await sendEmail({
+  adapter: MailgunAdapter({
+    apiKey: process.env.MAILGUN_API_KEY!,
+    domain: process.env.MAILGUN_DOMAIN!,
+  }),
+  from: 'sender@example.com',
+  to: 'recipient@example.com',
+  subject: 'Welcome',
+  jsx: (
+    <Html>
+      <Body>
+        <Text>Hello from Mailgun.</Text>
+      </Body>
+    </Html>
+  ),
+})
+```
+
+## Regional sending
+
+Use `apiBaseUrl: 'https://api.eu.mailgun.net'` for Mailgun EU domains.
+
+## Shared adapter features
+
+Like all provider adapters, Mailgun supports `to`, `cc`, `bcc`, `replyTo`, custom `headers`, and `attachments`. Inline attachments use `cid` when the provider supports content IDs.

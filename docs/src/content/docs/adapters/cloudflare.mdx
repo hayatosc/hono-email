@@ -1,0 +1,72 @@
+---
+title: Cloudflare Email
+description: Send email through Cloudflare Email Service with hono-email.
+---
+
+`hono-email/cloudflare` provides `CloudflareEmailAdapter` and connectors for Cloudflare Email Service.
+
+## On Cloudflare Workers
+
+Use `WorkersConnector` when running inside a Cloudflare Worker:
+
+```tsx
+import { Body, Html, Text, sendEmail } from 'hono-email'
+import { CloudflareEmailAdapter } from 'hono-email/cloudflare'
+import WorkersConnector from 'hono-email/cloudflare/workers'
+
+export default {
+  async fetch(_request: Request, env: Env): Promise<Response> {
+    const receipt = await sendEmail({
+      adapter: CloudflareEmailAdapter({ connector: WorkersConnector }),
+      from: 'sender@example.com',
+      to: 'recipient@example.com',
+      subject: 'Welcome',
+      jsx: (
+        <Html>
+          <Body>
+            <Text>Hello from Cloudflare Workers.</Text>
+          </Body>
+        </Html>
+      ),
+    })
+
+    return Response.json(receipt)
+  },
+}
+```
+
+## REST API
+
+Use `RESTConnector` from other runtimes:
+
+```tsx
+import { Body, Html, Text, sendEmail } from 'hono-email'
+import { CloudflareEmailAdapter, RESTConnector } from 'hono-email/cloudflare'
+
+const receipt = await sendEmail({
+  adapter: CloudflareEmailAdapter({
+    connector: RESTConnector({
+      accountId: process.env.CLOUDFLARE_ACCOUNT_ID!,
+      apiToken: process.env.CLOUDFLARE_API_TOKEN!,
+    }),
+  }),
+  from: { address: 'sender@example.com', name: 'Sender' },
+  to: ['first@example.com', 'second@example.com'],
+  subject: 'Welcome',
+  jsx: (
+    <Html>
+      <Body>
+        <Text>Hello from the Cloudflare REST API.</Text>
+      </Body>
+    </Html>
+  ),
+})
+
+if (receipt.successful && receipt.queued) {
+  console.log('Queued recipients:', receipt.queuedRecipients)
+}
+```
+
+## Shared adapter features
+
+Like all provider adapters, Cloudflare Email supports `to`, `cc`, `bcc`, `replyTo`, custom `headers`, and `attachments`. Inline attachments use `cid` when the provider supports content IDs.

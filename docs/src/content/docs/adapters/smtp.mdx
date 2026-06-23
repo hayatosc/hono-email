@@ -1,0 +1,116 @@
+---
+title: SMTP
+description: Send email through SMTP with hono-email.
+---
+
+`hono-email/smtp` provides a connector-based SMTP sender. You choose a runtime connector, instantiate `SmtpTransport`, and pass it to `sendEmail()`.
+
+## Example
+
+```tsx
+import CloudflareConnector from 'hono-email/smtp/cloudflare'
+import { Body, Html, Text, sendEmail } from 'hono-email'
+import { SmtpTransport } from 'hono-email/smtp'
+
+const dkimPrivateKey = `-----BEGIN PRIVATE KEY-----
+...
+-----END PRIVATE KEY-----`
+
+const smtp = new SmtpTransport({
+  connector: CloudflareConnector,
+  hostname: 'smtp.example.com',
+  port: 587,
+  secure: 'starttls',
+  connectionTimeout: 10_000,
+  greetingTimeout: 10_000,
+  socketTimeout: 30_000,
+  auth: {
+    username: 'smtp-user',
+    password: 'smtp-password',
+  },
+  dkim: {
+    domainName: 'example.com',
+    keySelector: 'mail',
+    privateKey: dkimPrivateKey,
+  },
+  pool: {
+    maxConnections: 2,
+    maxMessages: 100,
+  },
+  limits: {
+    maxAttachmentSize: 10 * 1024 * 1024,
+  },
+})
+
+try {
+  await smtp.verify()
+
+  const receipt = await sendEmail({
+    adapter: smtp,
+    from: 'sender@example.com',
+    to: ['recipient@example.com', 'second@example.com'],
+    subject: 'Welcome',
+    envelope: {
+      from: 'bounces@example.com',
+    },
+    jsx: (
+      <Html>
+        <Body>
+          <Text>Hello from hono-email.</Text>
+        </Body>
+      </Html>
+    ),
+    attachments: [
+      {
+        filename: 'invoice.txt',
+        content: 'Invoice text',
+        contentType: 'text/plain',
+      },
+      {
+        filename: 'logo.png',
+        href: 'https://example.com/assets/logo.png',
+        cid: 'logo',
+        contentDisposition: 'inline',
+      },
+    ],
+  })
+
+  if (!receipt.successful) {
+    console.error(receipt.errorMessages)
+  }
+} finally {
+  await smtp.close()
+}
+```
+
+## Runtime connectors
+
+| Entry point                  | Runtime            |
+| ---------------------------- | ------------------ |
+| `hono-email/smtp/cloudflare` | Cloudflare Workers |
+| `hono-email/smtp/node`       | Node.js            |
+| `hono-email/smtp/deno`       | Deno               |
+| `hono-email/smtp/bun`        | Bun                |
+
+## Important runtime notes
+
+- SMTP transport uses Web Streams internally. Runtime-specific socket support is supplied by the connector.
+- Cloudflare Workers does not allow outbound SMTP connections on port `25`. Use submission ports such as `465` or `587`.
+- Bun's TCP API supports direct TLS connections, but the Bun connector does not support STARTTLS upgrade. Use port `465` with `secure: true` on Bun.
+
+## Connection pooling
+
+`SmtpTransport` reuses SMTP sessions until `transport.close()` is called. The default pool size is `1`, so sends on the same transport share one TCP connection sequentially.
+
+- Set `pool.maxConnections` to allow multiple concurrent SMTP sessions.
+- Set `pool.maxMessages` to retire a session after a fixed number of messages.
+- If a session fails during send, that session is discarded. The message is not retried automatically.
+
+## Delivery controls
+
+- `await transport.verify()` checks connection setup, TLS negotiation, and authentication without sending a message.
+- `dkim` can be configured on `SmtpTransport` or overridden per message to add a `DKIM-Signature` header before SMTP delivery.
+- `envelope` lets you override the SMTP envelope sender and recipients without changing the visible `From` / `To` headers.
+- `to`, `cc`, `bcc`, and `envelope.to` accept single addresses or arrays. SMTP sends one `RCPT TO` command per resolved recipient and reports partial recipient rejection in `receipt.rejected`.
+
+See the [API Reference](/api/core/adapter/smtp/classes/smtptransport/) for the complete list of `SmtpTransport` options.

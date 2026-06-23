@@ -1,0 +1,39 @@
+---
+title: hono/css
+description: Use hono/css class-based CSS-in-JS with hono-email.
+---
+
+You can use `hono/css` class names directly on normal elements (`<div>`, `<Text>`, etc.). `render()` automatically converts matching class rules to email-safe inline styles.
+
+## Requirements
+
+`<Head><Style /></Head>` is required when using `hono/css`.
+
+## Example
+
+```tsx
+import { Style, css } from 'hono/css'
+import { Body, Head, Html, Text, render } from 'hono-email'
+
+const titleClass = css`
+  color: #0f172a;
+  padding-left: 1rem;
+  padding-right: 1rem;
+  font-weight: bold;
+`
+
+const { html } = await render(
+  <Html>
+    <Head>
+      <Style />
+    </Head>
+    <Body>
+      <Text className={titleClass}>Hello</Text>
+    </Body>
+  </Html>,
+)
+```
+
+## How it works
+
+`hono/css` generates scoped class names at runtime. `hono-email` inspects those class names, resolves the corresponding CSS rules, and inlines them as `style` attributes on the rendered output. Styles that cannot be safely inlined for email clients are reported as warnings according to your [`onWarning`](/core/render/#warning-handling) setting.

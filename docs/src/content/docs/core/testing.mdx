@@ -1,0 +1,45 @@
+---
+title: Testing
+description: Test your email templates with hono-email.
+---
+
+`hono-email` makes it straightforward to test email output. Strict-mode errors already reject `render()`, so unsupported tags or unsafe CSS fail tests automatically. Warnings require a small amount of configuration if you want them to fail tests.
+
+## Fail on warnings
+
+Pass `onWarning: 'error'` so `render()` throws when any warning is collected:
+
+```ts
+import { expect, test } from 'vitest'
+import { render } from 'hono-email'
+import { WelcomeEmail } from './welcome-email'
+
+// Fail the test on any compatibility warning.
+const renderEmail = (jsx: Parameters<typeof render>[0]) => render(jsx, { onWarning: 'error' })
+
+test('welcome email renders without warnings', async () => {
+  await expect(renderEmail(<WelcomeEmail />)).resolves.toBeDefined()
+})
+```
+
+## Assert on warnings directly
+
+Use `onWarning: 'silent'` to inspect `result.warnings` without console output:
+
+```ts
+test('welcome email has no warnings', async () => {
+  const { warnings } = await render(<WelcomeEmail />, { onWarning: 'silent' })
+  expect(warnings).toEqual([])
+})
+```
+
+## Custom warning collector
+
+You can also pass a callback to route warnings into your own collector:
+
+```ts
+const collected: Warning[] = []
+await render(<WelcomeEmail />, {
+  onWarning: (warning) => collected.push(warning),
+})
+```

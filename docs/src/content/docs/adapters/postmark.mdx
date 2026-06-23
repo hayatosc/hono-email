@@ -1,0 +1,43 @@
+---
+title: Postmark
+description: Send email through the Postmark API with hono-email.
+---
+
+`hono-email/postmark` provides `PostmarkAdapter` for the Postmark Email API.
+
+## Example
+
+```tsx
+import { Body, Html, Text, sendEmail } from 'hono-email'
+import { PostmarkAdapter } from 'hono-email/postmark'
+
+const receipt = await sendEmail({
+  adapter: PostmarkAdapter({
+    serverToken: process.env.POSTMARK_SERVER_TOKEN!,
+    messageStream: 'outbound',
+  }),
+  from: 'sender@example.com',
+  to: 'recipient@example.com',
+  subject: 'Welcome',
+  jsx: (
+    <Html>
+      <Body>
+        <Text>Hello from Postmark.</Text>
+      </Body>
+    </Html>
+  ),
+})
+```
+
+## Optional delivery controls
+
+| Option          | Description                                  |
+| --------------- | -------------------------------------------- |
+| `messageStream` | The Postmark message stream to send through. |
+| `tag`           | A tag for grouping and filtering messages.   |
+| `trackOpens`    | Enables open tracking.                       |
+| `trackLinks`    | Enables link tracking.                       |
+
+## Shared adapter features
+
+Like all provider adapters, Postmark supports `to`, `cc`, `bcc`, `replyTo`, custom `headers`, and `attachments`. Inline attachments use `cid` when the provider supports content IDs.

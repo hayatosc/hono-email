@@ -1,0 +1,47 @@
+---
+title: Markdown component
+description: Render GitHub Flavored Markdown as email-safe HTML.
+---
+
+`<Markdown>` converts GitHub Flavored Markdown into HTML and applies email-friendly inline styles by default. Sanitization is enabled by default.
+
+## Example
+
+```tsx
+import { Body, Head, Html, Markdown, render } from 'hono-email'
+
+const { html } = await render(
+  <Html lang="en">
+    <Head>
+      <title>Markdown example</title>
+    </Head>
+    <Body>
+      <Markdown
+        markdownContainerStyles={{
+          padding: '12px',
+          border: '1px solid #111827',
+        }}
+        markdownCustomStyles={{
+          h1: { color: '#dc2626' },
+          codeInline: {
+            backgroundColor: '#e5e7eb',
+            padding: '2px 4px',
+          },
+        }}
+      >{`
+# Markdown email
+
+| Name | Role |
+| --- | --- |
+| Taro | Builder |
+      `}</Markdown>
+    </Body>
+  </Html>,
+)
+```
+
+`<Markdown>` accepts inline style props (`markdownContainerStyles`, `markdownCustomStyles`) and Tailwind class props (`markdownContainerClassName`, `markdownCustomClassNames`). See the [API Reference](/api/core/index/functions/markdown/) for the full list of props.
+
+## Sanitization
+
+By default, `<Markdown>` sanitizes the generated HTML to remove content that is unsafe or unsupported in email clients. You can disable this, but it is not recommended.

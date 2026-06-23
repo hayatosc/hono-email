@@ -1,0 +1,37 @@
+---
+title: SendGrid
+description: Send email through the Twilio SendGrid API with hono-email.
+---
+
+`hono-email/sendgrid` provides `SendGridAdapter` for the Twilio SendGrid Mail Send API. The adapter sends JSON directly to `/v3/mail/send` and maps SendGrid error responses to `SendEmailReceipt`.
+
+## Example
+
+```tsx
+import { Body, Html, Text, sendEmail } from 'hono-email'
+import { SendGridAdapter } from 'hono-email/sendgrid'
+
+const receipt = await sendEmail({
+  adapter: SendGridAdapter({
+    apiKey: process.env.SENDGRID_API_KEY!,
+  }),
+  from: { address: 'sender@example.com', name: 'Sender' },
+  to: ['recipient@example.com'],
+  subject: 'Welcome',
+  jsx: (
+    <Html>
+      <Body>
+        <Text>Hello from SendGrid.</Text>
+      </Body>
+    </Html>
+  ),
+})
+```
+
+## Regional sending
+
+Use `apiBaseUrl: 'https://api.eu.sendgrid.com'` for SendGrid EU regional sending.
+
+## Shared adapter features
+
+Like all provider adapters, SendGrid supports `to`, `cc`, `bcc`, `replyTo`, custom `headers`, and `attachments`. Inline attachments use `cid` when the provider supports content IDs.

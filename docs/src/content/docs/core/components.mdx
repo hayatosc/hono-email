@@ -1,0 +1,66 @@
+---
+title: Components
+description: Email primitives and layout components provided by hono-email.
+---
+
+`hono-email` provides a set of email-oriented JSX primitives. These components render email-client-safe markup and apply sensible defaults for typography, spacing, and layout.
+
+## Document structure
+
+| Component | Purpose                                                                |
+| --------- | ---------------------------------------------------------------------- |
+| `Html`    | Root email document wrapper.                                           |
+| `Head`    | Container for `<title>`, `<style>`, `<Font>`, and other head elements. |
+| `Body`    | Outer body wrapper for the email content.                              |
+| `Preview` | Renders hidden preview text shown in email client inboxes.             |
+
+## Layout
+
+| Component        | Purpose                                                        |
+| ---------------- | -------------------------------------------------------------- |
+| `Container`      | Centers content and limits its maximum width.                  |
+| `Section`        | Logical content section.                                       |
+| `Box`            | Generic block container.                                       |
+| `Card`           | Bordered table container with configurable padding and colors. |
+| `Flex`           | Table-based layout. Does **not** use CSS `display: flex`.      |
+| `Grid`           | Table-based columns. Does **not** use CSS `display: grid`.     |
+| `Row` / `Column` | Table row and column helpers.                                  |
+| `Spacer`         | Explicit email-safe vertical or horizontal spacing.            |
+
+## Typography
+
+| Component           | Purpose                                                                                          |
+| ------------------- | ------------------------------------------------------------------------------------------------ |
+| `Text`              | Paragraph text. Defaults to `font-size: 14px`, `line-height: 24px`, and vertical `16px` margins. |
+| `Heading`           | Heading with shorthand margin props (`m`, `mx`, `my`, `mt`, `mr`, `mb`, `ml`).                   |
+| `Link`              | Anchor link. Defaults to `target="_blank"`.                                                      |
+| `Button`            | Call-to-action button. Defaults to `target="_blank"`.                                            |
+| `List` / `ListItem` | Ordered and unordered lists with email-oriented spacing defaults.                                |
+| `CodeInline`        | Inline code snippet.                                                                             |
+| `CodeBlock`         | Block code snippet.                                                                              |
+
+## Media and decoration
+
+| Component | Purpose                                                          |
+| --------- | ---------------------------------------------------------------- |
+| `Img`     | Image tag with email-safe defaults.                              |
+| `Hr`      | Horizontal divider. Defaults to `border-top: 1px solid #eaeaea`. |
+
+## Styling helpers
+
+| Component     | Purpose                                                                                                |
+| ------------- | ------------------------------------------------------------------------------------------------------ |
+| `Font`        | Renders `@font-face` and a fallback `font-family` declaration inside `<Head>`.                         |
+| `ColorScheme` | Declares light/dark color scheme preferences.                                                          |
+| `Tailwind`    | Applies Tailwind utility artifacts to children.                                                        |
+| `Conditional` | Renders Outlook conditional comments (`<!--[if mso]>...<![endif]-->`). Still validated in strict mode. |
+| `Markdown`    | Converts GFM into HTML and applies email-friendly inline styles.                                       |
+
+## Component notes
+
+- `Button` and `Link` default to `target="_blank"` so links open in a new tab in clients that support it.
+- `Preview` renders hidden preview text. Keep it short and place it immediately inside `<Body>`.
+- `Flex` renders table-based layout instead of CSS `display:flex` for broader client support.
+- `Grid` renders table-based columns instead of CSS `display:grid`.
+- `Card` renders a bordered table container with configurable padding and colors.
+- `Conditional` renders Outlook conditional comments and is still validated in strict mode.

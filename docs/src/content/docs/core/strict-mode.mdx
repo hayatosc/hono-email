@@ -1,0 +1,40 @@
+---
+title: Strict Mode
+description: How hono-email validates email markup and CSS.
+---
+
+Strict mode is enabled by default in `render()`. It is meant to fail early on markup and CSS that are risky for HTML email clients.
+
+## Errors
+
+The following cases cause `render()` to reject when `strict: true`:
+
+- Interactive or embedded tags such as `form`, `input`, `button` (the HTML element, not the `hono-email` component), `select`, `textarea`, `iframe`, `picture`, `source`, `svg`, and `script`.
+- `<a>` without an `href` attribute.
+- `<link rel="stylesheet">` tags.
+- `<style>` outside `<Head>`.
+- CSS declarations such as `display: grid`, `display: inline-grid`, and `display: inline-flex`.
+- Logical CSS properties such as `padding-inline`, `margin-block`, and `border-inline`.
+- Unsupported tags or CSS inside Outlook conditional comments (`<!--[if mso]>...<![endif]-->`).
+
+## Warnings
+
+The following cases are allowed but produce compatibility warnings on `RenderResult.warnings`:
+
+- `display: flex`
+- `position`
+- `object-fit` / `object-position`
+- `background-image`
+- `@font-face`
+- `@media`
+- `<img>` without an `alt` attribute
+
+Warnings are surfaced according to the [`onWarning`](/core/render/#warning-handling) option.
+
+## Disabling strict mode
+
+You can disable strict validation, but doing so means `hono-email` will no longer protect you from markup that is likely to break in email clients.
+
+```tsx
+const { html } = await render(<MyEmail />, { strict: false })
+```

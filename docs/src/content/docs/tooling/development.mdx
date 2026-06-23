@@ -1,0 +1,52 @@
+---
+title: Development
+description: Contribute to or develop hono-email locally.
+---
+
+This page covers how to work on `hono-email` itself.
+
+## Install dependencies
+
+```sh
+bun i
+```
+
+## Common tasks
+
+```sh
+# Build all packages
+bun run build
+
+# Run unit tests
+bun run test
+
+# Typecheck all packages
+bun run typecheck
+```
+
+## Local CI
+
+To run the full CI check (format, lint, typecheck, test, build) locally using [actrun](https://github.com/mizchi/actrun), run:
+
+```sh
+mise run ci
+```
+
+## Docs site
+
+The docs site is an Astro Starlight project located in `docs/`. From the workspace root:
+
+```sh
+bun run --cwd docs dev
+```
+
+Or from inside the `docs` directory:
+
+```sh
+cd docs
+bun run dev
+```
+
+## Credits
+
+This project is inspired by [react-email](https://github.com/resend/react-email) and [jsx-email](https://github.com/shellscape/jsx-email). Thanks to everyone involved in these projects.
