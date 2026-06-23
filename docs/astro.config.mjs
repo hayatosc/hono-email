@@ -18,6 +18,10 @@ export default defineConfig({
     starlight({
       title: 'hono-email',
       pagefind: false,
+      tableOfContents: {
+        minHeadingLevel: 2,
+        maxHeadingLevel: 4,
+      },
       social: [
         {
           icon: 'github',
@@ -38,17 +42,17 @@ export default defineConfig({
           label: 'Core',
           items: [
             { label: 'render()', slug: 'core/render' },
-            {
-              label: 'Components',
-              items: [
-                { label: 'Document Structure', slug: 'core/components/document-structure' },
-                { label: 'Layout', slug: 'core/components/layout' },
-                { label: 'Typography', slug: 'core/components/typography' },
-                { label: 'Styling Helpers', slug: 'core/components/styling-helpers' },
-              ],
-            },
             { label: 'Strict Mode', slug: 'core/strict-mode' },
             { label: 'Testing', slug: 'core/testing' },
+          ],
+        },
+        {
+          label: 'Components',
+          items: [
+            { label: 'Document Structure', slug: 'components/document-structure' },
+            { label: 'Layout', slug: 'components/layout' },
+            { label: 'Typography', slug: 'components/typography' },
+            { label: 'Styling Helpers', slug: 'components/styling-helpers' },
           ],
         },
         {
