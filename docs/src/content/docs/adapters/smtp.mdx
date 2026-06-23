@@ -113,4 +113,98 @@ try {
 - `envelope` lets you override the SMTP envelope sender and recipients without changing the visible `From` / `To` headers.
 - `to`, `cc`, `bcc`, and `envelope.to` accept single addresses or arrays. SMTP sends one `RCPT TO` command per resolved recipient and reports partial recipient rejection in `receipt.rejected`.
 
-See the [API Reference](/api/core/adapter/smtp/classes/smtptransport/) for the complete list of `SmtpTransport` options.
+## Options
+
+import { Badge } from '@astrojs/starlight/components';
+
+### `connector` <Badge text="Required" variant="caution" size="small" />
+
+**Type:** `SmtpConnector`
+
+Runtime-specific TCP socket connector. Import one for your runtime:
+
+| Entry point | Runtime |
+| --- | --- |
+| `hono-email/smtp/node` | Node.js |
+| `hono-email/smtp/bun` | Bun |
+| `hono-email/smtp/deno` | Deno |
+| `hono-email/smtp/cloudflare` | Cloudflare Workers |
+
+### `hostname` <Badge text="Required" variant="caution" size="small" />
+
+**Type:** `string`
+
+SMTP server hostname.
+
+### `port` <Badge text="Required" variant="caution" size="small" />
+
+**Type:** `number`
+
+SMTP server port. Use `587` for STARTTLS submission, `465` for implicit TLS.
+
+### `secure` <Badge text="Optional" variant="note" size="small" />
+
+**Type:** `boolean | 'starttls'` · **Default:** `'starttls'`
+
+TLS mode:
+
+| Value | Behavior |
+| --- | --- |
+| `'starttls'` | Upgrade to TLS after connecting (STARTTLS). |
+| `true` | Implicit TLS from the start of the connection. |
+| `false` | Plain-text connection with no TLS. |
+
+:::caution
+Bun's TCP connector does not support STARTTLS. Use `secure: true` with port `465` on Bun.
+:::
+
+### `auth` <Badge text="Optional" variant="note" size="small" />
+
+**Type:** `{ type?: 'plain' | 'login'; username: string; password: string }`
+
+SMTP authentication credentials. `type` defaults to `'plain'`.
+
+### `dkim` <Badge text="Optional" variant="note" size="small" />
+
+**Type:** `EmailDkimOptions`
+
+DKIM signing options. See [Email Types](/api/email-types/#emaildkimoptions).
+
+### `clientName` <Badge text="Optional" variant="note" size="small" />
+
+**Type:** `string`
+
+Hostname sent in the EHLO/HELO greeting. Defaults to the connector's resolved hostname.
+
+### `connectionTimeout` <Badge text="Optional" variant="note" size="small" />
+
+**Type:** `number`
+
+Milliseconds to wait for the TCP connection to be established.
+
+### `greetingTimeout` <Badge text="Optional" variant="note" size="small" />
+
+**Type:** `number`
+
+Milliseconds to wait for the server greeting after connecting.
+
+### `socketTimeout` <Badge text="Optional" variant="note" size="small" />
+
+**Type:** `number`
+
+Milliseconds of inactivity before the socket is considered timed out.
+
+### `pool` <Badge text="Optional" variant="note" size="small" />
+
+**Type:** `{ maxConnections?: number; maxMessages?: number }`
+
+Connection pool settings.
+
+- `maxConnections` — maximum concurrent SMTP sessions. Default: `1`.
+- `maxMessages` — retire a session after this many messages. Default: unlimited.
+
+### `limits.maxAttachmentSize` <Badge text="Optional" variant="note" size="small" />
+
+**Type:** `number`
+
+Maximum attachment size in bytes.

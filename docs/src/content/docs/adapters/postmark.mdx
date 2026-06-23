@@ -29,15 +29,62 @@ const receipt = await sendEmail({
 })
 ```
 
-## Optional delivery controls
-
-| Option          | Description                                  |
-| --------------- | -------------------------------------------- |
-| `messageStream` | The Postmark message stream to send through. |
-| `tag`           | A tag for grouping and filtering messages.   |
-| `trackOpens`    | Enables open tracking.                       |
-| `trackLinks`    | Enables link tracking.                       |
-
 ## Shared adapter features
 
 Like all provider adapters, Postmark supports `to`, `cc`, `bcc`, `replyTo`, custom `headers`, and `attachments`. Inline attachments use `cid` when the provider supports content IDs.
+
+## Options
+
+import { Badge } from '@astrojs/starlight/components';
+
+### `serverToken` <Badge text="Required" variant="caution" size="small" />
+
+**Type:** `string`
+
+Your Postmark server token.
+
+### `messageStream` <Badge text="Optional" variant="note" size="small" />
+
+**Type:** `string` · **Default:** `'outbound'`
+
+Postmark message stream ID.
+
+### `tag` <Badge text="Optional" variant="note" size="small" />
+
+**Type:** `string`
+
+Tag for grouping and filtering messages in the Postmark dashboard.
+
+### `trackOpens` <Badge text="Optional" variant="note" size="small" />
+
+**Type:** `boolean`
+
+Enable open tracking.
+
+### `trackLinks` <Badge text="Optional" variant="note" size="small" />
+
+**Type:** `'HtmlAndText' | 'HtmlOnly' | 'TextOnly' | 'None'`
+
+Enable link click tracking.
+
+### `apiBaseUrl` <Badge text="Optional" variant="note" size="small" />
+
+**Type:** `string`
+
+Override the Postmark API base URL.
+
+### `fetch` <Badge text="Optional" variant="note" size="small" />
+
+**Type:** `(input: string, init: RequestInit) => Promise<Response>`
+
+Custom `fetch` implementation. Defaults to `globalThis.fetch`.
+
+### `userAgent` <Badge text="Optional" variant="note" size="small" />
+
+**Type:** `string`
+
+### `limits.maxAttachmentSize` <Badge text="Optional" variant="note" size="small" />
+
+**Type:** `number`
+
+Maximum attachment size in bytes.

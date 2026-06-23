@@ -70,3 +70,63 @@ if (receipt.successful && receipt.queued) {
 ## Shared adapter features
 
 Like all provider adapters, Cloudflare Email supports `to`, `cc`, `bcc`, `replyTo`, custom `headers`, and `attachments`. Inline attachments use `cid` when the provider supports content IDs.
+
+## CloudflareEmailAdapter options
+
+import { Badge } from '@astrojs/starlight/components';
+
+### `connector` <Badge text="Required" variant="caution" size="small" />
+
+**Type:** `CloudflareEmailConnector`
+
+Cloudflare Email connector. Pass `WorkersConnector` when running inside a Cloudflare Worker, or `RESTConnector(...)` from other runtimes.
+
+### `limits.maxAttachmentSize` <Badge text="Optional" variant="note" size="small" />
+
+**Type:** `number`
+
+Maximum attachment size in bytes.
+
+## RESTConnector options
+
+```ts
+import { RESTConnector } from 'hono-email/cloudflare'
+```
+
+### `accountId` <Badge text="Required" variant="caution" size="small" />
+
+**Type:** `string`
+
+Your Cloudflare account ID.
+
+### `apiToken` <Badge text="Required" variant="caution" size="small" />
+
+**Type:** `string`
+
+Cloudflare API token with Email Routing write permission.
+
+### `apiBaseUrl` <Badge text="Optional" variant="note" size="small" />
+
+**Type:** `string`
+
+Override the Cloudflare API base URL.
+
+### `fetch` <Badge text="Optional" variant="note" size="small" />
+
+**Type:** `(input: string, init: RequestInit) => Promise<Response>`
+
+Custom `fetch` implementation.
+
+## WorkersConnector options
+
+```ts
+import WorkersConnector from 'hono-email/cloudflare/workers'
+```
+
+`WorkersConnector` is a value (not a factory function) — pass it directly.
+
+### `bindingName` <Badge text="Optional" variant="note" size="small" />
+
+**Type:** `string` · **Default:** `'EMAIL'`
+
+Name of the Email Workers binding in your `wrangler.toml`.

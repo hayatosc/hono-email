@@ -35,3 +35,35 @@ Use `apiBaseUrl: 'https://api.eu.sendgrid.com'` for SendGrid EU regional sending
 ## Shared adapter features
 
 Like all provider adapters, SendGrid supports `to`, `cc`, `bcc`, `replyTo`, custom `headers`, and `attachments`. Inline attachments use `cid` when the provider supports content IDs.
+
+## Options
+
+import { Badge } from '@astrojs/starlight/components';
+
+### `apiKey` <Badge text="Required" variant="caution" size="small" />
+
+**Type:** `string`
+
+Your SendGrid API key.
+
+### `apiBaseUrl` <Badge text="Optional" variant="note" size="small" />
+
+**Type:** `string` · **Default:** `'https://api.sendgrid.com'`
+
+Override the SendGrid API base URL. Use `'https://api.eu.sendgrid.com'` for EU regional sending.
+
+### `fetch` <Badge text="Optional" variant="note" size="small" />
+
+**Type:** `(input: string, init: RequestInit) => Promise<Response>`
+
+Custom `fetch` implementation. Defaults to `globalThis.fetch`.
+
+### `userAgent` <Badge text="Optional" variant="note" size="small" />
+
+**Type:** `string` · **Default:** `'hono-email'`
+
+### `limits.maxAttachmentSize` <Badge text="Optional" variant="note" size="small" />
+
+**Type:** `number`
+
+Maximum attachment size in bytes.

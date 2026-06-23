@@ -36,3 +36,41 @@ Use `apiBaseUrl: 'https://api.eu.mailgun.net'` for Mailgun EU domains.
 ## Shared adapter features
 
 Like all provider adapters, Mailgun supports `to`, `cc`, `bcc`, `replyTo`, custom `headers`, and `attachments`. Inline attachments use `cid` when the provider supports content IDs.
+
+## Options
+
+import { Badge } from '@astrojs/starlight/components';
+
+### `apiKey` <Badge text="Required" variant="caution" size="small" />
+
+**Type:** `string`
+
+Your Mailgun API key.
+
+### `domain` <Badge text="Required" variant="caution" size="small" />
+
+**Type:** `string`
+
+Your Mailgun sending domain (e.g. `'mg.example.com'`).
+
+### `apiBaseUrl` <Badge text="Optional" variant="note" size="small" />
+
+**Type:** `string` · **Default:** `'https://api.mailgun.net'`
+
+Override the Mailgun API base URL. Use `'https://api.eu.mailgun.net'` for EU domains.
+
+### `fetch` <Badge text="Optional" variant="note" size="small" />
+
+**Type:** `(input: string, init: RequestInit) => Promise<Response>`
+
+Custom `fetch` implementation. Defaults to `globalThis.fetch`.
+
+### `userAgent` <Badge text="Optional" variant="note" size="small" />
+
+**Type:** `string`
+
+### `limits.maxAttachmentSize` <Badge text="Optional" variant="note" size="small" />
+
+**Type:** `number`
+
+Maximum attachment size in bytes.

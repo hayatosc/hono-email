@@ -80,10 +80,7 @@ export default defineConfig({
         {
           label: 'API Reference',
           items: [
-            { label: 'render()', slug: 'api/render' },
-            { label: 'Components', slug: 'api/components' },
             { label: 'Email Types', slug: 'api/email-types' },
-            { label: 'Adapters', slug: 'api/adapters' },
           ],
         },
       ],
