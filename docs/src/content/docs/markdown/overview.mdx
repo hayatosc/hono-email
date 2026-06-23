@@ -3,6 +3,8 @@ title: Markdown component
 description: Render GitHub Flavored Markdown as email-safe HTML.
 ---
 
+import { Badge } from '@astrojs/starlight/components'
+
 `<Markdown>` converts GitHub Flavored Markdown into HTML and applies email-friendly inline styles by default. Sanitization is enabled by default.
 
 ## Example
@@ -48,21 +50,67 @@ By default, `<Markdown>` sanitizes the generated HTML to remove content that is 
 
 ## API Reference
 
-### Props
+---
 
-`<Markdown>` accepts the following props:
+## MarkdownProps
 
-| Prop                         | Type                       | Description                                                                                                                            |
-| :--------------------------- | :------------------------- | :------------------------------------------------------------------------------------------------------------------------------------- |
-| `children`                   | `string`                   | **Required.** The Markdown text content to render.                                                                                     |
-| `markdownStyleMode`          | `'inline' \| 'tailwind'`   | **Optional.** Style rendering mode. Defaults to `'inline'`. Set to `'tailwind'` to use utility classes (requires `<Tailwind>` parent). |
-| `markdownContainerClassName` | `string`                   | **Optional.** Class name applied to the generated Markdown root `<div>` container.                                                     |
-| `markdownContainerStyles`    | `JSX.CSSProperties`        | **Optional.** Inline styles applied to the generated Markdown root `<div>` container.                                                  |
-| `markdownCustomClassNames`   | `MarkdownCustomClassNames` | **Optional.** Custom class names mapped to specific Markdown elements.                                                                 |
-| `markdownCustomStyles`       | `MarkdownCustomStyles`     | **Optional.** Custom inline styles mapped to specific Markdown elements.                                                               |
-| `sanitize`                   | `boolean`                  | **Optional.** Whether to sanitize generated HTML. Defaults to `true`.                                                                  |
+```ts
+export type MarkdownProps = {
+  children: string
+  markdownStyleMode?: 'inline' | 'tailwind'
+  markdownContainerClassName?: string
+  markdownContainerStyles?: JSX.CSSProperties
+  markdownCustomClassNames?: MarkdownCustomClassNames
+  markdownCustomStyles?: MarkdownCustomStyles
+  sanitize?: boolean
+}
+```
 
-### Element keys
+#### `children` <Badge text="Required" variant="caution" size="small" />
+
+**Type:** `string`
+
+The Markdown text content to render.
+
+#### `markdownStyleMode` <Badge text="Optional" variant="note" size="small" />
+
+**Type:** `'inline' | 'tailwind'`
+
+Style rendering mode. Defaults to `'inline'`. Set to `'tailwind'` to use utility classes (requires `<Tailwind>` parent).
+
+#### `markdownContainerClassName` <Badge text="Optional" variant="note" size="small" />
+
+**Type:** `string`
+
+Class name applied to the generated Markdown root `<div>` container.
+
+#### `markdownContainerStyles` <Badge text="Optional" variant="note" size="small" />
+
+**Type:** `JSX.CSSProperties`
+
+Inline styles applied to the generated Markdown root `<div>` container.
+
+#### `markdownCustomClassNames` <Badge text="Optional" variant="note" size="small" />
+
+**Type:** `MarkdownCustomClassNames`
+
+Custom class names mapped to specific Markdown elements. See [Element keys](#element-keys) for supported target elements.
+
+#### `markdownCustomStyles` <Badge text="Optional" variant="note" size="small" />
+
+**Type:** `MarkdownCustomStyles`
+
+Custom inline styles mapped to specific Markdown elements. See [Element keys](#element-keys) for supported target elements.
+
+#### `sanitize` <Badge text="Optional" variant="note" size="small" />
+
+**Type:** `boolean`
+
+Whether to sanitize generated HTML. Defaults to `true`.
+
+---
+
+## Element keys
 
 The keys used in `markdownCustomClassNames` and `markdownCustomStyles` correspond to the following HTML elements:
 

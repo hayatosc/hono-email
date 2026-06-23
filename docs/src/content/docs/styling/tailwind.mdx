@@ -3,7 +3,7 @@ title: Tailwind
 description: Use Tailwind utility classes in hono-email templates.
 ---
 
-import { Tabs, TabItem } from '@astrojs/starlight/components'
+import { Tabs, TabItem, Badge } from '@astrojs/starlight/components'
 
 If you are using the `<Tailwind>` component, we recommend using a bundler together with the `EmailTailwind` plugin from `@hono-email/tailwind-plugin`.
 
@@ -138,11 +138,23 @@ const { html } = await render(
 
 ## API Reference
 
-### Props
+## TailwindProps
 
-`<Tailwind>` accepts the following props:
+```ts
+export type TailwindProps = {
+  artifact?: TailwindBuildArtifact
+  children: Child
+}
+```
 
-| Prop       | Type                    | Description                                                                                                                                                                         |
-| :--------- | :---------------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `artifact` | `TailwindBuildArtifact` | **Optional.** Build artifact containing parsed utility CSS rules. When not using the bundler plugin, you must pass this artifact explicitly using `buildTailwindArtifactFromCss()`. |
-| `children` | `Child`                 | The child elements to style.                                                                                                                                                        |
+#### `artifact` <Badge text="Optional" variant="note" size="small" />
+
+**Type:** `TailwindBuildArtifact`
+
+Build artifact containing parsed utility CSS rules. When not using the bundler plugin, you must pass this artifact explicitly using `buildTailwindArtifactFromCss()`.
+
+#### `children` <Badge text="Required" variant="caution" size="small" />
+
+**Type:** `Child`
+
+The child elements to apply Tailwind styling to.
