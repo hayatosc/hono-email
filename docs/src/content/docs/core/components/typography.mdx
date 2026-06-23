@@ -3,12 +3,23 @@ title: Typography
 description: Typography components like Text, Heading, Link, Button, Img, Hr, CodeInline, CodeBlock, List, and ListItem.
 ---
 
-import { Badge } from '@astrojs/starlight/components';
+import { Badge } from '@astrojs/starlight/components'
 
 These components handle text rendering and other common content elements. They are imported from `hono-email`:
 
 ```tsx
-import { Text, Heading, Link, Button, Img, Hr, CodeInline, CodeBlock, List, ListItem } from 'hono-email'
+import {
+  Text,
+  Heading,
+  Link,
+  Button,
+  Img,
+  Hr,
+  CodeInline,
+  CodeBlock,
+  List,
+  ListItem,
+} from 'hono-email'
 ```
 
 ---
@@ -22,9 +33,7 @@ Paragraph element with email-friendly defaults.
 Accepts all standard `<p>` attributes and `style` to override defaults.
 
 ```tsx
-<Text style={{ color: '#374151', fontSize: '16px' }}>
-  Thanks for signing up.
-</Text>
+<Text style={{ color: '#374151', fontSize: '16px' }}>Thanks for signing up.</Text>
 ```
 
 ## `<Heading>`
@@ -124,7 +133,9 @@ Inline code span.
 **Defaults:** `font-family: monospace`, `background: #f3f4f6`, `font-size: 13px`, `padding: 2px 4px`
 
 ```tsx
-<Text>Run <CodeInline>npm install hono-email</CodeInline> to get started.</Text>
+<Text>
+  Run <CodeInline>npm install hono-email</CodeInline> to get started.
+</Text>
 ```
 
 ## `<CodeBlock>`

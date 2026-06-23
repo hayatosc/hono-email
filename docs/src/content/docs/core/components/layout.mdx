@@ -3,7 +3,7 @@ title: Layout
 description: Layout components like Container, Section, Row, Column, Box, Spacer, Flex, Grid, and Card.
 ---
 
-import { Badge } from '@astrojs/starlight/components';
+import { Badge } from '@astrojs/starlight/components'
 
 These components help you structure and lay out your emails using email-safe tables. They are imported from `hono-email`:
 
@@ -136,9 +136,15 @@ Space between grid cells. Numbers are converted to pixels.
 
 ```tsx
 <Grid columns={3} gap={16}>
-  <Card><Text>Feature A</Text></Card>
-  <Card><Text>Feature B</Text></Card>
-  <Card><Text>Feature C</Text></Card>
+  <Card>
+    <Text>Feature A</Text>
+  </Card>
+  <Card>
+    <Text>Feature B</Text>
+  </Card>
+  <Card>
+    <Text>Feature C</Text>
+  </Card>
 </Grid>
 ```
 

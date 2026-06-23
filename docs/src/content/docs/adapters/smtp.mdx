@@ -115,7 +115,7 @@ try {
 
 ## Options
 
-import { Badge } from '@astrojs/starlight/components';
+import { Badge } from '@astrojs/starlight/components'
 
 ### `connector` <Badge text="Required" variant="caution" size="small" />
 
@@ -123,11 +123,11 @@ import { Badge } from '@astrojs/starlight/components';
 
 Runtime-specific TCP socket connector. Import one for your runtime:
 
-| Entry point | Runtime |
-| --- | --- |
-| `hono-email/smtp/node` | Node.js |
-| `hono-email/smtp/bun` | Bun |
-| `hono-email/smtp/deno` | Deno |
+| Entry point                  | Runtime            |
+| ---------------------------- | ------------------ |
+| `hono-email/smtp/node`       | Node.js            |
+| `hono-email/smtp/bun`        | Bun                |
+| `hono-email/smtp/deno`       | Deno               |
 | `hono-email/smtp/cloudflare` | Cloudflare Workers |
 
 ### `hostname` <Badge text="Required" variant="caution" size="small" />
@@ -148,11 +148,11 @@ SMTP server port. Use `587` for STARTTLS submission, `465` for implicit TLS.
 
 TLS mode:
 
-| Value | Behavior |
-| --- | --- |
-| `'starttls'` | Upgrade to TLS after connecting (STARTTLS). |
-| `true` | Implicit TLS from the start of the connection. |
-| `false` | Plain-text connection with no TLS. |
+| Value        | Behavior                                       |
+| ------------ | ---------------------------------------------- |
+| `'starttls'` | Upgrade to TLS after connecting (STARTTLS).    |
+| `true`       | Implicit TLS from the start of the connection. |
+| `false`      | Plain-text connection with no TLS.             |
 
 :::caution
 Bun's TCP connector does not support STARTTLS. Use `secure: true` with port `465` on Bun.

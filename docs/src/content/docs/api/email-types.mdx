@@ -3,7 +3,7 @@ title: Email Types
 description: API reference for email message types used across adapters.
 ---
 
-import { Badge } from '@astrojs/starlight/components';
+import { Badge } from '@astrojs/starlight/components'
 
 These types are exported from `hono-email/adapter` and re-exported from each adapter entry point.
 
@@ -166,9 +166,7 @@ if (!receipt.successful) {
 ## EmailAddress
 
 ```ts
-type EmailAddress =
-  | string
-  | { address: string; name?: string }
+type EmailAddress = string | { address: string; name?: string }
 ```
 
 Pass a plain string or an object with `address` and an optional display `name`.

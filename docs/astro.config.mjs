@@ -87,9 +87,7 @@ export default defineConfig({
         },
         {
           label: 'API Reference',
-          items: [
-            { label: 'Email Types', slug: 'api/email-types' },
-          ],
+          items: [{ label: 'Email Types', slug: 'api/email-types' }],
         },
       ],
     }),

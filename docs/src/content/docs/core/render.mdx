@@ -3,7 +3,7 @@ title: render()
 description: The primary runtime API for rendering email from hono/jsx.
 ---
 
-import { Badge } from '@astrojs/starlight/components';
+import { Badge } from '@astrojs/starlight/components'
 
 `render()` turns a `hono/jsx` tree into HTML email, plain text, and a list of warnings.
 
@@ -21,7 +21,7 @@ const { html, text, warnings } = await render(
     <Body>
       <Text>Hello from hono-email.</Text>
     </Body>
-  </Html>
+  </Html>,
 )
 ```
 
@@ -37,11 +37,11 @@ type RenderResult = {
 }
 ```
 
-| Property | Description |
-| --- | --- |
-| `html` | Rendered HTML email body including the configured doctype. |
-| `text` | Plain-text version derived from the HTML. |
-| `warnings` | Compatibility warnings collected during rendering. |
+| Property   | Description                                                |
+| ---------- | ---------------------------------------------------------- |
+| `html`     | Rendered HTML email body including the configured doctype. |
+| `text`     | Plain-text version derived from the HTML.                  |
+| `warnings` | Compatibility warnings collected during rendering.         |
 
 ## Options
 
@@ -57,12 +57,12 @@ Enable strict email validation. When `true`, `render()` throws on invalid markup
 
 Controls how compatibility warnings are handled:
 
-| Value | Behavior |
-| --- | --- |
-| `'warn'` | Log each warning with `console.warn` and collect in `warnings`. |
-| `'error'` | Throw an aggregated error when any warning is collected. |
-| `'silent'` | Collect warnings without logging. |
-| `callback` | Call a custom function for each warning. |
+| Value      | Behavior                                                        |
+| ---------- | --------------------------------------------------------------- |
+| `'warn'`   | Log each warning with `console.warn` and collect in `warnings`. |
+| `'error'`  | Throw an aggregated error when any warning is collected.        |
+| `'silent'` | Collect warnings without logging.                               |
+| `callback` | Call a custom function for each warning.                        |
 
 ```tsx
 const { html, warnings } = await render(<WelcomeEmail />, {
@@ -112,11 +112,11 @@ How headings are rendered in plain text. `'uppercase'` converts heading text to 
 
 How links are rendered in plain text:
 
-| Value | Output |
-| --- | --- |
+| Value             | Output                            |
+| ----------------- | --------------------------------- |
 | `'text-and-href'` | `Link text (https://example.com)` |
-| `'text-only'` | `Link text` |
-| `'href-only'` | `https://example.com` |
+| `'text-only'`     | `Link text`                       |
+| `'href-only'`     | `https://example.com`             |
 
 ```tsx
 const { html, text } = await render(<WelcomeEmail />, {
@@ -132,8 +132,10 @@ const { html, text } = await render(<WelcomeEmail />, {
 `render()` always expands three-digit hex colors to six digits inside `style` attributes and `<style>` blocks:
 
 ```css
-/* input */  color: #abc;
-/* output */ color: #aabbcc;
+/* input */
+color: #abc;
+/* output */
+color: #aabbcc;
 ```
 
 ## `sendEmail()`

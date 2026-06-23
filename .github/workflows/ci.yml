@@ -93,8 +93,11 @@ jobs:
       - name: Test
         run: bun run test
 
-      - name: Build
+      - name: Build packages
         run: bun run build
+
+      - name: Build docs
+        run: bun run --filter 'hono-email-docs' build
 
       - name: Runtime Test (Node)
         if: steps.filter.outputs.node == 'true'
