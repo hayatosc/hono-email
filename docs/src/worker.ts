@@ -140,7 +140,7 @@ app.all('*', async (c) => {
     (pathname.startsWith('/@fs/') ||
       pathname.startsWith('/@id/') ||
       pathname.startsWith('/@vite/') ||
-      pathname.startsWith('/node_modules/') ||
+      pathname.includes('/node_modules/') ||
       pathname.startsWith('/src/') ||
       pathname.startsWith('/_astro/'))
   ) {
