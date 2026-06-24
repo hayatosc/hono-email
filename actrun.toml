@@ -3,4 +3,4 @@ include_dirty = true
 local_skip_actions = ["actions/checkout", "jdx/mise-action"]
 
 [override."dorny/paths-filter"]
-run = "printf 'node=true\ndeno=true\nbun=true\ncloudflare=true\n' >> $GITHUB_OUTPUT"
+run = "printf 'node=true\ndeno=true\nbun=true\ncloudflare=true\ndocs=true\n' >> $GITHUB_OUTPUT"
