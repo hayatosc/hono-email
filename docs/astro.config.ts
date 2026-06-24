@@ -3,6 +3,7 @@ import starlight from '@astrojs/starlight'
 import { defineConfig } from 'astro/config'
 
 import { markdownExport } from './src/integrations/markdown-export'
+import { prerenderDocs } from './src/integrations/prerender-docs'
 
 // https://astro.build/config
 export default defineConfig({
@@ -10,6 +11,7 @@ export default defineConfig({
   adapter: cloudflare({ prerenderEnvironment: 'workerd' }),
   integrations: [
     markdownExport(),
+    prerenderDocs(),
     starlight({
       title: 'hono-email',
       pagefind: false,

@@ -20,53 +20,6 @@ function addVaryAccept(headers: Headers): void {
   }
 }
 
-interface AcceptEntry {
-  type: string
-  q: number
-}
-
-function matchAccept(entries: AcceptEntry[]): string {
-  let best = ''
-  let bestQ = -1
-  let bestPos = Infinity
-
-  for (const candidate of PRODUCES) {
-    let matchedQ = -1
-    let matchedPos = Infinity
-    let matchedSpec = -1
-
-    for (let i = 0; i < entries.length; i++) {
-      const entry = entries[i]
-      if (entry.q <= 0) continue
-
-      let spec = -1
-      if (entry.type === candidate) {
-        spec = 2
-      } else if (entry.type === `${candidate.split('/')[0]}/*`) {
-        spec = 1
-      } else if (entry.type === '*/*') {
-        spec = 0
-      }
-      if (spec < 0) continue
-
-      if (spec > matchedSpec || (spec === matchedSpec && i < matchedPos)) {
-        matchedSpec = spec
-        matchedPos = i
-        matchedQ = entry.q
-      }
-    }
-
-    if (matchedSpec < 0) continue
-    if (matchedQ > bestQ || (matchedQ === bestQ && matchedPos < bestPos)) {
-      best = candidate
-      bestQ = matchedQ
-      bestPos = matchedPos
-    }
-  }
-
-  return best
-}
-
 const app = new Hono<{ Bindings: Env }>()
 
 // Content negotiation runs before `handle()`. This is the Cloudflare adapter's
@@ -82,7 +35,6 @@ app.use(async (c, next) => {
     header: 'Accept',
     supports: [...PRODUCES],
     default: DEFAULT,
-    match: (entries) => matchAccept(entries),
   })
 
   if (pathname.endsWith('.md')) {

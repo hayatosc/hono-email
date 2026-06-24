@@ -36,4 +36,4 @@ const { html } = await render(
 
 ## How it works
 
-`hono/css` generates scoped class names at runtime. `hono-email` inspects those class names, resolves the corresponding CSS rules, and inlines them as `style` attributes on the rendered output. Styles that cannot be safely inlined for email clients are reported as warnings according to your [`onWarning`](/core/render/#warning-handling) setting.
+`hono/css` generates scoped class names at runtime. `hono-email` inspects those class names, resolves the corresponding CSS rules, and inlines them as `style` attributes on the rendered output. Styles that cannot be safely inlined for email clients are reported as warnings according to your [`onWarning`](/core/render/#onwarning) setting.
