@@ -27,6 +27,7 @@ export default defineConfig({
     markdownExport(),
     starlight({
       title: 'hono-email',
+      disable404Route: true,
       pagefind: false,
       customCss: ['./src/styles/custom.css'],
       components: {

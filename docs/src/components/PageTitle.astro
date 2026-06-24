@@ -3,7 +3,7 @@ import Default from '@astrojs/starlight/components/PageTitle.astro';
 
 const { url } = Astro;
 const pathname = url.pathname.replace(/\/$/, '');
-const markdownUrl = `${pathname}.md`;
+const markdownUrl = pathname ? `${pathname}.md` : '/index.md';
 ---
 
 <Default {...Astro.props} />

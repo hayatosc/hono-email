@@ -4,9 +4,6 @@ dist/
 # generated types
 .astro/
 
-# generated markdown for AI agents
-src/generated/
-
 # dependencies
 node_modules/
 
