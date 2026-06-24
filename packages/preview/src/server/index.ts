@@ -247,7 +247,7 @@ export async function startPreviewServer(options: PreviewServerOptions): Promise
         allow: [rootDir, templateDir, clientDir, resolvePackageRoot()],
       },
     },
-    ssr: { noExternal: true },
+    ssr: { noExternal: ['hono-email', /@hono-email/] },
     appType: 'custom',
     logLevel: 'info',
     plugins,
@@ -324,6 +324,9 @@ export async function startPreviewServer(options: PreviewServerOptions): Promise
     close: async () => {
       for (const res of liveClients) res.end()
       liveClients.clear()
+      if ('closeAllConnections' in server && typeof server.closeAllConnections === 'function') {
+        server.closeAllConnections()
+      }
       await new Promise<void>((resolve, reject) => {
         server.close((err) => {
           if (err) {
