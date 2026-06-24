@@ -1,17 +1,30 @@
 import cloudflare from '@astrojs/cloudflare'
 import starlight from '@astrojs/starlight'
-import { defineConfig } from 'astro/config'
+import { defineConfig, fontProviders, svgoOptimizer } from 'astro/config'
 
 import { markdownExport } from './src/integrations/markdown-export'
-import { prerenderDocs } from './src/integrations/prerender-docs'
 
 // https://astro.build/config
 export default defineConfig({
-  output: 'server',
-  adapter: cloudflare({ prerenderEnvironment: 'workerd' }),
+  fonts: [
+    {
+      provider: fontProviders.google(),
+      name: 'Inter',
+      cssVariable: '--sl-font',
+    },
+    {
+      provider: fontProviders.google(),
+      name: 'JetBrains Mono',
+      cssVariable: '--sl-font-mono',
+    },
+  ],
+  output: 'static',
+  adapter: cloudflare(),
+  experimental: {
+    svgOptimizer: svgoOptimizer(),
+  },
   integrations: [
     markdownExport(),
-    prerenderDocs(),
     starlight({
       title: 'hono-email',
       pagefind: false,
