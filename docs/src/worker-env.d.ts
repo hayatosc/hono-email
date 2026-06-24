@@ -5,7 +5,11 @@
 //
 // No bindings are declared in wrangler.jsonc; the ASSETS binding is injected by
 // the Astro Cloudflare adapter at build time and used only inside `handle()`.
-interface Env {}
+interface Env {
+  ASSETS: {
+    fetch(request: Request | string, requestInit?: RequestInit): Response | Promise<Response>
+  }
+}
 
 interface ExecutionContext {
   waitUntil(promise: Promise<unknown>): void

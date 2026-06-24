@@ -6,6 +6,18 @@ import {
   resolveEmailAttachmentsSync,
 } from './attachment'
 
+const first = <T>(arr: T[]): T => {
+  const item = arr[0]
+  if (item === undefined) throw new Error('Expected array to have at least one element')
+  return item
+}
+
+const at = <T>(arr: T[], index: number): T => {
+  const item = arr[index]
+  if (item === undefined) throw new Error(`Expected array to have element at index ${index}`)
+  return item
+}
+
 type MockFetch = {
   (input: string | URL | Request, init?: RequestInit): Promise<Response>
   preconnect: (
@@ -56,14 +68,14 @@ describe('decodeStringContent via resolveEmailAttachments', () => {
     const result = await resolveEmailAttachments([
       { content: 'SGVsbG8=', encoding: 'base64', filename: 'test.txt' },
     ])
-    expect(new TextDecoder().decode(result[0]!.content)).toBe('Hello')
+    expect(new TextDecoder().decode(first(result).content)).toBe('Hello')
   })
 
   test('base64 with whitespace decodes correctly', async () => {
     const result = await resolveEmailAttachments([
       { content: 'SGVs\nbG8=', encoding: 'base64', filename: 'test.txt' },
     ])
-    expect(new TextDecoder().decode(result[0]!.content)).toBe('Hello')
+    expect(new TextDecoder().decode(first(result).content)).toBe('Hello')
   })
 
   test('invalid base64 throws', async () => {
@@ -78,14 +90,14 @@ describe('decodeStringContent via resolveEmailAttachments', () => {
     const result = await resolveEmailAttachments([
       { content: '48656c6c6f', encoding: 'hex', filename: 'test.txt' },
     ])
-    expect(new TextDecoder().decode(result[0]!.content)).toBe('Hello')
+    expect(new TextDecoder().decode(first(result).content)).toBe('Hello')
   })
 
   test('hex with whitespace decodes correctly', async () => {
     const result = await resolveEmailAttachments([
       { content: '4865 6c6c 6f', encoding: 'hex', filename: 'test.txt' },
     ])
-    expect(new TextDecoder().decode(result[0]!.content)).toBe('Hello')
+    expect(new TextDecoder().decode(first(result).content)).toBe('Hello')
   })
 
   test('invalid hex characters throw', async () => {
@@ -102,103 +114,103 @@ describe('decodeStringContent via resolveEmailAttachments', () => {
 
   test('no encoding treats content as UTF-8', async () => {
     const result = await resolveEmailAttachments([{ content: 'Hello UTF-8', filename: 'test.txt' }])
-    expect(new TextDecoder().decode(result[0]!.content)).toBe('Hello UTF-8')
+    expect(new TextDecoder().decode(first(result).content)).toBe('Hello UTF-8')
   })
 
   test('utf8 encoding treats content as UTF-8', async () => {
     const result = await resolveEmailAttachments([
       { content: 'Hello', encoding: 'utf8', filename: 'test.txt' },
     ])
-    expect(new TextDecoder().decode(result[0]!.content)).toBe('Hello')
+    expect(new TextDecoder().decode(first(result).content)).toBe('Hello')
   })
 })
 
 describe('inferContentType', () => {
   test('infers jpg as image/jpeg', async () => {
     const result = await resolveEmailAttachments([{ content: 'x', filename: 'photo.jpg' }])
-    expect(result[0]!.contentType).toBe('image/jpeg')
+    expect(first(result).contentType).toBe('image/jpeg')
   })
 
   test('infers png as image/png', async () => {
     const result = await resolveEmailAttachments([{ content: 'x', filename: 'image.png' }])
-    expect(result[0]!.contentType).toBe('image/png')
+    expect(first(result).contentType).toBe('image/png')
   })
 
   test('infers pdf as application/pdf', async () => {
     const result = await resolveEmailAttachments([{ content: 'x', filename: 'doc.pdf' }])
-    expect(result[0]!.contentType).toBe('application/pdf')
+    expect(first(result).contentType).toBe('application/pdf')
   })
 
   test('infers html as text/html', async () => {
     const result = await resolveEmailAttachments([{ content: 'x', filename: 'page.html' }])
-    expect(result[0]!.contentType).toBe('text/html')
+    expect(first(result).contentType).toBe('text/html')
   })
 
   test('infers json as application/json', async () => {
     const result = await resolveEmailAttachments([{ content: 'x', filename: 'data.json' }])
-    expect(result[0]!.contentType).toBe('application/json')
+    expect(first(result).contentType).toBe('application/json')
   })
 
   test('unknown extension falls back to application/octet-stream', async () => {
     const result = await resolveEmailAttachments([{ content: 'x', filename: 'file.xyz' }])
-    expect(result[0]!.contentType).toBe('application/octet-stream')
+    expect(first(result).contentType).toBe('application/octet-stream')
   })
 
   test('no extension falls back to application/octet-stream', async () => {
     const result = await resolveEmailAttachments([{ content: 'x', filename: 'noext' }])
-    expect(result[0]!.contentType).toBe('application/octet-stream')
+    expect(first(result).contentType).toBe('application/octet-stream')
   })
 
   test('extension at end of string with path', async () => {
     const result = await resolveEmailAttachments([{ content: 'x', path: '/tmp/file.csv' }])
-    expect(result[0]!.contentType).toBe('text/csv')
+    expect(first(result).contentType).toBe('text/csv')
   })
 
   test('explicit contentType takes precedence', async () => {
     const result = await resolveEmailAttachments([
       { content: 'x', filename: 'file.jpg', contentType: 'custom/type' },
     ])
-    expect(result[0]!.contentType).toBe('custom/type')
+    expect(first(result).contentType).toBe('custom/type')
   })
 })
 
 describe('filenameFromPath', () => {
   test('unix path extracts filename', async () => {
     const result = await resolveEmailAttachments([{ content: 'x', path: '/tmp/docs/report.pdf' }])
-    expect(result[0]!.filename).toBe('report.pdf')
+    expect(first(result).filename).toBe('report.pdf')
   })
 
   test('windows path extracts filename', async () => {
     const result = await resolveEmailAttachments([
       { content: 'x', path: 'C:\\Users\\docs\\report.pdf' },
     ])
-    expect(result[0]!.filename).toBe('report.pdf')
+    expect(first(result).filename).toBe('report.pdf')
   })
 
   test('path with query string strips query', async () => {
     const result = await resolveEmailAttachments([
       { content: 'x', path: 'https://example.com/file.pdf?token=abc' },
     ])
-    expect(result[0]!.filename).toBe('file.pdf')
+    expect(first(result).filename).toBe('file.pdf')
   })
 
   test('path with hash strips hash', async () => {
     const result = await resolveEmailAttachments([
       { content: 'x', path: 'https://example.com/file.pdf#section' },
     ])
-    expect(result[0]!.filename).toBe('file.pdf')
+    expect(first(result).filename).toBe('file.pdf')
   })
 
   test('empty path yields no filename', async () => {
     const result = await resolveEmailAttachments([{ content: 'x', path: '' }])
-    expect(result[0]!.filename).toBeUndefined()
+    expect(first(result).filename).toBeUndefined()
   })
 
   test('explicit filename overrides path', async () => {
     const result = await resolveEmailAttachments([
       { content: 'x', path: '/tmp/original.pdf', filename: 'custom.pdf' },
     ])
-    expect(result[0]!.filename).toBe('custom.pdf')
+    expect(first(result).filename).toBe('custom.pdf')
   })
 })
 
@@ -206,13 +218,13 @@ describe('resolveEmailAttachments - content types', () => {
   test('Uint8Array content', async () => {
     const bytes = new Uint8Array([1, 2, 3])
     const result = await resolveEmailAttachments([{ content: bytes, filename: 'test.bin' }])
-    expect(result[0]!.content).toEqual(bytes)
+    expect(first(result).content).toEqual(bytes)
   })
 
   test('ArrayBuffer content', async () => {
     const buffer = new Uint8Array([1, 2, 3]).buffer
     const result = await resolveEmailAttachments([{ content: buffer, filename: 'test.bin' }])
-    expect(result[0]!.content).toEqual(new Uint8Array([1, 2, 3]))
+    expect(first(result).content).toEqual(new Uint8Array([1, 2, 3]))
   })
 
   test('ReadableStream content', async () => {
@@ -223,7 +235,7 @@ describe('resolveEmailAttachments - content types', () => {
       },
     })
     const result = await resolveEmailAttachments([{ content: stream, filename: 'test.txt' }])
-    expect(new TextDecoder().decode(result[0]!.content)).toBe('Hello')
+    expect(new TextDecoder().decode(first(result).content)).toBe('Hello')
   })
 
   test('ReadableStream with multiple chunks', async () => {
@@ -235,33 +247,33 @@ describe('resolveEmailAttachments - content types', () => {
       },
     })
     const result = await resolveEmailAttachments([{ content: stream, filename: 'test.txt' }])
-    expect(new TextDecoder().decode(result[0]!.content)).toBe('Hello')
+    expect(new TextDecoder().decode(first(result).content)).toBe('Hello')
   })
 })
 
 describe('resolveEmailAttachments - data URI', () => {
   test('plain text data URI', async () => {
     const result = await resolveEmailAttachments([{ path: 'data:text/plain,Hello%20World' }])
-    expect(new TextDecoder().decode(result[0]!.content)).toBe('Hello World')
-    expect(result[0]!.contentType).toBe('text/plain')
+    expect(new TextDecoder().decode(first(result).content)).toBe('Hello World')
+    expect(first(result).contentType).toBe('text/plain')
   })
 
   test('base64 data URI', async () => {
     const result = await resolveEmailAttachments([{ path: 'data:image/png;base64,SGVsbG8=' }])
-    expect(new TextDecoder().decode(result[0]!.content)).toBe('Hello')
-    expect(result[0]!.contentType).toBe('image/png')
+    expect(new TextDecoder().decode(first(result).content)).toBe('Hello')
+    expect(first(result).contentType).toBe('image/png')
   })
 
   test('data URI without content type', async () => {
     const result = await resolveEmailAttachments([{ path: 'data:;base64,SGVsbG8=' }])
-    expect(new TextDecoder().decode(result[0]!.content)).toBe('Hello')
-    expect(result[0]!.contentType).toBe('application/octet-stream')
+    expect(new TextDecoder().decode(first(result).content)).toBe('Hello')
+    expect(first(result).contentType).toBe('application/octet-stream')
   })
 
   test('data URI without base64 flag', async () => {
     const result = await resolveEmailAttachments([{ path: 'data:text/plain,plain text' }])
-    expect(new TextDecoder().decode(result[0]!.content)).toBe('plain text')
-    expect(result[0]!.contentType).toBe('text/plain')
+    expect(new TextDecoder().decode(first(result).content)).toBe('plain text')
+    expect(first(result).contentType).toBe('text/plain')
   })
 })
 
@@ -276,8 +288,8 @@ describe('resolveEmailAttachments - fetch', () => {
     })
     try {
       const result = await resolveEmailAttachments([{ path: 'http://example.com/file.txt' }])
-      expect(new TextDecoder().decode(result[0]!.content)).toBe('fetched content')
-      expect(result[0]!.contentType).toBe('text/plain')
+      expect(new TextDecoder().decode(first(result).content)).toBe('fetched content')
+      expect(first(result).contentType).toBe('text/plain')
     } finally {
       globalThis.fetch = originalFetch
     }
@@ -293,7 +305,7 @@ describe('resolveEmailAttachments - fetch', () => {
     })
     try {
       const result = await resolveEmailAttachments([{ path: 'https://example.com/file.pdf' }])
-      expect(new TextDecoder().decode(result[0]!.content)).toBe('secure content')
+      expect(new TextDecoder().decode(first(result).content)).toBe('secure content')
     } finally {
       globalThis.fetch = originalFetch
     }
@@ -309,7 +321,7 @@ describe('resolveEmailAttachments - fetch', () => {
     })
     try {
       const result = await resolveEmailAttachments([{ href: 'https://example.com/file.txt' }])
-      expect(new TextDecoder().decode(result[0]!.content)).toBe('href content')
+      expect(new TextDecoder().decode(first(result).content)).toBe('href content')
     } finally {
       globalThis.fetch = originalFetch
     }
@@ -382,7 +394,7 @@ describe('resolveEmailAttachments - fetch', () => {
     })
     try {
       const result = await resolveEmailAttachments([{ href: 'https://example.com/empty' }])
-      expect(result[0]!.content).toEqual(new Uint8Array(0))
+      expect(first(result).content).toEqual(new Uint8Array(0))
     } finally {
       globalThis.fetch = originalFetch
     }
@@ -457,37 +469,37 @@ describe('resolveEmailAttachments - maxAttachmentSize', () => {
     const result = await resolveEmailAttachments([{ content: 'Hi', filename: 'test.txt' }], {
       maxAttachmentSize: 100,
     })
-    expect(new TextDecoder().decode(result[0]!.content)).toBe('Hi')
+    expect(new TextDecoder().decode(first(result).content)).toBe('Hi')
   })
 })
 
 describe('resolveEmailAttachments - disposition and cid', () => {
   test('default disposition is attachment', async () => {
     const result = await resolveEmailAttachments([{ content: 'x', filename: 'test.txt' }])
-    expect(result[0]!.contentDisposition).toBe('attachment')
+    expect(first(result).contentDisposition).toBe('attachment')
   })
 
   test('cid sets disposition to inline', async () => {
     const result = await resolveEmailAttachments([
       { content: 'x', filename: 'test.png', cid: 'img001' },
     ])
-    expect(result[0]!.contentDisposition).toBe('inline')
-    expect(result[0]!.cid).toBe('img001')
+    expect(first(result).contentDisposition).toBe('inline')
+    expect(first(result).cid).toBe('img001')
   })
 
   test('explicit contentDisposition overrides default', async () => {
     const result = await resolveEmailAttachments([
       { content: 'x', filename: 'test.txt', contentDisposition: 'inline' },
     ])
-    expect(result[0]!.contentDisposition).toBe('inline')
+    expect(first(result).contentDisposition).toBe('inline')
   })
 
   test('explicit contentDisposition overrides cid default', async () => {
     const result = await resolveEmailAttachments([
       { content: 'x', filename: 'test.txt', cid: 'cid1', contentDisposition: 'attachment' },
     ])
-    expect(result[0]!.contentDisposition).toBe('attachment')
-    expect(result[0]!.cid).toBe('cid1')
+    expect(first(result).contentDisposition).toBe('attachment')
+    expect(first(result).cid).toBe('cid1')
   })
 })
 
@@ -496,12 +508,12 @@ describe('resolveEmailAttachments - headers', () => {
     const result = await resolveEmailAttachments([
       { content: 'x', filename: 'test.txt', headers: { 'X-Custom': 'value' } },
     ])
-    expect(result[0]!.headers).toEqual({ 'X-Custom': 'value' })
+    expect(first(result).headers).toEqual({ 'X-Custom': 'value' })
   })
 
   test('no headers yields undefined headers', async () => {
     const result = await resolveEmailAttachments([{ content: 'x', filename: 'test.txt' }])
-    expect(result[0]!.headers).toBeUndefined()
+    expect(first(result).headers).toBeUndefined()
   })
 })
 
@@ -510,43 +522,43 @@ describe('resolveEmailAttachmentsSync', () => {
     const result = resolveEmailAttachmentsSync([
       { content: 'SGVsbG8=', encoding: 'base64', filename: 'test.txt' },
     ])
-    expect(new TextDecoder().decode(result[0]!.content)).toBe('Hello')
+    expect(new TextDecoder().decode(first(result).content)).toBe('Hello')
   })
 
   test('string content with hex encoding', () => {
     const result = resolveEmailAttachmentsSync([
       { content: '48656c6c6f', encoding: 'hex', filename: 'test.txt' },
     ])
-    expect(new TextDecoder().decode(result[0]!.content)).toBe('Hello')
+    expect(new TextDecoder().decode(first(result).content)).toBe('Hello')
   })
 
   test('string content with no encoding (UTF-8)', () => {
     const result = resolveEmailAttachmentsSync([{ content: 'Hello', filename: 'test.txt' }])
-    expect(new TextDecoder().decode(result[0]!.content)).toBe('Hello')
+    expect(new TextDecoder().decode(first(result).content)).toBe('Hello')
   })
 
   test('Uint8Array content', () => {
     const bytes = new Uint8Array([1, 2, 3])
     const result = resolveEmailAttachmentsSync([{ content: bytes, filename: 'test.bin' }])
-    expect(result[0]!.content).toEqual(bytes)
+    expect(first(result).content).toEqual(bytes)
   })
 
   test('ArrayBuffer content', () => {
     const buffer = new Uint8Array([1, 2, 3]).buffer
     const result = resolveEmailAttachmentsSync([{ content: buffer, filename: 'test.bin' }])
-    expect(result[0]!.content).toEqual(new Uint8Array([1, 2, 3]))
+    expect(first(result).content).toEqual(new Uint8Array([1, 2, 3]))
   })
 
   test('data URI path', () => {
     const result = resolveEmailAttachmentsSync([{ path: 'data:text/plain,Hello%20Sync' }])
-    expect(new TextDecoder().decode(result[0]!.content)).toBe('Hello Sync')
-    expect(result[0]!.contentType).toBe('text/plain')
+    expect(new TextDecoder().decode(first(result).content)).toBe('Hello Sync')
+    expect(first(result).contentType).toBe('text/plain')
   })
 
   test('base64 data URI path', () => {
     const result = resolveEmailAttachmentsSync([{ path: 'data:image/png;base64,SGVsbG8=' }])
-    expect(new TextDecoder().decode(result[0]!.content)).toBe('Hello')
-    expect(result[0]!.contentType).toBe('image/png')
+    expect(new TextDecoder().decode(first(result).content)).toBe('Hello')
+    expect(first(result).contentType).toBe('image/png')
   })
 
   test('ReadableStream throws (requires async)', () => {
@@ -607,13 +619,13 @@ describe('resolveEmailAttachmentsSync', () => {
     const result = resolveEmailAttachmentsSync([
       { content: 'x', filename: 'test.png', cid: 'img001' },
     ])
-    expect(result[0]!.contentDisposition).toBe('inline')
-    expect(result[0]!.cid).toBe('img001')
+    expect(first(result).contentDisposition).toBe('inline')
+    expect(first(result).cid).toBe('img001')
   })
 
   test('content type inference from filename', () => {
     const result = resolveEmailAttachmentsSync([{ content: 'x', filename: 'photo.jpg' }])
-    expect(result[0]!.contentType).toBe('image/jpeg')
+    expect(first(result).contentType).toBe('image/jpeg')
   })
 })
 
@@ -625,8 +637,8 @@ describe('resolveEmailAttachments - multiple attachments', () => {
       { content: 'third', filename: 'c.txt' },
     ])
     expect(result).toHaveLength(3)
-    expect(new TextDecoder().decode(result[0]!.content)).toBe('first')
-    expect(new TextDecoder().decode(result[1]!.content)).toBe('second')
-    expect(new TextDecoder().decode(result[2]!.content)).toBe('third')
+    expect(new TextDecoder().decode(first(result).content)).toBe('first')
+    expect(new TextDecoder().decode(at(result, 1).content)).toBe('second')
+    expect(new TextDecoder().decode(at(result, 2).content)).toBe('third')
   })
 })
