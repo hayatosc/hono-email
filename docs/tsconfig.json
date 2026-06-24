@@ -4,5 +4,5 @@
     "types": ["bun"]
   },
   "include": [".astro/types.d.ts", "**/*"],
-  "exclude": ["dist", "**/*.test.ts"]
+  "exclude": ["dist"]
 }
