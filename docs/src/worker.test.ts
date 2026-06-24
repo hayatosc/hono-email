@@ -6,9 +6,9 @@ const fixture: Record<string, string> = {
   '/getting-started/overview/': '# Overview',
 }
 
-mock.module('./generated/docs-markdown', () => ({ docsMarkdown: fixture }))
+void mock.module('./generated/docs-markdown', () => ({ docsMarkdown: fixture }))
 
-mock.module('@astrojs/cloudflare/handler', () => ({
+void mock.module('@astrojs/cloudflare/handler', () => ({
   handle: async () =>
     new Response('<html><body>Page</body></html>', {
       status: 200,
@@ -19,6 +19,7 @@ mock.module('@astrojs/cloudflare/handler', () => ({
 const { default: app } = await import('./worker')
 
 const mockEnv: Env = { ASSETS: { fetch: () => Promise.resolve(new Response()) } }
+// eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
 const mockExecutionCtx = {
   waitUntil: () => {},
   passThroughOnException: () => {},

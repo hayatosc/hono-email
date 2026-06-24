@@ -12,10 +12,12 @@ describe('prerenderDocs', () => {
     expect(integration.hooks['astro:route:setup']).toBeFunction()
   })
 
-  test('hook sets route.prerender to true', () => {
-    const hook = prerenderDocs().hooks['astro:route:setup']!
+  test('hook sets route.prerender to true', async () => {
+    const hook = prerenderDocs().hooks['astro:route:setup']
+    if (!hook) return
     const route = { prerender: false as boolean }
-    hook({ route } as Parameters<typeof hook>[0])
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
+    await hook({ route } as Parameters<typeof hook>[0])
     expect(route.prerender).toBe(true)
   })
 })
