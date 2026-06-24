@@ -102,7 +102,7 @@ For the full list of configuration options, see the [SMTP Options API Reference]
 
 ## Connection pooling
 
-`SmtpTransport` reuses SMTP sessions until `transport.close()` is called. The default pool size is `1`, so sends on the same transport share one TCP connection sequentially.
+`SmtpTransport` reuses SMTP sessions until `smtp.close()` is called. The default pool size is `1`, so sends on the same transport share one TCP connection sequentially.
 
 - Set `pool.maxConnections` to allow multiple concurrent SMTP sessions.
 - Set `pool.maxMessages` to retire a session after a fixed number of messages.
@@ -110,7 +110,7 @@ For the full list of configuration options, see the [SMTP Options API Reference]
 
 ## Delivery controls
 
-- `await transport.verify()` checks connection setup, TLS negotiation, and authentication without sending a message.
+- `await smtp.verify()` checks connection setup, TLS negotiation, and authentication without sending a message.
 - `dkim` can be configured on `SmtpTransport` or overridden per message to add a `DKIM-Signature` header before SMTP delivery.
 - `envelope` lets you override the SMTP envelope sender and recipients without changing the visible `From` / `To` headers.
 - `to`, `cc`, `bcc`, and `envelope.to` accept single addresses or arrays. SMTP sends one `RCPT TO` command per resolved recipient and reports partial recipient rejection in `receipt.rejected`.

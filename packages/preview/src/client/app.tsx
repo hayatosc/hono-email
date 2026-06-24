@@ -3,7 +3,12 @@ import { render, useState, useEffect, useCallback, useRef } from 'hono/jsx/dom'
 
 // Apply theme before first paint to avoid flash
 {
-  const saved = localStorage.getItem('theme')
+  let saved: string | null = null
+  try {
+    saved = localStorage.getItem('theme')
+  } catch {
+    // SecurityError in sandboxed environments
+  }
   const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
   const initial = saved === 'light' || saved === 'dark' ? saved : prefersDark ? 'dark' : 'light'
   document.documentElement.setAttribute('data-theme', initial)
@@ -176,7 +181,11 @@ function App() {
     setTheme((prev) => {
       const next = prev === 'dark' ? 'light' : 'dark'
       document.documentElement.setAttribute('data-theme', next)
-      localStorage.setItem('theme', next)
+      try {
+        localStorage.setItem('theme', next)
+      } catch {
+        // SecurityError in sandboxed environments
+      }
       return next
     })
   }, [])
