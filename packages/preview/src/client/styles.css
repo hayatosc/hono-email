@@ -1,23 +1,54 @@
+/* ── Dark mode (default) ───────────────────────────────────── */
 :root {
-  --bg: #050506;
-  --bg2: #0b0b0d;
-  --surface: #141418;
-  --surface-hover: #1c1c22;
-  --border: rgba(255, 255, 255, 0.07);
-  --border-strong: rgba(255, 255, 255, 0.14);
-  --text: #f4f4f5;
-  --text2: #a1a1aa;
-  --muted: #6b6b76;
-  --accent: #fafafa;
+  color-scheme: dark;
+
+  /* Zinc dark scale — mirrors docs/src/styles/custom.css */
+  --bg: hsl(240, 10%, 4%); /* zinc-950 */
+  --bg2: hsl(240, 6%, 7%); /* between 950 and 900 */
+  --surface: hsl(240, 6%, 11%); /* zinc-900 */
+  --surface-hover: hsl(240, 5%, 15%);
+  --border: hsl(240, 5%, 18%); /* zinc-800 = docs hairline */
+  --border-strong: hsl(240, 5%, 26%);
+  --text: hsl(0, 0%, 98%); /* zinc-50 */
+  --text2: hsl(240, 5%, 78%); /* zinc-300 */
+  --muted: hsl(240, 5%, 56%); /* zinc-400/500 */
+  --accent: hsl(0, 0%, 98%);
   --accent-dim: rgba(255, 255, 255, 0.08);
+  --header-bg: hsl(240, 6%, 8%);
+  --header-bg2: hsl(240, 6%, 6%);
   --warn-bg: rgba(234, 179, 8, 0.07);
   --warn-border: rgba(234, 179, 8, 0.25);
-  --warn-text: #facc15;
-  --error: #f87171;
-  --success: #4ade80;
+  --warn-text: hsl(48, 96%, 53%); /* amber-400 */
+  --error: hsl(0, 86%, 72%); /* red-400 */
+  --success: hsl(142, 71%, 45%); /* green-500 */
   --radius: 8px;
   --radius-sm: 6px;
   --sidebar: 320px;
+}
+
+/* ── Light mode ────────────────────────────────────────────── */
+[data-theme='light'] {
+  color-scheme: light;
+
+  /* Zinc light scale — mirrors docs/src/styles/custom.css */
+  --bg: hsl(0, 0%, 100%); /* white */
+  --bg2: hsl(240, 5%, 98%); /* near-white */
+  --surface: hsl(240, 5%, 96%); /* zinc-100 */
+  --surface-hover: hsl(240, 5%, 92%);
+  --border: hsl(240, 5%, 90%); /* docs hairline light */
+  --border-strong: hsl(240, 5%, 80%);
+  --text: hsl(240, 10%, 4%); /* zinc-950 */
+  --text2: hsl(240, 5%, 26%); /* zinc-700 */
+  --muted: hsl(240, 5%, 45%); /* zinc-500 */
+  --accent: hsl(240, 10%, 4%);
+  --accent-dim: rgba(0, 0, 0, 0.06);
+  --header-bg: hsl(0, 0%, 100%);
+  --header-bg2: hsl(240, 5%, 98%);
+  --warn-bg: rgba(234, 179, 8, 0.08);
+  --warn-border: rgba(202, 138, 4, 0.3);
+  --warn-text: hsl(33, 92%, 42%); /* amber-700 — readable on light bg */
+  --error: hsl(0, 72%, 51%); /* red-600 */
+  --success: hsl(142, 76%, 36%); /* green-600 */
 }
 
 * {
@@ -52,7 +83,7 @@ body {
   align-items: center;
   padding: 0 16px;
   height: 48px;
-  background: linear-gradient(180deg, #101013 0%, #0b0b0d 100%);
+  background: linear-gradient(180deg, var(--header-bg) 0%, var(--header-bg2) 100%);
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
 }
@@ -76,10 +107,39 @@ body {
   box-shadow: 0 0 10px rgba(255, 255, 255, 0.6);
 }
 
+[data-theme='light'] .header-title::before {
+  box-shadow: 0 0 8px rgba(0, 0, 0, 0.25);
+}
+
 .header-title span {
   color: var(--text);
   font-weight: 700;
   letter-spacing: -0.01em;
+}
+
+/* Theme toggle */
+.theme-toggle {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--text2);
+  cursor: pointer;
+  font-family: inherit;
+  flex-shrink: 0;
+  transition:
+    background 0.12s ease,
+    color 0.12s ease;
+}
+
+.theme-toggle:hover {
+  background: var(--surface);
+  color: var(--text);
 }
 
 /* Layout */
@@ -318,6 +378,10 @@ body {
   font-weight: 700;
   padding: 1px 7px;
   border-radius: 10px;
+}
+
+[data-theme='light'] .warnings-badge {
+  color: #fff;
 }
 
 .warnings-arrow {
