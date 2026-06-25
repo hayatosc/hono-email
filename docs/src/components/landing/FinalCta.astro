@@ -1,6 +1,6 @@
 ---
 import GetStartedButton from './GetStartedButton.astro'
-import InstallCommand from './InstallCommand.astro'
+import InstallCommand from './InstallCommand.svelte'
 ---
 
 <section>
@@ -9,7 +9,7 @@ import InstallCommand from './InstallCommand.astro'
       <h2 class="title">Send your first email in minutes.</h2>
       <div class="cta">
         <GetStartedButton />
-        <InstallCommand />
+        <InstallCommand client:idle />
       </div>
     </div>
   </div>

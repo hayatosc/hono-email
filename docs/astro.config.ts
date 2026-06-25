@@ -1,5 +1,6 @@
 import cloudflare from '@astrojs/cloudflare'
 import starlight from '@astrojs/starlight'
+import svelte from '@astrojs/svelte'
 import { defineConfig, fontProviders, sessionDrivers, svgoOptimizer } from 'astro/config'
 
 import { markdownExport } from './src/integrations/markdown-export'
@@ -121,5 +122,6 @@ export default defineConfig({
         },
       ],
     }),
+    svelte(),
   ],
 })
