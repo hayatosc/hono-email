@@ -16,9 +16,11 @@
     "@astrojs/check": "^0.9.9",
     "@astrojs/cloudflare": "^14.0.0",
     "@astrojs/starlight": "^0.41.0",
+    "@astrojs/svelte": "^9.0.0",
     "astro": "7",
     "hono": "^4.12.26",
     "sharp": "^0.34.5",
+    "svelte": "^5.56.4",
     "typescript": "^6.0.3"
   },
   "devDependencies": {

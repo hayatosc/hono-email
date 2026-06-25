@@ -1,7 +1,7 @@
 ---
 import GetStartedButton from './GetStartedButton.astro'
 import HeroSnippet from './hero-snippet.mdx'
-import InstallCommand from './InstallCommand.astro'
+import InstallCommand from './InstallCommand.svelte'
 
 const repo = 'https://github.com/hayatosc/hono-email'
 ---
@@ -25,7 +25,7 @@ const repo = 'https://github.com/hayatosc/hono-email'
           GitHub
         </a>
       </div>
-      <div class="install-slot"><InstallCommand /></div>
+      <div class="install-slot"><InstallCommand client:idle /></div>
     </div>
 
     <div class="demo">
