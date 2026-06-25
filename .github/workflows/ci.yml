@@ -117,7 +117,8 @@ jobs:
         if: steps.filter.outputs.docs == 'true'
         run: bun run --filter 'hono-email-docs' check
 
-      - name: Build docs
+      - name: Astro Build
+        if: steps.filter.outputs.docs == 'true'
         run: bun run --filter 'hono-email-docs' build
 
       - name: Runtime Test (Node)
