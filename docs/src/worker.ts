@@ -12,7 +12,18 @@ app.all('*', async (c) => {
   const pathname = url.pathname
 
   if (pathname.endsWith('.md') || pathname === LLMS_FULL_PATH) {
-    return c.env.ASSETS.fetch(c.req.raw)
+    const response = await c.env.ASSETS.fetch(c.req.raw)
+    if (response.status === 200) {
+      const newResponse = new Response(response.body, response)
+      newResponse.headers.set(
+        'content-type',
+        pathname === LLMS_FULL_PATH ? 'text/plain; charset=utf-8' : 'text/markdown; charset=utf-8',
+      )
+      newResponse.headers.delete('content-encoding')
+      newResponse.headers.delete('content-length')
+      return newResponse
+    }
+    return response
   }
 
   const accept = c.req.header('accept') || ''
@@ -21,7 +32,13 @@ app.all('*', async (c) => {
     mdUrl.pathname =
       mdUrl.pathname === '/' ? '/index.md' : mdUrl.pathname.replace(/\/$/, '') + '.md'
     const response = await c.env.ASSETS.fetch(new Request(mdUrl, c.req.raw))
-    if (response.status !== 404) return response
+    if (response.status === 200) {
+      const newResponse = new Response(response.body, response)
+      newResponse.headers.set('content-type', 'text/markdown; charset=utf-8')
+      newResponse.headers.delete('content-encoding')
+      newResponse.headers.delete('content-length')
+      return newResponse
+    }
   }
 
   if (
