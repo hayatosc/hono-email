@@ -1,0 +1,55 @@
+---
+// Shared shell for the content sections: kicker, heading, optional lead, and a
+// centered container. Section-specific content goes in the default slot.
+interface Props {
+  kicker: string
+  title: string
+  lead?: string
+}
+
+const { kicker, title, lead } = Astro.props
+---
+
+<section>
+  <div class="inner">
+    <p class="kicker">{kicker}</p>
+    <h2 class="title">{title}</h2>
+    {lead && <p class="lead">{lead}</p>}
+    <slot />
+  </div>
+</section>
+
+<style>
+  section {
+    padding-block: clamp(3rem, 7vw, 5rem);
+  }
+  .inner {
+    max-width: var(--lp-maxw);
+    margin-inline: auto;
+    padding-inline: clamp(1.25rem, 4vw, 2.5rem);
+  }
+  .kicker {
+    margin: 0 0 0.9rem;
+    font-family: var(--sl-font-mono);
+    font-size: 0.75rem;
+    letter-spacing: 0.12em;
+    color: var(--lp-accent);
+  }
+  .title {
+    margin: 0;
+    border: 0;
+    padding: 0;
+    line-height: 1.1;
+    font-size: clamp(1.6rem, 3.2vw, 2.3rem);
+    font-weight: 700;
+    letter-spacing: -0.025em;
+    color: var(--sl-color-white);
+    max-width: 24ch;
+  }
+  .lead {
+    margin: 1rem 0 0;
+    max-width: 50ch;
+    color: var(--sl-color-gray-3);
+    line-height: 1.65;
+  }
+</style>

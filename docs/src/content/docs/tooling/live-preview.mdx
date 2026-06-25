@@ -4,6 +4,10 @@ description: Preview email templates with real-time props editing.
 ---
 
 import { Tabs, TabItem } from '@astrojs/starlight/components'
+import { Image } from 'astro:assets'
+import preview from '../../../assets/preview.png'
+
+<Image src={preview} alt="hono-email preview UI" />
 
 `@hono-email/preview` provides a live development server and CLI to preview your email templates in a web browser with real-time interactive props editing.
 

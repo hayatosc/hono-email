@@ -1,0 +1,258 @@
+---
+import GetStartedButton from './GetStartedButton.astro'
+import HeroSnippet from './hero-snippet.mdx'
+import InstallCommand from './InstallCommand.astro'
+
+const repo = 'https://github.com/hayatosc/hono-email'
+---
+
+<section class="hero">
+  <div class="glow" aria-hidden="true"></div>
+  <div class="grid-mask" aria-hidden="true"></div>
+  <div class="inner">
+    <div class="copy">
+      <h1 class="title">
+        Email, built the<br /><span class="accent">hono/jsx way.</span>
+      </h1>
+      <p class="tagline">
+        Render, validate, and send HTML email — with plain&#8209;text generated automatically —
+        from a single <code>hono/jsx</code> component.
+      </p>
+      <div class="cta">
+        <GetStartedButton />
+        <a class="ghost" href={repo} target="_blank" rel="noopener">
+          <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></svg>
+          GitHub
+        </a>
+      </div>
+      <div class="install-slot"><InstallCommand /></div>
+    </div>
+
+    <div class="demo">
+      <figure class="window" aria-label="Example: rendering a welcome email with hono-email">
+        <div class="bar">
+          <span class="dots" aria-hidden="true"><i></i><i></i><i></i></span>
+          <span class="filename">welcome.email.tsx</span>
+        </div>
+        <div class="code"><HeroSnippet /></div>
+      </figure>
+    </div>
+  </div>
+</section>
+
+<style>
+  .hero {
+    position: relative;
+    isolation: isolate;
+    padding-block: clamp(3.5rem, 9vw, 7rem) clamp(3rem, 7vw, 5.5rem);
+    overflow: clip;
+    border-bottom: 1px solid var(--sl-color-hairline);
+  }
+  .glow {
+    position: absolute;
+    inset: -30% 0 auto 0;
+    height: 70%;
+    z-index: -2;
+    background:
+      radial-gradient(60% 60% at 70% 0%, var(--lp-accent-soft), transparent 70%),
+      radial-gradient(50% 50% at 20% 10%, hsl(0 0% 100% / 0.06), transparent 70%);
+    filter: blur(8px);
+  }
+  .grid-mask {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background-image:
+      linear-gradient(to right, var(--sl-color-hairline) 1px, transparent 1px),
+      linear-gradient(to bottom, var(--sl-color-hairline) 1px, transparent 1px);
+    background-size: 56px 56px;
+    opacity: 0.5;
+    mask-image: radial-gradient(75% 60% at 50% 0%, #000 0%, transparent 80%);
+  }
+  .inner {
+    max-width: var(--lp-maxw);
+    margin-inline: auto;
+    padding-inline: clamp(1.25rem, 4vw, 2.5rem);
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);
+    gap: clamp(2rem, 5vw, 4rem);
+    align-items: center;
+  }
+
+  /* ── Copy ──────────────────────────────────────────────── */
+  .title {
+    margin: 0;
+    border: 0;
+    padding: 0;
+    line-height: 1.1;
+    font-size: clamp(2.5rem, 6.5vw, 4.25rem);
+    font-weight: 800;
+    letter-spacing: -0.035em;
+    color: var(--sl-color-white);
+  }
+  .accent {
+    background: linear-gradient(100deg, var(--sl-color-white) 30%, var(--lp-accent));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .tagline {
+    margin: 1.4rem 0 0;
+    max-width: 34rem;
+    font-size: clamp(1rem, 1.4vw, 1.15rem);
+    line-height: 1.65;
+    color: var(--sl-color-gray-3);
+  }
+  .tagline code {
+    font-family: var(--sl-font-mono);
+    font-size: 0.92em;
+    color: var(--sl-color-gray-1);
+  }
+  .cta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-top: 2rem;
+  }
+  .ghost {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.62rem 1.15rem;
+    border-radius: 0.55rem;
+    font-size: 0.95rem;
+    font-weight: 600;
+    text-decoration: none;
+    background: transparent;
+    color: var(--sl-color-white);
+    border: 1px solid var(--sl-color-hairline);
+    transition:
+      border-color 0.15s ease,
+      transform 0.15s ease;
+  }
+  .ghost:hover {
+    border-color: var(--sl-color-gray-3);
+  }
+  .ghost:active {
+    transform: translateY(1px);
+  }
+  .install-slot {
+    margin-top: 1.5rem;
+  }
+
+  /* ── Code window ───────────────────────────────────────── */
+  .window {
+    margin: 0;
+    border: 1px solid var(--sl-color-hairline);
+    border-radius: var(--lp-radius);
+    background: var(--sl-color-bg-inline-code);
+    box-shadow: 0 24px 60px -34px hsl(0 0% 0% / 0.55);
+    overflow: hidden;
+  }
+  .bar {
+    position: relative;
+    display: flex;
+    align-items: center;
+    padding: 0.75rem 0.95rem;
+    border-bottom: 1px solid var(--sl-color-hairline);
+  }
+  /* macOS traffic-light buttons */
+  .dots {
+    display: inline-flex;
+    gap: 0.5rem;
+  }
+  .dots i {
+    width: 0.75rem;
+    height: 0.75rem;
+    border-radius: 50%;
+    box-shadow: inset 0 0 0 0.5px hsl(0 0% 0% / 0.2);
+  }
+  .dots i:nth-child(1) {
+    background: #ff5f57;
+  }
+  .dots i:nth-child(2) {
+    background: #febc2e;
+  }
+  .dots i:nth-child(3) {
+    background: #28c840;
+  }
+  .filename {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: var(--sl-font-mono);
+    font-size: 0.78rem;
+    color: var(--sl-color-gray-3);
+  }
+  .code {
+    overflow-x: auto;
+    /* fade the right edge to hint that long lines scroll */
+    mask-image: linear-gradient(to right, #000 calc(100% - 1.5rem), transparent);
+  }
+  /* Expressive Code (frame="none") is highlighted at build time and is dual-theme
+     aware. Strip its frame + copy button so it sits inside our window chrome. */
+  .code :global(.expressive-code),
+  .code :global(.expressive-code .frame),
+  .code :global(.expressive-code pre) {
+    margin: 0 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+  .code :global(.expressive-code pre) {
+    padding: 1.2rem 1.3rem !important;
+  }
+  .code :global(.expressive-code .copy) {
+    display: none !important;
+  }
+  .code :global(.expressive-code code) {
+    font-size: 0.76rem;
+    line-height: 1.75;
+  }
+
+  /* ── Entrance motion ───────────────────────────────────── */
+  @media (prefers-reduced-motion: no-preference) {
+    .copy > *,
+    .demo {
+      animation: hero-rise 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+    .eyebrow {
+      animation-delay: 0.02s;
+    }
+    .title {
+      animation-delay: 0.08s;
+    }
+    .tagline {
+      animation-delay: 0.14s;
+    }
+    .cta {
+      animation-delay: 0.2s;
+    }
+    .install-slot {
+      animation-delay: 0.26s;
+    }
+    .demo {
+      animation-delay: 0.18s;
+    }
+  }
+  @keyframes hero-rise {
+    from {
+      opacity: 0;
+      transform: translateY(12px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @media (max-width: 60rem) {
+    .inner {
+      grid-template-columns: 1fr;
+    }
+    .demo {
+      order: 2;
+    }
+  }
+</style>
