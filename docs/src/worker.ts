@@ -17,7 +17,11 @@ app.all('*', async (c) => {
 
   const accept = c.req.header('accept') || ''
   if (accept.includes('text/markdown')) {
-    return c.env.ASSETS.fetch(c.req.raw)
+    const mdUrl = new URL(url)
+    mdUrl.pathname =
+      mdUrl.pathname === '/' ? '/index.md' : mdUrl.pathname.replace(/\/$/, '') + '.md'
+    const response = await c.env.ASSETS.fetch(new Request(mdUrl, c.req.raw))
+    if (response.status !== 404) return response
   }
 
   if (
