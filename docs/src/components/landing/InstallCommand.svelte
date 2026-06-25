@@ -1,5 +1,5 @@
 <script>
-  let copied = false;
+  let copied = $state(false);
   const installCmd = 'npm install hono-email';
 
   function copy() {
@@ -15,7 +15,7 @@
 <div class="install" role="group" aria-label="Install command">
   <span class="prompt" aria-hidden="true">$</span>
   <code class="cmd">{installCmd}</code>
-  <button class="copy" type="button" aria-label="Copy install command" class:is-copied={copied} on:click={copy}>
+  <button class={['copy', copied && 'is-copied']} type="button" aria-label="Copy install command" onclick={copy}>
     {#if !copied}
       <svg class="ic-copy" viewBox="0 0 16 16" width="15" height="15" aria-hidden="true">
         <path fill="none" stroke="currentColor" stroke-width="1.4" d="M5.5 5.5v-2A1.5 1.5 0 0 1 7 2h5.5A1.5 1.5 0 0 1 14 3.5V9a1.5 1.5 0 0 1-1.5 1.5h-2M2 7.5A1.5 1.5 0 0 1 3.5 6H9a1.5 1.5 0 0 1 1.5 1.5V13A1.5 1.5 0 0 1 9 14.5H3.5A1.5 1.5 0 0 1 2 13z"/>

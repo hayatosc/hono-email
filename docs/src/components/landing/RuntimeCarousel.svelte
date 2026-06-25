@@ -1,13 +1,10 @@
 <script>
-  import { onMount } from 'svelte';
+  let { runtimes = [] } = $props();
 
-  export let runtimes = [];
+  let active = $state(0);
+  let prefersReducedMotion = $state(false);
 
-  let stage;
-  let active = 0;
-  let prefersReducedMotion = false;
-
-  $: n = runtimes.length;
+  let n = $derived(runtimes.length);
 
   function getPos(i, currentActive, total) {
     if (prefersReducedMotion) return 'static';
@@ -18,7 +15,7 @@
     return 'hidden';
   }
 
-  onMount(() => {
+  $effect(() => {
     prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (prefersReducedMotion || n === 0) return;
 
@@ -30,8 +27,8 @@
   });
 </script>
 
-<div class="stage" bind:this={stage} data-runtime-carousel>
-  {#each runtimes as r, i}
+<div class="stage" data-runtime-carousel>
+  {#each runtimes as r, i (r.name)}
     <figure class="rt" data-pos={getPos(i, active, n)}>
       <svg class="rt-icon" viewBox="0 0 24 24" aria-hidden="true">
         <path fill="currentColor" d={r.path} />
