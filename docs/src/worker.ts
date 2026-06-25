@@ -19,6 +19,8 @@ app.all('*', async (c) => {
         'content-type',
         pathname === LLMS_FULL_PATH ? 'text/plain; charset=utf-8' : 'text/markdown; charset=utf-8',
       )
+      newResponse.headers.delete('content-encoding')
+      newResponse.headers.delete('content-length')
       return newResponse
     }
     return response
@@ -33,6 +35,8 @@ app.all('*', async (c) => {
     if (response.status === 200) {
       const newResponse = new Response(response.body, response)
       newResponse.headers.set('content-type', 'text/markdown; charset=utf-8')
+      newResponse.headers.delete('content-encoding')
+      newResponse.headers.delete('content-length')
       return newResponse
     }
   }
