@@ -149,7 +149,7 @@ async function generateIntermediate(
   outputRoot: string,
 ): Promise<MarkdownManifest> {
   const pagesDir = join(outputRoot, PAGES_DIR)
-  await rm(pagesDir, { recursive: true, force: true })
+  await mkdir(pagesDir, { recursive: true })
 
   const pages: MarkdownPage[] = []
   const llmsPages: { pathname: string; markdown: string }[] = []
