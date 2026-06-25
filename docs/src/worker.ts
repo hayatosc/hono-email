@@ -15,6 +15,11 @@ app.all('*', async (c) => {
     return c.env.ASSETS.fetch(c.req.raw)
   }
 
+  const accept = c.req.header('accept') || ''
+  if (accept.includes('text/markdown')) {
+    return c.env.ASSETS.fetch(c.req.raw)
+  }
+
   if (
     import.meta.env.DEV &&
     (pathname.startsWith('/@fs/') ||

@@ -1,4 +1,4 @@
-import { mkdir, readdir, readFile, stat, writeFile } from 'node:fs/promises'
+import { mkdir, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises'
 import { basename, dirname, join, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -148,6 +148,9 @@ async function generateIntermediate(
   docsRoot: string,
   outputRoot: string,
 ): Promise<MarkdownManifest> {
+  const pagesDir = join(outputRoot, PAGES_DIR)
+  await rm(pagesDir, { recursive: true, force: true })
+
   const pages: MarkdownPage[] = []
   const llmsPages: { pathname: string; markdown: string }[] = []
 
