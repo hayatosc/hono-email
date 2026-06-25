@@ -1,6 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "hono-email-docs",
+  "name": "hono-email",
   "compatibility_date": "2026-04-15",
   "compatibility_flags": ["nodejs_compat"],
   // Custom entrypoint: src/worker.ts handles content negotiation, then delegates
@@ -10,5 +10,10 @@
   // negotiation in src/worker.ts works for all routes (including prerendered ones).
   "assets": {
     "run_worker_first": true,
+  },
+  "observability": {
+    "logs": {
+      "enabled": false,
+    },
   },
 }

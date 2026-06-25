@@ -1,6 +1,6 @@
 import cloudflare from '@astrojs/cloudflare'
 import starlight from '@astrojs/starlight'
-import { defineConfig, fontProviders, svgoOptimizer } from 'astro/config'
+import { defineConfig, fontProviders, sessionDrivers, svgoOptimizer } from 'astro/config'
 
 import { markdownExport } from './src/integrations/markdown-export'
 
@@ -8,7 +8,12 @@ import { markdownExport } from './src/integrations/markdown-export'
 export default defineConfig({
   site: 'https://hono-email.hayatosc.dev',
   output: 'server',
-  adapter: cloudflare(),
+  adapter: cloudflare({
+    imageService: 'compile',
+  }),
+  session: {
+    driver: sessionDrivers.lruCache(),
+  },
   experimental: {
     svgOptimizer: svgoOptimizer(),
   },
