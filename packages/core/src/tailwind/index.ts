@@ -1,4 +1,3 @@
-import * as csstree from 'css-tree'
 import { HTMLRewriter } from 'htmlrewriter'
 
 import { MARKDOWN_TAILWIND_PARENT_REQUIRED_ATTRIBUTE_NAME } from '../markdown'
@@ -10,6 +9,7 @@ import {
   normalizeMediaQuery,
   resolveCssVariables,
 } from './css'
+import * as csstree from './csstree'
 
 /**
  * Compiled Tailwind CSS data consumed by `<Tailwind>`.
