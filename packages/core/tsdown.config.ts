@@ -6,7 +6,7 @@ const neverBundle = [
   /^hono(\/.*)?$/,
   'htmlrewriter',
   'decode-named-character-reference',
-  
+
   /^node:/,
 ]
 
