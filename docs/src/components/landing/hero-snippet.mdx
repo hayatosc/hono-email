@@ -1,0 +1,15 @@
+```tsx frame="none"
+import { render, Html, Heading, Text, Button } from 'hono-email'
+
+function Welcome({ name }: { name: string }) {
+  return (
+    <Html lang="en">
+      <Heading as="h1">Welcome, {name}</Heading>
+      <Text>Thanks for signing up.</Text>
+      <Button href="https://acme.dev/start">Get started</Button>
+    </Html>
+  )
+}
+
+const { html, text } = await render(<Welcome name="Ada" />)
+```
