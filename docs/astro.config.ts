@@ -6,6 +6,12 @@ import { markdownExport } from './src/integrations/markdown-export'
 
 // https://astro.build/config
 export default defineConfig({
+  site: 'https://hono-email.hayatosc.dev',
+  output: 'server',
+  adapter: cloudflare(),
+  experimental: {
+    svgOptimizer: svgoOptimizer(),
+  },
   fonts: [
     {
       provider: fontProviders.google(),
@@ -18,11 +24,6 @@ export default defineConfig({
       cssVariable: '--sl-font-mono',
     },
   ],
-  output: 'static',
-  adapter: cloudflare(),
-  experimental: {
-    svgOptimizer: svgoOptimizer(),
-  },
   integrations: [
     markdownExport(),
     starlight({
