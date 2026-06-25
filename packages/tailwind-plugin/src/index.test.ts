@@ -127,7 +127,9 @@ const createMockContext = (): MockContext => ({
 
 const getPluginOptions = (result: ReturnType<typeof unpluginFactory>): UnpluginOptions => {
   if (Array.isArray(result)) {
-    return result[0]!
+    const opt = result[0]
+    if (!opt) throw new Error('plugin options not found')
+    return opt
   }
   return result
 }
@@ -137,7 +139,8 @@ const getResolveIdFn = (plugin: UnpluginOptions) => {
   if (typeof resolveId === 'function') {
     return resolveId
   }
-  return resolveId!.handler
+  if (!resolveId) throw new Error('resolveId handler not found')
+  return resolveId.handler
 }
 
 const getLoadFn = (plugin: UnpluginOptions) => {
@@ -145,7 +148,8 @@ const getLoadFn = (plugin: UnpluginOptions) => {
   if (typeof load === 'function') {
     return load
   }
-  return load!.handler
+  if (!load) throw new Error('load handler not found')
+  return load.handler
 }
 
 const getTransformHandler = (plugin: UnpluginOptions) => {
@@ -153,7 +157,8 @@ const getTransformHandler = (plugin: UnpluginOptions) => {
   if (typeof transform === 'function') {
     return transform
   }
-  return transform!.handler
+  if (!transform) throw new Error('transform handler not found')
+  return transform.handler
 }
 
 describe('unpluginFactory', () => {

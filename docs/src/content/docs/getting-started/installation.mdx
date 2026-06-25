@@ -1,0 +1,48 @@
+---
+title: Installation
+description: Install hono-email and optional packages.
+---
+
+import { Tabs, TabItem } from '@astrojs/starlight/components'
+
+Install the core package with your preferred package manager.
+
+<Tabs syncKey="package-manager">
+  <TabItem label="npm">
+
+    ```sh
+    npm i hono-email
+    ```
+
+  </TabItem>
+  <TabItem label="yarn">
+
+    ```sh
+    yarn add hono-email
+    ```
+
+  </TabItem>
+  <TabItem label="pnpm">
+
+    ```sh
+    pnpm add hono-email
+    ```
+
+  </TabItem>
+  <TabItem label="bun">
+
+    ```sh
+    bun i hono-email
+    ```
+
+  </TabItem>
+</Tabs>
+
+## Optional packages
+
+| Package                       | Install command                        | Purpose                                                  |
+| ----------------------------- | -------------------------------------- | -------------------------------------------------------- |
+| `@hono-email/tailwind-plugin` | `npm i -D @hono-email/tailwind-plugin` | Inject Tailwind CSS into email components at build time. |
+| `@hono-email/preview`         | `npm i -D @hono-email/preview`         | Live preview server with interactive props editing.      |
+
+The core package includes all rendering, validation, and adapter APIs. Add the other packages only when you need Tailwind bundler integration or the preview server.

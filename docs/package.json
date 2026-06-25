@@ -1,0 +1,24 @@
+{
+  "name": "hono-email-docs",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev",
+    "start": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "astro": "astro",
+    "check": "astro check"
+  },
+  "dependencies": {
+    "@astrojs/check": "^0.9.9",
+    "@astrojs/cloudflare": "^14.0.0",
+    "@astrojs/starlight": "^0.41.0",
+    "astro": "7",
+    "hono": "^4.12.26",
+    "sharp": "^0.34.5",
+    "typescript": "^6.0.3"
+  },
+  "packageManager": "bun@1.3.12"
+}

@@ -3,7 +3,8 @@
   "private": true,
   "workspaces": [
     "packages/*",
-    "examples/*"
+    "examples/*",
+    "docs"
   ],
   "type": "module",
   "scripts": {
@@ -15,8 +16,8 @@
     "format:check": "oxfmt --check .",
     "lint": "oxlint .",
     "lint:types": "oxlint --type-aware .",
-    "test": "bun test --path-ignore-patterns='_build' packages/core/src packages/tailwind-plugin/src packages/preview/src",
-    "test:coverage": "bun test --coverage --path-ignore-patterns='_build' packages/core/src packages/tailwind-plugin/src packages/preview/src",
+    "test": "bun test --path-ignore-patterns='_build' packages/core/src packages/tailwind-plugin/src packages/preview/src docs/src",
+    "test:coverage": "bun test --coverage --path-ignore-patterns='_build' packages/core/src packages/tailwind-plugin/src packages/preview/src docs/src",
     "test:runtime": "bun run test:runtime:node && bun run test:runtime:deno && bun run test:runtime:bun && bun run test:runtime:cloudflare",
     "test:runtime:node": "node --test runtime-tests/node/*.test.ts",
     "test:runtime:deno": "deno test --allow-net --allow-read runtime-tests/deno",
@@ -47,7 +48,6 @@
   },
   "packageManager": "bun@1.3.12",
   "patchedDependencies": {
-    "css-tree@3.2.1": "patches/css-tree@3.2.1.patch",
     "mdast-util-from-markdown@2.0.3": "patches/mdast-util-from-markdown@2.0.3.patch",
     "micromark@4.0.2": "patches/micromark@4.0.2.patch",
     "decode-named-character-reference@1.3.0": "patches/decode-named-character-reference@1.3.0.patch"

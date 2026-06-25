@@ -1,0 +1,94 @@
+---
+title: Quick Start
+description: Build and render your first email with hono-email.
+---
+
+import { Tabs, TabItem } from '@astrojs/starlight/components'
+
+This guide shows how to create a minimal email template and render it to HTML and plain text.
+
+## Installation
+
+Install the core package:
+
+<Tabs syncKey="package-manager">
+  <TabItem label="npm">
+
+    ```sh
+    npm i hono-email
+    ```
+
+  </TabItem>
+  <TabItem label="yarn">
+
+    ```sh
+    yarn add hono-email
+    ```
+
+  </TabItem>
+  <TabItem label="pnpm">
+
+    ```sh
+    pnpm add hono-email
+    ```
+
+  </TabItem>
+  <TabItem label="bun">
+
+    ```sh
+    bun i hono-email
+    ```
+
+  </TabItem>
+</Tabs>
+
+## Write a template
+
+Create a JSX component that uses the email primitives from `hono-email`:
+
+```tsx
+import { Body, Button, Container, Head, Heading, Html, Preview, Text, render } from 'hono-email'
+
+export default function WelcomeEmail() {
+  return (
+    <Html lang="en">
+      <Head>
+        <title>Welcome</title>
+      </Head>
+      <Preview>Your account is ready.</Preview>
+      <Body style={{ backgroundColor: '#f6f9fc', color: '#1f2937' }}>
+        <Container style={{ maxWidth: '560px', margin: '0 auto', padding: '24px' }}>
+          <Heading as="h1">Welcome</Heading>
+          <Text>Thanks for signing up.</Text>
+          <Button href="https://example.com/start">Get started</Button>
+        </Container>
+      </Body>
+    </Html>
+  )
+}
+```
+
+## Render it
+
+Call `render()` with the component to get HTML, plain text, and any warnings:
+
+```tsx
+const { html, text, warnings } = await render(<WelcomeEmail />, {
+  text: {
+    headingStyle: 'preserve',
+    linkFormat: 'text-only',
+  },
+})
+```
+
+- `html` — the final HTML email body.
+- `text` — the plain-text version derived from the same JSX tree.
+- `warnings` — compatibility warnings collected during rendering.
+
+Strict mode is enabled by default. If the JSX contains markup or CSS that is risky for email clients, `render()` throws or warns depending on the configuration.
+
+## Next steps
+
+- Learn more about the [`render()` API](/core/render/).
+- Explore the available [components](/components/document-structure/).
+- Send the output through an [adapter](/adapters/smtp/).

@@ -1,0 +1,173 @@
+---
+title: Typography
+description: Typography components like Text, Heading, Link, Button, Img, Hr, CodeInline, CodeBlock, List, and ListItem.
+---
+
+import { Badge } from '@astrojs/starlight/components'
+
+These components handle text rendering and other common content elements. They are imported from `hono-email`:
+
+```tsx
+import {
+  Text,
+  Heading,
+  Link,
+  Button,
+  Img,
+  Hr,
+  CodeInline,
+  CodeBlock,
+  List,
+  ListItem,
+} from 'hono-email'
+```
+
+---
+
+## `<Text>`
+
+Paragraph element with email-friendly defaults.
+
+**Defaults:** `font-size: 14px`, `line-height: 24px`, `margin: 16px 0`
+
+Accepts all standard `<p>` attributes and `style` to override defaults.
+
+```tsx
+<Text style={{ color: '#374151', fontSize: '16px' }}>Thanks for signing up.</Text>
+```
+
+## `<Heading>`
+
+Heading element with shorthand margin props.
+
+```tsx
+<Heading as="h2" mt={0} mb={16}>
+  Account summary
+</Heading>
+```
+
+### `as` <Badge text="Optional" variant="note" size="small" />
+
+**Type:** `'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6'` · **Default:** `'h1'`
+
+### Margin shorthands <Badge text="Optional" variant="note" size="small" />
+
+`m`, `mx`, `my`, `mt`, `mr`, `mb`, `ml` — shorthand margin props. Numbers are converted to pixels.
+
+## `<Link>`
+
+Anchor element. Requires `href`.
+
+```tsx
+<Link href="https://example.com/account">View your account</Link>
+```
+
+### `href` <Badge text="Required" variant="caution" size="small" />
+
+**Type:** `string`
+
+### `target` <Badge text="Optional" variant="note" size="small" />
+
+**Type:** `string` · **Default:** `'_blank'`
+
+## `<Button>`
+
+Call-to-action link rendered with Outlook-compatible button padding.
+
+```tsx
+<Button
+  href="https://example.com/confirm"
+  style={{
+    backgroundColor: '#111827',
+    color: '#ffffff',
+    padding: '12px 24px',
+    borderRadius: '6px',
+  }}
+>
+  Confirm your email
+</Button>
+```
+
+### `href` <Badge text="Required" variant="caution" size="small" />
+
+**Type:** `string`
+
+### `target` <Badge text="Optional" variant="note" size="small" />
+
+**Type:** `string` · **Default:** `'_blank'`
+
+## `<Img>`
+
+Image element. `src` and `alt` are both required.
+
+```tsx
+<Img src="https://example.com/logo.png" alt="Company Logo" width={120} height={40} />
+```
+
+### `src` <Badge text="Required" variant="caution" size="small" />
+
+**Type:** `string`
+
+### `alt` <Badge text="Required" variant="caution" size="small" />
+
+**Type:** `string`
+
+Descriptive alt text for accessibility and clients that block images.
+
+## `<Hr>`
+
+Horizontal rule.
+
+**Default:** `border-top: 1px solid #eaeaea`, `width: 100%`
+
+```tsx
+<Text>Order details</Text>
+<Hr />
+<Text>Total: $42.00</Text>
+```
+
+## `<CodeInline>`
+
+Inline code span.
+
+**Defaults:** `font-family: monospace`, `background: #f3f4f6`, `font-size: 13px`, `padding: 2px 4px`
+
+```tsx
+<Text>
+  Run <CodeInline>npm install hono-email</CodeInline> to get started.
+</Text>
+```
+
+## `<CodeBlock>`
+
+Preformatted code block.
+
+**Defaults:** `font-family: monospace`, `background: #f3f4f6`, `font-size: 13px`, `white-space: pre-wrap`
+
+```tsx
+<CodeBlock>{`curl -X POST https://api.example.com/send`}</CodeBlock>
+```
+
+## `<List>` / `<ListItem>`
+
+Ordered or unordered lists.
+
+```tsx
+<List ordered>
+  <ListItem>Confirm your email address</ListItem>
+  <ListItem>Set up your profile</ListItem>
+  <ListItem>Invite your team</ListItem>
+</List>
+```
+
+### `ordered` <Badge text="Optional" variant="note" size="small" />
+
+**Type:** `boolean`
+
+Render an `<ol>` when `true`, `<ul>` otherwise.
+
+### `marker` <Badge text="Optional" variant="note" size="small" />
+
+**Type:** `string`
+
+CSS `list-style-type` value (e.g. `'disc'`, `'decimal'`, `'"→ "'`).

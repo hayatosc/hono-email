@@ -1,0 +1,78 @@
+---
+title: Mailgun
+description: Send email through the Mailgun Messages API with hono-email.
+---
+
+`hono-email/mailgun` provides `MailgunAdapter` for the Mailgun Messages API. The adapter sends a `multipart/form-data` request to `/v3/{domain}/messages`.
+
+## Example
+
+```tsx
+import { Body, Html, Text, sendEmail } from 'hono-email'
+import { MailgunAdapter } from 'hono-email/mailgun'
+
+const receipt = await sendEmail({
+  adapter: MailgunAdapter({
+    apiKey: process.env.MAILGUN_API_KEY!,
+    domain: process.env.MAILGUN_DOMAIN!,
+  }),
+  from: 'sender@example.com',
+  to: 'recipient@example.com',
+  subject: 'Welcome',
+  jsx: (
+    <Html>
+      <Body>
+        <Text>Hello from Mailgun.</Text>
+      </Body>
+    </Html>
+  ),
+})
+```
+
+For the full list of configuration options, see the [Mailgun Options API Reference](/api/adapter-options/#mailgun-options).
+
+## Regional sending
+
+Use `apiBaseUrl: 'https://api.eu.mailgun.net'` for Mailgun EU domains.
+
+## Shared adapter features
+
+Like all provider adapters, Mailgun supports `to`, `cc`, `bcc`, `replyTo`, custom `headers`, and `attachments`. Inline attachments use `cid` when the provider supports content IDs.
+
+## Options
+
+import { Badge } from '@astrojs/starlight/components'
+
+### `apiKey` <Badge text="Required" variant="caution" size="small" />
+
+**Type:** `string`
+
+Your Mailgun API key.
+
+### `domain` <Badge text="Required" variant="caution" size="small" />
+
+**Type:** `string`
+
+Your Mailgun sending domain (e.g. `'mg.example.com'`).
+
+### `apiBaseUrl` <Badge text="Optional" variant="note" size="small" />
+
+**Type:** `string` · **Default:** `'https://api.mailgun.net'`
+
+Override the Mailgun API base URL. Use `'https://api.eu.mailgun.net'` for EU domains.
+
+### `fetch` <Badge text="Optional" variant="note" size="small" />
+
+**Type:** `(input: string, init: RequestInit) => Promise<Response>`
+
+Custom `fetch` implementation. Defaults to `globalThis.fetch`.
+
+### `userAgent` <Badge text="Optional" variant="note" size="small" />
+
+**Type:** `string`
+
+### `limits.maxAttachmentSize` <Badge text="Optional" variant="note" size="small" />
+
+**Type:** `number`
+
+Maximum attachment size in bytes.

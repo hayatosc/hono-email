@@ -38,10 +38,27 @@ export const preview = defineCommand({
         port,
       })
 
+      let shuttingDown = false
       const shutdown = async () => {
+        if (shuttingDown) {
+          process.exit(0)
+        }
+        shuttingDown = true
         console.log('\nShutting down...')
-        await server.close()
-        process.exit(0)
+
+        const forceExitTimeout = setTimeout(() => {
+          process.exit(0)
+        }, 1000)
+        forceExitTimeout.unref()
+
+        try {
+          await server.close()
+        } catch {
+          // ignore
+        } finally {
+          clearTimeout(forceExitTimeout)
+          process.exit(0)
+        }
       }
 
       process.on('SIGINT', shutdown)

@@ -1,0 +1,44 @@
+---
+title: Styling Overview
+description: Choose a styling strategy for your email templates.
+---
+
+`hono-email` supports three styling strategies. You can mix them within the same template, but most templates use one primary approach.
+
+## Inline styles
+
+The simplest approach. Pass a style object directly to component props:
+
+```tsx
+import { Body, Html, Text, render } from 'hono-email'
+
+const { html } = await render(
+  <Html>
+    <Body>
+      <Text style={{ color: '#0f172a' }}>Hello</Text>
+    </Body>
+  </Html>,
+)
+```
+
+This is the most compatible approach because most email clients preserve inline styles.
+
+## hono/css
+
+Use `hono/css` class names on normal elements or `hono-email` components. `render()` converts matching class rules to email-safe inline styles automatically.
+
+See the [hono/css guide](/styling/hono-css/) for setup and examples.
+
+## Tailwind
+
+Use Tailwind utility classes inside the `<Tailwind>` component. For build-time artifact injection, use the `@hono-email/tailwind-plugin` bundler plugin.
+
+See the [Tailwind guide](/styling/tailwind/) for setup and examples.
+
+## Strategy comparison
+
+| Strategy      | Best for                                          | Build-time plugin required |
+| ------------- | ------------------------------------------------- | -------------------------- |
+| Inline styles | Simple templates, maximum compatibility           | No                         |
+| `hono/css`    | Existing Hono projects using `hono/css`           | No                         |
+| Tailwind      | Teams already using Tailwind, responsive variants | Yes (recommended)          |

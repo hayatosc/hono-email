@@ -1,0 +1,162 @@
+---
+title: render()
+description: The primary runtime API for rendering email from hono/jsx.
+---
+
+import { Badge } from '@astrojs/starlight/components'
+
+`render()` turns a `hono/jsx` tree into HTML email, plain text, and a list of warnings.
+
+```ts
+function render(jsx: Child, options?: RenderOptions): Promise<RenderResult>
+```
+
+## Basic usage
+
+```tsx
+import { Html, Body, Text, render } from 'hono-email'
+
+const { html, text, warnings } = await render(
+  <Html>
+    <Body>
+      <Text>Hello from hono-email.</Text>
+    </Body>
+  </Html>,
+)
+```
+
+## Return value
+
+`render()` resolves to a `RenderResult`:
+
+```ts
+type RenderResult = {
+  html: string
+  text: string
+  warnings: string[]
+}
+```
+
+| Property   | Description                                                |
+| ---------- | ---------------------------------------------------------- |
+| `html`     | Rendered HTML email body including the configured doctype. |
+| `text`     | Plain-text version derived from the HTML.                  |
+| `warnings` | Compatibility warnings collected during rendering.         |
+
+## Options
+
+### `strict` <Badge text="Optional" variant="note" size="small" />
+
+**Type:** `boolean` · **Default:** `true`
+
+Enable strict email validation. When `true`, `render()` throws on invalid markup and collects compatibility warnings. See [Strict Mode](/core/strict-mode/).
+
+### `onWarning` <Badge text="Optional" variant="note" size="small" />
+
+**Type:** `'warn' | 'error' | 'silent' | ((warning: string) => void)` · **Default:** `'warn'`
+
+Controls how compatibility warnings are handled:
+
+| Value      | Behavior                                                        |
+| ---------- | --------------------------------------------------------------- |
+| `'warn'`   | Log each warning with `console.warn` and collect in `warnings`. |
+| `'error'`  | Throw an aggregated error when any warning is collected.        |
+| `'silent'` | Collect warnings without logging.                               |
+| `callback` | Call a custom function for each warning.                        |
+
+```tsx
+const { html, warnings } = await render(<WelcomeEmail />, {
+  onWarning: (msg) => logger.warn(msg),
+})
+```
+
+### `pretty` <Badge text="Optional" variant="note" size="small" />
+
+**Type:** `boolean`
+
+Pretty-print the rendered HTML. Takes precedence over `minify`.
+
+### `minify` <Badge text="Optional" variant="note" size="small" />
+
+**Type:** `boolean` · **Default:** `true`
+
+Minify the rendered HTML. Ignored when `pretty` is `true`.
+
+### `widows` <Badge text="Optional" variant="note" size="small" />
+
+**Type:** `boolean`
+
+Join the last two words of each text block with `&nbsp;` to prevent single-word orphans on the last line.
+
+### `doctype` <Badge text="Optional" variant="note" size="small" />
+
+**Type:** `'html5' | 'xhtml-transitional' | false` · **Default:** `'html5'`
+
+Doctype prepended to the output. Pass `false` to omit the doctype entirely.
+
+### `text` <Badge text="Optional" variant="note" size="small" />
+
+**Type:** `PlainTextRenderOptions`
+
+Options for the plain-text version derived from the HTML.
+
+#### `text.headingStyle` <Badge text="Optional" variant="note" size="small" />
+
+**Type:** `'preserve' | 'uppercase'` · **Default:** `'uppercase'`
+
+How headings are rendered in plain text. `'uppercase'` converts heading text to uppercase. `'preserve'` keeps the original casing.
+
+#### `text.linkFormat` <Badge text="Optional" variant="note" size="small" />
+
+**Type:** `'href-only' | 'text-and-href' | 'text-only'` · **Default:** `'text-and-href'`
+
+How links are rendered in plain text:
+
+| Value             | Output                            |
+| ----------------- | --------------------------------- |
+| `'text-and-href'` | `Link text (https://example.com)` |
+| `'text-only'`     | `Link text`                       |
+| `'href-only'`     | `https://example.com`             |
+
+```tsx
+const { html, text } = await render(<WelcomeEmail />, {
+  text: {
+    headingStyle: 'preserve',
+    linkFormat: 'text-only',
+  },
+})
+```
+
+## Color expansion
+
+`render()` always expands three-digit hex colors to six digits inside `style` attributes and `<style>` blocks:
+
+```css
+/* input */
+color: #abc;
+/* output */
+color: #aabbcc;
+```
+
+## `sendEmail()`
+
+Renders a JSX draft and sends it through a delivery adapter.
+
+```ts
+function sendEmail(options: SendEmailOptions): Promise<SendEmailReceipt>
+```
+
+```tsx
+import { sendEmail } from 'hono-email'
+import ResendAdapter from 'hono-email/resend'
+
+const receipt = await sendEmail({
+  adapter: ResendAdapter({ apiKey: process.env.RESEND_API_KEY! }),
+  from: 'sender@example.com',
+  to: 'recipient@example.com',
+  subject: 'Welcome',
+  jsx: <WelcomeEmail />,
+})
+```
+
+See [Email Types](/api/email-types/) for `SendEmailOptions` and `SendEmailReceipt`.

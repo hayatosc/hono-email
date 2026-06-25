@@ -73,9 +73,14 @@ describe('cli port validation', () => {
     exitCode = null
   })
 
+  const runPreview = async (port: string) => {
+    if (!preview.run) throw new Error('preview.run is undefined')
+    await preview.run(createMockContext(port))
+  }
+
   test('invalid port (non-integer) calls process.exit(1)', async () => {
     try {
-      await preview.run!(createMockContext('abc'))
+      await runPreview('abc')
     } catch {
       // expected
     }
@@ -84,7 +89,7 @@ describe('cli port validation', () => {
 
   test('invalid port (< 1) calls process.exit(1)', async () => {
     try {
-      await preview.run!(createMockContext('0'))
+      await runPreview('0')
     } catch {
       // expected
     }
@@ -93,7 +98,7 @@ describe('cli port validation', () => {
 
   test('invalid port (> 65535) calls process.exit(1)', async () => {
     try {
-      await preview.run!(createMockContext('70000'))
+      await runPreview('70000')
     } catch {
       // expected
     }
@@ -102,7 +107,7 @@ describe('cli port validation', () => {
 
   test('invalid port (float) calls process.exit(1)', async () => {
     try {
-      await preview.run!(createMockContext('3000.5'))
+      await runPreview('3000.5')
     } catch {
       // expected
     }

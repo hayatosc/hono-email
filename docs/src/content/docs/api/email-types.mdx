@@ -1,0 +1,287 @@
+---
+title: Email Types
+description: API reference for email message types used across adapters.
+---
+
+import { Badge } from '@astrojs/starlight/components'
+
+These types are exported from `hono-email/adapter` and re-exported from each adapter entry point.
+
+---
+
+## EmailMessage
+
+A fully rendered email message passed to an adapter.
+
+```ts
+type EmailMessage = {
+  from: EmailAddress
+  to: EmailAddress | EmailAddress[]
+  cc?: EmailAddress | EmailAddress[]
+  bcc?: EmailAddress | EmailAddress[]
+  replyTo?: EmailAddress | EmailAddress[]
+  subject: string
+  html: string
+  text: string
+  attachments?: EmailAttachment[]
+  headers?: Record<string, string>
+  messageId?: string
+  date?: Date
+  envelope?: EmailEnvelope
+  dkim?: EmailDkimOptions
+}
+```
+
+#### `from` <Badge text="Required" variant="caution" size="small" />
+
+Visible sender address. See [EmailAddress](#emailaddress).
+
+#### `to` <Badge text="Required" variant="caution" size="small" />
+
+Visible recipient address or addresses.
+
+#### `subject` <Badge text="Required" variant="caution" size="small" />
+
+Message subject line.
+
+#### `html` <Badge text="Required" variant="caution" size="small" />
+
+Rendered HTML body. Set automatically by `sendEmail()`.
+
+#### `text` <Badge text="Required" variant="caution" size="small" />
+
+Plain-text body. Set automatically by `sendEmail()`.
+
+#### `cc` <Badge text="Optional" variant="note" size="small" />
+
+Carbon-copy addresses.
+
+#### `bcc` <Badge text="Optional" variant="note" size="small" />
+
+Blind carbon-copy addresses.
+
+#### `replyTo` <Badge text="Optional" variant="note" size="small" />
+
+Reply-to address or addresses.
+
+#### `attachments` <Badge text="Optional" variant="note" size="small" />
+
+Message attachments. See [EmailAttachment](#emailattachment).
+
+#### `headers` <Badge text="Optional" variant="note" size="small" />
+
+Custom email headers as a `Record<string, string>`.
+
+#### `messageId` <Badge text="Optional" variant="note" size="small" />
+
+Custom Message-ID header value.
+
+#### `date` <Badge text="Optional" variant="note" size="small" />
+
+Message date.
+
+#### `envelope` <Badge text="Optional" variant="note" size="small" />
+
+SMTP envelope override. See [EmailEnvelope](#emailenvelope).
+
+#### `dkim` <Badge text="Optional" variant="note" size="small" />
+
+DKIM signing options. See [EmailDkimOptions](#emaildkimoptions).
+
+---
+
+## EmailMessageDraft
+
+Email message with JSX instead of rendered `html`/`text`. Pass to `sendEmail()`.
+
+```ts
+type EmailMessageDraft = Omit<EmailMessage, 'html' | 'text'> & {
+  jsx: Child
+  render?: RenderOptions
+}
+```
+
+#### `jsx` <Badge text="Required" variant="caution" size="small" />
+
+Email JSX tree. Rendered to `html` and `text` by `sendEmail()`.
+
+#### `render` <Badge text="Optional" variant="note" size="small" />
+
+Render options applied before delivery. See [RenderOptions](/core/render/).
+
+---
+
+## SendEmailOptions
+
+Options for `sendEmail()`: all `EmailMessageDraft` fields plus an adapter.
+
+```ts
+type SendEmailOptions = EmailMessageDraft & {
+  adapter: EmailAdapter
+}
+```
+
+#### `adapter` <Badge text="Required" variant="caution" size="small" />
+
+Delivery adapter (e.g. `ResendAdapter(...)`, `SmtpTransport`, `CloudflareEmailAdapter(...)`).
+
+---
+
+## SendEmailReceipt
+
+Union of `SuccessfulSendReceipt | FailedSendReceipt`.
+
+```ts
+type SuccessfulSendReceipt = {
+  successful: true
+  messageId: string
+  accepted: string[]
+  rejected: string[]
+  response: string
+  queued?: boolean
+  queuedRecipients?: string[]
+}
+
+type FailedSendReceipt = {
+  successful: false
+  accepted: string[]
+  rejected: string[]
+  errorMessages: string[]
+  response?: string
+  cause?: unknown
+}
+```
+
+Narrow on `receipt.successful` to access success or failure fields:
+
+```ts
+const receipt = await sendEmail({ ... })
+if (!receipt.successful) {
+  console.error(receipt.errorMessages)
+}
+```
+
+---
+
+## EmailAddress
+
+```ts
+type EmailAddress = string | { address: string; name?: string }
+```
+
+Pass a plain string or an object with `address` and an optional display `name`.
+
+---
+
+## EmailAttachment
+
+```ts
+type EmailAttachment = {
+  filename?: string
+  content?: string | Uint8Array | ArrayBuffer | ReadableStream<Uint8Array>
+  path?: string
+  href?: string
+  contentType?: string
+  contentDisposition?: 'attachment' | 'inline'
+  cid?: string
+  encoding?: 'base64' | 'hex' | 'utf8'
+  headers?: Record<string, string>
+}
+```
+
+#### `filename` <Badge text="Optional" variant="note" size="small" />
+
+Attachment filename shown to recipients.
+
+#### `content` <Badge text="Optional" variant="note" size="small" />
+
+In-memory attachment content. One of `content`, `path`, or `href` is required.
+
+#### `path` <Badge text="Optional" variant="note" size="small" />
+
+Remote URL or data URI to resolve as attachment content. Local files must be read by user code and passed as `content`.
+
+#### `href` <Badge text="Optional" variant="note" size="small" />
+
+Remote URL to fetch as attachment content.
+
+#### `contentType` <Badge text="Optional" variant="note" size="small" />
+
+MIME content type.
+
+#### `contentDisposition` <Badge text="Optional" variant="note" size="small" />
+
+`'attachment'` (default) or `'inline'`.
+
+#### `cid` <Badge text="Optional" variant="note" size="small" />
+
+Content ID for inline attachments referenced in HTML as `cid:...`.
+
+#### `encoding` <Badge text="Optional" variant="note" size="small" />
+
+Encoding for string content: `'base64'` | `'hex'` | `'utf8'`.
+
+---
+
+## EmailEnvelope
+
+SMTP envelope override. Useful when the envelope sender differs from the visible `From` address (e.g. for bounce handling).
+
+```ts
+type EmailEnvelope = {
+  from?: EmailAddress
+  to?: EmailAddress | EmailAddress[]
+  cc?: EmailAddress | EmailAddress[]
+  bcc?: EmailAddress | EmailAddress[]
+}
+```
+
+---
+
+## EmailDkimOptions
+
+DKIM signing options. Applied by the SMTP adapter and any adapter that supports DKIM.
+
+```ts
+type EmailDkimOptions = {
+  domainName: string
+  keySelector: string
+  privateKey: string
+  headerFieldNames?: string[]
+  skipFields?: string[]
+}
+```
+
+#### `domainName` <Badge text="Required" variant="caution" size="small" />
+
+Signing domain (e.g. `'example.com'`).
+
+#### `keySelector` <Badge text="Required" variant="caution" size="small" />
+
+DKIM selector (e.g. `'mail'`).
+
+#### `privateKey` <Badge text="Required" variant="caution" size="small" />
+
+PEM private key string.
+
+#### `headerFieldNames` <Badge text="Optional" variant="note" size="small" />
+
+Header names to include in the signature.
+
+#### `skipFields` <Badge text="Optional" variant="note" size="small" />
+
+Header names to exclude from signing.
+
+---
+
+## EmailAdapter
+
+The interface implemented by all delivery adapters.
+
+```ts
+type EmailAdapter = {
+  send(message: EmailMessage): Promise<SendEmailReceipt>
+}
+```
+
+Pass a custom implementation when no built-in adapter fits your provider.

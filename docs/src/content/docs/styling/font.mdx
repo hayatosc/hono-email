@@ -1,0 +1,36 @@
+---
+title: Font
+description: Load custom web fonts in hono-email templates.
+---
+
+`<Font>` renders `@font-face` and a fallback `font-family` declaration inside `<Head>`.
+
+:::caution
+`@font-face` is not supported by all email clients. Always set a `fallbackFontFamily` so clients that ignore the custom font still render readable text.
+:::
+
+## Example
+
+```tsx
+import { Font, Head, Html, render } from 'hono-email'
+
+const { html } = await render(
+  <Html>
+    <Head>
+      <Font
+        fallbackFontFamily={['Arial', 'sans-serif']}
+        fontFamily="Inter"
+        fontWeight={400}
+        webFont={{
+          url: 'https://example.com/inter.woff2',
+          format: 'woff2',
+        }}
+      />
+    </Head>
+  </Html>,
+)
+```
+
+## Why provide a fallback
+
+Many email clients ignore `@font-face` and web fonts entirely. Providing a stack of fallback fonts ensures your email remains readable even when the custom font does not load. You can check client support at [Can I email... @font-face](https://www.caniemail.com/features/css-at-font-face/).

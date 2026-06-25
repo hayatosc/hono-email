@@ -1,0 +1,27 @@
+---
+title: Overview
+description: What hono-email is and what it can do.
+---
+
+:::caution
+This project is in the early stages of development. APIs and other elements are subject to change in the future.
+:::
+
+`hono-email` is an ESM library for rendering HTML email and plain text from `hono/jsx`. It focuses on rendering, normalization, validation, and email-oriented primitives.
+
+## What it does
+
+- Renders HTML email from `hono/jsx` components.
+- Derives plain text from the same JSX tree through `render()`.
+- Keeps strict email validation enabled by default.
+- Minifies output by default, with optional pretty printing and widow control.
+- Styles markdown content with the `Markdown` component.
+- Supports `hono/css` class-based CSS-in-JS as a styling option.
+- Applies Tailwind utility output through `Tailwind` build artifacts.
+- Sends rendered email through transport adapters (SMTP, Resend, SendGrid, Postmark, Mailgun, Cloudflare Email).
+- Provides bundler integrations through `@hono-email/tailwind-plugin`.
+- Live-previews templates with real-time props editing using `@hono-email/preview`.
+
+## When to use it
+
+Use `hono-email` when you want to build email templates with JSX in a Hono or Bun/Node/Deno/Cloudflare Workers environment, and you need validated, email-client-safe output without managing a separate React dependency.

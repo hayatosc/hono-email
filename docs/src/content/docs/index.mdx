@@ -1,0 +1,37 @@
+---
+title: hono-email
+description: Render HTML email and plain text from hono/jsx.
+template: splash
+hero:
+  tagline: An ESM library for rendering, validating, and sending HTML email from hono/jsx.
+  actions:
+    - text: Get started
+      link: /getting-started/quick-start/
+      icon: right-arrow
+    - text: View on GitHub
+      link: https://github.com/hayatosc/hono-email
+      icon: external
+      variant: minimal
+---
+
+import { Card, CardGrid } from '@astrojs/starlight/components'
+
+## Features
+
+<CardGrid stagger>
+  <Card title="Render from JSX" icon="document">
+    Render HTML email and derived plain text from the same `hono/jsx` tree.
+  </Card>
+  <Card title="Email-safe by default" icon="approve-check">
+    Strict validation catches risky markup and CSS before delivery.
+  </Card>
+  <Card title="Multiple adapters" icon="rocket">
+    Send via SMTP, Resend, SendGrid, Postmark, Mailgun, or Cloudflare Email.
+  </Card>
+  <Card title="Flexible styling" icon="pen">
+    Use inline styles, `hono/css`, or Tailwind utility classes.
+  </Card>
+  <Card title="Live preview" icon="laptop">
+    Preview templates and edit props in real time with `@hono-email/preview`.
+  </Card>
+</CardGrid>

@@ -1,0 +1,134 @@
+---
+title: Cloudflare Email
+description: Send email through Cloudflare Email Service with hono-email.
+---
+
+`hono-email/cloudflare` provides `CloudflareEmailAdapter` and connectors for Cloudflare Email Service.
+
+## On Cloudflare Workers
+
+Use `WorkersConnector` when running inside a Cloudflare Worker:
+
+```tsx
+import { Body, Html, Text, sendEmail } from 'hono-email'
+import { CloudflareEmailAdapter } from 'hono-email/cloudflare'
+import WorkersConnector from 'hono-email/cloudflare/workers'
+
+export default {
+  async fetch(_request: Request, env: Env): Promise<Response> {
+    const receipt = await sendEmail({
+      adapter: CloudflareEmailAdapter({ connector: WorkersConnector }),
+      from: 'sender@example.com',
+      to: 'recipient@example.com',
+      subject: 'Welcome',
+      jsx: (
+        <Html>
+          <Body>
+            <Text>Hello from Cloudflare Workers.</Text>
+          </Body>
+        </Html>
+      ),
+    })
+
+    return Response.json(receipt)
+  },
+}
+```
+
+## REST API
+
+Use `RESTConnector` from other runtimes:
+
+```tsx
+import { Body, Html, Text, sendEmail } from 'hono-email'
+import { CloudflareEmailAdapter, RESTConnector } from 'hono-email/cloudflare'
+
+const receipt = await sendEmail({
+  adapter: CloudflareEmailAdapter({
+    connector: RESTConnector({
+      accountId: process.env.CLOUDFLARE_ACCOUNT_ID!,
+      apiToken: process.env.CLOUDFLARE_API_TOKEN!,
+    }),
+  }),
+  from: { address: 'sender@example.com', name: 'Sender' },
+  to: ['first@example.com', 'second@example.com'],
+  subject: 'Welcome',
+  jsx: (
+    <Html>
+      <Body>
+        <Text>Hello from the Cloudflare REST API.</Text>
+      </Body>
+    </Html>
+  ),
+})
+
+if (receipt.successful && receipt.queued) {
+  console.log('Queued recipients:', receipt.queuedRecipients)
+}
+```
+
+For the full list of configuration options, see the [Cloudflare Email Options API Reference](/api/adapter-options/#cloudflare-email-options).
+
+## Shared adapter features
+
+Like all provider adapters, Cloudflare Email supports `to`, `cc`, `bcc`, `replyTo`, custom `headers`, and `attachments`. Inline attachments use `cid` when the provider supports content IDs.
+
+## CloudflareEmailAdapter options
+
+import { Badge } from '@astrojs/starlight/components'
+
+### `connector` <Badge text="Required" variant="caution" size="small" />
+
+**Type:** `CloudflareEmailConnector`
+
+Cloudflare Email connector. Pass `WorkersConnector` when running inside a Cloudflare Worker, or `RESTConnector(...)` from other runtimes.
+
+### `limits.maxAttachmentSize` <Badge text="Optional" variant="note" size="small" />
+
+**Type:** `number`
+
+Maximum attachment size in bytes.
+
+## RESTConnector options
+
+```ts
+import { RESTConnector } from 'hono-email/cloudflare'
+```
+
+### `accountId` <Badge text="Required" variant="caution" size="small" />
+
+**Type:** `string`
+
+Your Cloudflare account ID.
+
+### `apiToken` <Badge text="Required" variant="caution" size="small" />
+
+**Type:** `string`
+
+Cloudflare API token with Email Routing write permission.
+
+### `apiBaseUrl` <Badge text="Optional" variant="note" size="small" />
+
+**Type:** `string`
+
+Override the Cloudflare API base URL.
+
+### `fetch` <Badge text="Optional" variant="note" size="small" />
+
+**Type:** `(input: string, init: RequestInit) => Promise<Response>`
+
+Custom `fetch` implementation.
+
+## WorkersConnector options
+
+```ts
+import WorkersConnector from 'hono-email/cloudflare/workers'
+```
+
+`WorkersConnector` is a value (not a factory function) — pass it directly.
+
+### `bindingName` <Badge text="Optional" variant="note" size="small" />
+
+**Type:** `string` · **Default:** `'EMAIL'`
+
+Name of the Email Workers binding in your `wrangler.toml`.

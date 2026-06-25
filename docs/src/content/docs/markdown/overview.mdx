@@ -1,0 +1,117 @@
+---
+title: Markdown component
+description: Render GitHub Flavored Markdown as email-safe HTML.
+---
+
+import { Badge } from '@astrojs/starlight/components'
+
+`<Markdown>` converts GitHub Flavored Markdown into HTML and applies email-friendly inline styles by default. Sanitization is enabled by default.
+
+## Example
+
+```tsx
+import { Body, Head, Html, Markdown, render } from 'hono-email'
+
+const { html } = await render(
+  <Html lang="en">
+    <Head>
+      <title>Markdown example</title>
+    </Head>
+    <Body>
+      <Markdown
+        markdownContainerStyles={{
+          padding: '12px',
+          border: '1px solid #111827',
+        }}
+        markdownCustomStyles={{
+          h1: { color: '#dc2626' },
+          codeInline: {
+            backgroundColor: '#e5e7eb',
+            padding: '2px 4px',
+          },
+        }}
+      >{`
+# Markdown email
+
+| Name | Role |
+| --- | --- |
+| Taro | Builder |
+      `}</Markdown>
+    </Body>
+  </Html>,
+)
+```
+
+`<Markdown>` accepts inline style props (`markdownContainerStyles`, `markdownCustomStyles`) and Tailwind class props (`markdownContainerClassName`, `markdownCustomClassNames`). See the [API Reference](#markdownprops) for the full list of props.
+
+## Sanitization
+
+By default, `<Markdown>` sanitizes the generated HTML to remove content that is unsafe or unsupported in email clients. You can disable this, but it is not recommended.
+
+## API Reference
+
+---
+
+## MarkdownProps
+
+```ts
+export type MarkdownProps = {
+  children: string
+  markdownStyleMode?: 'inline' | 'tailwind'
+  markdownContainerClassName?: string
+  markdownContainerStyles?: JSX.CSSProperties
+  markdownCustomClassNames?: MarkdownCustomClassNames
+  markdownCustomStyles?: MarkdownCustomStyles
+  sanitize?: boolean
+}
+```
+
+#### `children` <Badge text="Required" variant="caution" size="small" />
+
+**Type:** `string`
+
+The Markdown text content to render.
+
+#### `markdownStyleMode` <Badge text="Optional" variant="note" size="small" />
+
+**Type:** `'inline' | 'tailwind'`
+
+Style rendering mode. Defaults to `'inline'`. Set to `'tailwind'` to use utility classes (requires `<Tailwind>` parent).
+
+#### `markdownContainerClassName` <Badge text="Optional" variant="note" size="small" />
+
+**Type:** `string`
+
+Class name applied to the generated Markdown root `<div>` container.
+
+#### `markdownContainerStyles` <Badge text="Optional" variant="note" size="small" />
+
+**Type:** `JSX.CSSProperties`
+
+Inline styles applied to the generated Markdown root `<div>` container.
+
+#### `markdownCustomClassNames` <Badge text="Optional" variant="note" size="small" />
+
+**Type:** `MarkdownCustomClassNames`
+
+Custom class names mapped to specific Markdown elements. See [Element keys](#element-keys) for supported target elements.
+
+#### `markdownCustomStyles` <Badge text="Optional" variant="note" size="small" />
+
+**Type:** `MarkdownCustomStyles`
+
+Custom inline styles mapped to specific Markdown elements. See [Element keys](#element-keys) for supported target elements.
+
+#### `sanitize` <Badge text="Optional" variant="note" size="small" />
+
+**Type:** `boolean`
+
+Whether to sanitize generated HTML. Defaults to `true`.
+
+---
+
+## Element keys
+
+The keys used in `markdownCustomClassNames` and `markdownCustomStyles` correspond to the following HTML elements:
+
+`a`, `blockquote`, `code` (code block), `codeInline` (inline code), `h1`, `h2`, `h3`, `h4`, `h5`, `h6`, `img`, `li`, `ol`, `p`, `pre`, `table`, `tbody`, `td`, `th`, `thead`, `tr`, `ul`

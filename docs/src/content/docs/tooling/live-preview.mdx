@@ -1,0 +1,117 @@
+---
+title: Live Preview
+description: Preview email templates with real-time props editing.
+---
+
+import { Tabs, TabItem } from '@astrojs/starlight/components'
+
+`@hono-email/preview` provides a live development server and CLI to preview your email templates in a web browser with real-time interactive props editing.
+
+## Installation
+
+Install the preview package as a development dependency.
+
+<Tabs syncKey="package-manager">
+  <TabItem label="npm">
+
+    ```sh
+    npm i -D @hono-email/preview
+    ```
+
+  </TabItem>
+  <TabItem label="yarn">
+
+    ```sh
+    yarn add -D @hono-email/preview
+    ```
+
+  </TabItem>
+  <TabItem label="pnpm">
+
+    ```sh
+    pnpm add -D @hono-email/preview
+    ```
+
+  </TabItem>
+  <TabItem label="bun">
+
+    ```sh
+    bun i -D @hono-email/preview
+    ```
+
+  </TabItem>
+</Tabs>
+
+## Running the server
+
+Start the preview server with the `hono-email` CLI's `preview` command:
+
+```sh
+npx hono-email preview --dir ./emails
+```
+
+With Bun:
+
+```sh
+bunx hono-email preview --dir ./emails
+```
+
+### Options
+
+| Option              | Description                                                                      |
+| ------------------- | -------------------------------------------------------------------------------- |
+| `-d, --dir <path>`  | The directory to search for email templates recursively. Defaults to `./emails`. |
+| `-p, --port <port>` | The port to run the server on. Defaults to `3000`.                               |
+
+## Interactive props schema
+
+To enable structured props editing in the preview UI, export a `previewProps` configuration object alongside your default-exported email template component.
+
+```tsx
+import type { PreviewPropsConfig } from '@hono-email/preview'
+import { Html, Body, Container, Heading, Text } from 'hono-email'
+
+export const previewProps = {
+  name: { type: 'string', default: 'Taro' },
+  appName: { type: 'string', default: 'Acme' },
+  trialDays: { type: 'number', default: 14 },
+} satisfies PreviewPropsConfig
+
+type WelcomeEmailProps = {
+  name: string
+  appName: string
+  trialDays: number
+}
+
+export default function WelcomeEmail({ name, appName, trialDays }: WelcomeEmailProps) {
+  return (
+    <Html>
+      <Body>
+        <Container>
+          <Heading>
+            Welcome to {appName}, {name}!
+          </Heading>
+          <Text>You have {trialDays} days remaining in your free trial.</Text>
+        </Container>
+      </Body>
+    </Html>
+  )
+}
+```
+
+Supported field types include `string`, `number`, `boolean`, `select`, and `array`. See the [API Reference](#interactive-props-schema) for the full schema definition.
+
+### Array prop example
+
+```tsx
+export const previewProps = {
+  items: {
+    type: 'array',
+    item: {
+      name: { type: 'string' },
+      qty: { type: 'number' },
+    },
+    default: [{ name: 'Widget', qty: 1 }],
+  },
+} satisfies PreviewPropsConfig
+```

@@ -1,0 +1,43 @@
+---
+title: Markdown with Tailwind
+description: Use Tailwind classes to style Markdown output.
+---
+
+When you render Markdown inside `<Tailwind>`, you can switch Markdown to class-based mode so Tailwind utilities control the styling. For details on setting up Tailwind build-time compilation, see the [Tailwind Plugin guide](/styling/tailwind/).
+
+:::note
+`markdownStyleMode="tailwind"` is only supported inside `<Tailwind>` and throws otherwise.
+:::
+
+## Example
+
+```tsx
+import { Body, Head, Html, Markdown, Tailwind, render } from 'hono-email'
+
+const { html } = await render(
+  <Html lang="en">
+    <Head />
+    <Tailwind>
+      <Body>
+        <Markdown
+          markdownStyleMode="tailwind"
+          markdownContainerClassName="prose text-slate-900"
+          markdownCustomClassNames={{
+            h1: 'text-2xl font-semibold',
+            p: 'mb-3',
+            codeInline: 'bg-slate-100 px-1 rounded',
+          }}
+        >{`
+# Markdown email
+
+Paragraph with \`code\`
+        `}</Markdown>
+      </Body>
+    </Tailwind>
+  </Html>,
+)
+```
+
+## Mixing inline and class-based styles
+
+`markdownCustomStyles` and `markdownContainerStyles` are still available in Tailwind mode if you want to mix class-based and inline overrides.

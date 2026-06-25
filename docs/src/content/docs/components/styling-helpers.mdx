@@ -1,0 +1,68 @@
+---
+title: Styling Helpers
+description: Styling helpers like Font, ColorScheme, and Conditional.
+---
+
+import { Badge } from '@astrojs/starlight/components'
+
+These components provide utilities for styling, dark mode, and conditional comments. They are imported from `hono-email`:
+
+```tsx
+import { Font, ColorScheme, Conditional } from 'hono-email'
+```
+
+---
+
+## `<Font>`
+
+Renders `@font-face` and fallback `font-family` CSS inside `<Head>`. See [Font](/styling/font/).
+
+```tsx
+<Head>
+  <Font
+    fontFamily="Inter"
+    fallbackFontFamily={['Arial', 'sans-serif']}
+    webFont={{ url: 'https://fonts.gstatic.com/s/inter/...', format: 'woff2' }}
+  />
+</Head>
+```
+
+## `<ColorScheme>`
+
+Declares light and dark color scheme support inside `<Head>`.
+
+```tsx
+<Head>
+  <ColorScheme colorScheme="light dark" />
+</Head>
+```
+
+### `colorScheme` <Badge text="Optional" variant="note" size="small" />
+
+**Type:** `'light' | 'dark' | 'light dark'` · **Default:** `'light dark'`
+
+### `supportedColorSchemes` <Badge text="Optional" variant="note" size="small" />
+
+**Type:** `'light' | 'dark' | 'light dark'` · **Default:** value of `colorScheme`
+
+## `<Conditional>`
+
+Renders Outlook conditional comment branches.
+
+```tsx
+<Conditional mso>
+  <Text>This appears only in Outlook for Windows.</Text>
+</Conditional>
+```
+
+### `mso` <Badge text="Optional" variant="note" size="small" />
+
+**Type:** `boolean` · **Default:** `true`
+
+Wrap children in `<!--[if mso]>...<![endif]-->`.
+
+### `notMso` <Badge text="Optional" variant="note" size="small" />
+
+**Type:** `boolean`
+
+Wrap children in `<!--[if !mso]><!--> ... <!--<![endif]-->`.
