@@ -1,4 +1,4 @@
-import { mkdir, readdir, readFile, stat, writeFile } from 'node:fs/promises'
+import { mkdir, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises'
 import { basename, dirname, join, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -144,12 +144,27 @@ function buildLlmsFull(pages: { pathname: string; markdown: string }[]): string 
   return sections.join('\n---\n\n')
 }
 
+async function cleanDir(dir: string): Promise<void> {
+  try {
+    const entries = await readdir(dir, { withFileTypes: true })
+    for (const entry of entries) {
+      const fullPath = join(dir, entry.name)
+      await rm(fullPath, { recursive: true, force: true })
+    }
+  } catch (err) {
+    if (err && typeof err === 'object' && 'code' in err && err.code !== 'ENOENT') {
+      throw err
+    }
+  }
+}
+
 async function generateIntermediate(
   docsRoot: string,
   outputRoot: string,
 ): Promise<MarkdownManifest> {
   const pagesDir = join(outputRoot, PAGES_DIR)
   await mkdir(pagesDir, { recursive: true })
+  await cleanDir(pagesDir)
 
   const pages: MarkdownPage[] = []
   const llmsPages: { pathname: string; markdown: string }[] = []
