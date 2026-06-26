@@ -10,6 +10,7 @@
   };
 
   function copy() {
+    if (!navigator.clipboard) return;
     navigator.clipboard.writeText(commands[activeManager]).then(() => {
       copied = true;
       setTimeout(() => {
