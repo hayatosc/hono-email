@@ -3,6 +3,7 @@
 
   let active = $state(0);
   let prefersReducedMotion = $state(false);
+  let isPaused = $state(false);
 
   let n = $derived(runtimes.length);
 
@@ -17,7 +18,7 @@
 
   $effect(() => {
     prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (prefersReducedMotion || n === 0) return;
+    if (prefersReducedMotion || n === 0 || isPaused) return;
 
     const interval = setInterval(() => {
       active = (active + 1) % n;
@@ -27,7 +28,17 @@
   });
 </script>
 
-<div class="stage" data-runtime-carousel>
+<div
+  class="stage"
+  data-runtime-carousel
+  tabindex="0"
+  role="region"
+  aria-label="Supported Runtimes Carousel"
+  onmouseenter={() => isPaused = true}
+  onmouseleave={() => isPaused = false}
+  onfocusin={() => isPaused = true}
+  onfocusout={() => isPaused = false}
+>
   {#each runtimes as r, i (r.name)}
     <figure class="rt" data-pos={getPos(i, active, n)}>
       <svg class="rt-icon" viewBox="0 0 24 24" aria-hidden="true">
@@ -47,6 +58,14 @@
     height: 12.5rem;
     /* soften the peeking neighbours at the edges */
     mask-image: linear-gradient(to right, transparent, #000 16%, #000 84%, transparent);
+  }
+  .stage:focus {
+    outline: none;
+  }
+  .stage:focus-visible {
+    outline: 2px solid var(--lp-accent);
+    outline-offset: 4px;
+    border-radius: var(--lp-radius, 0.5rem);
   }
   .rt {
     position: absolute;
