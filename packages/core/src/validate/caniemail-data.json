@@ -1,0 +1,756 @@
+{
+  "apiVersion": "1.0.4",
+  "lastUpdateDate": "2026-05-19 13:46:34 +0000",
+  "generatedAt": "2026-06-29T09:09:24.707Z",
+  "features": {
+    "display:flex": {
+      "slug": "css-display-flex",
+      "kind": "css-declaration",
+      "ratio": 0.8292682926829268,
+      "status": "supported",
+      "url": "https://www.caniemail.com/features/css-display-flex/"
+    },
+    "display:grid": {
+      "slug": "css-display-grid",
+      "kind": "css-declaration",
+      "ratio": 0.8292682926829268,
+      "status": "supported",
+      "url": "https://www.caniemail.com/features/css-display-grid/"
+    },
+    "display:inline-flex": {
+      "slug": "css-display-flex",
+      "kind": "css-declaration",
+      "ratio": 0.8292682926829268,
+      "status": "supported",
+      "url": "https://www.caniemail.com/features/css-display-flex/"
+    },
+    "display:inline-grid": {
+      "slug": "css-display-grid",
+      "kind": "css-declaration",
+      "ratio": 0.8292682926829268,
+      "status": "supported",
+      "url": "https://www.caniemail.com/features/css-display-grid/"
+    },
+    "position:fixed": {
+      "slug": "css-position",
+      "kind": "css-declaration",
+      "ratio": 0.8048780487804879,
+      "status": "supported",
+      "url": "https://www.caniemail.com/features/css-position/"
+    },
+    "position:sticky": {
+      "slug": "css-position",
+      "kind": "css-declaration",
+      "ratio": 0.8048780487804879,
+      "status": "supported",
+      "url": "https://www.caniemail.com/features/css-position/"
+    },
+    "grid": {
+      "slug": "css-grid-template",
+      "kind": "css-property",
+      "ratio": 0.37209302325581395,
+      "status": "unsupported",
+      "url": "https://www.caniemail.com/features/css-grid-template/"
+    },
+    "grid-area": {
+      "slug": "css-display-grid",
+      "kind": "css-property",
+      "ratio": 0.8292682926829268,
+      "status": "supported",
+      "url": "https://www.caniemail.com/features/css-display-grid/"
+    },
+    "grid-auto-columns": {
+      "slug": "css-display-grid",
+      "kind": "css-property",
+      "ratio": 0.8292682926829268,
+      "status": "supported",
+      "url": "https://www.caniemail.com/features/css-display-grid/"
+    },
+    "grid-auto-flow": {
+      "slug": "css-display-grid",
+      "kind": "css-property",
+      "ratio": 0.8292682926829268,
+      "status": "supported",
+      "url": "https://www.caniemail.com/features/css-display-grid/"
+    },
+    "grid-auto-rows": {
+      "slug": "css-display-grid",
+      "kind": "css-property",
+      "ratio": 0.8292682926829268,
+      "status": "supported",
+      "url": "https://www.caniemail.com/features/css-display-grid/"
+    },
+    "grid-column": {
+      "slug": "css-display-grid",
+      "kind": "css-property",
+      "ratio": 0.8292682926829268,
+      "status": "supported",
+      "url": "https://www.caniemail.com/features/css-display-grid/"
+    },
+    "grid-column-end": {
+      "slug": "css-display-grid",
+      "kind": "css-property",
+      "ratio": 0.8292682926829268,
+      "status": "supported",
+      "url": "https://www.caniemail.com/features/css-display-grid/"
+    },
+    "grid-column-start": {
+      "slug": "css-display-grid",
+      "kind": "css-property",
+      "ratio": 0.8292682926829268,
+      "status": "supported",
+      "url": "https://www.caniemail.com/features/css-display-grid/"
+    },
+    "grid-row": {
+      "slug": "css-display-grid",
+      "kind": "css-property",
+      "ratio": 0.8292682926829268,
+      "status": "supported",
+      "url": "https://www.caniemail.com/features/css-display-grid/"
+    },
+    "grid-row-end": {
+      "slug": "css-display-grid",
+      "kind": "css-property",
+      "ratio": 0.8292682926829268,
+      "status": "supported",
+      "url": "https://www.caniemail.com/features/css-display-grid/"
+    },
+    "grid-row-start": {
+      "slug": "css-display-grid",
+      "kind": "css-property",
+      "ratio": 0.8292682926829268,
+      "status": "supported",
+      "url": "https://www.caniemail.com/features/css-display-grid/"
+    },
+    "grid-template": {
+      "slug": "css-grid-template",
+      "kind": "css-property",
+      "ratio": 0.37209302325581395,
+      "status": "unsupported",
+      "url": "https://www.caniemail.com/features/css-grid-template/"
+    },
+    "grid-template-areas": {
+      "slug": "css-grid-template",
+      "kind": "css-property",
+      "ratio": 0.37209302325581395,
+      "status": "unsupported",
+      "url": "https://www.caniemail.com/features/css-grid-template/"
+    },
+    "grid-template-columns": {
+      "slug": "css-grid-template",
+      "kind": "css-property",
+      "ratio": 0.37209302325581395,
+      "status": "unsupported",
+      "url": "https://www.caniemail.com/features/css-grid-template/"
+    },
+    "grid-template-rows": {
+      "slug": "css-grid-template",
+      "kind": "css-property",
+      "ratio": 0.37209302325581395,
+      "status": "unsupported",
+      "url": "https://www.caniemail.com/features/css-grid-template/"
+    },
+    "margin-inline": {
+      "slug": "css-margin-inline-block",
+      "kind": "css-property",
+      "ratio": 0.5365853658536586,
+      "status": "warn",
+      "url": "https://www.caniemail.com/features/css-margin-inline-block/"
+    },
+    "margin-inline-start": {
+      "slug": "css-margin-inline-start-end",
+      "kind": "css-property",
+      "ratio": 0.34146341463414637,
+      "status": "unsupported",
+      "url": "https://www.caniemail.com/features/css-margin-inline-start-end/"
+    },
+    "margin-inline-end": {
+      "slug": "css-margin-inline-start-end",
+      "kind": "css-property",
+      "ratio": 0.34146341463414637,
+      "status": "unsupported",
+      "url": "https://www.caniemail.com/features/css-margin-inline-start-end/"
+    },
+    "margin-block": {
+      "slug": "css-margin-inline-block",
+      "kind": "css-property",
+      "ratio": 0.5365853658536586,
+      "status": "warn",
+      "url": "https://www.caniemail.com/features/css-margin-inline-block/"
+    },
+    "margin-block-start": {
+      "slug": "css-margin-block-start-end",
+      "kind": "css-property",
+      "ratio": 0.34146341463414637,
+      "status": "unsupported",
+      "url": "https://www.caniemail.com/features/css-margin-block-start-end/"
+    },
+    "margin-block-end": {
+      "slug": "css-margin-block-start-end",
+      "kind": "css-property",
+      "ratio": 0.34146341463414637,
+      "status": "unsupported",
+      "url": "https://www.caniemail.com/features/css-margin-block-start-end/"
+    },
+    "padding-inline": {
+      "slug": "css-padding-inline-block",
+      "kind": "css-property",
+      "ratio": 0.2926829268292683,
+      "status": "unsupported",
+      "url": "https://www.caniemail.com/features/css-padding-inline-block/"
+    },
+    "padding-inline-start": {
+      "slug": "css-padding-inline-start-end",
+      "kind": "css-property",
+      "ratio": 0.34146341463414637,
+      "status": "unsupported",
+      "url": "https://www.caniemail.com/features/css-padding-inline-start-end/"
+    },
+    "padding-inline-end": {
+      "slug": "css-padding-inline-start-end",
+      "kind": "css-property",
+      "ratio": 0.34146341463414637,
+      "status": "unsupported",
+      "url": "https://www.caniemail.com/features/css-padding-inline-start-end/"
+    },
+    "padding-block": {
+      "slug": "css-padding-inline-block",
+      "kind": "css-property",
+      "ratio": 0.2926829268292683,
+      "status": "unsupported",
+      "url": "https://www.caniemail.com/features/css-padding-inline-block/"
+    },
+    "padding-block-start": {
+      "slug": "css-padding-block-start-end",
+      "kind": "css-property",
+      "ratio": 0.34146341463414637,
+      "status": "unsupported",
+      "url": "https://www.caniemail.com/features/css-padding-block-start-end/"
+    },
+    "padding-block-end": {
+      "slug": "css-padding-block-start-end",
+      "kind": "css-property",
+      "ratio": 0.34146341463414637,
+      "status": "unsupported",
+      "url": "https://www.caniemail.com/features/css-padding-block-start-end/"
+    },
+    "border-inline": {
+      "slug": "css-border-inline-block",
+      "kind": "css-property",
+      "ratio": 0.36585365853658536,
+      "status": "unsupported",
+      "url": "https://www.caniemail.com/features/css-border-inline-block/"
+    },
+    "border-inline-start": {
+      "slug": "css-border-inline-block-individual",
+      "kind": "css-property",
+      "ratio": 0.4146341463414634,
+      "status": "unsupported",
+      "url": "https://www.caniemail.com/features/css-border-inline-block-individual/"
+    },
+    "border-inline-end": {
+      "slug": "css-border-inline-block-individual",
+      "kind": "css-property",
+      "ratio": 0.4146341463414634,
+      "status": "unsupported",
+      "url": "https://www.caniemail.com/features/css-border-inline-block-individual/"
+    },
+    "border-block": {
+      "slug": "css-border-inline-block",
+      "kind": "css-property",
+      "ratio": 0.36585365853658536,
+      "status": "unsupported",
+      "url": "https://www.caniemail.com/features/css-border-inline-block/"
+    },
+    "border-block-start": {
+      "slug": "css-border-inline-block-individual",
+      "kind": "css-property",
+      "ratio": 0.4146341463414634,
+      "status": "unsupported",
+      "url": "https://www.caniemail.com/features/css-border-inline-block-individual/"
+    },
+    "border-block-end": {
+      "slug": "css-border-inline-block-individual",
+      "kind": "css-property",
+      "ratio": 0.4146341463414634,
+      "status": "unsupported",
+      "url": "https://www.caniemail.com/features/css-border-inline-block-individual/"
+    },
+    "filter": {
+      "slug": "css-filter",
+      "kind": "css-property",
+      "ratio": 0.4878048780487805,
+      "status": "unsupported",
+      "url": "https://www.caniemail.com/features/css-filter/"
+    },
+    "user-select": {
+      "slug": "css-user-select",
+      "kind": "css-property",
+      "ratio": 0.17073170731707318,
+      "status": "unsupported",
+      "url": "https://www.caniemail.com/features/css-user-select/"
+    },
+    "aspect-ratio": {
+      "slug": "css-aspect-ratio",
+      "kind": "css-property",
+      "ratio": 0.4146341463414634,
+      "status": "unsupported",
+      "url": "https://www.caniemail.com/features/css-aspect-ratio/"
+    },
+    "transform": {
+      "slug": "css-transform",
+      "kind": "css-property",
+      "ratio": 0.4878048780487805,
+      "status": "unsupported",
+      "url": "https://www.caniemail.com/features/css-transform/"
+    },
+    "transition": {
+      "slug": "css-transition",
+      "kind": "css-property",
+      "ratio": 0.3953488372093023,
+      "status": "unsupported",
+      "url": "https://www.caniemail.com/features/css-transition/"
+    },
+    "animation": {
+      "slug": "css-animation",
+      "kind": "css-property",
+      "ratio": 0.36585365853658536,
+      "status": "unsupported",
+      "url": "https://www.caniemail.com/features/css-animation/"
+    },
+    "mask-image": {
+      "slug": "css-mask-image",
+      "kind": "css-property",
+      "ratio": 0.125,
+      "status": "unsupported",
+      "url": "https://www.caniemail.com/features/css-mask-image/"
+    },
+    "clip-path": {
+      "slug": "css-clip-path",
+      "kind": "css-property",
+      "ratio": 0.5121951219512195,
+      "status": "warn",
+      "url": "https://www.caniemail.com/features/css-clip-path/"
+    },
+    "background-blend-mode": {
+      "slug": "css-background-blend-mode",
+      "kind": "css-property",
+      "ratio": 0.6585365853658537,
+      "status": "warn",
+      "url": "https://www.caniemail.com/features/css-background-blend-mode/"
+    },
+    "background-clip": {
+      "slug": "css-background-clip",
+      "kind": "css-property",
+      "ratio": 0.6585365853658537,
+      "status": "warn",
+      "url": "https://www.caniemail.com/features/css-background-clip/"
+    },
+    "backdrop-filter": {
+      "slug": "css-backdrop-filter",
+      "kind": "css-property",
+      "ratio": 0.2682926829268293,
+      "status": "unsupported",
+      "url": "https://www.caniemail.com/features/css-backdrop-filter/"
+    },
+    "mix-blend-mode": {
+      "slug": "css-mix-blend-mode",
+      "kind": "css-property",
+      "ratio": 0.6341463414634146,
+      "status": "warn",
+      "url": "https://www.caniemail.com/features/css-mix-blend-mode/"
+    },
+    "align-content": {
+      "slug": "css-flex-direction",
+      "kind": "css-property",
+      "ratio": 0.5609756097560976,
+      "status": "warn",
+      "url": "https://www.caniemail.com/features/css-flex-direction/"
+    },
+    "align-items": {
+      "slug": "css-align-items",
+      "kind": "css-property",
+      "ratio": 0.5853658536585366,
+      "status": "warn",
+      "url": "https://www.caniemail.com/features/css-align-items/"
+    },
+    "align-self": {
+      "slug": "css-align-items",
+      "kind": "css-property",
+      "ratio": 0.5853658536585366,
+      "status": "warn",
+      "url": "https://www.caniemail.com/features/css-align-items/"
+    },
+    "flex": {
+      "slug": "css-display-flex",
+      "kind": "css-property",
+      "ratio": 0.8292682926829268,
+      "status": "supported",
+      "url": "https://www.caniemail.com/features/css-display-flex/"
+    },
+    "flex-basis": {
+      "slug": "css-flex-direction",
+      "kind": "css-property",
+      "ratio": 0.5609756097560976,
+      "status": "warn",
+      "url": "https://www.caniemail.com/features/css-flex-direction/"
+    },
+    "flex-direction": {
+      "slug": "css-flex-direction",
+      "kind": "css-property",
+      "ratio": 0.5609756097560976,
+      "status": "warn",
+      "url": "https://www.caniemail.com/features/css-flex-direction/"
+    },
+    "flex-grow": {
+      "slug": "css-flex-direction",
+      "kind": "css-property",
+      "ratio": 0.5609756097560976,
+      "status": "warn",
+      "url": "https://www.caniemail.com/features/css-flex-direction/"
+    },
+    "flex-shrink": {
+      "slug": "css-flex-direction",
+      "kind": "css-property",
+      "ratio": 0.5609756097560976,
+      "status": "warn",
+      "url": "https://www.caniemail.com/features/css-flex-direction/"
+    },
+    "flex-wrap": {
+      "slug": "css-flex-wrap",
+      "kind": "css-property",
+      "ratio": 0.5853658536585366,
+      "status": "warn",
+      "url": "https://www.caniemail.com/features/css-flex-wrap/"
+    },
+    "justify-content": {
+      "slug": "css-justify-content",
+      "kind": "css-property",
+      "ratio": 0.5853658536585366,
+      "status": "warn",
+      "url": "https://www.caniemail.com/features/css-justify-content/"
+    },
+    "order": {
+      "slug": "css-flex-direction",
+      "kind": "css-property",
+      "ratio": 0.5609756097560976,
+      "status": "warn",
+      "url": "https://www.caniemail.com/features/css-flex-direction/"
+    },
+    "position": {
+      "slug": "css-position",
+      "kind": "css-property",
+      "ratio": 0.8048780487804879,
+      "status": "supported",
+      "url": "https://www.caniemail.com/features/css-position/"
+    },
+    "object-fit": {
+      "slug": "css-object-fit",
+      "kind": "css-property",
+      "ratio": 0.6585365853658537,
+      "status": "warn",
+      "url": "https://www.caniemail.com/features/css-object-fit/"
+    },
+    "object-position": {
+      "slug": "css-object-position",
+      "kind": "css-property",
+      "ratio": 0.6585365853658537,
+      "status": "warn",
+      "url": "https://www.caniemail.com/features/css-object-position/"
+    },
+    "background-image": {
+      "slug": "css-background-image",
+      "kind": "css-property",
+      "ratio": 0.9069767441860465,
+      "status": "supported",
+      "url": "https://www.caniemail.com/features/css-background-image/"
+    },
+    "box-shadow": {
+      "slug": "css-box-shadow",
+      "kind": "css-property",
+      "ratio": 0.6341463414634146,
+      "status": "warn",
+      "url": "https://www.caniemail.com/features/css-box-shadow/"
+    },
+    "z-index": {
+      "slug": "css-z-index",
+      "kind": "css-property",
+      "ratio": 0.8292682926829268,
+      "status": "supported",
+      "url": "https://www.caniemail.com/features/css-z-index/"
+    },
+    "opacity": {
+      "slug": "css-opacity",
+      "kind": "css-property",
+      "ratio": 0.7073170731707317,
+      "status": "warn",
+      "url": "https://www.caniemail.com/features/css-opacity/"
+    },
+    "border-radius": {
+      "slug": "css-border-radius",
+      "kind": "css-property",
+      "ratio": 0.8292682926829268,
+      "status": "supported",
+      "url": "https://www.caniemail.com/features/css-border-radius/"
+    },
+    "overflow": {
+      "slug": "css-overflow",
+      "kind": "css-property",
+      "ratio": 0.9512195121951219,
+      "status": "supported",
+      "url": "https://www.caniemail.com/features/css-overflow/"
+    },
+    "text-shadow": {
+      "slug": "css-text-shadow",
+      "kind": "css-property",
+      "ratio": 0.7804878048780488,
+      "status": "warn",
+      "url": "https://www.caniemail.com/features/css-text-shadow/"
+    },
+    "gap": {
+      "slug": "css-gap",
+      "kind": "css-property",
+      "ratio": 0.6388888888888888,
+      "status": "warn",
+      "url": "https://www.caniemail.com/features/css-gap/"
+    },
+    "float": {
+      "slug": "css-float",
+      "kind": "css-property",
+      "ratio": 0.9512195121951219,
+      "status": "supported",
+      "url": "https://www.caniemail.com/features/css-float/"
+    },
+    "clear": {
+      "slug": "css-clear",
+      "kind": "css-property",
+      "ratio": 0.5121951219512195,
+      "status": "warn",
+      "url": "https://www.caniemail.com/features/css-clear/"
+    },
+    "@media": {
+      "slug": "css-at-media",
+      "kind": "css-at-rule",
+      "ratio": 0.8048780487804879,
+      "status": "supported",
+      "url": "https://www.caniemail.com/features/css-at-media/"
+    },
+    "@import": {
+      "slug": "css-at-import",
+      "kind": "css-at-rule",
+      "ratio": 0.23809523809523808,
+      "status": "unsupported",
+      "url": "https://www.caniemail.com/features/css-at-import/"
+    },
+    "@font-face": {
+      "slug": "css-at-font-face",
+      "kind": "css-at-rule",
+      "ratio": 0.2682926829268293,
+      "status": "unsupported",
+      "url": "https://www.caniemail.com/features/css-at-font-face/"
+    },
+    "@keyframes": {
+      "slug": "css-at-keyframes",
+      "kind": "css-at-rule",
+      "ratio": 0.36585365853658536,
+      "status": "unsupported",
+      "url": "https://www.caniemail.com/features/css-at-keyframes/"
+    },
+    "@supports": {
+      "slug": "css-at-supports",
+      "kind": "css-at-rule",
+      "ratio": 0.5121951219512195,
+      "status": "warn",
+      "url": "https://www.caniemail.com/features/css-at-supports/"
+    },
+    "form": {
+      "slug": "html-form",
+      "kind": "html-tag",
+      "ratio": 0.4878048780487805,
+      "status": "unsupported",
+      "url": "https://www.caniemail.com/features/html-form/"
+    },
+    "input": {
+      "slug": "html-input-text",
+      "kind": "html-tag",
+      "ratio": 0.4634146341463415,
+      "status": "unsupported",
+      "url": "https://www.caniemail.com/features/html-input-text/"
+    },
+    "button": {
+      "slug": "html-button-submit",
+      "kind": "html-tag",
+      "ratio": 0.6829268292682927,
+      "status": "warn",
+      "url": "https://www.caniemail.com/features/html-button-submit/"
+    },
+    "select": {
+      "slug": "html-select",
+      "kind": "html-tag",
+      "ratio": 0.6829268292682927,
+      "status": "warn",
+      "url": "https://www.caniemail.com/features/html-select/"
+    },
+    "option": {
+      "slug": "html-select",
+      "kind": "html-tag",
+      "ratio": 0.6829268292682927,
+      "status": "warn",
+      "url": "https://www.caniemail.com/features/html-select/"
+    },
+    "textarea": {
+      "slug": "html-textarea",
+      "kind": "html-tag",
+      "ratio": 0.6341463414634146,
+      "status": "warn",
+      "url": "https://www.caniemail.com/features/html-textarea/"
+    },
+    "video": {
+      "slug": "html-video",
+      "kind": "html-tag",
+      "ratio": 0.24390243902439024,
+      "status": "unsupported",
+      "url": "https://www.caniemail.com/features/html-video/"
+    },
+    "audio": {
+      "slug": "html-audio",
+      "kind": "html-tag",
+      "ratio": 0.21428571428571427,
+      "status": "unsupported",
+      "url": "https://www.caniemail.com/features/html-audio/"
+    },
+    "object": {
+      "slug": "html-object",
+      "kind": "html-tag",
+      "ratio": 0.17073170731707318,
+      "status": "unsupported",
+      "url": "https://www.caniemail.com/features/html-object/"
+    },
+    "picture": {
+      "slug": "html-picture",
+      "kind": "html-tag",
+      "ratio": 0.2682926829268293,
+      "status": "unsupported",
+      "url": "https://www.caniemail.com/features/html-picture/"
+    },
+    "source": {
+      "slug": "html-picture",
+      "kind": "html-tag",
+      "ratio": 0.2682926829268293,
+      "status": "unsupported",
+      "url": "https://www.caniemail.com/features/html-picture/"
+    },
+    "svg": {
+      "slug": "image-svg",
+      "kind": "image-format",
+      "ratio": 0.9047619047619048,
+      "status": "supported",
+      "url": "https://www.caniemail.com/features/image-svg/"
+    },
+    "dialog": {
+      "slug": "html-dialog",
+      "kind": "html-tag",
+      "ratio": 0.3170731707317073,
+      "status": "unsupported",
+      "url": "https://www.caniemail.com/features/html-dialog/"
+    },
+    "meter": {
+      "slug": "html-meter",
+      "kind": "html-tag",
+      "ratio": 0.4634146341463415,
+      "status": "unsupported",
+      "url": "https://www.caniemail.com/features/html-meter/"
+    },
+    "progress": {
+      "slug": "html-progress",
+      "kind": "html-tag",
+      "ratio": 0.3902439024390244,
+      "status": "unsupported",
+      "url": "https://www.caniemail.com/features/html-progress/"
+    },
+    "marquee": {
+      "slug": "html-marquee",
+      "kind": "html-tag",
+      "ratio": 0.6190476190476191,
+      "status": "warn",
+      "url": "https://www.caniemail.com/features/html-marquee/"
+    },
+    "bdi": {
+      "slug": "html-bdi",
+      "kind": "html-tag",
+      "ratio": 0.36585365853658536,
+      "status": "unsupported",
+      "url": "https://www.caniemail.com/features/html-bdi/"
+    },
+    "srcset": {
+      "slug": "html-srcset",
+      "kind": "html-attribute",
+      "ratio": 0.2682926829268293,
+      "status": "unsupported",
+      "url": "https://www.caniemail.com/features/html-srcset/"
+    },
+    "sizes": {
+      "slug": "html-srcset",
+      "kind": "html-attribute",
+      "ratio": 0.2682926829268293,
+      "status": "unsupported",
+      "url": "https://www.caniemail.com/features/html-srcset/"
+    },
+    "loading": {
+      "slug": "html-loading-attribute",
+      "kind": "html-attribute",
+      "ratio": 0.2926829268292683,
+      "status": "unsupported",
+      "url": "https://www.caniemail.com/features/html-loading-attribute/"
+    },
+    "target": {
+      "slug": "html-target",
+      "kind": "html-attribute",
+      "ratio": 0.3170731707317073,
+      "status": "unsupported",
+      "url": "https://www.caniemail.com/features/html-target/"
+    },
+    "popover": {
+      "slug": "html-popover",
+      "kind": "html-attribute",
+      "ratio": 0.14634146341463414,
+      "status": "unsupported",
+      "url": "https://www.caniemail.com/features/html-popover/"
+    },
+    "hidden": {
+      "slug": "html-hidden",
+      "kind": "html-attribute",
+      "ratio": 0.2682926829268293,
+      "status": "unsupported",
+      "url": "https://www.caniemail.com/features/html-hidden/"
+    },
+    "required": {
+      "slug": "html-required",
+      "kind": "html-attribute",
+      "ratio": 0.36585365853658536,
+      "status": "unsupported",
+      "url": "https://www.caniemail.com/features/html-required/"
+    },
+    "webp": {
+      "slug": "image-webp",
+      "kind": "image-format",
+      "ratio": 0.9523809523809523,
+      "status": "supported",
+      "url": "https://www.caniemail.com/features/image-webp/"
+    },
+    "avif": {
+      "slug": "image-avif",
+      "kind": "image-format",
+      "ratio": 0.6341463414634146,
+      "status": "warn",
+      "url": "https://www.caniemail.com/features/image-avif/"
+    },
+    "base64": {
+      "slug": "image-base64",
+      "kind": "image-format",
+      "ratio": 0.8095238095238095,
+      "status": "supported",
+      "url": "https://www.caniemail.com/features/image-base64/"
+    }
+  }
+}
