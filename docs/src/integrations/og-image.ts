@@ -10,15 +10,6 @@ import { OgImage } from '../components/og-image.js'
 
 const OG_DIR = 'og'
 
-function escapeHtml(text: string): string {
-  return text
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;')
-}
-
 function truncate(text: string, maxLength: number): string {
   if (text.length <= maxLength) return text
   return `${text.slice(0, maxLength - 1)}…`
@@ -30,8 +21,10 @@ function extractTitle(html: string): string | undefined {
 }
 
 function extractDescription(html: string): string | undefined {
-  const match = html.match(/<meta[^>]*name=["']description["'][^>]*content=["']([^"']*)["'][^>]*>/i)
-  return match?.[1]?.trim()
+  const tagMatch = html.match(/<meta\b[^>]*\bname=["']description["'][^>]*>/i)
+  if (!tagMatch) return undefined
+  const contentMatch = tagMatch[0].match(/\bcontent=["']([^"']*)["']/i)
+  return contentMatch?.[1]?.trim()
 }
 
 function htmlPathToPathname(filePath: string, rootDir: string): string {
@@ -78,8 +71,8 @@ export function ogImage(): AstroIntegration {
           }
 
           const pathname = htmlPathToPathname(htmlPath, buildOutputRoot)
-          const title = truncate(escapeHtml(rawTitle), 80)
-          const description = truncate(escapeHtml(rawDescription ?? ''), 160)
+          const title = truncate(rawTitle, 80)
+          const description = truncate(rawDescription ?? '', 160)
           const outputPath = join(ogOutputDir, pathnameToOgPath(pathname))
 
           try {

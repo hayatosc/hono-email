@@ -28,7 +28,7 @@
         type="button"
         role="tab"
         aria-selected={activeManager === pm}
-        onclick={() => activeManager = pm}
+        onclick={() => { activeManager = pm; copied = false; }}
       >
         {pm}
       </button>
