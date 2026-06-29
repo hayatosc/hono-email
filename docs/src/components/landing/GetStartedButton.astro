@@ -1,0 +1,42 @@
+---
+// Primary call-to-action, shared by the hero and the closing section.
+const href = '/getting-started/quick-start/'
+---
+
+<a class="btn" href={href}>
+  Get started
+  <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true" class="arrow">
+    <path fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" d="M3 8h10M9 4l4 4-4 4"/>
+  </svg>
+</a>
+
+<style>
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.62rem 1.15rem;
+    border-radius: 0.55rem;
+    font-size: 0.95rem;
+    font-weight: 600;
+    text-decoration: none;
+    border: 1px solid transparent;
+    background: var(--sl-color-white);
+    color: var(--sl-color-black);
+    transition:
+      transform 0.15s ease,
+      opacity 0.15s ease;
+  }
+  .btn:hover {
+    opacity: 0.88;
+  }
+  .btn:active {
+    transform: translateY(1px);
+  }
+  .arrow {
+    transition: transform 0.15s ease;
+  }
+  .btn:hover .arrow {
+    transform: translateX(2px);
+  }
+</style>

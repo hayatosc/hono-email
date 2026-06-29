@@ -1,0 +1,49 @@
+---
+import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro'
+
+import Adapters from '../components/landing/Adapters.astro'
+import Styling from '../components/landing/Styling.astro'
+import Features from '../components/landing/Features.astro'
+import FinalCta from '../components/landing/FinalCta.astro'
+import Hero from '../components/landing/Hero.astro'
+import Preview from '../components/landing/Preview.astro'
+import Runtimes from '../components/landing/Runtimes.astro'
+
+export const prerender = true
+---
+
+<StarlightPage
+  frontmatter={{
+    title: 'hono-email',
+    description: 'Render, validate, and send HTML email and plain text from hono/jsx.',
+    template: 'splash',
+    tableOfContents: false,
+  }}
+>
+  <div class="landing not-content">
+    <Hero />
+    <Runtimes />
+    <Preview />
+    <Styling />
+    <Adapters />
+    <Features />
+    <FinalCta />
+  </div>
+</StarlightPage>
+
+<style>
+  /* Shared design tokens for the landing — an ember accent (Hono's 🔥) over the
+     docs' zinc theme. Custom properties cascade into every section component. */
+  .landing {
+    --lp-accent: hsl(18 90% 56%);
+    --lp-accent-soft: hsl(18 90% 56% / 0.14);
+    --lp-radius: 0.85rem;
+    --lp-maxw: 70rem;
+    /* full-bleed out of Starlight's centered content column */
+    width: 100vw;
+    margin-inline: calc(50% - 50vw);
+    overflow-x: clip;
+    /* pull the hero up under the site header */
+    margin-top: clamp(-2rem, -1.5vw, -1rem);
+  }
+</style>

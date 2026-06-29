@@ -1,0 +1,191 @@
+---
+import Section from './Section.astro'
+import StylingInline from './styling-inline.mdx'
+import StylingHonoCss from './styling-hono-css.mdx'
+import StylingTailwind from './styling-tailwind.mdx'
+
+const approaches = [
+  {
+    label: 'Inline Styles',
+    file: 'welcome.email.tsx',
+    desc: 'The standard approach. Set styles directly on elements — what you write is what gets delivered.',
+    Snippet: StylingInline,
+  },
+  {
+    label: 'hono/css',
+    file: 'styled.email.tsx',
+    desc: 'Write scoped CSS with the css helper. Styles are extracted and inlined at render time — zero runtime cost.',
+    Snippet: StylingHonoCss,
+  },
+  {
+    label: 'Tailwind CSS',
+    file: 'tailwind.email.tsx',
+    desc: 'Use utility classes you already know. The bundler plugin compiles them to inline styles at build time.',
+    Snippet: StylingTailwind,
+  },
+]
+---
+
+<Section
+  kicker="Styling"
+  title="Your emails, your style."
+  lead="Inline styles, hono/css, or Tailwind utilities — every approach is compiled and inlined at build time so emails render perfectly in every client."
+>
+  <div class="approaches">
+    {
+      approaches.map((a, i) => (
+        <div class="approach" style={`--i: ${i}`}>
+          <h3 class="approach-label">{a.label}</h3>
+          <p class="approach-desc">{a.desc}</p>
+          <figure class="window">
+            <div class="bar">
+              <span class="dots" aria-hidden="true"><i /><i /><i /></span>
+              <span class="filename">{a.file}</span>
+            </div>
+            <div class="code"><a.Snippet /></div>
+          </figure>
+        </div>
+      ))
+    }
+  </div>
+</Section>
+
+<style>
+  .approaches {
+    margin-top: 2.5rem;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1.25rem;
+  }
+
+  .approach {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 1.5rem 1.35rem;
+    border: 1px solid var(--sl-color-hairline);
+    border-radius: var(--lp-radius);
+    background: var(--sl-color-bg);
+    transition:
+      border-color 0.15s ease,
+      background-color 0.18s ease;
+  }
+  .approach:hover {
+    border-color: var(--sl-color-gray-5);
+    background: var(--sl-color-bg-inline-code);
+  }
+
+  .approach-label {
+    margin: 0;
+    font-size: 1.02rem;
+    font-weight: 600;
+    color: var(--sl-color-white);
+    letter-spacing: -0.01em;
+  }
+  .approach-desc {
+    margin: 0;
+    font-size: 0.92rem;
+    line-height: 1.6;
+    color: var(--sl-color-gray-3);
+  }
+
+  /* ── Code window — matches Hero chrome ─────────────────── */
+  .window {
+    margin: auto 0 0;
+    border: 1px solid var(--sl-color-hairline);
+    border-radius: var(--lp-radius);
+    background: var(--sl-color-bg-inline-code);
+    box-shadow: 0 24px 60px -34px hsl(0 0% 0% / 0.55);
+    overflow: hidden;
+  }
+  .bar {
+    position: relative;
+    display: flex;
+    align-items: center;
+    padding: 0.75rem 0.95rem;
+    border-bottom: 1px solid var(--sl-color-hairline);
+  }
+  /* macOS traffic-light buttons */
+  .dots {
+    display: inline-flex;
+    gap: 0.5rem;
+  }
+  .dots i {
+    width: 0.75rem;
+    height: 0.75rem;
+    border-radius: 50%;
+    box-shadow: inset 0 0 0 0.5px hsl(0 0% 0% / 0.2);
+  }
+  .dots i:nth-child(1) {
+    background: #ff5f57;
+  }
+  .dots i:nth-child(2) {
+    background: #febc2e;
+  }
+  .dots i:nth-child(3) {
+    background: #28c840;
+  }
+  .filename {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: var(--sl-font-mono);
+    font-size: 0.78rem;
+    color: var(--sl-color-gray-3);
+  }
+  .code {
+    overflow-x: auto;
+    mask-image: linear-gradient(to right, #000 calc(100% - 1.5rem), transparent);
+  }
+  /* Expressive Code (frame="none") — strip its chrome so it sits inside our
+     window bar, exactly like the Hero component does. */
+  .code :global(.expressive-code),
+  .code :global(.expressive-code .frame),
+  .code :global(.expressive-code pre) {
+    margin: 0 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+  .code :global(.expressive-code pre) {
+    padding: 1.2rem 1.3rem !important;
+  }
+  .code :global(.expressive-code .copy) {
+    display: none !important;
+  }
+  .code :global(.expressive-code code) {
+    font-size: 0.76rem;
+    line-height: 1.75;
+  }
+
+  /* ── Entrance motion — matches Hero curve ──────────────── */
+  @media (prefers-reduced-motion: no-preference) {
+    .approach {
+      opacity: 0;
+      transform: translateY(12px);
+      animation: approach-rise 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+      animation-delay: calc(0.1s * var(--i));
+    }
+  }
+  @keyframes approach-rise {
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  @media (max-width: 60rem) {
+    .approaches {
+      grid-template-columns: 1fr;
+      max-width: 32rem;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .approach {
+      opacity: 1;
+      transform: none;
+    }
+  }
+</style>
