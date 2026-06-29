@@ -6,15 +6,6 @@ import { OgImage } from '../../components/og-image.js'
 const DEFAULT_TITLE = 'hono-email'
 const DEFAULT_DESCRIPTION = 'Render, validate, and send HTML email and plain text from hono/jsx.'
 
-function escapeHtml(text: string): string {
-  return text
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;')
-}
-
 function truncate(text: string, maxLength: number): string {
   if (text.length <= maxLength) return text
   return `${text.slice(0, maxLength - 1)}…`
@@ -25,8 +16,8 @@ export const GET: APIRoute = async ({ request }) => {
   const rawTitle = url.searchParams.get('title') ?? DEFAULT_TITLE
   const rawDescription = url.searchParams.get('description') ?? DEFAULT_DESCRIPTION
 
-  const title = truncate(escapeHtml(rawTitle), 80)
-  const description = truncate(escapeHtml(rawDescription), 160)
+  const title = truncate(rawTitle, 80)
+  const description = truncate(rawDescription, 160)
 
   try {
     const png = await render(OgImage({ title, description }), {
