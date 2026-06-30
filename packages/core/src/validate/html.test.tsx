@@ -29,7 +29,9 @@ describe('render strict mode', () => {
           </body>
         </html>,
       ),
-    ).rejects.toThrow("The <form> tag isn't supported in HTML email strict mode.")
+    ).rejects.toThrow(
+      "The <form> tag isn't allowed in HTML email strict mode. Active content and embedded resources must not be used in email HTML.",
+    )
   })
 
   test('allows unsupported tags when strict mode is disabled', async () => {
@@ -200,7 +202,7 @@ describe('render strict mode', () => {
   })
 
   test('allows position:fixed and position:sticky in strict mode', async () => {
-    const { html } = await render(
+    const { html: fixedHtml } = await render(
       <html>
         <body>
           <div style={{ position: 'fixed' }}>Hello</div>
@@ -208,7 +210,16 @@ describe('render strict mode', () => {
       </html>,
     )
 
-    expect(html).toContain('position:fixed')
+    const { html: stickyHtml } = await render(
+      <html>
+        <body>
+          <div style={{ position: 'sticky' }}>World</div>
+        </body>
+      </html>,
+    )
+
+    expect(fixedHtml).toContain('position:fixed')
+    expect(stickyHtml).toContain('position:sticky')
   })
 
   test('allows float and clear properties in strict mode', async () => {
@@ -446,7 +457,9 @@ describe('render strict mode', () => {
       validateHtml(
         '<html><body><!--[if mso]><form action="https://example.com"><input /></form><![endif]--><p>Hello</p></body></html>',
       ),
-    ).toThrow("The <form> tag isn't supported in HTML email strict mode.")
+    ).toThrow(
+      "The <form> tag isn't allowed in HTML email strict mode. Active content and embedded resources must not be used in email HTML.",
+    )
   })
 
   test('ignores unsupported tags inside HTML comments', () => {
