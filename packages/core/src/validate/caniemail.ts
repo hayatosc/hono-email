@@ -36,25 +36,57 @@ export type FeatureMapEntry = {
   slug: string
 }
 
+export type ValidationEntry = {
+  message: string
+  url: string
+}
+
+export type ValidationTables = {
+  disallowedTags: Record<string, ValidationEntry>
+  warningTags: Record<string, ValidationEntry>
+  disallowedDeclarations: Record<string, ValidationEntry>
+  warningDeclarations: Record<string, ValidationEntry>
+  disallowedProperties: Record<string, ValidationEntry>
+  warningProperties: Record<string, ValidationEntry>
+  disallowedAtRules: Record<string, ValidationEntry>
+  warningAtRules: Record<string, ValidationEntry>
+}
+
+export type EmailClient = 'outlook' | 'gmail' | 'apple-mail' | 'yahoo'
+
+export type ClientStatus = 'y' | 'n' | 'a'
+
+export type ClientDataEntry = { url: string } & Partial<Record<EmailClient, ClientStatus>>
+
 export type CaniemailDataFile = {
   apiVersion: string
   lastUpdateDate: string
   contentHash: string
-  features: Record<string, CaniemailFeatureEntry>
+  tables: ValidationTables
+  clientData: Record<string, ClientDataEntry>
 }
 
-export type CaniemailFeatureEntry = {
-  slug: string
-  kind: FeatureKind
-  ratio: number
-  status: 'supported' | 'warn' | 'unsupported'
-  url: string
+// Representative platform used as the latest-version proxy for each client
+export const EMAIL_CLIENT_PLATFORMS: Record<EmailClient, { client: string; platform: string }> = {
+  'outlook': { client: 'outlook', platform: 'windows' },
+  'gmail': { client: 'gmail', platform: 'desktop-webmail' },
+  'apple-mail': { client: 'apple-mail', platform: 'macos' },
+  'yahoo': { client: 'yahoo', platform: 'desktop-webmail' },
 }
+
+export const EMAIL_CLIENT_NAMES: Record<EmailClient, string> = {
+  'outlook': 'Outlook',
+  'gmail': 'Gmail',
+  'apple-mail': 'Apple Mail',
+  'yahoo': 'Yahoo Mail',
+}
+
+export const ALWAYS_BLOCKED_TAGS = new Set(['script', 'iframe', 'embed', 'object', 'applet', 'form'])
 
 const SUPPORT_THRESHOLD = 0.8
 const WARNING_THRESHOLD = 0.5
 
-export const classifyRatio = (ratio: number): CaniemailFeatureEntry['status'] => {
+export const classifyRatio = (ratio: number): 'supported' | 'warn' | 'unsupported' => {
   if (ratio >= SUPPORT_THRESHOLD) {
     return 'supported'
   }
@@ -244,8 +276,3 @@ export const CANIEMAIL_FEATURE_MAP: FeatureMapEntry[] = [
   { key: 'base64', kind: 'image-format', slug: 'image-base64' },
 ]
 
-export const getFeatureEntry = (
-  data: CaniemailDataFile,
-  key: string,
-  kind: FeatureKind,
-): CaniemailFeatureEntry | undefined => data.features[`${kind}:${key}`]

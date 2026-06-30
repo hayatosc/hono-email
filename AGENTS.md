@@ -57,7 +57,7 @@ Use `mise run ci` to run the full CI check locally (format, lint, typecheck, tes
 
 Individual commands for quick checks:
 
-- `bun test` (runs unit tests across all packages)
+- `bun run test` (runs unit tests across all packages — use `bun run test`, never `bun test` directly, to avoid picking up stale `_build/actrun/` workspaces)
 - `bun run typecheck` (typechecks all packages with `tsgo`)
 - `bun run build` (builds all packages in the monorepo)
 - `bun run lint`

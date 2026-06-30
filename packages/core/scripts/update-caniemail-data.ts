@@ -13,12 +13,18 @@ import { writeFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
 
 import {
+  ALWAYS_BLOCKED_TAGS,
   CANIEMAIL_FEATURE_MAP,
+  EMAIL_CLIENT_PLATFORMS,
   classifyRatio,
   computeSupportRatio,
   type CaniemailApiData,
   type CaniemailDataFile,
   type CaniemailFeature,
+  type ClientDataEntry,
+  type ClientStatus,
+  type EmailClient,
+  type ValidationTables,
 } from '../src/validate/caniemail'
 
 const API_URL = 'https://www.caniemail.com/api/data.json'
@@ -94,7 +100,16 @@ const buildFeatureMap = (apiData: CaniemailApiData): Record<string, CaniemailFea
 
 const generateDataFile = (apiData: CaniemailApiData): CaniemailDataFile => {
   const featureMap = buildFeatureMap(apiData)
-  const features: CaniemailDataFile['features'] = {}
+  const tables: ValidationTables = {
+    disallowedTags: {},
+    warningTags: {},
+    disallowedDeclarations: {},
+    warningDeclarations: {},
+    disallowedProperties: {},
+    warningProperties: {},
+    disallowedAtRules: {},
+    warningAtRules: {},
+  }
 
   for (const entry of CANIEMAIL_FEATURE_MAP) {
     const feature = featureMap[entry.slug]
@@ -104,20 +119,74 @@ const generateDataFile = (apiData: CaniemailApiData): CaniemailDataFile => {
     }
 
     const ratio = computeSupportRatio(feature.stats)
-    const namespacedKey = `${entry.kind}:${entry.key}`
-    features[namespacedKey] = {
-      slug: entry.slug,
-      kind: entry.kind,
-      ratio,
-      status: classifyRatio(ratio),
-      url: feature.url,
+    const status = classifyRatio(ratio)
+
+    if (status === 'supported') {
+      continue
     }
+
+    const { key, kind } = entry
+    const url = feature.url
+
+    if (kind === 'html-tag') {
+      if (ALWAYS_BLOCKED_TAGS.has(key)) {
+        continue
+      }
+
+      const message =
+        status === 'unsupported'
+          ? `The <${key}> tag isn't supported in HTML email strict mode.`
+          : `The <${key}> tag has limited support in HTML email strict mode.`
+
+      if (status === 'unsupported') {
+        tables.disallowedTags[key] = { message, url }
+      } else {
+        tables.warningTags[key] = { message, url }
+      }
+    } else if (kind === 'css-declaration') {
+      const message =
+        status === 'unsupported'
+          ? `The CSS property '${key}' isn't supported in HTML email strict mode.`
+          : `The CSS property '${key}' may not be supported consistently in HTML email strict mode.`
+
+      if (status === 'unsupported') {
+        tables.disallowedDeclarations[key] = { message, url }
+      } else {
+        tables.warningDeclarations[key] = { message, url }
+      }
+    } else if (kind === 'css-property') {
+      const message =
+        status === 'unsupported'
+          ? `The CSS property '${key}' isn't supported in HTML email strict mode.`
+          : `The CSS property '${key}' has inconsistent support in HTML email strict mode.`
+
+      if (status === 'unsupported') {
+        tables.disallowedProperties[key] = { message, url }
+      } else {
+        tables.warningProperties[key] = { message, url }
+      }
+    } else if (kind === 'css-at-rule') {
+      const message =
+        status === 'unsupported'
+          ? `The CSS at-rule '${key}' isn't supported reliably in HTML email strict mode.`
+          : `The CSS at-rule '${key}' has limited support in HTML email strict mode.`
+
+      if (status === 'unsupported') {
+        tables.disallowedAtRules[key] = { message, url }
+      } else {
+        tables.warningAtRules[key] = { message, url }
+      }
+    }
+    // html-attribute and image-format: not validated in html.ts
   }
+
+  const clientData = buildClientData(featureMap)
 
   const deterministicContent = JSON.stringify({
     apiVersion: apiData.api_version,
     lastUpdateDate: apiData.last_update_date,
-    features,
+    tables,
+    clientData,
   })
   const contentHash = createHash('sha256').update(deterministicContent).digest('hex')
 
@@ -125,9 +194,66 @@ const generateDataFile = (apiData: CaniemailApiData): CaniemailDataFile => {
     apiVersion: apiData.api_version,
     lastUpdateDate: apiData.last_update_date,
     contentHash,
-    features,
+    tables,
+    clientData,
   }
 }
+
+const buildClientData = (
+  featureMap: Record<string, CaniemailFeature>,
+): Record<string, ClientDataEntry> => {
+  const result: Record<string, ClientDataEntry> = {}
+
+  for (const entry of CANIEMAIL_FEATURE_MAP) {
+    if (entry.kind === 'html-attribute' || entry.kind === 'image-format') {
+      continue
+    }
+
+    const feature = featureMap[entry.slug]
+    if (feature === undefined) {
+      continue
+    }
+
+    const clients: Partial<Record<EmailClient, ClientStatus>> = {}
+
+    for (const [clientName, { client, platform }] of Object.entries(EMAIL_CLIENT_PLATFORMS) as [
+      EmailClient,
+      { client: string; platform: string },
+    ][]) {
+      const platformData = feature.stats[client]?.[platform]
+      if (!platformData) {
+        continue
+      }
+
+      const latestKey = Object.keys(platformData).sort((a, b) =>
+        a.localeCompare(b, undefined, { numeric: true }),
+      ).at(-1)
+      if (latestKey === undefined) {
+        continue
+      }
+
+      const raw = platformData[latestKey]
+      if (raw === undefined) {
+        continue
+      }
+
+      const base = raw.split('#')[0]?.trim().split(/\s+/)[0]?.toLowerCase()
+      if (base === 'y') clients[clientName] = 'y'
+      else if (base === 'a') clients[clientName] = 'a'
+      else if (base === 'n') clients[clientName] = 'n'
+    }
+
+    // Only include features where at least one tracked client has non-full support
+    if (Object.values(clients).some((s) => s !== 'y')) {
+      result[`${entry.kind}:${entry.key}`] = { url: feature.url, ...clients }
+    }
+  }
+
+  return result
+}
+
+const countEntries = (tables: ValidationTables): number =>
+  Object.values(tables).reduce((sum, table) => sum + Object.keys(table).length, 0)
 
 const main = async (): Promise<void> => {
   console.log(`Fetching ${API_URL}...`)
@@ -140,7 +266,7 @@ const main = async (): Promise<void> => {
   const json = `${JSON.stringify(dataFile, null, 2)}\n`
   await writeFile(OUTPUT_PATH, json, 'utf8')
 
-  console.log(`Wrote ${Object.keys(dataFile.features).length} features to ${OUTPUT_PATH}.`)
+  console.log(`Wrote ${countEntries(dataFile.tables)} validation entries to ${OUTPUT_PATH}.`)
 }
 
 main().catch((error: unknown) => {
