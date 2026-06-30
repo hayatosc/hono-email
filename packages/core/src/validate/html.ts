@@ -1,4 +1,10 @@
-import caniemailData from './caniemail-data.json' with { type: 'json' }
+import {
+  ALWAYS_BLOCKED_TAGS,
+  EMAIL_CLIENT_NAMES,
+  type CaniemailDataFile,
+  type EmailClient,
+} from './caniemail'
+import caniemailDataJson from './caniemail-data.json' with { type: 'json' }
 import {
   collectOpeningTags,
   extractConditionalCommentPayloads,
@@ -6,112 +12,24 @@ import {
   type OpeningTag,
 } from './tags'
 
-const ALWAYS_BLOCKED_TAGS = new Set(['script', 'iframe', 'embed', 'object', 'applet', 'form'])
+const { tables, clientData } = caniemailDataJson as unknown as CaniemailDataFile
 
-/**
- * Build validation lookup tables from caniemail-data.json.
- *
- * caniemail.com is the single source of truth for email-client compatibility.
- * Only features tracked by caniemail are validated; anything not present in the
- * data is allowed to pass strict mode.
- */
-const buildValidationTables = () => {
-  const disallowedTags = new Map<string, string>()
-  const warningTags = new Map<string, string>()
-  const disallowedDeclarations = new Map<string, string>()
-  const disallowedProperties = new Set<string>()
-  const disallowedPropertyMessages = new Map<string, string>()
-  const warningDeclarations = new Map<string, string>()
-  const warningProperties = new Map<string, string>()
-  const warningAtRules = new Map<string, string>()
-  const disallowedAtRules = new Map<string, string>()
-
-  for (const [namespacedKey, entry] of Object.entries(caniemailData.features)) {
-    const originalKey = namespacedKey.split(':').slice(1).join(':')
-
-    if (entry.status === 'supported') {
-      continue
-    }
-
-    if (entry.kind === 'html-tag') {
-      if (ALWAYS_BLOCKED_TAGS.has(originalKey)) {
-        continue
-      }
-
-      if (entry.status === 'unsupported') {
-        const message = `The <${originalKey}> tag isn't supported in HTML email strict mode.`
-        disallowedTags.set(originalKey, message)
-      } else {
-        const message = `The <${originalKey}> tag has limited support in HTML email strict mode.`
-        warningTags.set(originalKey, message)
-      }
-      continue
-    }
-
-    if (entry.kind === 'css-property') {
-      const message =
-        entry.status === 'unsupported'
-          ? `The CSS property '${originalKey}' isn't supported in HTML email strict mode.`
-          : `The CSS property '${originalKey}' has inconsistent support in HTML email strict mode.`
-      if (entry.status === 'unsupported') {
-        disallowedProperties.add(originalKey)
-        disallowedPropertyMessages.set(originalKey, message)
-      } else {
-        warningProperties.set(originalKey, message)
-      }
-      continue
-    }
-
-    if (entry.kind === 'css-declaration') {
-      const message =
-        entry.status === 'unsupported'
-          ? `The CSS property '${originalKey}' isn't supported in HTML email strict mode.`
-          : `The CSS property '${originalKey}' may not be supported consistently in HTML email strict mode.`
-      if (entry.status === 'unsupported') {
-        disallowedDeclarations.set(originalKey, message)
-      } else {
-        warningDeclarations.set(originalKey, message)
-      }
-      continue
-    }
-
-    if (entry.kind === 'css-at-rule') {
-      const message =
-        entry.status === 'unsupported'
-          ? `The CSS at-rule '${originalKey}' isn't supported reliably in HTML email strict mode.`
-          : `The CSS at-rule '${originalKey}' has limited support in HTML email strict mode.`
-      if (entry.status === 'unsupported') {
-        disallowedAtRules.set(originalKey, message)
-      } else {
-        warningAtRules.set(originalKey, message)
-      }
-    }
-  }
-
-  return {
-    disallowedTags,
-    warningTags,
-    disallowedDeclarations,
-    disallowedProperties,
-    disallowedPropertyMessages,
-    warningDeclarations,
-    warningProperties,
-    warningAtRules,
-    disallowedAtRules,
-  }
+const formatClients = (clients: EmailClient[]): string => {
+  const names = clients.map((c) => EMAIL_CLIENT_NAMES[c])
+  return names.length === 1
+    ? (names[0] ?? '')
+    : `${names.slice(0, -1).join(', ')} and ${names.at(-1)}`
 }
 
-const {
-  disallowedTags: DISALLOWED_TAG_MESSAGES,
-  warningTags: WARNING_TAG_MESSAGES,
-  disallowedDeclarations: DISALLOWED_CSS_DECLARATIONS,
-  disallowedProperties: DISALLOWED_CSS_PROPERTIES,
-  disallowedPropertyMessages: DISALLOWED_CSS_PROPERTY_MESSAGES,
-  warningDeclarations: WARNING_CSS_DECLARATIONS,
-  warningProperties: WARNING_CSS_PROPERTIES,
-  warningAtRules: WARNING_AT_RULES,
-  disallowedAtRules: DISALLOWED_AT_RULES,
-} = buildValidationTables()
+const getUnsupportedClients = (
+  key: string,
+  warningClients: EmailClient[],
+): { clients: EmailClient[]; url: string } | undefined => {
+  const entry = clientData[key]
+  if (!entry) return undefined
+  const unsupported = warningClients.filter((c) => entry[c] === 'n' || entry[c] === 'a')
+  return unsupported.length > 0 ? { clients: unsupported, url: entry.url } : undefined
+}
 
 const CSS_COMMENT_PATTERN = /\/\*[\s\S]*?\*\//g
 const IMPORTANT_PATTERN = /\s*!important\b/gi
@@ -166,7 +84,11 @@ const getUrlScheme = (value: string): string | undefined => {
   return match?.[1]?.toLowerCase()
 }
 
-const validateTags = (openingTags: OpeningTag[], warnings: Set<string>): void => {
+const validateTags = (
+  openingTags: OpeningTag[],
+  warnings: Set<string>,
+  warningClients: EmailClient[],
+): void => {
   for (const tag of openingTags) {
     if (ALWAYS_BLOCKED_TAGS.has(tag.name)) {
       throw new Error(
@@ -174,14 +96,23 @@ const validateTags = (openingTags: OpeningTag[], warnings: Set<string>): void =>
       )
     }
 
-    const disallowedMessage = DISALLOWED_TAG_MESSAGES.get(tag.name)
-    if (disallowedMessage) {
-      throw new Error(disallowedMessage)
+    const disallowedEntry = tables.disallowedTags[tag.name]
+    if (disallowedEntry) {
+      throw new Error(`${disallowedEntry.message} See: ${disallowedEntry.url}`)
     }
 
-    const warningMessage = WARNING_TAG_MESSAGES.get(tag.name)
-    if (warningMessage) {
-      warnings.add(warningMessage)
+    const warningEntry = tables.warningTags[tag.name]
+    if (warningEntry) {
+      warnings.add(`${warningEntry.message} See: ${warningEntry.url}`)
+    }
+
+    if (warningClients.length > 0) {
+      const result = getUnsupportedClients(`html-tag:${tag.name}`, warningClients)
+      if (result) {
+        warnings.add(
+          `The <${tag.name}> tag is not supported in ${formatClients(result.clients)}. See: ${result.url}`,
+        )
+      }
     }
   }
 }
@@ -324,18 +255,36 @@ const collectStyleTagContents = (html: string, openingTags: OpeningTag[]): strin
   return contents
 }
 
-const collectCssWarnings = (cssText: string, warnings: Set<string>): void => {
+const collectCssWarnings = (
+  cssText: string,
+  warnings: Set<string>,
+  warningClients: EmailClient[],
+): void => {
   const normalizedCssText = stripCssComments(cssText).toLowerCase()
 
-  for (const [atRule, message] of DISALLOWED_AT_RULES) {
+  for (const [atRule, entry] of Object.entries(tables.disallowedAtRules)) {
     if (normalizedCssText.includes(atRule)) {
-      throw new Error(message)
+      throw new Error(`${entry.message} See: ${entry.url}`)
     }
   }
 
-  for (const [atRule, message] of WARNING_AT_RULES) {
+  for (const [atRule, entry] of Object.entries(tables.warningAtRules)) {
     if (normalizedCssText.includes(atRule)) {
-      warnings.add(message)
+      warnings.add(`${entry.message} See: ${entry.url}`)
+    }
+  }
+
+  if (warningClients.length > 0) {
+    for (const [namespacedKey] of Object.entries(clientData)) {
+      if (!namespacedKey.startsWith('css-at-rule:')) continue
+      const atRule = namespacedKey.slice('css-at-rule:'.length)
+      if (!normalizedCssText.includes(atRule)) continue
+      const result = getUnsupportedClients(namespacedKey, warningClients)
+      if (result) {
+        warnings.add(
+          `The CSS at-rule '${atRule}' is not supported in ${formatClients(result.clients)}. See: ${result.url}`,
+        )
+      }
     }
   }
 }
@@ -362,9 +311,13 @@ const validateCssUrls = (property: string, value: string, warnings: Set<string>)
   }
 }
 
-const validateCssDeclarations = (cssText: string, warnings: Set<string>): void => {
+const validateCssDeclarations = (
+  cssText: string,
+  warnings: Set<string>,
+  warningClients: EmailClient[],
+): void => {
   const normalizedCssText = stripCssComments(cssText)
-  collectCssWarnings(normalizedCssText, warnings)
+  collectCssWarnings(normalizedCssText, warnings, warningClients)
 
   for (const match of normalizedCssText.matchAll(CSS_DECLARATION_PATTERN)) {
     const property = match[1]?.toLowerCase()
@@ -399,36 +352,54 @@ const validateCssDeclarations = (cssText: string, warnings: Set<string>): void =
     }
 
     const declarationKey = `${property}:${normalizedValue}`
-    const disallowedDeclarationMessage = DISALLOWED_CSS_DECLARATIONS.get(declarationKey)
-    if (disallowedDeclarationMessage) {
-      throw new Error(disallowedDeclarationMessage)
+    const disallowedDeclaration = tables.disallowedDeclarations[declarationKey]
+    if (disallowedDeclaration) {
+      throw new Error(`${disallowedDeclaration.message} See: ${disallowedDeclaration.url}`)
     }
 
-    if (DISALLOWED_CSS_PROPERTIES.has(property)) {
-      throw new Error(
-        DISALLOWED_CSS_PROPERTY_MESSAGES.get(property) ??
-          `The CSS property '${property}' isn't supported in HTML email strict mode.`,
-      )
+    const disallowedProperty = tables.disallowedProperties[property]
+    if (disallowedProperty) {
+      throw new Error(`${disallowedProperty.message} See: ${disallowedProperty.url}`)
     }
 
-    const warningDeclarationMessage = WARNING_CSS_DECLARATIONS.get(declarationKey)
-    if (warningDeclarationMessage) {
-      warnings.add(warningDeclarationMessage)
+    const warningDeclaration = tables.warningDeclarations[declarationKey]
+    if (warningDeclaration) {
+      warnings.add(`${warningDeclaration.message} See: ${warningDeclaration.url}`)
     }
 
-    const warningPropertyMessage = WARNING_CSS_PROPERTIES.get(property)
-    if (warningPropertyMessage) {
-      warnings.add(warningPropertyMessage)
+    const warningProperty = tables.warningProperties[property]
+    if (warningProperty) {
+      warnings.add(`${warningProperty.message} See: ${warningProperty.url}`)
+    }
+
+    if (warningClients.length > 0) {
+      const declResult = getUnsupportedClients(`css-declaration:${declarationKey}`, warningClients)
+      if (declResult) {
+        warnings.add(
+          `The CSS property '${declarationKey}' is not supported in ${formatClients(declResult.clients)}. See: ${declResult.url}`,
+        )
+      }
+
+      const propResult = getUnsupportedClients(`css-property:${property}`, warningClients)
+      if (propResult) {
+        warnings.add(
+          `The CSS property '${property}' is not supported in ${formatClients(propResult.clients)}. See: ${propResult.url}`,
+        )
+      }
     }
   }
 }
 
-const validateStyleAttributes = (openingTags: OpeningTag[], warnings: Set<string>): void => {
+const validateStyleAttributes = (
+  openingTags: OpeningTag[],
+  warnings: Set<string>,
+  warningClients: EmailClient[],
+): void => {
   for (const tag of openingTags) {
     const cssText = tag.attributes.get('style')
 
     if (cssText && cssText.trim() !== '') {
-      validateCssDeclarations(cssText, warnings)
+      validateCssDeclarations(cssText, warnings, warningClients)
     }
   }
 }
@@ -437,24 +408,26 @@ const validateStyleTags = (
   html: string,
   openingTags: OpeningTag[],
   warnings: Set<string>,
+  warningClients: EmailClient[],
 ): void => {
   for (const cssText of collectStyleTagContents(html, openingTags)) {
     if (cssText.trim() === '') {
       continue
     }
 
-    validateCssDeclarations(cssText, warnings)
+    validateCssDeclarations(cssText, warnings, warningClients)
   }
 }
 
 const validateHtmlFragment = (
   html: string,
   warnings: Set<string>,
-  options?: { enforceStylePlacement?: boolean },
+  options?: { enforceStylePlacement?: boolean; warningClients?: EmailClient[] },
 ): void => {
   const openingTags = collectOpeningTags(html)
+  const warningClients = options?.warningClients ?? []
 
-  validateTags(openingTags, warnings)
+  validateTags(openingTags, warnings, warningClients)
   if (options?.enforceStylePlacement ?? true) {
     validateStylePlacement(html, openingTags)
   }
@@ -462,18 +435,18 @@ const validateHtmlFragment = (
   validateAnchors(openingTags)
   validateUnsafeAttributes(openingTags, warnings)
   validateImages(openingTags, warnings)
-  validateStyleAttributes(openingTags, warnings)
-  validateStyleTags(html, openingTags, warnings)
+  validateStyleAttributes(openingTags, warnings, warningClients)
+  validateStyleTags(html, openingTags, warnings, warningClients)
 }
 
-export const validateHtml = (html: string): string[] => {
+export const validateHtml = (html: string, warningClients: EmailClient[] = []): string[] => {
   const warnings = new Set<string>()
   const conditionalCommentPayloads = extractConditionalCommentPayloads(html)
   const htmlWithoutComments = stripHtmlComments(html)
 
-  validateHtmlFragment(htmlWithoutComments, warnings)
+  validateHtmlFragment(htmlWithoutComments, warnings, { warningClients })
   for (const payload of conditionalCommentPayloads) {
-    validateHtmlFragment(payload, warnings, { enforceStylePlacement: false })
+    validateHtmlFragment(payload, warnings, { enforceStylePlacement: false, warningClients })
   }
 
   return Array.from(warnings)
