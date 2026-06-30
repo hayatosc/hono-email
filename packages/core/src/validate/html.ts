@@ -1,4 +1,4 @@
-import caniemailData from './caniemail-data.json'
+import caniemailData from './caniemail-data.json' with { type: 'json' }
 import {
   collectOpeningTags,
   extractConditionalCommentPayloads,
