@@ -87,7 +87,8 @@
     "build": "tsdown",
     "typecheck": "tsgo --noEmit",
     "typecheck:compat": "tsc --noEmit",
-    "test": "bun test ./src"
+    "test": "bun test ./src",
+    "update-caniemail": "bun run ./scripts/update-caniemail-data.ts"
   },
   "dependencies": {
     "decode-named-character-reference": "^1.3.0",
@@ -113,6 +114,6 @@
     "hono": "^4.0.0"
   },
   "engines": {
-    "node": ">=20.0.0"
+    "node": ">=22.0.0"
   }
 }

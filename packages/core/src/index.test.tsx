@@ -64,7 +64,7 @@ describe('render', () => {
     const WithWarning = () => (
       <html>
         <body>
-          <p style={{ display: 'flex' }}>Hello</p>
+          <p style={{ flexDirection: 'column' }}>Hello</p>
         </body>
       </html>
     )
@@ -73,7 +73,7 @@ describe('render', () => {
       const { warnings } = await render(<WithWarning />, { onWarning: 'silent' })
 
       expect(warnings.length).toBeGreaterThan(0)
-      expect(warnings.some((warning) => warning.includes('display:flex'))).toBe(true)
+      expect(warnings.some((warning) => warning.includes("'flex-direction'"))).toBe(true)
     })
 
     test('throws when onWarning is "error"', async () => {

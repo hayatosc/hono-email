@@ -82,6 +82,7 @@ import { ensureSixHex } from './transform/six-hex'
 export { buildTailwindArtifactFromCss, collectTailwindClassesFromHtml } from './tailwind'
 export type { BuildTailwindArtifactFromCssOptions } from './tailwind'
 import { renderPlainText, type PlainTextRenderOptions } from './text'
+import type { EmailClient } from './validate/caniemail'
 import { validateHtml } from './validate/html'
 
 /**
@@ -111,6 +112,7 @@ type BaseRenderOptions = {
   widows?: boolean
   strict?: boolean
   onWarning?: WarningHandler
+  warningClients?: EmailClient[]
 }
 
 /**
@@ -158,7 +160,7 @@ export type RenderResult = {
   warnings: string[]
 }
 
-export type { BaseRenderOptions }
+export type { BaseRenderOptions, EmailClient }
 
 const HTML5_DOCTYPE = '<!DOCTYPE html>'
 const XHTML_TRANSITIONAL_DOCTYPE =
@@ -222,7 +224,10 @@ const renderHtml = async (
     throw new Error(TAILWIND_ARTIFACT_REQUIRED_ERROR_MESSAGE)
   }
 
-  const warnings = [...tailwindWarnings.warnings, ...(strict ? validateHtml(html) : [])]
+  const warnings = [
+    ...tailwindWarnings.warnings,
+    ...(strict ? validateHtml(html, options.warningClients ?? []) : []),
+  ]
   const dedupedWarnings = Array.from(new Set(warnings))
   dispatchWarnings(dedupedWarnings, options.onWarning ?? 'warn')
 

@@ -1,441 +1,35 @@
 import {
+  ALWAYS_BLOCKED_TAGS,
+  EMAIL_CLIENT_NAMES,
+  type CaniemailDataFile,
+  type EmailClient,
+} from './caniemail'
+import caniemailDataJson from './caniemail-data.json' with { type: 'json' }
+import {
   collectOpeningTags,
   extractConditionalCommentPayloads,
   stripHtmlComments,
   type OpeningTag,
 } from './tags'
 
-const DISALLOWED_TAG_MESSAGES = new Map([
-  [
-    'form',
-    'The <form> tag isn\'t supported in HTML email strict mode. Use <Button href="..."> or <Link href="..."> for clickable actions instead.',
-  ],
-  [
-    'input',
-    "The <input> tag isn't supported in HTML email strict mode. Use copy, links, or explicit fallback text instead of interactive form fields.",
-  ],
-  [
-    'button',
-    'The <button> tag isn\'t supported in HTML email strict mode. Use <Button href="..."> or <Link href="..."> instead.',
-  ],
-  [
-    'select',
-    "The <select> tag isn't supported in HTML email strict mode. Use links to separate landing pages instead of interactive selection controls.",
-  ],
-  [
-    'option',
-    "The <option> tag isn't supported in HTML email strict mode. Use links or plain text choices instead.",
-  ],
-  [
-    'textarea',
-    "The <textarea> tag isn't supported in HTML email strict mode. Use a link to a hosted form instead.",
-  ],
-  [
-    'label',
-    "The <label> tag isn't supported in HTML email strict mode. Remove form labeling and replace the flow with text plus links.",
-  ],
-  [
-    'video',
-    "The <video> tag isn't supported in HTML email strict mode. Use an <Img> preview linked to a hosted video page instead.",
-  ],
-  [
-    'audio',
-    "The <audio> tag isn't supported in HTML email strict mode. Use a linked image or text CTA to a hosted audio page instead.",
-  ],
-  [
-    'object',
-    "The <object> tag isn't supported in HTML email strict mode. Use static HTML content or linked assets instead of embedded objects.",
-  ],
-  [
-    'embed',
-    "The <embed> tag isn't supported in HTML email strict mode. Use static HTML content or linked assets instead.",
-  ],
-  [
-    'iframe',
-    "The <iframe> tag isn't supported in HTML email strict mode. Link to the hosted content instead of embedding it.",
-  ],
-  [
-    'picture',
-    "The <picture> tag isn't supported in HTML email strict mode. Use <Img> with a broadly supported fallback asset instead.",
-  ],
-  [
-    'source',
-    "The <source> tag isn't supported in HTML email strict mode. Use a single <Img> source instead of source switching.",
-  ],
-  [
-    'canvas',
-    "The <canvas> tag isn't supported in HTML email strict mode. Render the graphic ahead of time and use <Img> instead.",
-  ],
-  [
-    'svg',
-    "The <svg> tag isn't supported in HTML email strict mode. Export the asset to an image and use <Img> instead.",
-  ],
-  [
-    'math',
-    "The <math> tag isn't supported in HTML email strict mode. Use text, an image, or pre-rendered markup instead.",
-  ],
-  [
-    'dialog',
-    "The <dialog> tag isn't supported in HTML email strict mode. Use a linked landing page for modal-like interactions instead.",
-  ],
-  [
-    'template',
-    "The <template> tag isn't supported in HTML email strict mode. Render the final HTML content directly instead.",
-  ],
-  [
-    'slot',
-    "The <slot> tag isn't supported in HTML email strict mode. Render explicit content instead of relying on slot projection.",
-  ],
-  [
-    'script',
-    "The <script> tag isn't supported in HTML email strict mode. Pre-render the final content and rely on links for interaction instead.",
-  ],
-])
+const { tables, clientData } = caniemailDataJson as unknown as CaniemailDataFile
 
-const DISALLOWED_CSS_DECLARATIONS = new Map([
-  [
-    'display:grid',
-    "The CSS property 'display:grid' isn't supported in HTML email strict mode. Use <Section>, <Row>, <Column>, or table-based layout instead.",
-  ],
-  [
-    'display:inline-grid',
-    "The CSS property 'display:inline-grid' isn't supported in HTML email strict mode. Use inline-block or table-based layout instead.",
-  ],
-  [
-    'display:inline-flex',
-    "The CSS property 'display:inline-flex' isn't supported in HTML email strict mode. Use inline-block or table-based layout instead.",
-  ],
-  [
-    'position:fixed',
-    "The CSS property 'position:fixed' isn't supported in HTML email strict mode.",
-  ],
-  [
-    'position:sticky',
-    "The CSS property 'position:sticky' isn't supported in HTML email strict mode.",
-  ],
-])
+const formatClients = (clients: EmailClient[]): string => {
+  const names = clients.map((c) => EMAIL_CLIENT_NAMES[c])
+  return names.length === 1
+    ? (names[0] ?? '')
+    : `${names.slice(0, -1).join(', ')} and ${names.at(-1)}`
+}
 
-const DISALLOWED_CSS_PROPERTIES = new Set([
-  '-ms-grid',
-  '-ms-grid-column',
-  '-ms-grid-column-align',
-  '-ms-grid-column-span',
-  '-ms-grid-columns',
-  '-ms-grid-row',
-  '-ms-grid-row-align',
-  '-ms-grid-row-span',
-  '-ms-grid-rows',
-  'grid',
-  'grid-area',
-  'grid-auto-columns',
-  'grid-auto-flow',
-  'grid-auto-rows',
-  'grid-column',
-  'grid-column-end',
-  'grid-column-start',
-  'grid-row',
-  'grid-row-end',
-  'grid-row-start',
-  'grid-template',
-  'grid-template-areas',
-  'grid-template-columns',
-  'grid-template-rows',
-  'margin-inline',
-  'margin-inline-start',
-  'margin-inline-end',
-  'margin-block',
-  'margin-block-start',
-  'margin-block-end',
-  'padding-inline',
-  'padding-inline-start',
-  'padding-inline-end',
-  'padding-block',
-  'padding-block-start',
-  'padding-block-end',
-  'border-inline',
-  'border-inline-start',
-  'border-inline-end',
-  'border-block',
-  'border-block-start',
-  'border-block-end',
-  'filter',
-  'pointer-events',
-  'user-select',
-  'aspect-ratio',
-  'transform',
-  'transition',
-  'animation',
-  'mask-image',
-  'clip-path',
-  'background-attachment',
-  'background-blend-mode',
-  'background-clip',
-  'backdrop-filter',
-  'mix-blend-mode',
-  'contain',
-  'will-change',
-])
-
-const DISALLOWED_CSS_PROPERTY_MESSAGES = new Map([
-  [
-    'grid',
-    "The CSS property 'grid' isn't supported in HTML email strict mode. Use table-based layout instead.",
-  ],
-  [
-    'grid-template',
-    "The CSS property 'grid-template' isn't supported in HTML email strict mode. Use table-based layout instead.",
-  ],
-  [
-    'grid-template-areas',
-    "The CSS property 'grid-template-areas' isn't supported in HTML email strict mode. Use table-based layout instead.",
-  ],
-  [
-    'grid-template-columns',
-    "The CSS property 'grid-template-columns' isn't supported in HTML email strict mode. Use <Section>, <Row>, <Column>, or table-based layout instead.",
-  ],
-  [
-    'grid-template-rows',
-    "The CSS property 'grid-template-rows' isn't supported in HTML email strict mode. Use table-based layout instead.",
-  ],
-  [
-    'margin-inline',
-    "The CSS property 'margin-inline' isn't supported in HTML email strict mode. Use physical properties such as margin-left and margin-right instead.",
-  ],
-  [
-    'margin-inline-start',
-    "The CSS property 'margin-inline-start' isn't supported in HTML email strict mode. Use margin-left instead.",
-  ],
-  [
-    'margin-inline-end',
-    "The CSS property 'margin-inline-end' isn't supported in HTML email strict mode. Use margin-right instead.",
-  ],
-  [
-    'margin-block',
-    "The CSS property 'margin-block' isn't supported in HTML email strict mode. Use margin-top and margin-bottom instead.",
-  ],
-  [
-    'margin-block-start',
-    "The CSS property 'margin-block-start' isn't supported in HTML email strict mode. Use margin-top instead.",
-  ],
-  [
-    'margin-block-end',
-    "The CSS property 'margin-block-end' isn't supported in HTML email strict mode. Use margin-bottom instead.",
-  ],
-  [
-    'padding-inline',
-    "The CSS property 'padding-inline' isn't supported in HTML email strict mode. Use physical properties such as padding-left and padding-right instead.",
-  ],
-  [
-    'padding-inline-start',
-    "The CSS property 'padding-inline-start' isn't supported in HTML email strict mode. Use padding-left instead.",
-  ],
-  [
-    'padding-inline-end',
-    "The CSS property 'padding-inline-end' isn't supported in HTML email strict mode. Use padding-right instead.",
-  ],
-  [
-    'padding-block',
-    "The CSS property 'padding-block' isn't supported in HTML email strict mode. Use padding-top and padding-bottom instead.",
-  ],
-  [
-    'padding-block-start',
-    "The CSS property 'padding-block-start' isn't supported in HTML email strict mode. Use padding-top instead.",
-  ],
-  [
-    'padding-block-end',
-    "The CSS property 'padding-block-end' isn't supported in HTML email strict mode. Use padding-bottom instead.",
-  ],
-  [
-    'border-inline',
-    "The CSS property 'border-inline' isn't supported in HTML email strict mode. Use border-left and border-right instead.",
-  ],
-  [
-    'border-inline-start',
-    "The CSS property 'border-inline-start' isn't supported in HTML email strict mode. Use border-left instead.",
-  ],
-  [
-    'border-inline-end',
-    "The CSS property 'border-inline-end' isn't supported in HTML email strict mode. Use border-right instead.",
-  ],
-  [
-    'border-block',
-    "The CSS property 'border-block' isn't supported in HTML email strict mode. Use border-top and border-bottom instead.",
-  ],
-  [
-    'border-block-start',
-    "The CSS property 'border-block-start' isn't supported in HTML email strict mode. Use border-top instead.",
-  ],
-  [
-    'border-block-end',
-    "The CSS property 'border-block-end' isn't supported in HTML email strict mode. Use border-bottom instead.",
-  ],
-  ['filter', "The CSS property 'filter' isn't supported in HTML email strict mode."],
-  [
-    'pointer-events',
-    "The CSS property 'pointer-events' isn't supported in HTML email strict mode.",
-  ],
-  ['user-select', "The CSS property 'user-select' isn't supported in HTML email strict mode."],
-  ['aspect-ratio', "The CSS property 'aspect-ratio' isn't supported in HTML email strict mode."],
-  ['transform', "The CSS property 'transform' isn't supported in HTML email strict mode."],
-  ['transition', "The CSS property 'transition' isn't supported in HTML email strict mode."],
-  ['animation', "The CSS property 'animation' isn't supported in HTML email strict mode."],
-  ['mask-image', "The CSS property 'mask-image' isn't supported in HTML email strict mode."],
-  ['clip-path', "The CSS property 'clip-path' isn't supported in HTML email strict mode."],
-  [
-    'background-attachment',
-    "The CSS property 'background-attachment' isn't supported in HTML email strict mode.",
-  ],
-  [
-    'background-blend-mode',
-    "The CSS property 'background-blend-mode' isn't supported in HTML email strict mode.",
-  ],
-  [
-    'background-clip',
-    "The CSS property 'background-clip' isn't supported in HTML email strict mode.",
-  ],
-  [
-    'backdrop-filter',
-    "The CSS property 'backdrop-filter' isn't supported in HTML email strict mode.",
-  ],
-  [
-    'mix-blend-mode',
-    "The CSS property 'mix-blend-mode' isn't supported in HTML email strict mode.",
-  ],
-  ['contain', "The CSS property 'contain' isn't supported in HTML email strict mode."],
-  ['will-change', "The CSS property 'will-change' isn't supported in HTML email strict mode."],
-])
-
-const WARNING_CSS_DECLARATIONS = new Map([
-  [
-    'display:flex',
-    "The CSS property 'display:flex' may not be supported consistently across email clients. Prefer <Section>, <Row>, <Column>, or table-based layout for critical structure.",
-  ],
-])
-
-const WARNING_CSS_PROPERTIES = new Map([
-  [
-    'align-content',
-    "The CSS property 'align-content' has inconsistent support in email clients. Prefer table structure and explicit spacing for layout.",
-  ],
-  [
-    'align-items',
-    "The CSS property 'align-items' has inconsistent support in email clients. Prefer table structure and explicit alignment attributes for layout.",
-  ],
-  [
-    'align-self',
-    "The CSS property 'align-self' has inconsistent support in email clients. Prefer table structure and explicit alignment attributes for layout.",
-  ],
-  [
-    'flex',
-    "The CSS property 'flex' has inconsistent support in email clients. Prefer table-based layout for critical structure.",
-  ],
-  [
-    'flex-basis',
-    "The CSS property 'flex-basis' has inconsistent support in email clients. Prefer table-based layout for critical structure.",
-  ],
-  [
-    'flex-direction',
-    "The CSS property 'flex-direction' has inconsistent support in email clients. Prefer table-based layout for critical structure.",
-  ],
-  [
-    'flex-grow',
-    "The CSS property 'flex-grow' has inconsistent support in email clients. Prefer fixed widths or table columns.",
-  ],
-  [
-    'flex-shrink',
-    "The CSS property 'flex-shrink' has inconsistent support in email clients. Prefer fixed widths or table columns.",
-  ],
-  [
-    'flex-wrap',
-    "The CSS property 'flex-wrap' has inconsistent support in email clients. Prefer table rows or stacked content.",
-  ],
-  [
-    'justify-content',
-    "The CSS property 'justify-content' has inconsistent support in email clients. Prefer table structure and explicit alignment attributes for layout.",
-  ],
-  [
-    'order',
-    "The CSS property 'order' has inconsistent support in email clients. Keep email source order aligned with the intended reading order.",
-  ],
-  [
-    'position',
-    "The CSS property 'position' may not be supported consistently across email clients. Prefer table structure, spacing, and natural document flow instead of positional offsets.",
-  ],
-  [
-    'object-fit',
-    "The CSS property 'object-fit' may not be supported consistently across email clients, especially in Outlook (Windows).",
-  ],
-  [
-    'object-position',
-    "The CSS property 'object-position' may not be supported consistently across email clients, especially in Outlook (Windows).",
-  ],
-  [
-    'background-image',
-    "The CSS property 'background-image' may not be supported consistently across email clients. Prefer <Img> or a solid background color for essential content.",
-  ],
-  [
-    'box-shadow',
-    "The CSS property 'box-shadow' may not be supported consistently across email clients, especially in Outlook and some Gmail versions.",
-  ],
-  [
-    'z-index',
-    "The CSS property 'z-index' has limited support in email clients as it depends on positioning.",
-  ],
-  [
-    'opacity',
-    "The CSS property 'opacity' may not be supported consistently across all email clients.",
-  ],
-  [
-    'border-radius',
-    "The CSS property 'border-radius' isn't supported in Outlook (Windows). It may be ignored or cause rendering issues.",
-  ],
-  [
-    'overflow',
-    "The CSS property 'overflow' has limited support and is often ignored in email clients like Gmail and Outlook.",
-  ],
-  [
-    'text-shadow',
-    "The CSS property 'text-shadow' isn't supported in Outlook and has inconsistent support in other clients.",
-  ],
-  [
-    'gap',
-    "The CSS property 'gap' isn't supported in many email clients. Use margin on child elements for consistent spacing in layouts.",
-  ],
-  [
-    'float',
-    "The CSS property 'float' has inconsistent support, particularly in Outlook (Windows). Prefer table-based layout instead.",
-  ],
-  [
-    'clear',
-    "The CSS property 'clear' has inconsistent support, particularly in Outlook (Windows).",
-  ],
-])
-
-const WARNING_AT_RULES = new Map([
-  [
-    '@media',
-    "The CSS at-rule '@media' may not be supported consistently across email clients. Keep the base layout readable without media queries.",
-  ],
-  [
-    '@import',
-    "The CSS at-rule '@import' is poorly supported in email clients. Prefer linking to fonts via <Font> or using system fonts.",
-  ],
-  [
-    '@font-face',
-    "The CSS at-rule '@font-face' has limited support in email clients. Keep fallback system fonts in your stack.",
-  ],
-  [
-    '@supports',
-    "The CSS at-rule '@supports' has limited support in email clients. Keep fallback styles outside feature queries.",
-  ],
-])
-
-const DISALLOWED_AT_RULES = new Map([
-  [
-    '@keyframes',
-    "The CSS at-rule '@keyframes' isn't supported reliably in HTML email strict mode. Avoid CSS animations in email.",
-  ],
-])
+const getUnsupportedClients = (
+  key: string,
+  warningClients: EmailClient[],
+): { clients: EmailClient[]; url: string } | undefined => {
+  const entry = clientData[key]
+  if (!entry) return undefined
+  const unsupported = warningClients.filter((c) => entry[c] === 'n' || entry[c] === 'a')
+  return unsupported.length > 0 ? { clients: unsupported, url: entry.url } : undefined
+}
 
 const CSS_COMMENT_PATTERN = /\/\*[\s\S]*?\*\//g
 const IMPORTANT_PATTERN = /\s*!important\b/gi
@@ -490,11 +84,35 @@ const getUrlScheme = (value: string): string | undefined => {
   return match?.[1]?.toLowerCase()
 }
 
-const validateTags = (openingTags: OpeningTag[]): void => {
+const validateTags = (
+  openingTags: OpeningTag[],
+  warnings: Set<string>,
+  warningClients: EmailClient[],
+): void => {
   for (const tag of openingTags) {
-    const message = DISALLOWED_TAG_MESSAGES.get(tag.name)
-    if (message) {
-      throw new Error(message)
+    if (ALWAYS_BLOCKED_TAGS.has(tag.name)) {
+      throw new Error(
+        `The <${tag.name}> tag isn't allowed in HTML email strict mode. Active content and embedded resources must not be used in email HTML.`,
+      )
+    }
+
+    const disallowedEntry = tables.disallowedTags[tag.name]
+    if (disallowedEntry) {
+      throw new Error(`${disallowedEntry.message} See: ${disallowedEntry.url}`)
+    }
+
+    const warningEntry = tables.warningTags[tag.name]
+    if (warningEntry) {
+      warnings.add(`${warningEntry.message} See: ${warningEntry.url}`)
+    }
+
+    if (warningClients.length > 0) {
+      const result = getUnsupportedClients(`html-tag:${tag.name}`, warningClients)
+      if (result) {
+        warnings.add(
+          `The <${tag.name}> tag is not supported in ${formatClients(result.clients)}. See: ${result.url}`,
+        )
+      }
     }
   }
 }
@@ -637,18 +255,36 @@ const collectStyleTagContents = (html: string, openingTags: OpeningTag[]): strin
   return contents
 }
 
-const collectCssWarnings = (cssText: string, warnings: Set<string>): void => {
+const collectCssWarnings = (
+  cssText: string,
+  warnings: Set<string>,
+  warningClients: EmailClient[],
+): void => {
   const normalizedCssText = stripCssComments(cssText).toLowerCase()
 
-  for (const [atRule, message] of DISALLOWED_AT_RULES) {
+  for (const [atRule, entry] of Object.entries(tables.disallowedAtRules)) {
     if (normalizedCssText.includes(atRule)) {
-      throw new Error(message)
+      throw new Error(`${entry.message} See: ${entry.url}`)
     }
   }
 
-  for (const [atRule, message] of WARNING_AT_RULES) {
+  for (const [atRule, entry] of Object.entries(tables.warningAtRules)) {
     if (normalizedCssText.includes(atRule)) {
-      warnings.add(message)
+      warnings.add(`${entry.message} See: ${entry.url}`)
+    }
+  }
+
+  if (warningClients.length > 0) {
+    for (const [namespacedKey] of Object.entries(clientData)) {
+      if (!namespacedKey.startsWith('css-at-rule:')) continue
+      const atRule = namespacedKey.slice('css-at-rule:'.length)
+      if (!normalizedCssText.includes(atRule)) continue
+      const result = getUnsupportedClients(namespacedKey, warningClients)
+      if (result) {
+        warnings.add(
+          `The CSS at-rule '${atRule}' is not supported in ${formatClients(result.clients)}. See: ${result.url}`,
+        )
+      }
     }
   }
 }
@@ -675,9 +311,13 @@ const validateCssUrls = (property: string, value: string, warnings: Set<string>)
   }
 }
 
-const validateCssDeclarations = (cssText: string, warnings: Set<string>): void => {
+const validateCssDeclarations = (
+  cssText: string,
+  warnings: Set<string>,
+  warningClients: EmailClient[],
+): void => {
   const normalizedCssText = stripCssComments(cssText)
-  collectCssWarnings(normalizedCssText, warnings)
+  collectCssWarnings(normalizedCssText, warnings, warningClients)
 
   for (const match of normalizedCssText.matchAll(CSS_DECLARATION_PATTERN)) {
     const property = match[1]?.toLowerCase()
@@ -712,36 +352,54 @@ const validateCssDeclarations = (cssText: string, warnings: Set<string>): void =
     }
 
     const declarationKey = `${property}:${normalizedValue}`
-    const disallowedDeclarationMessage = DISALLOWED_CSS_DECLARATIONS.get(declarationKey)
-    if (disallowedDeclarationMessage) {
-      throw new Error(disallowedDeclarationMessage)
+    const disallowedDeclaration = tables.disallowedDeclarations[declarationKey]
+    if (disallowedDeclaration) {
+      throw new Error(`${disallowedDeclaration.message} See: ${disallowedDeclaration.url}`)
     }
 
-    if (DISALLOWED_CSS_PROPERTIES.has(property)) {
-      throw new Error(
-        DISALLOWED_CSS_PROPERTY_MESSAGES.get(property) ??
-          `The CSS property '${property}' isn't supported in HTML email strict mode.`,
-      )
+    const disallowedProperty = tables.disallowedProperties[property]
+    if (disallowedProperty) {
+      throw new Error(`${disallowedProperty.message} See: ${disallowedProperty.url}`)
     }
 
-    const warningDeclarationMessage = WARNING_CSS_DECLARATIONS.get(declarationKey)
-    if (warningDeclarationMessage) {
-      warnings.add(warningDeclarationMessage)
+    const warningDeclaration = tables.warningDeclarations[declarationKey]
+    if (warningDeclaration) {
+      warnings.add(`${warningDeclaration.message} See: ${warningDeclaration.url}`)
     }
 
-    const warningPropertyMessage = WARNING_CSS_PROPERTIES.get(property)
-    if (warningPropertyMessage) {
-      warnings.add(warningPropertyMessage)
+    const warningProperty = tables.warningProperties[property]
+    if (warningProperty) {
+      warnings.add(`${warningProperty.message} See: ${warningProperty.url}`)
+    }
+
+    if (warningClients.length > 0) {
+      const declResult = getUnsupportedClients(`css-declaration:${declarationKey}`, warningClients)
+      if (declResult) {
+        warnings.add(
+          `The CSS property '${declarationKey}' is not supported in ${formatClients(declResult.clients)}. See: ${declResult.url}`,
+        )
+      }
+
+      const propResult = getUnsupportedClients(`css-property:${property}`, warningClients)
+      if (propResult) {
+        warnings.add(
+          `The CSS property '${property}' is not supported in ${formatClients(propResult.clients)}. See: ${propResult.url}`,
+        )
+      }
     }
   }
 }
 
-const validateStyleAttributes = (openingTags: OpeningTag[], warnings: Set<string>): void => {
+const validateStyleAttributes = (
+  openingTags: OpeningTag[],
+  warnings: Set<string>,
+  warningClients: EmailClient[],
+): void => {
   for (const tag of openingTags) {
     const cssText = tag.attributes.get('style')
 
     if (cssText && cssText.trim() !== '') {
-      validateCssDeclarations(cssText, warnings)
+      validateCssDeclarations(cssText, warnings, warningClients)
     }
   }
 }
@@ -750,24 +408,26 @@ const validateStyleTags = (
   html: string,
   openingTags: OpeningTag[],
   warnings: Set<string>,
+  warningClients: EmailClient[],
 ): void => {
   for (const cssText of collectStyleTagContents(html, openingTags)) {
     if (cssText.trim() === '') {
       continue
     }
 
-    validateCssDeclarations(cssText, warnings)
+    validateCssDeclarations(cssText, warnings, warningClients)
   }
 }
 
 const validateHtmlFragment = (
   html: string,
   warnings: Set<string>,
-  options?: { enforceStylePlacement?: boolean },
+  options?: { enforceStylePlacement?: boolean; warningClients?: EmailClient[] },
 ): void => {
   const openingTags = collectOpeningTags(html)
+  const warningClients = options?.warningClients ?? []
 
-  validateTags(openingTags)
+  validateTags(openingTags, warnings, warningClients)
   if (options?.enforceStylePlacement ?? true) {
     validateStylePlacement(html, openingTags)
   }
@@ -775,18 +435,18 @@ const validateHtmlFragment = (
   validateAnchors(openingTags)
   validateUnsafeAttributes(openingTags, warnings)
   validateImages(openingTags, warnings)
-  validateStyleAttributes(openingTags, warnings)
-  validateStyleTags(html, openingTags, warnings)
+  validateStyleAttributes(openingTags, warnings, warningClients)
+  validateStyleTags(html, openingTags, warnings, warningClients)
 }
 
-export const validateHtml = (html: string): string[] => {
+export const validateHtml = (html: string, warningClients: EmailClient[] = []): string[] => {
   const warnings = new Set<string>()
   const conditionalCommentPayloads = extractConditionalCommentPayloads(html)
   const htmlWithoutComments = stripHtmlComments(html)
 
-  validateHtmlFragment(htmlWithoutComments, warnings)
+  validateHtmlFragment(htmlWithoutComments, warnings, { warningClients })
   for (const payload of conditionalCommentPayloads) {
-    validateHtmlFragment(payload, warnings, { enforceStylePlacement: false })
+    validateHtmlFragment(payload, warnings, { enforceStylePlacement: false, warningClients })
   }
 
   return Array.from(warnings)

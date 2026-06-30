@@ -1,5 +1,37 @@
 # Changelog
 
+## [0.7.0] - 2026-06-30
+
+### caniemail.com-driven Strict Validation
+
+Strict-mode validation is now derived entirely from [caniemail.com](https://www.caniemail.com/) data. A bundled snapshot (`caniemail-data.json`) is used at runtime; run `nr update-caniemail` to refresh it from the live API.
+
+- Tags, CSS properties, CSS declarations, and CSS at-rules are classified by support ratio across all tracked email clients: ≥80% → allowed, 50–79% → warning, <50% → error. Partial (`a`) support counts as supported.
+- Security-critical tags (`script`, `iframe`, `embed`, `object`, `applet`, `form`) are always blocked regardless of ratio.
+- Error and warning messages now include a direct link to the relevant caniemail.com page.
+- The minimum supported Node.js version is raised to v22 (required for `import … with { type: 'json' }`).
+
+### Per-client Compatibility Warnings (`warningClients`)
+
+Added a `warningClients` option to `render()` and `renderAsync()`:
+
+```ts
+import { render } from 'hono-email'
+import type { EmailClient } from 'hono-email'
+
+const { html, text, warnings } = await render(<Email />, {
+  warningClients: ['outlook', 'gmail'],
+})
+// warnings will include entries like:
+// "The CSS property 'display:grid' is not supported in Outlook. See: https://..."
+```
+
+Supported clients: `'outlook'`, `'gmail'`, `'apple-mail'`, `'yahoo'`. When a client is listed and a used feature is unsupported for that client, a warning is emitted (controlled by `onWarning`). This is additive — threshold-based errors still throw.
+
+- feat(core): derive strict-mode validation from caniemail.com data (#89, #90)
+- feat(core): add `warningClients` option for per-client compatibility warnings
+- fix(core): add import attribute for JSON module; bump Node.js minimum to v22
+
 ## [0.4.0] - 2026-05-16
 
 ### Add Provider Adapters
