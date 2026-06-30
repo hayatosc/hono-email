@@ -39,7 +39,7 @@ export type FeatureMapEntry = {
 export type CaniemailDataFile = {
   apiVersion: string
   lastUpdateDate: string
-  generatedAt: string
+  contentHash: string
   features: Record<string, CaniemailFeatureEntry>
 }
 
@@ -77,7 +77,7 @@ export const computeSupportRatio = (stats: CaniemailStats): number => {
         continue
       }
 
-      const sortedKeys = [...keys].sort()
+      const sortedKeys = [...keys].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
       const latest = sortedKeys[sortedKeys.length - 1]
       if (latest === undefined) {
         continue
@@ -247,4 +247,5 @@ export const CANIEMAIL_FEATURE_MAP: FeatureMapEntry[] = [
 export const getFeatureEntry = (
   data: CaniemailDataFile,
   key: string,
-): CaniemailFeatureEntry | undefined => data.features[key]
+  kind: FeatureKind,
+): CaniemailFeatureEntry | undefined => data.features[`${kind}:${key}`]

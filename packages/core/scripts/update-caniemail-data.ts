@@ -8,6 +8,7 @@
  *   nr update-caniemail
  */
 
+import { createHash } from 'node:crypto'
 import { writeFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
 
@@ -23,7 +24,7 @@ import {
 const API_URL = 'https://www.caniemail.com/api/data.json'
 const OUTPUT_PATH = resolve(import.meta.dirname, '../src/validate/caniemail-data.json')
 
-const isCaniemailApiData = (value: unknown): value is CaniemailApiData => {
+const isValidFeature = (value: unknown): value is CaniemailFeature => {
   if (typeof value !== 'object' || value === null) {
     return false
   }
@@ -35,10 +36,37 @@ const isCaniemailApiData = (value: unknown): value is CaniemailApiData => {
   }
 
   return (
-    typeof getValue('api_version') === 'string' &&
-    typeof getValue('last_update_date') === 'string' &&
-    Array.isArray(getValue('data'))
+    typeof getValue('slug') === 'string' &&
+    typeof getValue('url') === 'string' &&
+    typeof getValue('stats') === 'object' &&
+    getValue('stats') !== null
   )
+}
+
+const isCaniemailApiData = (value: unknown): value is CaniemailApiData => {
+  if (typeof value !== 'object' || value === null) {
+    return false
+  }
+
+  const entries = Object.entries(value)
+  const getValue = (key: string): unknown => {
+    const entry = entries.find(([entryKey]) => entryKey === key)
+    return entry?.[1]
+  }
+
+  if (
+    typeof getValue('api_version') !== 'string' ||
+    typeof getValue('last_update_date') !== 'string'
+  ) {
+    return false
+  }
+
+  const data = getValue('data')
+  if (!Array.isArray(data)) {
+    return false
+  }
+
+  return data.every(isValidFeature)
 }
 
 const fetchApiData = async (): Promise<CaniemailApiData> => {
@@ -76,7 +104,8 @@ const generateDataFile = (apiData: CaniemailApiData): CaniemailDataFile => {
     }
 
     const ratio = computeSupportRatio(feature.stats)
-    features[entry.key] = {
+    const namespacedKey = `${entry.kind}:${entry.key}`
+    features[namespacedKey] = {
       slug: entry.slug,
       kind: entry.kind,
       ratio,
@@ -85,10 +114,17 @@ const generateDataFile = (apiData: CaniemailApiData): CaniemailDataFile => {
     }
   }
 
+  const deterministicContent = JSON.stringify({
+    apiVersion: apiData.api_version,
+    lastUpdateDate: apiData.last_update_date,
+    features,
+  })
+  const contentHash = createHash('sha256').update(deterministicContent).digest('hex')
+
   return {
     apiVersion: apiData.api_version,
     lastUpdateDate: apiData.last_update_date,
-    generatedAt: new Date().toISOString(),
+    contentHash,
     features,
   }
 }

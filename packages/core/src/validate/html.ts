@@ -6,6 +6,8 @@ import {
   type OpeningTag,
 } from './tags'
 
+const ALWAYS_BLOCKED_TAGS = new Set(['script', 'iframe', 'embed', 'object', 'applet', 'form'])
+
 /**
  * Build validation lookup tables from caniemail-data.json.
  *
@@ -15,6 +17,7 @@ import {
  */
 const buildValidationTables = () => {
   const disallowedTags = new Map<string, string>()
+  const warningTags = new Map<string, string>()
   const disallowedDeclarations = new Map<string, string>()
   const disallowedProperties = new Set<string>()
   const disallowedPropertyMessages = new Map<string, string>()
@@ -23,30 +26,38 @@ const buildValidationTables = () => {
   const warningAtRules = new Map<string, string>()
   const disallowedAtRules = new Map<string, string>()
 
-  for (const [key, entry] of Object.entries(caniemailData.features)) {
+  for (const [namespacedKey, entry] of Object.entries(caniemailData.features)) {
+    const originalKey = namespacedKey.split(':').slice(1).join(':')
+
     if (entry.status === 'supported') {
       continue
     }
 
     if (entry.kind === 'html-tag') {
-      const message =
-        entry.status === 'unsupported'
-          ? `The <${key}> tag isn't supported in HTML email strict mode.`
-          : `The <${key}> tag has limited support in HTML email strict mode.`
-      disallowedTags.set(key, message)
+      if (ALWAYS_BLOCKED_TAGS.has(originalKey)) {
+        continue
+      }
+
+      if (entry.status === 'unsupported') {
+        const message = `The <${originalKey}> tag isn't supported in HTML email strict mode.`
+        disallowedTags.set(originalKey, message)
+      } else {
+        const message = `The <${originalKey}> tag has limited support in HTML email strict mode.`
+        warningTags.set(originalKey, message)
+      }
       continue
     }
 
     if (entry.kind === 'css-property') {
       const message =
         entry.status === 'unsupported'
-          ? `The CSS property '${key}' isn't supported in HTML email strict mode.`
-          : `The CSS property '${key}' has inconsistent support in HTML email strict mode.`
+          ? `The CSS property '${originalKey}' isn't supported in HTML email strict mode.`
+          : `The CSS property '${originalKey}' has inconsistent support in HTML email strict mode.`
       if (entry.status === 'unsupported') {
-        disallowedProperties.add(key)
-        disallowedPropertyMessages.set(key, message)
+        disallowedProperties.add(originalKey)
+        disallowedPropertyMessages.set(originalKey, message)
       } else {
-        warningProperties.set(key, message)
+        warningProperties.set(originalKey, message)
       }
       continue
     }
@@ -54,12 +65,12 @@ const buildValidationTables = () => {
     if (entry.kind === 'css-declaration') {
       const message =
         entry.status === 'unsupported'
-          ? `The CSS property '${key}' isn't supported in HTML email strict mode.`
-          : `The CSS property '${key}' may not be supported consistently in HTML email strict mode.`
+          ? `The CSS property '${originalKey}' isn't supported in HTML email strict mode.`
+          : `The CSS property '${originalKey}' may not be supported consistently in HTML email strict mode.`
       if (entry.status === 'unsupported') {
-        disallowedDeclarations.set(key, message)
+        disallowedDeclarations.set(originalKey, message)
       } else {
-        warningDeclarations.set(key, message)
+        warningDeclarations.set(originalKey, message)
       }
       continue
     }
@@ -67,18 +78,19 @@ const buildValidationTables = () => {
     if (entry.kind === 'css-at-rule') {
       const message =
         entry.status === 'unsupported'
-          ? `The CSS at-rule '${key}' isn't supported reliably in HTML email strict mode.`
-          : `The CSS at-rule '${key}' has limited support in HTML email strict mode.`
+          ? `The CSS at-rule '${originalKey}' isn't supported reliably in HTML email strict mode.`
+          : `The CSS at-rule '${originalKey}' has limited support in HTML email strict mode.`
       if (entry.status === 'unsupported') {
-        disallowedAtRules.set(key, message)
+        disallowedAtRules.set(originalKey, message)
       } else {
-        warningAtRules.set(key, message)
+        warningAtRules.set(originalKey, message)
       }
     }
   }
 
   return {
     disallowedTags,
+    warningTags,
     disallowedDeclarations,
     disallowedProperties,
     disallowedPropertyMessages,
@@ -91,6 +103,7 @@ const buildValidationTables = () => {
 
 const {
   disallowedTags: DISALLOWED_TAG_MESSAGES,
+  warningTags: WARNING_TAG_MESSAGES,
   disallowedDeclarations: DISALLOWED_CSS_DECLARATIONS,
   disallowedProperties: DISALLOWED_CSS_PROPERTIES,
   disallowedPropertyMessages: DISALLOWED_CSS_PROPERTY_MESSAGES,
@@ -153,11 +166,22 @@ const getUrlScheme = (value: string): string | undefined => {
   return match?.[1]?.toLowerCase()
 }
 
-const validateTags = (openingTags: OpeningTag[]): void => {
+const validateTags = (openingTags: OpeningTag[], warnings: Set<string>): void => {
   for (const tag of openingTags) {
-    const message = DISALLOWED_TAG_MESSAGES.get(tag.name)
-    if (message) {
-      throw new Error(message)
+    if (ALWAYS_BLOCKED_TAGS.has(tag.name)) {
+      throw new Error(
+        `The <${tag.name}> tag isn't allowed in HTML email strict mode. Active content and embedded resources must not be used in email HTML.`,
+      )
+    }
+
+    const disallowedMessage = DISALLOWED_TAG_MESSAGES.get(tag.name)
+    if (disallowedMessage) {
+      throw new Error(disallowedMessage)
+    }
+
+    const warningMessage = WARNING_TAG_MESSAGES.get(tag.name)
+    if (warningMessage) {
+      warnings.add(warningMessage)
     }
   }
 }
@@ -180,6 +204,14 @@ const validateAnchors = (openingTags: OpeningTag[]): void => {
 
 const validateUnsafeAttributes = (openingTags: OpeningTag[], warnings: Set<string>): void => {
   for (const tag of openingTags) {
+    for (const attributeName of tag.attributes.keys()) {
+      if (attributeName.startsWith('on')) {
+        throw new Error(
+          `The '${attributeName}' attribute isn't supported in HTML email strict mode. JavaScript event handlers must not be used in email HTML.`,
+        )
+      }
+    }
+
     const href = tag.attributes.get('href')
     if (href !== undefined) {
       const scheme = getUrlScheme(href)
@@ -422,7 +454,7 @@ const validateHtmlFragment = (
 ): void => {
   const openingTags = collectOpeningTags(html)
 
-  validateTags(openingTags)
+  validateTags(openingTags, warnings)
   if (options?.enforceStylePlacement ?? true) {
     validateStylePlacement(html, openingTags)
   }
