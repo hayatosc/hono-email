@@ -28,10 +28,15 @@ export function discoverTemplates(dir: string): TemplateEntry[] {
   if (!existsSync(absDir)) {
     return []
   }
-  const files = readdirSync(absDir, { recursive: true })
-    .map((f) => resolve(absDir, f.toString()))
-    .filter((f) => f.endsWith('.tsx'))
-    .sort()
+  let files: string[]
+  try {
+    files = readdirSync(absDir, { recursive: true })
+      .map((f) => resolve(absDir, f.toString()))
+      .filter((f) => f.endsWith('.tsx'))
+      .sort()
+  } catch {
+    return []
+  }
 
   return files.map((filePath) => ({
     name: templateName(absDir, filePath),

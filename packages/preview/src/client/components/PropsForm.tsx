@@ -209,11 +209,16 @@ function ArrayField({
     <div class="field">
       <label class="field-label">{label}</label>
       <div class="array-field">
-        {items.map((item, index) => (
-          <div class="array-item" key={index}>
-            <button class="array-item-remove" type="button" onClick={() => removeItem(index)}>
-              ×
-            </button>
+        {items.map((item, index) => {
+          const itemKey =
+            typeof item === 'object' && item !== null
+              ? `${name}-${index}-${JSON.stringify(item)}`
+              : `${name}-${index}-${String(item)}`
+          return (
+            <div class="array-item" key={itemKey}>
+              <button class="array-item-remove" type="button" onClick={() => removeItem(index)}>
+                ×
+              </button>
             {itemSchema ? (
               <div class="array-item-fields">
                 {Object.entries(itemSchema).map(([fieldKey, fieldSpec]) => {
@@ -240,8 +245,9 @@ function ArrayField({
                 }}
               />
             )}
-          </div>
-        ))}
+            </div>
+          )
+        })}
         <button class="array-add" type="button" onClick={addItem}>
           + Add item
         </button>

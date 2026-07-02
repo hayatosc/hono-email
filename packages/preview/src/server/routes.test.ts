@@ -140,7 +140,7 @@ describe('createApiRoutes error paths', () => {
     const res = await app.request('/api/templates/Test/props')
     expect(res.status).toBe(500)
     const body = await res.json()
-    expect(body.error).toBe('Internal server error')
+    expect(body.error).toBe('Module load failed')
   })
 
   test('POST /api/templates/:name/render returns 400 when no component exported', async () => {
@@ -170,6 +170,6 @@ describe('createApiRoutes error paths', () => {
     })
     expect(res.status).toBe(500)
     const body = await res.json()
-    expect(body.error).toBe('Internal server error')
+    expect(body.error).toBe('Module load failed')
   })
 })

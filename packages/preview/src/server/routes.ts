@@ -36,7 +36,8 @@ export function createApiRoutes(loadModule: LoadModule, templateDir: string) {
       return c.json(schema)
     } catch (err) {
       console.error('Failed to load template props:', err)
-      return c.json({ error: 'Internal server error' }, 500)
+      const message = err instanceof Error ? err.message : 'Unknown error'
+      return c.json({ error: message }, 500)
     }
   })
 
@@ -64,7 +65,9 @@ export function createApiRoutes(loadModule: LoadModule, templateDir: string) {
       return c.json(result)
     } catch (err) {
       console.error('Failed to render template:', err)
-      return c.json({ error: 'Internal server error' }, 500)
+      const message = err instanceof Error ? err.message : 'Unknown error'
+      const status = message.startsWith('Missing required props') ? 400 : 500
+      return c.json({ error: message }, status)
     }
   })
 
