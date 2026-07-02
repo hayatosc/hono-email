@@ -114,6 +114,14 @@ export type MarkdownRenderOptions = {
   markdownCustomStyles?: MarkdownCustomStyles
   markdownCustomClassNames?: MarkdownCustomClassNames
   markdownStyleMode?: MarkdownStyleMode
+  /**
+   * Whether to sanitize the rendered HTML. Defaults to `true`.
+   *
+   * @warning Setting this to `false` allows arbitrary HTML in the Markdown source
+   * to pass through unsanitized. This can lead to XSS vulnerabilities if the
+   * Markdown content comes from untrusted sources. Only disable sanitization
+   * if you fully trust the input.
+   */
   sanitize?: boolean
 }
 
@@ -325,18 +333,18 @@ export const renderMarkdownHtml = async (
 ): Promise<string> => {
   const styleMode = options.markdownStyleMode ?? 'inline'
   const requiresTailwindParent = styleMode === 'tailwind'
-  const htmlSource =
-    options.sanitize === false
-      ? String(
-          await unified()
-            .use(remarkParse)
-            .use(remarkGfm)
-            .use(remarkRehype, { allowDangerousHtml: true })
-            .use(rehypeRaw)
-            .use(rehypeStringify)
-            .process(markdown),
-        )
-      : await normalizeSanitizedMarkdownHtml(
+  const sanitize = options.sanitize !== false
+  const htmlSource = !sanitize
+    ? String(
+        await unified()
+          .use(remarkParse)
+          .use(remarkGfm)
+          .use(remarkRehype, { allowDangerousHtml: true })
+          .use(rehypeRaw)
+          .use(rehypeStringify)
+          .process(markdown),
+      )
+    : await normalizeSanitizedMarkdownHtml(
           String(
             await unified()
               .use(remarkParse)
