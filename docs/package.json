@@ -23,6 +23,5 @@
   },
   "devDependencies": {
     "wrangler": "^4.104.0"
-  },
-  "packageManager": "bun@1.3.12"
+  }
 }
