@@ -54,10 +54,11 @@ const previewChildrenLength = (children: Child | undefined): number => {
   }
 
   if (Array.isArray(children)) {
-    return children.reduce<number>(
-      (total, child) => total + (typeof child === 'string' ? child.length : 0),
-      0,
-    )
+    return children.reduce<number>((total, child) => total + previewChildrenLength(child), 0)
+  }
+
+  if (children !== null && typeof children === 'object' && 'children' in children) {
+    return previewChildrenLength((children as { children?: Child | Child[] }).children)
   }
 
   return 0
