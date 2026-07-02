@@ -1,7 +1,6 @@
 import type { EmailDkimOptions } from '../index'
+import { BASE64_ALPHABET, CRLF, bytesToBase64 } from '../utils'
 
-const CRLF = '\r\n'
-const BASE64_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
 const DEFAULT_HEADER_FIELD_NAMES = [
   'From',
   'To',
@@ -20,23 +19,6 @@ const HEADER_FIELD_NAME_PATTERN = /^[A-Za-z0-9-]+$/
 type ParsedHeader = {
   name: string
   raw: string
-}
-
-const bytesToBase64 = (bytes: Uint8Array): string => {
-  let output = ''
-  for (let index = 0; index < bytes.length; index += 3) {
-    const first = bytes[index] ?? 0
-    const second = bytes[index + 1] ?? 0
-    const third = bytes[index + 2] ?? 0
-    const combined = (first << 16) | (second << 8) | third
-
-    output += BASE64_ALPHABET[(combined >> 18) & 0x3f]
-    output += BASE64_ALPHABET[(combined >> 12) & 0x3f]
-    output += index + 1 < bytes.length ? BASE64_ALPHABET[(combined >> 6) & 0x3f] : '='
-    output += index + 2 < bytes.length ? BASE64_ALPHABET[combined & 0x3f] : '='
-  }
-
-  return output
 }
 
 const base64ToBytes = (value: string): Uint8Array => {
