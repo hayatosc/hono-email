@@ -21,6 +21,14 @@ export type {
 
 const DEFAULT_API_BASE_URL = 'https://api.cloudflare.com/client/v4'
 
+const validateApiBaseUrl = (url: string): void => {
+  if (url.startsWith('http://')) {
+    throw new Error(
+      'Cloudflare REST adapter requires HTTPS. API tokens must not be sent over plaintext.',
+    )
+  }
+}
+
 export type CloudflareApiMessage = {
   code?: number
   message: string
@@ -116,8 +124,10 @@ export const RESTConnector = (
 
   return {
     async send(request: CloudflareEmailConnectorRequest): Promise<CloudflareEmailConnectorResult> {
+      const apiBaseUrl = options.apiBaseUrl ?? DEFAULT_API_BASE_URL
+      validateApiBaseUrl(apiBaseUrl)
       const response = await fetchImplementation(
-        `${options.apiBaseUrl ?? DEFAULT_API_BASE_URL}/accounts/${encodeURIComponent(options.accountId)}/email/sending/send`,
+        `${apiBaseUrl}/accounts/${encodeURIComponent(options.accountId)}/email/sending/send`,
         {
           body: JSON.stringify(request.restPayload),
           headers: {

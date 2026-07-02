@@ -28,12 +28,12 @@ describe('resolveSecureTransport', () => {
     expect(resolveSecureTransport(undefined, 587)).toBe('starttls')
   })
 
-  test('returns off when secure is undefined and port is 25', () => {
-    expect(resolveSecureTransport(undefined, 25)).toBe('off')
+  test('returns starttls when secure is undefined and port is 25', () => {
+    expect(resolveSecureTransport(undefined, 25)).toBe('starttls')
   })
 
-  test('returns off when secure is undefined and port is not 465 or 587', () => {
-    expect(resolveSecureTransport(undefined, 2525)).toBe('off')
+  test('returns starttls when secure is undefined and port is not 465 or 587', () => {
+    expect(resolveSecureTransport(undefined, 2525)).toBe('starttls')
   })
 })
 

@@ -91,6 +91,14 @@ export type PostmarkErrorResponse = {
 const DEFAULT_API_BASE_URL = 'https://api.postmarkapp.com'
 const DEFAULT_USER_AGENT = 'hono-email'
 
+const validateApiBaseUrl = (url: string): void => {
+  if (url.startsWith('http://')) {
+    throw new Error(
+      'Postmark adapter requires HTTPS. API tokens must not be sent over plaintext.',
+    )
+  }
+}
+
 const failedReceipt = (
   errorMessages: string[],
   options: {
@@ -270,6 +278,7 @@ export const PostmarkAdapter = (options: PostmarkAdapterOptions): EmailAdapter =
     try {
       const fetchImplementation = getFetch(options.fetch)
       const apiBaseUrl = options.apiBaseUrl ?? DEFAULT_API_BASE_URL
+      validateApiBaseUrl(apiBaseUrl)
       const response = await fetchImplementation(`${apiBaseUrl.replace(/\/$/u, '')}/email`, {
         body: JSON.stringify(payload),
         headers: {

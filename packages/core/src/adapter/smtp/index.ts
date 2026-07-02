@@ -179,9 +179,13 @@ export class SmtpTransport implements EmailAdapter {
         ...(this.#auth !== undefined ? { auth: this.#auth } : {}),
       })
     } finally {
-      await session?.close().catch(() => {})
+      await session?.close().catch((error) => {
+        console.debug('SMTP session close failed:', error)
+      })
       if (session === undefined) {
-        await Promise.resolve(socket?.close?.()).catch(() => {})
+        await Promise.resolve(socket?.close?.()).catch((error) => {
+          console.debug('SMTP socket close failed:', error)
+        })
       }
     }
   }
@@ -212,7 +216,9 @@ export class SmtpTransport implements EmailAdapter {
           recipients: envelope.recipients,
         })
       } catch (error) {
-        await this.#discardSlot(slot).catch(() => {})
+        await this.#discardSlot(slot).catch((discardError) => {
+          console.debug('SMTP discard slot failed:', discardError)
+        })
         return failedReceipt(error)
       }
 
@@ -300,7 +306,9 @@ export class SmtpTransport implements EmailAdapter {
       return slot
     } catch (error) {
       this.#totalSlots -= 1
-      await Promise.resolve(socket?.close?.()).catch(() => {})
+      await Promise.resolve(socket?.close?.()).catch((closeError) => {
+        console.debug('SMTP socket close failed:', closeError)
+      })
       this.#serveWaiters()
       throw error
     }
