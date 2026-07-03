@@ -2,7 +2,6 @@
   "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "hono-email-cloudflare-vite-example",
   "compatibility_date": "2026-04-19",
-  "compatibility_flags": ["nodejs_compat"],
   "main": "./src/index.tsx",
 
   // Enable `remote: true` only if you want real delivery during `wrangler dev`
