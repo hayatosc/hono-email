@@ -26,6 +26,8 @@ type ResolvedPluginOptions = {
 
 const normalizePathForCss = (value: string): string => value.replace(/\\/g, '/')
 
+const escapeCssString = (value: string): string => value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
+
 const resolveOptionalPath = (value: string | undefined): string | undefined =>
   value ? normalizePathForCss(path.resolve(value)) : undefined
 
@@ -126,10 +128,10 @@ export const buildPerFileCssModule = (
   const lines = ['@import "tailwindcss";']
 
   if (resolved.configPath) {
-    lines.push(`@config "${normalizePathForCss(resolved.configPath).replace(/"/g, '\\"')}";`)
+    lines.push(`@config "${escapeCssString(normalizePathForCss(resolved.configPath))}";`)
   }
 
-  lines.push(`@source "${normalizePathForCss(sourceFilePath).replace(/"/g, '\\"')}";`)
+  lines.push(`@source "${escapeCssString(normalizePathForCss(sourceFilePath))}";`)
 
   if (resolved.safelist.length > 0) {
     lines.push(`@source inline(${JSON.stringify(resolved.safelist.join(' '))});`)
