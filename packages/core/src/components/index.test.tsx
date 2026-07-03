@@ -299,4 +299,24 @@ describe('email components', () => {
       '<h3 style="margin-left:12px;margin-right:12px;margin-top:8px">Hello</h3>',
     )
   })
+
+  test('Preview counts text in nested JSX elements for padding', async () => {
+    const { html } = await render(
+      <Html>
+        <Body>
+          <Preview>
+            <span>Your</span> <span>receipt</span>
+          </Preview>
+        </Body>
+      </Html>,
+    )
+
+    expect(html).toContain('Your')
+    expect(html).toContain('receipt')
+    // Preview pads the hidden preview text to ~200 characters so clients render
+    // the intended preview snippet. The padding includes zero-width joiners and
+    // other invisible whitespace characters.
+    expect(html).toContain('\u200c')
+    expect(html).toContain('\ufeff')
+  })
 })
