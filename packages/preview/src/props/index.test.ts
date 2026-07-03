@@ -183,8 +183,16 @@ describe('resolveComponent', () => {
 
   test('falls back to named function export when no default', () => {
     const MyEmail = () => null
-    const mod = { MyEmail, previewProps: {} }
+    ;(MyEmail as { previewProps?: Record<string, unknown> }).previewProps = {}
+    const mod = { MyEmail }
     expect(resolveComponent(mod)).toBe(MyEmail)
+  })
+
+  test('skips named function exports without previewProps', () => {
+    const MyEmail = () => null
+    const util = () => null
+    const mod = { MyEmail, util, previewProps: {} }
+    expect(resolveComponent(mod)).toBeNull()
   })
 
   test('skips previewProps when looking for named exports', () => {
