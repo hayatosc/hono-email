@@ -121,3 +121,10 @@ export function LoginEmail({ code, expiresInMinutes = 10 }: LoginEmailProps) {
     </Html>
   )
 }
+
+export const previewProps = {
+  code: { type: 'string', default: '123456' },
+  expiresInMinutes: { type: 'number', default: 10 },
+}
+
+LoginEmail.previewProps = previewProps

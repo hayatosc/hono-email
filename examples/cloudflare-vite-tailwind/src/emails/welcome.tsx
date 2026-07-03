@@ -68,3 +68,14 @@ export const WelcomeEmail = ({ message, subject }: WelcomeEmailInput) => (
     </Tailwind>
   </Html>
 )
+
+export const previewProps = {
+  message: {
+    type: 'string',
+    default:
+      'Hello,\n\nThis email was sent from the Hono form in examples/cloudflare-vite-tailwind.',
+  },
+  subject: { type: 'string', default: 'Test email from hono-email' },
+}
+
+WelcomeEmail.previewProps = previewProps
