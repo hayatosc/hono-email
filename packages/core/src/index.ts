@@ -20,6 +20,7 @@ export {
   Html,
   Img,
   Link,
+  LinkButton,
   List,
   ListItem,
   Markdown,
@@ -40,6 +41,7 @@ import {
   type SendEmailReceipt,
 } from './email'
 export type {
+  ButtonProps,
   FontProps,
   MarkdownCustomClassNames,
   MarkdownCustomStyles,

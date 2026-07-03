@@ -18,6 +18,7 @@ import {
   Hr,
   Html,
   Link,
+  LinkButton,
   List,
   ListItem,
   Preview,
@@ -78,6 +79,24 @@ describe('email components', () => {
     expect(html).toContain('mso-padding-alt:0px')
     expect(html).toContain('padding-top:12px')
     expect(html).toContain('padding-right:20px')
+    expect(html).toContain('Start')
+    expect(html).not.toContain('<button')
+  })
+
+  test('renders LinkButton as a link with email-safe defaults', async () => {
+    const { html } = await render(
+      <Html>
+        <Body>
+          <LinkButton href="https://example.com" style={{ padding: '12px 20px' }}>
+            Start
+          </LinkButton>
+        </Body>
+      </Html>,
+    )
+
+    expect(html).toContain('<a href="https://example.com"')
+    expect(html).toContain('target="_blank"')
+    expect(html).toContain('mso-padding-alt:0px')
     expect(html).toContain('Start')
     expect(html).not.toContain('<button')
   })
