@@ -13,7 +13,7 @@ const CSS_IMPORT_PREFIX = 'virtual:hono-email-tw.css:'
 const RESOLVED_ARTIFACT_PREFIX = '\0virtual:hono-email-tw-artifact:'
 const RESOLVED_CSS_PREFIX = '\0virtual:hono-email-tw-css:'
 const RESOLVED_CSS_SUFFIX = '.css'
-const SOURCE_MODULE_FILTER: RegExp = /\.[cm]?[jt]sx?$/
+const SOURCE_MODULE_FILTER: RegExp = /\.[cm]?[jt]sx?(?:[?#]|$)/
 const TAILWIND_COMPONENT_OPEN_TAG_PATTERN: RegExp = /<Tailwind\b([^>]*?)(\/?)>/g
 
 type ResolvedPluginOptions = {
@@ -55,7 +55,7 @@ const hasTailwindImport = (code: string, packageNames: string[]): boolean =>
     (packageName) =>
       new RegExp(`from\\s*['"]${escapeForRegExp(packageName)}['"]`).test(code) &&
       new RegExp(
-        `import\\s*{[\\s\\S]*\\bTailwind\\b[\\s\\S]*}\\s*from\\s*['"]${escapeForRegExp(packageName)}['"]`,
+        `import\\s*{[^}]*\\bTailwind\\b[^}]*}\\s*from\\s*['"]${escapeForRegExp(packageName)}['"]`,
       ).test(code),
   )
 
@@ -87,7 +87,7 @@ export const transformTailwindComponentSource = (
   const transformedCode = code.replace(
     TAILWIND_COMPONENT_OPEN_TAG_PATTERN,
     (fullMatch, attributes: string, selfClosing: string) => {
-      if (/\bartifact\s*=/.test(attributes)) {
+      if (/(?:^|\s)artifact\s*=/.test(attributes)) {
         return fullMatch
       }
 
@@ -126,10 +126,10 @@ export const buildPerFileCssModule = (
   const lines = ['@import "tailwindcss";']
 
   if (resolved.configPath) {
-    lines.push(`@config "${resolved.configPath}";`)
+    lines.push(`@config "${normalizePathForCss(resolved.configPath).replace(/"/g, '\\"')}";`)
   }
 
-  lines.push(`@source "${normalizePathForCss(sourceFilePath)}";`)
+  lines.push(`@source "${normalizePathForCss(sourceFilePath).replace(/"/g, '\\"')}";`)
 
   if (resolved.safelist.length > 0) {
     lines.push(`@source inline(${JSON.stringify(resolved.safelist.join(' '))});`)
@@ -205,7 +205,12 @@ export const unpluginFactory: UnpluginFactory<EmailTailwindPluginOptions | undef
       const bareId = qIdx >= 0 ? id.slice(0, qIdx) : id
       if (bareId.startsWith(RESOLVED_CSS_PREFIX) && bareId.endsWith(RESOLVED_CSS_SUFFIX)) {
         const encodedPath = bareId.slice(RESOLVED_CSS_PREFIX.length, -RESOLVED_CSS_SUFFIX.length)
-        const sourceFilePath = decodeURIComponent(encodedPath)
+        let sourceFilePath: string
+        try {
+          sourceFilePath = decodeURIComponent(encodedPath)
+        } catch {
+          throw new Error(`Invalid encoded path in Tailwind CSS virtual module: ${encodedPath}`)
+        }
 
         this.addWatchFile(sourceFilePath)
 
