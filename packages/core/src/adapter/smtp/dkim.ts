@@ -1,5 +1,5 @@
 import type { EmailDkimOptions } from '../index'
-import { BASE64_ALPHABET, CRLF, bytesToBase64 } from '../utils'
+import { BASE64_ALPHABET, CRLF, base64ToBytes, bytesToBase64, normalizeLineEndings } from '../utils'
 
 const DEFAULT_HEADER_FIELD_NAMES = [
   'From',
@@ -21,35 +21,8 @@ type ParsedHeader = {
   raw: string
 }
 
-const base64ToBytes = (value: string): Uint8Array => {
-  const sanitized = value.replace(/\s+/g, '')
-  let bits = 0
-  let bitCount = 0
-  const output: number[] = []
-
-  for (const character of sanitized) {
-    if (character === '=') {
-      break
-    }
-
-    const index = BASE64_ALPHABET.indexOf(character)
-    if (index < 0) {
-      throw new Error('Invalid DKIM private key: PEM contains invalid base64 data.')
-    }
-
-    bits = (bits << 6) | index
-    bitCount += 6
-
-    if (bitCount >= 8) {
-      bitCount -= 8
-      output.push((bits >> bitCount) & 0xff)
-    }
-  }
-
-  return Uint8Array.from(output)
-}
-
-const normalizeLineEndings = (value: string): string => value.replace(/\r\n|\r|\n/g, CRLF)
+const decodeDkimBase64 = (value: string): Uint8Array =>
+  base64ToBytes(value, 'Invalid DKIM private key: PEM contains invalid base64 data.')
 
 const encodeDerLength = (length: number): Uint8Array => {
   if (length < 0x80) {
@@ -136,12 +109,12 @@ const decodePemPrivateKey = (pem: string): Uint8Array => {
 
   const pkcs8 = extractPemBlock(trimmed, 'PRIVATE KEY')
   if (pkcs8 !== undefined) {
-    return base64ToBytes(pkcs8)
+    return decodeDkimBase64(pkcs8)
   }
 
   const pkcs1 = extractPemBlock(trimmed, 'RSA PRIVATE KEY')
   if (pkcs1 !== undefined) {
-    return wrapPkcs1InPkcs8(base64ToBytes(pkcs1))
+    return wrapPkcs1InPkcs8(decodeDkimBase64(pkcs1))
   }
 
   throw new Error(

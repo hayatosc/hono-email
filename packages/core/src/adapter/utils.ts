@@ -18,3 +18,33 @@ export const bytesToBase64 = (bytes: Uint8Array): string => {
 
   return output
 }
+
+export const base64ToBytes = (value: string, invalidDataErrorMessage: string): Uint8Array => {
+  const sanitized = value.replace(/\s+/g, '')
+  let bits = 0
+  let bitCount = 0
+  const output: number[] = []
+
+  for (const character of sanitized) {
+    if (character === '=') {
+      break
+    }
+
+    const index = BASE64_ALPHABET.indexOf(character)
+    if (index < 0) {
+      throw new Error(invalidDataErrorMessage)
+    }
+
+    bits = (bits << 6) | index
+    bitCount += 6
+
+    if (bitCount >= 8) {
+      bitCount -= 8
+      output.push((bits >> bitCount) & 0xff)
+    }
+  }
+
+  return Uint8Array.from(output)
+}
+
+export const normalizeLineEndings = (value: string): string => value.replace(/\r\n|\r|\n/g, CRLF)

@@ -5,7 +5,7 @@ import {
   resolveEmailAttachmentsSync,
 } from './attachment'
 import type { EmailAddress, EmailAttachmentLimits, EmailHeaders, EmailMessage } from './index'
-import { CRLF, bytesToBase64 } from './utils'
+import { CRLF, bytesToBase64, normalizeLineEndings } from './utils'
 
 const BASE64_CHUNK_SIZE = 76
 const EMAIL_ADDRESS_PATTERN = /^[^\s@<>]+@[^\s@<>]+$/
@@ -35,8 +35,6 @@ const PROTECTED_ATTACHMENT_HEADERS = new Set(
     'MIME-Version',
   ].map((name) => name.toLowerCase()),
 )
-
-const normalizeLineEndings = (value: string): string => value.replace(/\r\n|\r|\n/g, CRLF)
 
 const hasUnsafeHeaderValue = (value: string): boolean => /[\r\n]/.test(value)
 
