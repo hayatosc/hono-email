@@ -9,6 +9,7 @@ import {
   asCloudflareEmailRecipientField,
   CloudflareEmailConnectorError,
   type CloudflareEmailAdapterOptions,
+  type CloudflareEmailConnectorRequest,
   type CloudflareEmailRestAttachment,
   type CloudflareEmailNameAddress,
   type CloudflareEmailRestPayload,
@@ -222,22 +223,29 @@ export const CloudflareEmailAdapter = (options: CloudflareEmailAdapterOptions): 
       }
     }
 
-    let restPayload: CloudflareEmailRestPayload
-    let workersPayload: CloudflareEmailWorkerPayload
     try {
       const attachments = await resolveEmailAttachments(message.attachments, options.limits)
-      restPayload = buildRestPayload(message, attachments)
-      workersPayload = buildWorkersPayload(message, attachments)
-    } catch (error) {
-      return failedReceipt(error, [], recipients)
-    }
 
-    try {
-      const result = await connector.send({
-        recipients,
-        restPayload,
-        workersPayload,
-      })
+      let request: CloudflareEmailConnectorRequest
+      if (connector.kind === 'rest') {
+        request = {
+          recipients,
+          restPayload: buildRestPayload(message, attachments),
+        }
+      } else if (connector.kind === 'workers') {
+        request = {
+          recipients,
+          workersPayload: buildWorkersPayload(message, attachments),
+        }
+      } else {
+        request = {
+          recipients,
+          restPayload: buildRestPayload(message, attachments),
+          workersPayload: buildWorkersPayload(message, attachments),
+        }
+      }
+
+      const result = await connector.send(request)
       const accepted = [...result.delivered, ...result.queued]
       const queuedRecipients = result.queued.length > 0 ? result.queued : undefined
 

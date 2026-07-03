@@ -12,6 +12,7 @@ export type {
   CloudflareEmailBinding,
   CloudflareEmailBindingSendResult,
   CloudflareEmailConnector,
+  CloudflareEmailConnectorKind,
   CloudflareEmailConnectorRequest,
   CloudflareEmailConnectorResult,
   CloudflareEmailWorkersConnectorOptions,
@@ -40,9 +41,10 @@ const resolveEmailBinding = (bindingName: string): CloudflareEmailBinding => {
 }
 
 const buildConnector = (bindingName: string): CloudflareEmailConnector => ({
+  kind: 'workers' as const,
   async send(request: CloudflareEmailConnectorRequest): Promise<CloudflareEmailConnectorResult> {
     const binding = resolveEmailBinding(bindingName)
-    const result = await binding.send(request.workersPayload)
+    const result = await binding.send(request.workersPayload!)
 
     return {
       delivered: request.recipients,

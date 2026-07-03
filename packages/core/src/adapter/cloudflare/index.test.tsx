@@ -241,4 +241,68 @@ describe('Cloudflare Email Service adapter', () => {
       ],
     })
   })
+
+  test('REST connector exposes kind and adapter skips workers payload', async () => {
+    const fetchImplementation: CloudflareEmailFetch = async () =>
+      new Response(
+        JSON.stringify({
+          errors: [],
+          messages: [],
+          result: {
+            delivered: ['recipient@example.com'],
+            permanent_bounces: [],
+            queued: [],
+          },
+          success: true,
+        }),
+        { status: 200 },
+      )
+
+    const connector = RESTConnector({
+      accountId: 'account-123',
+      apiToken: 'token-123',
+      fetch: fetchImplementation,
+    })
+
+    expect(connector.kind).toBe('rest')
+
+    const receipt = await CloudflareEmailAdapter({ connector }).send({
+      from: 'sender@example.com',
+      html: '<p>Hello</p>',
+      subject: 'Hello',
+      text: 'Hello',
+      to: 'recipient@example.com',
+    })
+
+    expect(receipt.successful).toBe(true)
+  })
+
+  test('adapter builds only the payload requested by connector kind', async () => {
+    let capturedRequest: { restPayload?: unknown; workersPayload?: unknown } = {}
+
+    const receipt = await CloudflareEmailAdapter({
+      connector: {
+        kind: 'workers' as const,
+        send(request) {
+          capturedRequest = request
+          return {
+            delivered: ['recipient@example.com'],
+            permanentBounces: [],
+            queued: [],
+            response: 'accepted',
+          }
+        },
+      },
+    }).send({
+      from: 'sender@example.com',
+      html: '<p>Hello</p>',
+      subject: 'Hello',
+      text: 'Hello',
+      to: 'recipient@example.com',
+    })
+
+    expect(receipt.successful).toBe(true)
+    expect(capturedRequest.workersPayload).toBeDefined()
+    expect(capturedRequest.restPayload).toBeUndefined()
+  })
 })
