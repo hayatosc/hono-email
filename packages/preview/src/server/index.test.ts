@@ -196,8 +196,8 @@ describe('prepareClientHtml', () => {
       <script type="module" src="./app.tsx"></script>
     `
     const result = prepareClientHtml('/client/dir', html)
-    expect(result.match(/href="\/\@fs\/client\/dir\/styles\.css"/g)?.length).toBe(1)
-    expect(result.match(/src="\/\@fs\/client\/dir\/app\.tsx"/g)?.length).toBe(1)
+    expect(result.match(/href="\/@fs\/client\/dir\/styles\.css"/g)?.length).toBe(1)
+    expect(result.match(/src="\/@fs\/client\/dir\/app\.tsx"/g)?.length).toBe(1)
   })
 })
 

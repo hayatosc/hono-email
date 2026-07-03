@@ -108,7 +108,7 @@ export function prepareClientHtml(clientDir: string, html: string): string {
   const comments: string[] = []
   const withoutComments = html.replace(/<!--[\s\S]*?-->/g, (match) => {
     comments.push(match)
-    return `\0COMMENT_${comments.length - 1}\0`
+    return `__HTML_COMMENT_ID_${comments.length - 1}__`
   })
 
   const replaced = withoutComments
@@ -119,7 +119,7 @@ export function prepareClientHtml(clientDir: string, html: string): string {
       match.replace('./app.tsx', `${base}/app.tsx`),
     )
 
-  return replaced.replace(/\0COMMENT_(\d+)\0/g, (_, index) => comments[Number(index)])
+  return replaced.replace(/__HTML_COMMENT_ID_(\d+)__/g, (_, index) => comments[Number(index)] ?? '')
 }
 
 const STATIC_MIME: Record<string, string> = {

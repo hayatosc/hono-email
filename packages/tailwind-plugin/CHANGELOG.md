@@ -1,5 +1,11 @@
 # @hono-email/tailwind-plugin
 
+## 0.6.1
+
+### Patch Changes
+
+- [#97](https://github.com/hayatosc/hono-email/pull/97) [`0643326`](https://github.com/hayatosc/hono-email/commit/0643326cc9151f0b400fd1da7cca7a2700a255bc) Thanks [@hayatosc](https://github.com/hayatosc)! - fix: multiple regex and error handling issues in tailwind-plugin
+
 ## 0.6.0
 
 ### Minor Changes
