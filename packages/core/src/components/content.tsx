@@ -265,7 +265,7 @@ export const Heading: FC<HeadingProps> = ({
   )
 }
 
-type ButtonProps = LinkProps
+export type ButtonProps = LinkProps
 
 /**
  * Link rendered with button-friendly defaults and Outlook padding support.
