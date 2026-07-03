@@ -14,7 +14,7 @@
     "release": "changeset publish",
     "format": "oxfmt .",
     "format:check": "oxfmt --check .",
-    "lint": "oxlint .",
+    "lint": "oxlint --no-error-on-unmatched-pattern .",
     "lint:types": "oxlint --type-aware .",
     "test": "bun test --path-ignore-patterns='_build' packages/core/src packages/tailwind-plugin/src packages/preview/src docs/src",
     "test:coverage": "bun test --coverage --path-ignore-patterns='_build' packages/core/src packages/tailwind-plugin/src packages/preview/src docs/src",
