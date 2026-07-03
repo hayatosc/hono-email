@@ -318,7 +318,8 @@ class ReusableSmtpSession implements SmtpSession {
 
     try {
       await this.#client.tryCommand('QUIT')
-    } catch {
+    } catch (error) {
+      console.debug('SMTP QUIT command failed:', error)
     } finally {
       await this.#client.close()
     }

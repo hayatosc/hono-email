@@ -39,6 +39,17 @@ export type {
 const DEFAULT_API_BASE_URL = 'https://api.resend.com'
 const DEFAULT_USER_AGENT = 'hono-email'
 
+const validateApiBaseUrl = (url: string): void => {
+  if (!url.startsWith('http://')) {
+    return
+  }
+  const { hostname } = new URL(url)
+  if (hostname === 'localhost' || hostname === '127.0.0.1') {
+    return
+  }
+  throw new Error('Resend adapter requires HTTPS. API tokens must not be sent over plaintext.')
+}
+
 const failedReceipt = (
   errorMessages: string[],
   options: {
@@ -171,6 +182,7 @@ export const ResendAdapter = (options: ResendAdapterOptions): EmailAdapter => ({
     try {
       const fetchImplementation = getFetch(options.fetch)
       const apiBaseUrl = options.apiBaseUrl ?? DEFAULT_API_BASE_URL
+      validateApiBaseUrl(apiBaseUrl)
       const response = await fetchImplementation(`${apiBaseUrl.replace(/\/$/u, '')}/emails`, {
         body: JSON.stringify(payload),
         headers: {

@@ -23,11 +23,7 @@ export const resolveSecureTransport = (
     return 'on'
   }
 
-  if (port === 587) {
-    return 'starttls'
-  }
-
-  return 'off'
+  return 'starttls'
 }
 
 export const resolveMaxConnections = (maxConnections: number | undefined): number => {
