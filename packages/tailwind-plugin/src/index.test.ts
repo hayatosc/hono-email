@@ -75,6 +75,14 @@ export const Email = () => <Tailwind />
     expect(cssModule).toContain('@theme { --color-brand-500: #0f172a; }')
   })
 
+  test('escapes double quotes in configPath and sourceFilePath', () => {
+    const cssModule = buildPerFileCssModule('/abs/emails/wel"come.tsx', {
+      configPath: './tail"wind.config.ts',
+    })
+    expect(cssModule).toContain('tail\\"wind.config.ts')
+    expect(cssModule).toContain('wel\\"come.tsx')
+  })
+
   test('builds a per-file artifact module referencing the per-file CSS virtual module', () => {
     const moduleCode = buildPerFileArtifactModule(ENCODED_TEST_FILE_ID, '@scope/hono-email')
 
