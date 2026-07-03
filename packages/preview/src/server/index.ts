@@ -102,9 +102,24 @@ function resolveClient(): { dir: string; prebuilt: boolean } {
 export function prepareClientHtml(clientDir: string, html: string): string {
   const fsPath = clientDir.replace(/\\/g, '/')
   const base = `/@fs${fsPath.startsWith('/') ? '' : '/'}${fsPath}`
-  return html
-    .replace('href="./styles.css"', `href="${base}/styles.css"`)
-    .replace('src="./app.tsx"', `src="${base}/app.tsx"`)
+
+  // Preserve HTML comments while replacing real tag attributes so comments
+  // containing the same literal strings are not accidentally rewritten.
+  const comments: string[] = []
+  const withoutComments = html.replace(/<!--[\s\S]*?-->/g, (match) => {
+    comments.push(match)
+    return `\0COMMENT_${comments.length - 1}\0`
+  })
+
+  const replaced = withoutComments
+    .replace(/<link\b[^>]*?\shref=["']\.\/styles\.css["'][^>]*?>/g, (match) =>
+      match.replace('./styles.css', `${base}/styles.css`),
+    )
+    .replace(/<script\b[^>]*?\ssrc=["']\.\/app\.tsx["'][^>]*?>/g, (match) =>
+      match.replace('./app.tsx', `${base}/app.tsx`),
+    )
+
+  return replaced.replace(/\0COMMENT_(\d+)\0/g, (_, index) => comments[Number(index)])
 }
 
 const STATIC_MIME: Record<string, string> = {
