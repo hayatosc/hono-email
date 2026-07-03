@@ -265,6 +265,8 @@ export const Heading: FC<HeadingProps> = ({
   )
 }
 
+type ButtonProps = LinkProps
+
 /**
  * Link rendered with button-friendly defaults and Outlook padding support.
  *
@@ -275,15 +277,15 @@ export const Heading: FC<HeadingProps> = ({
  *
  * @example
  * ```tsx
- * <Button
+ * <LinkButton
  *   href="https://example.com/start"
  *   style={{ backgroundColor: '#111827', color: '#ffffff', padding: '12px 16px' }}
  * >
  *   Get started
- * </Button>
+ * </LinkButton>
  * ```
  */
-export const Button: FC<LinkProps> = ({ children, style, target = '_blank', ...props }) => {
+export const LinkButton: FC<ButtonProps> = ({ children, style, target = '_blank', ...props }) => {
   const styleObject = styleObjectFromUnknown(style) ?? {}
   const padding = expandBoxValues(styleObject.padding, {
     Bottom: styleObject.paddingBottom,
@@ -336,6 +338,14 @@ export const Button: FC<LinkProps> = ({ children, style, target = '_blank', ...p
     </a>
   )
 }
+
+/**
+ * Alias for {@link LinkButton}.
+ *
+ * @deprecated Use `LinkButton` instead. `Button` renders an `<a>` element, which
+ *   is confusing for a component named `Button`.
+ */
+export const Button = LinkButton
 
 /**
  * Anchor element that requires `href` and defaults to `target="_blank"`.
