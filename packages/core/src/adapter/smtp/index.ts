@@ -179,7 +179,7 @@ export class SmtpTransport implements EmailAdapter {
         ...(this.#auth !== undefined ? { auth: this.#auth } : {}),
       })
     } finally {
-      await session?.close().catch((error) => {
+      await session?.close()?.catch((error) => {
         console.debug('SMTP session close failed:', error)
       })
       if (session === undefined) {

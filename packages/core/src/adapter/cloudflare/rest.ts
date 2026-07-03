@@ -22,11 +22,16 @@ export type {
 const DEFAULT_API_BASE_URL = 'https://api.cloudflare.com/client/v4'
 
 const validateApiBaseUrl = (url: string): void => {
-  if (url.startsWith('http://')) {
-    throw new Error(
-      'Cloudflare REST adapter requires HTTPS. API tokens must not be sent over plaintext.',
-    )
+  if (!url.startsWith('http://')) {
+    return
   }
+  const { hostname } = new URL(url)
+  if (hostname === 'localhost' || hostname === '127.0.0.1') {
+    return
+  }
+  throw new Error(
+    'Cloudflare REST adapter requires HTTPS. API tokens must not be sent over plaintext.',
+  )
 }
 
 export type CloudflareApiMessage = {

@@ -81,9 +81,14 @@ const DEFAULT_API_BASE_URL = 'https://api.sendgrid.com'
 const DEFAULT_USER_AGENT = 'hono-email'
 
 const validateApiBaseUrl = (url: string): void => {
-  if (url.startsWith('http://')) {
-    throw new Error('SendGrid adapter requires HTTPS. API tokens must not be sent over plaintext.')
+  if (!url.startsWith('http://')) {
+    return
   }
+  const { hostname } = new URL(url)
+  if (hostname === 'localhost' || hostname === '127.0.0.1') {
+    return
+  }
+  throw new Error('SendGrid adapter requires HTTPS. API tokens must not be sent over plaintext.')
 }
 
 const failedReceipt = (
