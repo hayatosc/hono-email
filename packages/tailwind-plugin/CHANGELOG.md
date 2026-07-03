@@ -1,5 +1,11 @@
 # @hono-email/tailwind-plugin
 
+## 0.6.2
+
+### Patch Changes
+
+- [#113](https://github.com/hayatosc/hono-email/pull/113) [`ebd6c61`](https://github.com/hayatosc/hono-email/commit/ebd6c61d7181491f3310621dff50027599f6751a) Thanks [@hayatosc](https://github.com/hayatosc)! - fix incomplete sanitization (backslash and double quotes escaping) for `@config` and `@source` paths in the CSS module builder
+
 ## 0.6.1
 
 ### Patch Changes
