@@ -187,6 +187,18 @@ describe('prepareClientHtml', () => {
     const result = prepareClientHtml('C:\\Users\\test\\client', html)
     expect(result).toContain('href="/@fs/C:/Users/test/client/styles.css"')
   })
+
+  test('does not replace occurrences inside HTML comments or data attributes', () => {
+    const html = `
+      <!-- <link href="./styles.css" rel="stylesheet"> -->
+      <link href="./styles.css" rel="stylesheet">
+      <meta data-example="src=&quot;./app.tsx&quot;">
+      <script type="module" src="./app.tsx"></script>
+    `
+    const result = prepareClientHtml('/client/dir', html)
+    expect(result.match(/href="\/\@fs\/client\/dir\/styles\.css"/g)?.length).toBe(1)
+    expect(result.match(/src="\/\@fs\/client\/dir\/app\.tsx"/g)?.length).toBe(1)
+  })
 })
 
 describe('serveStaticAsset', () => {
