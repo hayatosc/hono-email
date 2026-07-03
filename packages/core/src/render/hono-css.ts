@@ -34,13 +34,24 @@ const extractHeadBounds = (html: string): { headOpen: number; headClose: number 
 }
 
 const decodeHonoCssRuntimeString = (rawCss: string): string =>
-  rawCss
-    .replace(/\\n/g, '\n')
-    .replace(/\\r/g, '\r')
-    .replace(/\\t/g, '\t')
-    .replace(/\\"/g, '"')
-    .replace(/\\'/g, "'")
-    .replace(/\\\\/g, '\\')
+  rawCss.replace(/\\(\\|n|r|t|"|')/g, (_match, char) => {
+    switch (char) {
+      case 'n':
+        return '\n'
+      case 'r':
+        return '\r'
+      case 't':
+        return '\t'
+      case '"':
+        return '"'
+      case "'":
+        return "'"
+      case '\\':
+        return '\\'
+      default:
+        return char
+    }
+  })
 
 const extractHonoCssFromHtml = (
   html: string,

@@ -25,8 +25,10 @@ const tokenizeHtml = (html: string): string[] => {
 
 const isClosingTag = (token: string): boolean => token.startsWith('</')
 
+const isSelfClosingTag = (token: string): boolean => token.endsWith('/>')
+
 const isOpeningTag = (token: string): boolean =>
-  /^<[^!/][^>]*>$/.test(token) && !isClosingTag(token) && !token.endsWith('/>')
+  /^<[^!/][^>]*>$/.test(token) && !isClosingTag(token) && !isSelfClosingTag(token)
 
 const isVoidTag = (token: string): boolean => {
   const tagName = token.match(/^<([a-z0-9-]+)/i)?.[1]?.toLowerCase()
