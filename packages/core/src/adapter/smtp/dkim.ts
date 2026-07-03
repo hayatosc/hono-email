@@ -1,5 +1,5 @@
 import type { EmailDkimOptions } from '../index'
-import { BASE64_ALPHABET, CRLF, base64ToBytes, bytesToBase64, normalizeLineEndings } from '../utils'
+import { CRLF, base64ToBytes, bytesToBase64, normalizeLineEndings } from '../utils'
 
 const DEFAULT_HEADER_FIELD_NAMES = [
   'From',
