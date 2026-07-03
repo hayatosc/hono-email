@@ -219,32 +219,32 @@ function ArrayField({
               <button class="array-item-remove" type="button" onClick={() => removeItem(index)}>
                 ×
               </button>
-            {itemSchema ? (
-              <div class="array-item-fields">
-                {Object.entries(itemSchema).map(([fieldKey, fieldSpec]) => {
-                  const record = isRecord(item) ? item : {}
-                  return (
-                    <Field
-                      key={fieldKey}
-                      name={fieldKey}
-                      spec={fieldSpec}
-                      value={record[fieldKey]}
-                      onChange={(k, v) => replaceItem(index, { ...record, [k]: v })}
-                    />
-                  )
-                })}
-              </div>
-            ) : (
-              <input
-                class="field-input"
-                type="text"
-                value={inputValue(item)}
-                onInput={(e) => {
-                  const el = asInputElement(e.currentTarget)
-                  if (el) replaceItem(index, el.value)
-                }}
-              />
-            )}
+              {itemSchema ? (
+                <div class="array-item-fields">
+                  {Object.entries(itemSchema).map(([fieldKey, fieldSpec]) => {
+                    const record = isRecord(item) ? item : {}
+                    return (
+                      <Field
+                        key={fieldKey}
+                        name={fieldKey}
+                        spec={fieldSpec}
+                        value={record[fieldKey]}
+                        onChange={(k, v) => replaceItem(index, { ...record, [k]: v })}
+                      />
+                    )
+                  })}
+                </div>
+              ) : (
+                <input
+                  class="field-input"
+                  type="text"
+                  value={inputValue(item)}
+                  onInput={(e) => {
+                    const el = asInputElement(e.currentTarget)
+                    if (el) replaceItem(index, el.value)
+                  }}
+                />
+              )}
             </div>
           )
         })}
