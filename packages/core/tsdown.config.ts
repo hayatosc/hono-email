@@ -1,4 +1,8 @@
+import { createRequire } from 'node:module'
+
 import { defineConfig } from 'tsdown'
+
+const require = createRequire(import.meta.url)
 
 const neverBundle = [
   'cloudflare:sockets',
@@ -33,5 +37,8 @@ export default defineConfig({
   dts: true,
   outDir: 'dist',
   clean: true,
-  deps: { neverBundle },
+  alias: {
+    'css-tree': require.resolve('css-tree/dist/csstree.esm'),
+  },
+  deps: { neverBundle, alwaysBundle: ['css-tree'] },
 })
