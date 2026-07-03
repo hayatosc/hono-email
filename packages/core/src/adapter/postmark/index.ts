@@ -93,9 +93,7 @@ const DEFAULT_USER_AGENT = 'hono-email'
 
 const validateApiBaseUrl = (url: string): void => {
   if (url.startsWith('http://')) {
-    throw new Error(
-      'Postmark adapter requires HTTPS. API tokens must not be sent over plaintext.',
-    )
+    throw new Error('Postmark adapter requires HTTPS. API tokens must not be sent over plaintext.')
   }
 }
 
