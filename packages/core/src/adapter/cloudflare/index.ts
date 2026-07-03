@@ -23,6 +23,7 @@ export type {
   CloudflareEmailBinding,
   CloudflareEmailBindingSendResult,
   CloudflareEmailConnector,
+  CloudflareEmailConnectorKind,
   CloudflareEmailConnectorRequest,
   CloudflareEmailConnectorResult,
   CloudflareEmailFetch,

@@ -128,6 +128,7 @@ export const RESTConnector = (
   }
 
   return {
+    kind: 'rest' as const,
     async send(request: CloudflareEmailConnectorRequest): Promise<CloudflareEmailConnectorResult> {
       const apiBaseUrl = options.apiBaseUrl ?? DEFAULT_API_BASE_URL
       validateApiBaseUrl(apiBaseUrl)

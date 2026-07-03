@@ -95,9 +95,13 @@ export type CloudflareEmailBinding = {
 
 export type CloudflareEmailConnectorRequest = {
   recipients: string[]
-  restPayload: CloudflareEmailRestPayload
-  workersPayload: CloudflareEmailWorkerPayload
-}
+} & (
+  | { restPayload: CloudflareEmailRestPayload; workersPayload?: never }
+  | { restPayload?: never; workersPayload: CloudflareEmailWorkerPayload }
+  | { restPayload: CloudflareEmailRestPayload; workersPayload: CloudflareEmailWorkerPayload }
+)
+
+export type CloudflareEmailConnectorKind = 'rest' | 'workers'
 
 export type CloudflareEmailConnectorResult = {
   delivered: string[]
@@ -110,6 +114,7 @@ export type CloudflareEmailConnectorResult = {
 /**
  * Connector interface used by `CloudflareEmailAdapter`.
  *
+ * @property kind - Connector kind. When set, only the matching payload is built.
  * @property send - Sends a prepared Cloudflare Email connector request.
  *
  * @example
@@ -122,6 +127,7 @@ export type CloudflareEmailConnectorResult = {
  * ```
  */
 export type CloudflareEmailConnector = {
+  kind?: CloudflareEmailConnectorKind
   send(
     request: CloudflareEmailConnectorRequest,
   ): CloudflareEmailConnectorResult | Promise<CloudflareEmailConnectorResult>
