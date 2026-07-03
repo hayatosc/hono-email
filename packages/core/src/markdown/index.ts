@@ -345,17 +345,17 @@ export const renderMarkdownHtml = async (
           .process(markdown),
       )
     : await normalizeSanitizedMarkdownHtml(
-          String(
-            await unified()
-              .use(remarkParse)
-              .use(remarkGfm)
-              .use(remarkRehype, { allowDangerousHtml: true })
-              .use(rehypeRaw)
-              .use(rehypeSanitize, MARKDOWN_SANITIZE_SCHEMA)
-              .use(rehypeStringify)
-              .process(markdown),
-          ),
-        )
+        String(
+          await unified()
+            .use(remarkParse)
+            .use(remarkGfm)
+            .use(remarkRehype, { allowDangerousHtml: true })
+            .use(rehypeRaw)
+            .use(rehypeSanitize, MARKDOWN_SANITIZE_SCHEMA)
+            .use(rehypeStringify)
+            .process(markdown),
+        ),
+      )
 
   const s = options.markdownCustomStyles
   const classNames = options.markdownCustomClassNames ?? {}
