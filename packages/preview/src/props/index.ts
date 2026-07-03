@@ -120,12 +120,15 @@ export function extractPropsSchema(mod: Record<string, unknown>): PropsSchema {
  */
 type EmailComponent = (props: Record<string, unknown>) => Child
 
-function isEmailComponent(v: unknown): v is EmailComponent {
-  return typeof v === 'function'
+function isEmailComponent(v: unknown, isDefault = false): v is EmailComponent {
+  return (
+    typeof v === 'function' &&
+    (isDefault || typeof (v as { previewProps?: unknown }).previewProps !== 'undefined')
+  )
 }
 
 export function resolveComponent(mod: Record<string, unknown>): EmailComponent | null {
-  if (isEmailComponent(mod.default)) {
+  if (isEmailComponent(mod.default, true)) {
     return mod.default
   }
 
