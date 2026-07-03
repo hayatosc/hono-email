@@ -50,6 +50,10 @@ export type ValidationTables = {
   warningProperties: Record<string, ValidationEntry>
   disallowedAtRules: Record<string, ValidationEntry>
   warningAtRules: Record<string, ValidationEntry>
+  disallowedAttributes: Record<string, ValidationEntry>
+  warningAttributes: Record<string, ValidationEntry>
+  disallowedImageFormats: Record<string, ValidationEntry>
+  warningImageFormats: Record<string, ValidationEntry>
 }
 
 export type EmailClient = 'outlook' | 'gmail' | 'apple-mail' | 'yahoo'
@@ -68,20 +72,35 @@ export type CaniemailDataFile = {
 
 // Representative platform used as the latest-version proxy for each client
 export const EMAIL_CLIENT_PLATFORMS: Record<EmailClient, { client: string; platform: string }> = {
-  'outlook': { client: 'outlook', platform: 'windows' },
-  'gmail': { client: 'gmail', platform: 'desktop-webmail' },
+  outlook: { client: 'outlook', platform: 'windows' },
+  gmail: { client: 'gmail', platform: 'desktop-webmail' },
   'apple-mail': { client: 'apple-mail', platform: 'macos' },
-  'yahoo': { client: 'yahoo', platform: 'desktop-webmail' },
+  yahoo: { client: 'yahoo', platform: 'desktop-webmail' },
 }
 
 export const EMAIL_CLIENT_NAMES: Record<EmailClient, string> = {
-  'outlook': 'Outlook',
-  'gmail': 'Gmail',
+  outlook: 'Outlook',
+  gmail: 'Gmail',
   'apple-mail': 'Apple Mail',
-  'yahoo': 'Yahoo Mail',
+  yahoo: 'Yahoo Mail',
 }
 
-export const ALWAYS_BLOCKED_TAGS = new Set(['script', 'iframe', 'embed', 'object', 'applet', 'form'])
+export const ALWAYS_BLOCKED_TAGS = new Set([
+  'script',
+  'iframe',
+  'embed',
+  'object',
+  'applet',
+  'form',
+])
+
+// satisfies ensures all entries are valid EmailClient values without widening to string[]
+export const EMAIL_CLIENT_LIST = [
+  'outlook',
+  'gmail',
+  'apple-mail',
+  'yahoo',
+] as const satisfies readonly EmailClient[]
 
 const SUPPORT_THRESHOLD = 0.8
 const WARNING_THRESHOLD = 0.5
@@ -275,4 +294,3 @@ export const CANIEMAIL_FEATURE_MAP: FeatureMapEntry[] = [
   { key: 'svg', kind: 'image-format', slug: 'image-svg' },
   { key: 'base64', kind: 'image-format', slug: 'image-base64' },
 ]
-

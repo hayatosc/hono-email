@@ -529,4 +529,14 @@ describe('render strict mode', () => {
 
     expect(warnings.some((m) => m.includes('data URL'))).toBe(true)
   })
+
+  test('warningClients lists unsupported attributes or image formats as warnings', () => {
+    const warnings = validateHtml(
+      '<html><body><img src="https://example.com/hero.webp" loading="lazy" /></body></html>',
+      ['outlook', 'gmail'],
+    )
+
+    expect(warnings.some((w) => w.includes("'loading' attribute"))).toBe(true)
+    expect(warnings.some((w) => w.includes("'webp' image format"))).toBe(true)
+  })
 })

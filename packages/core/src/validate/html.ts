@@ -1,18 +1,11 @@
-import {
-  ALWAYS_BLOCKED_TAGS,
-  EMAIL_CLIENT_NAMES,
-  type CaniemailDataFile,
-  type EmailClient,
-} from './caniemail'
-import caniemailDataJson from './caniemail-data.json' with { type: 'json' }
+import { ALWAYS_BLOCKED_TAGS, EMAIL_CLIENT_NAMES, type EmailClient } from './caniemail'
+import { clientData, tables } from './caniemail-data'
 import {
   collectOpeningTags,
   extractConditionalCommentPayloads,
   stripHtmlComments,
   type OpeningTag,
 } from './tags'
-
-const { tables, clientData } = caniemailDataJson as unknown as CaniemailDataFile
 
 const formatClients = (clients: EmailClient[]): string => {
   const names = clients.map((c) => EMAIL_CLIENT_NAMES[c])
@@ -21,14 +14,17 @@ const formatClients = (clients: EmailClient[]): string => {
     : `${names.slice(0, -1).join(', ')} and ${names.at(-1)}`
 }
 
-const getUnsupportedClients = (
+const getClientCompatibility = (
   key: string,
   warningClients: EmailClient[],
-): { clients: EmailClient[]; url: string } | undefined => {
+): { unsupported: EmailClient[]; partial: EmailClient[]; url: string } | undefined => {
   const entry = clientData[key]
   if (!entry) return undefined
-  const unsupported = warningClients.filter((c) => entry[c] === 'n' || entry[c] === 'a')
-  return unsupported.length > 0 ? { clients: unsupported, url: entry.url } : undefined
+  const unsupported = warningClients.filter((c) => entry[c] === 'n')
+  const partial = warningClients.filter((c) => entry[c] === 'a')
+  return unsupported.length > 0 || partial.length > 0
+    ? { unsupported, partial, url: entry.url }
+    : undefined
 }
 
 const CSS_COMMENT_PATTERN = /\/\*[\s\S]*?\*\//g
@@ -107,11 +103,18 @@ const validateTags = (
     }
 
     if (warningClients.length > 0) {
-      const result = getUnsupportedClients(`html-tag:${tag.name}`, warningClients)
-      if (result) {
-        warnings.add(
-          `The <${tag.name}> tag is not supported in ${formatClients(result.clients)}. See: ${result.url}`,
-        )
+      const compat = getClientCompatibility(`html-tag:${tag.name}`, warningClients)
+      if (compat) {
+        if (compat.unsupported.length > 0) {
+          warnings.add(
+            `The <${tag.name}> tag is not supported in ${formatClients(compat.unsupported)}. See: ${compat.url}`,
+          )
+        }
+        if (compat.partial.length > 0) {
+          warnings.add(
+            `The <${tag.name}> tag has partial support in ${formatClients(compat.partial)}. See: ${compat.url}`,
+          )
+        }
       }
     }
   }
@@ -133,13 +136,81 @@ const validateAnchors = (openingTags: OpeningTag[]): void => {
   }
 }
 
-const validateUnsafeAttributes = (openingTags: OpeningTag[], warnings: Set<string>): void => {
+const detectImageFormats = (src: string | undefined, srcset: string | undefined): Set<string> => {
+  const formats = new Set<string>()
+  if (src) {
+    const trimmedSrc = src.trim()
+    if (trimmedSrc.startsWith('data:')) {
+      formats.add('base64')
+      if (trimmedSrc.includes('image/webp')) formats.add('webp')
+      if (trimmedSrc.includes('image/avif')) formats.add('avif')
+      if (trimmedSrc.includes('image/svg+xml')) formats.add('svg')
+    } else {
+      const path = trimmedSrc.split('?')[0] ?? ''
+      if (path.endsWith('.webp')) formats.add('webp')
+      if (path.endsWith('.avif')) formats.add('avif')
+      if (path.endsWith('.svg')) formats.add('svg')
+    }
+  }
+  if (srcset) {
+    const urls = srcset
+      .split(',')
+      .map((s) => s.trim().split(/\s+/)[0])
+      .filter((s): s is string => Boolean(s))
+    for (const url of urls) {
+      if (url.startsWith('data:')) {
+        formats.add('base64')
+        if (url.includes('image/webp')) formats.add('webp')
+        if (url.includes('image/avif')) formats.add('avif')
+        if (url.includes('image/svg+xml')) formats.add('svg')
+      } else {
+        const path = url.split('?')[0] ?? ''
+        if (path.endsWith('.webp')) formats.add('webp')
+        if (path.endsWith('.avif')) formats.add('avif')
+        if (path.endsWith('.svg')) formats.add('svg')
+      }
+    }
+  }
+  return formats
+}
+
+const validateUnsafeAttributes = (
+  openingTags: OpeningTag[],
+  warnings: Set<string>,
+  warningClients: EmailClient[],
+): void => {
   for (const tag of openingTags) {
     for (const attributeName of tag.attributes.keys()) {
       if (attributeName.startsWith('on')) {
         throw new Error(
           `The '${attributeName}' attribute isn't supported in HTML email strict mode. JavaScript event handlers must not be used in email HTML.`,
         )
+      }
+
+      const disallowedAttr = tables.disallowedAttributes[attributeName]
+      if (disallowedAttr) {
+        warnings.add(`${disallowedAttr.message} See: ${disallowedAttr.url}`)
+      }
+
+      const warningAttr = tables.warningAttributes[attributeName]
+      if (warningAttr) {
+        warnings.add(`${warningAttr.message} See: ${warningAttr.url}`)
+      }
+
+      if (warningClients.length > 0) {
+        const compat = getClientCompatibility(`html-attribute:${attributeName}`, warningClients)
+        if (compat) {
+          if (compat.unsupported.length > 0) {
+            warnings.add(
+              `The '${attributeName}' attribute is not supported in ${formatClients(compat.unsupported)}. See: ${compat.url}`,
+            )
+          }
+          if (compat.partial.length > 0) {
+            warnings.add(
+              `The '${attributeName}' attribute has partial support in ${formatClients(compat.partial)}. See: ${compat.url}`,
+            )
+          }
+        }
       }
     }
 
@@ -154,6 +225,7 @@ const validateUnsafeAttributes = (openingTags: OpeningTag[], warnings: Set<strin
     }
 
     const src = tag.attributes.get('src')
+    const srcset = tag.attributes.get('srcset')
     if (src !== undefined) {
       const scheme = getUrlScheme(src)
       if (scheme !== undefined && DANGEROUS_URL_SCHEMES.has(scheme)) {
@@ -165,6 +237,36 @@ const validateUnsafeAttributes = (openingTags: OpeningTag[], warnings: Set<strin
           throw new Error(
             `The ${tag.name} src uses the unsafe '${scheme}:' URL scheme. Use http, https, cid, or a relative URL instead.`,
           )
+        }
+      }
+    }
+
+    if (src !== undefined || srcset !== undefined) {
+      const detectedFormats = detectImageFormats(src, srcset)
+      for (const format of detectedFormats) {
+        const disallowedImg = tables.disallowedImageFormats[format]
+        if (disallowedImg) {
+          warnings.add(`${disallowedImg.message} See: ${disallowedImg.url}`)
+        }
+        const warningImg = tables.warningImageFormats[format]
+        if (warningImg) {
+          warnings.add(`${warningImg.message} See: ${warningImg.url}`)
+        }
+
+        if (warningClients.length > 0) {
+          const compat = getClientCompatibility(`image-format:${format}`, warningClients)
+          if (compat) {
+            if (compat.unsupported.length > 0) {
+              warnings.add(
+                `The '${format}' image format is not supported in ${formatClients(compat.unsupported)}. See: ${compat.url}`,
+              )
+            }
+            if (compat.partial.length > 0) {
+              warnings.add(
+                `The '${format}' image format has partial support in ${formatClients(compat.partial)}. See: ${compat.url}`,
+              )
+            }
+          }
         }
       }
     }
@@ -279,11 +381,18 @@ const collectCssWarnings = (
       if (!namespacedKey.startsWith('css-at-rule:')) continue
       const atRule = namespacedKey.slice('css-at-rule:'.length)
       if (!normalizedCssText.includes(atRule)) continue
-      const result = getUnsupportedClients(namespacedKey, warningClients)
-      if (result) {
-        warnings.add(
-          `The CSS at-rule '${atRule}' is not supported in ${formatClients(result.clients)}. See: ${result.url}`,
-        )
+      const compat = getClientCompatibility(namespacedKey, warningClients)
+      if (compat) {
+        if (compat.unsupported.length > 0) {
+          warnings.add(
+            `The CSS at-rule '${atRule}' is not supported in ${formatClients(compat.unsupported)}. See: ${compat.url}`,
+          )
+        }
+        if (compat.partial.length > 0) {
+          warnings.add(
+            `The CSS at-rule '${atRule}' has partial support in ${formatClients(compat.partial)}. See: ${compat.url}`,
+          )
+        }
       }
     }
   }
@@ -373,18 +482,23 @@ const validateCssDeclarations = (
     }
 
     if (warningClients.length > 0) {
-      const declResult = getUnsupportedClients(`css-declaration:${declarationKey}`, warningClients)
-      if (declResult) {
-        warnings.add(
-          `The CSS property '${declarationKey}' is not supported in ${formatClients(declResult.clients)}. See: ${declResult.url}`,
-        )
-      }
-
-      const propResult = getUnsupportedClients(`css-property:${property}`, warningClients)
-      if (propResult) {
-        warnings.add(
-          `The CSS property '${property}' is not supported in ${formatClients(propResult.clients)}. See: ${propResult.url}`,
-        )
+      const cssLookups: [string, string][] = [
+        [`css-declaration:${declarationKey}`, `'${declarationKey}'`],
+        [`css-property:${property}`, `'${property}'`],
+      ]
+      for (const [lookupKey, label] of cssLookups) {
+        const compat = getClientCompatibility(lookupKey, warningClients)
+        if (!compat) continue
+        if (compat.unsupported.length > 0) {
+          warnings.add(
+            `The CSS property ${label} is not supported in ${formatClients(compat.unsupported)}. See: ${compat.url}`,
+          )
+        }
+        if (compat.partial.length > 0) {
+          warnings.add(
+            `The CSS property ${label} has partial support in ${formatClients(compat.partial)}. See: ${compat.url}`,
+          )
+        }
       }
     }
   }
@@ -433,7 +547,7 @@ const validateHtmlFragment = (
   }
   validateStylesheetLinks(openingTags)
   validateAnchors(openingTags)
-  validateUnsafeAttributes(openingTags, warnings)
+  validateUnsafeAttributes(openingTags, warnings, warningClients)
   validateImages(openingTags, warnings)
   validateStyleAttributes(openingTags, warnings, warningClients)
   validateStyleTags(html, openingTags, warnings, warningClients)
