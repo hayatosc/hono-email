@@ -25,7 +25,9 @@
         "packages/*/src/**/*.test.ts",
         "packages/*/src/**/*.test.tsx",
         "docs/src/**/*.test.ts",
-        "docs/src/**/*.test.tsx"
+        "docs/src/**/*.test.tsx",
+        "runtime-tests/**/*.test.ts",
+        "runtime-tests/**/*.test.tsx"
       ],
       "rules": {
         "typescript/await-thenable": "off",
