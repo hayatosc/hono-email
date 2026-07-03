@@ -9,7 +9,7 @@
   "dependencies": {
     "dotenv": "^16.4.7",
     "hono": "^4.12.14",
-    "hono-email": "file:../.."
+    "hono-email": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
