@@ -85,10 +85,12 @@ describe('createApiRoutes with named export', () => {
     writeFileSync(join(tempDir, 'notification.tsx'), 'export const Notification = () => {}')
 
     loadModule = async (_filePath: string) => {
+      const NotificationComponent = (_props: unknown) => {
+        return null
+      }
+      NotificationComponent.previewProps = {}
       return {
-        Notification: (_props: unknown) => {
-          return null
-        },
+        Notification: NotificationComponent,
       }
     }
 
