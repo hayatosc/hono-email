@@ -232,7 +232,7 @@ export async function startPreviewServer(options: PreviewServerOptions): Promise
         try {
           res.write('data: update\n\n')
         } catch {
-          // ignore errors from disconnected clients
+          liveClients.delete(res)
         }
       }
       options.server.config.logger.info(

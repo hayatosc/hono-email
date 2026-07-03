@@ -209,45 +209,39 @@ function ArrayField({
     <div class="field">
       <label class="field-label">{label}</label>
       <div class="array-field">
-        {items.map((item, index) => {
-          const itemKey =
-            typeof item === 'object' && item !== null
-              ? `${name}-${index}-${JSON.stringify(item)}`
-              : `${name}-${index}-${String(item)}`
-          return (
-            <div class="array-item" key={itemKey}>
-              <button class="array-item-remove" type="button" onClick={() => removeItem(index)}>
-                ×
-              </button>
-              {itemSchema ? (
-                <div class="array-item-fields">
-                  {Object.entries(itemSchema).map(([fieldKey, fieldSpec]) => {
-                    const record = isRecord(item) ? item : {}
-                    return (
-                      <Field
-                        key={fieldKey}
-                        name={fieldKey}
-                        spec={fieldSpec}
-                        value={record[fieldKey]}
-                        onChange={(k, v) => replaceItem(index, { ...record, [k]: v })}
-                      />
-                    )
-                  })}
-                </div>
-              ) : (
-                <input
-                  class="field-input"
-                  type="text"
-                  value={inputValue(item)}
-                  onInput={(e) => {
-                    const el = asInputElement(e.currentTarget)
-                    if (el) replaceItem(index, el.value)
-                  }}
-                />
-              )}
-            </div>
-          )
-        })}
+        {items.map((item, index) => (
+          <div class="array-item" key={`${name}-${index}`}>
+            <button class="array-item-remove" type="button" onClick={() => removeItem(index)}>
+              ×
+            </button>
+            {itemSchema ? (
+              <div class="array-item-fields">
+                {Object.entries(itemSchema).map(([fieldKey, fieldSpec]) => {
+                  const record = isRecord(item) ? item : {}
+                  return (
+                    <Field
+                      key={fieldKey}
+                      name={fieldKey}
+                      spec={fieldSpec}
+                      value={record[fieldKey]}
+                      onChange={(k, v) => replaceItem(index, { ...record, [k]: v })}
+                    />
+                  )
+                })}
+              </div>
+            ) : (
+              <input
+                class="field-input"
+                type="text"
+                value={inputValue(item)}
+                onInput={(e) => {
+                  const el = asInputElement(e.currentTarget)
+                  if (el) replaceItem(index, el.value)
+                }}
+              />
+            )}
+          </div>
+        ))}
         <button class="array-add" type="button" onClick={addItem}>
           + Add item
         </button>

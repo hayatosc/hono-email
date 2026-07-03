@@ -1,7 +1,12 @@
 import { Hono } from 'hono'
 
 import { discoverTemplates } from '../discovery/index.js'
-import { extractPropsSchema, mergePropsWithDefaults, resolveComponent } from '../props/index.js'
+import {
+  MissingRequiredPropsError,
+  extractPropsSchema,
+  mergePropsWithDefaults,
+  resolveComponent,
+} from '../props/index.js'
 import { renderTemplate } from './renderer.js'
 
 type LoadModule = (url: string) => Promise<Record<string, unknown>>
@@ -66,7 +71,7 @@ export function createApiRoutes(loadModule: LoadModule, templateDir: string) {
     } catch (err) {
       console.error('Failed to render template:', err)
       const message = err instanceof Error ? err.message : 'Unknown error'
-      const status = message.startsWith('Missing required props') ? 400 : 500
+      const status = err instanceof MissingRequiredPropsError ? 400 : 500
       return c.json({ error: message }, status)
     }
   })

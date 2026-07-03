@@ -139,6 +139,13 @@ export function resolveComponent(mod: Record<string, unknown>): EmailComponent |
   return null
 }
 
+export class MissingRequiredPropsError extends Error {
+  constructor(public missingProps: string[]) {
+    super(`Missing required props: ${missingProps.join(', ')}`)
+    this.name = 'MissingRequiredPropsError'
+  }
+}
+
 export function mergePropsWithDefaults(
   schema: PropsSchema,
   userProps: Record<string, unknown>,
@@ -162,7 +169,7 @@ export function mergePropsWithDefaults(
     .map(([key]) => key)
     .filter((key) => !(key in merged))
   if (missing.length > 0) {
-    throw new Error(`Missing required props: ${missing.join(', ')}`)
+    throw new MissingRequiredPropsError(missing)
   }
 
   return merged
