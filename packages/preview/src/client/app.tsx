@@ -167,6 +167,7 @@ function App() {
     scheduleRender()
   }, [selected, propValues, scheduleRender])
   useEffect(() => {
+    if (typeof EventSource === 'undefined') return
     const source = new EventSource('/__live')
     const handler = () => renderRef.current?.()
     source.addEventListener('message', handler)

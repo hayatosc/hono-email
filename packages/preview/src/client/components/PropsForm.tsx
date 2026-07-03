@@ -210,7 +210,7 @@ function ArrayField({
       <label class="field-label">{label}</label>
       <div class="array-field">
         {items.map((item, index) => (
-          <div class="array-item" key={index}>
+          <div class="array-item" key={`${name}-${index}`}>
             <button class="array-item-remove" type="button" onClick={() => removeItem(index)}>
               ×
             </button>

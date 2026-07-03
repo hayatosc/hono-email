@@ -92,7 +92,11 @@ function resolveClient(): { dir: string; prebuilt: boolean } {
   if (existsSync(resolve(srcClient, 'index.html'))) {
     return { dir: srcClient, prebuilt: false }
   }
-  return { dir: resolve(packageRoot, 'dist/client'), prebuilt: true }
+  const distClient = resolve(packageRoot, 'dist/client')
+  if (existsSync(resolve(distClient, 'index.html'))) {
+    return { dir: distClient, prebuilt: true }
+  }
+  throw new Error('Could not resolve preview client assets')
 }
 
 export function prepareClientHtml(clientDir: string, html: string): string {
@@ -225,7 +229,11 @@ export async function startPreviewServer(options: PreviewServerOptions): Promise
       }
 
       for (const res of liveClients) {
-        res.write('data: update\n\n')
+        try {
+          res.write('data: update\n\n')
+        } catch {
+          liveClients.delete(res)
+        }
       }
       options.server.config.logger.info(
         `template updated: ${relative(rootDir, resolve(options.file))}`,
@@ -314,7 +322,10 @@ export async function startPreviewServer(options: PreviewServerOptions): Promise
     })
   })
 
-  await new Promise<void>((resolve) => server.listen(port, '127.0.0.1', () => resolve()))
+  await new Promise<void>((resolve, reject) => {
+    server.on('error', reject)
+    server.listen(port, '127.0.0.1', () => resolve())
+  })
 
   vite.config.logger.info(`\n  hono-email preview ready → http://localhost:${port}\n`, {
     timestamp: false,
@@ -322,7 +333,13 @@ export async function startPreviewServer(options: PreviewServerOptions): Promise
 
   return {
     close: async () => {
-      for (const res of liveClients) res.end()
+      for (const res of liveClients) {
+        try {
+          res.end()
+        } catch {
+          // ignore errors from already-closed connections
+        }
+      }
       liveClients.clear()
       if ('closeAllConnections' in server && typeof server.closeAllConnections === 'function') {
         server.closeAllConnections()
