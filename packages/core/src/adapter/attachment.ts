@@ -5,10 +5,10 @@ import type {
   EmailAttachmentLimits,
   EmailHeaders,
 } from '../email'
+import { base64ToBytes, bytesToBase64 } from './utils'
 
 const DATA_URI_PATTERN = /^data:([^,]*?),(.*)$/is
 const DEFAULT_CONTENT_TYPE = 'application/octet-stream'
-const BASE64_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
 const MIME_TYPES_BY_EXTENSION: Record<string, string> = {
   avif: 'image/avif',
   css: 'text/css',
@@ -48,50 +48,8 @@ type AttachmentContentSource = {
 const isReadableStream = (value: unknown): value is ReadableStream<Uint8Array> =>
   value instanceof ReadableStream
 
-const bytesToBase64 = (bytes: Uint8Array): string => {
-  let output = ''
-  for (let index = 0; index < bytes.length; index += 3) {
-    const first = bytes[index] ?? 0
-    const second = bytes[index + 1] ?? 0
-    const third = bytes[index + 2] ?? 0
-    const combined = (first << 16) | (second << 8) | third
-
-    output += BASE64_ALPHABET[(combined >> 18) & 0x3f]
-    output += BASE64_ALPHABET[(combined >> 12) & 0x3f]
-    output += index + 1 < bytes.length ? BASE64_ALPHABET[(combined >> 6) & 0x3f] : '='
-    output += index + 2 < bytes.length ? BASE64_ALPHABET[combined & 0x3f] : '='
-  }
-
-  return output
-}
-
-const base64ToBytes = (value: string): Uint8Array => {
-  const sanitized = value.replace(/\s+/g, '')
-  let bits = 0
-  let bitCount = 0
-  const output: number[] = []
-
-  for (const character of sanitized) {
-    if (character === '=') {
-      break
-    }
-
-    const index = BASE64_ALPHABET.indexOf(character)
-    if (index < 0) {
-      throw new Error('Attachment content contains invalid base64 data.')
-    }
-
-    bits = (bits << 6) | index
-    bitCount += 6
-
-    if (bitCount >= 8) {
-      bitCount -= 8
-      output.push((bits >> bitCount) & 0xff)
-    }
-  }
-
-  return Uint8Array.from(output)
-}
+const decodeAttachmentBase64 = (value: string): Uint8Array =>
+  base64ToBytes(value, 'Attachment content contains invalid base64 data.')
 
 const hexToBytes = (value: string): Uint8Array => {
   const sanitized = value.replace(/\s+/g, '')
@@ -113,7 +71,7 @@ const decodeStringContent = (
   encoding: EmailAttachmentEncoding | undefined,
 ): Uint8Array => {
   if (encoding === 'base64') {
-    return base64ToBytes(content)
+    return decodeAttachmentBase64(content)
   }
 
   if (encoding === 'hex') {
@@ -184,7 +142,7 @@ const parseDataUri = (value: string): AttachmentContentSource | undefined => {
   const decoded = decodeURIComponent(data)
 
   return {
-    content: isBase64 ? base64ToBytes(decoded) : new TextEncoder().encode(decoded),
+    content: isBase64 ? decodeAttachmentBase64(decoded) : new TextEncoder().encode(decoded),
     ...(contentType !== undefined ? { contentType } : {}),
   }
 }

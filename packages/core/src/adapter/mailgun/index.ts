@@ -8,6 +8,7 @@ import type {
   SendEmailReceipt,
 } from '../index'
 import { addressToPath, formatEmailAddress, toAddressList, validateEmailHeaders } from '../message'
+import { bytesToBase64 } from '../utils'
 
 export type {
   EmailAddress,
@@ -55,7 +56,6 @@ export type MailgunErrorResponse = {
 
 const DEFAULT_API_BASE_URL = 'https://api.mailgun.net'
 const DEFAULT_USER_AGENT = 'hono-email'
-const BASE64_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
 
 const failedReceipt = (
   errorMessages: string[],
@@ -73,23 +73,6 @@ const failedReceipt = (
   ...(options.response !== undefined ? { response: options.response } : {}),
   ...(options.cause !== undefined ? { cause: options.cause } : {}),
 })
-
-const bytesToBase64 = (bytes: Uint8Array): string => {
-  let output = ''
-  for (let index = 0; index < bytes.length; index += 3) {
-    const first = bytes[index] ?? 0
-    const second = bytes[index + 1] ?? 0
-    const third = bytes[index + 2] ?? 0
-    const combined = (first << 16) | (second << 8) | third
-
-    output += BASE64_ALPHABET[(combined >> 18) & 0x3f]
-    output += BASE64_ALPHABET[(combined >> 12) & 0x3f]
-    output += index + 1 < bytes.length ? BASE64_ALPHABET[(combined >> 6) & 0x3f] : '='
-    output += index + 2 < bytes.length ? BASE64_ALPHABET[combined & 0x3f] : '='
-  }
-
-  return output
-}
 
 const getFetch = (fetchImplementation: MailgunFetch | undefined): MailgunFetch => {
   const resolvedFetch = fetchImplementation ?? globalThis.fetch

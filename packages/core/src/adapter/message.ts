@@ -5,8 +5,8 @@ import {
   resolveEmailAttachmentsSync,
 } from './attachment'
 import type { EmailAddress, EmailAttachmentLimits, EmailHeaders, EmailMessage } from './index'
+import { CRLF, bytesToBase64, normalizeLineEndings } from './utils'
 
-const CRLF = '\r\n'
 const BASE64_CHUNK_SIZE = 76
 const EMAIL_ADDRESS_PATTERN = /^[^\s@<>]+@[^\s@<>]+$/
 const HEADER_NAME_PATTERN = /^[A-Za-z0-9-]+$/
@@ -36,10 +36,6 @@ const PROTECTED_ATTACHMENT_HEADERS = new Set(
   ].map((name) => name.toLowerCase()),
 )
 
-const BASE64_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
-
-const normalizeLineEndings = (value: string): string => value.replace(/\r\n|\r|\n/g, CRLF)
-
 const hasUnsafeHeaderValue = (value: string): boolean => /[\r\n]/.test(value)
 
 const ensureSafeHeaderValue = (value: string, fieldName: string): string => {
@@ -48,23 +44,6 @@ const ensureSafeHeaderValue = (value: string, fieldName: string): string => {
   }
 
   return value
-}
-
-const bytesToBase64 = (bytes: Uint8Array): string => {
-  let output = ''
-  for (let index = 0; index < bytes.length; index += 3) {
-    const first = bytes[index] ?? 0
-    const second = bytes[index + 1] ?? 0
-    const third = bytes[index + 2] ?? 0
-    const combined = (first << 16) | (second << 8) | third
-
-    output += BASE64_ALPHABET[(combined >> 18) & 0x3f]
-    output += BASE64_ALPHABET[(combined >> 12) & 0x3f]
-    output += index + 1 < bytes.length ? BASE64_ALPHABET[(combined >> 6) & 0x3f] : '='
-    output += index + 2 < bytes.length ? BASE64_ALPHABET[combined & 0x3f] : '='
-  }
-
-  return output
 }
 
 const wrapBase64 = (value: string): string => {

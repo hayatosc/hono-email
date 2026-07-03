@@ -1,6 +1,5 @@
+import { CRLF } from '../utils'
 import type { SmtpAuth, SmtpSecureTransport, SmtpSocket } from './types'
-
-const CRLF = '\r\n'
 
 export type SmtpCommandResponse = {
   code: number
