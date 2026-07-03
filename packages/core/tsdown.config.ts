@@ -9,7 +9,6 @@ const neverBundle = [
   'cloudflare:workers',
   /^hono(\/.*)?$/,
   'htmlrewriter',
-  'decode-named-character-reference',
 
   /^node:/,
 ]
@@ -40,5 +39,5 @@ export default defineConfig({
   alias: {
     'css-tree': require.resolve('css-tree/dist/csstree.esm'),
   },
-  deps: { neverBundle, alwaysBundle: ['css-tree'] },
+  deps: { neverBundle, alwaysBundle: ['css-tree', 'decode-named-character-reference'] },
 })
