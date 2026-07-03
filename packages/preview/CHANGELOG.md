@@ -1,5 +1,17 @@
 # @hono-email/preview
 
+## 0.6.1
+
+### Patch Changes
+
+- [#107](https://github.com/hayatosc/hono-email/pull/107) [`a17d480`](https://github.com/hayatosc/hono-email/commit/a17d480757bf24a50445a0e323bf102a8da76234) Thanks [@hayatosc](https://github.com/hayatosc)! - fix: make prepareClientHtml replacement more robust
+
+- [#106](https://github.com/hayatosc/hono-email/pull/106) [`caaa824`](https://github.com/hayatosc/hono-email/commit/caaa824ea808f78cdc4caeb3cc0943c7f258d662) Thanks [@hayatosc](https://github.com/hayatosc)! - fix: require previewProps marker for named email component exports
+
+- [#105](https://github.com/hayatosc/hono-email/pull/105) [`e1f00f6`](https://github.com/hayatosc/hono-email/commit/e1f00f6eb08189dac2c86d3beec369a2515931e6) Thanks [@hayatosc](https://github.com/hayatosc)! - fix: respect prefers-reduced-motion in preview client styles
+
+- [#98](https://github.com/hayatosc/hono-email/pull/98) [`227a1bc`](https://github.com/hayatosc/hono-email/commit/227a1bc8df6a1b460e7eebd85517c6569ef62abc) Thanks [@hayatosc](https://github.com/hayatosc)! - fix: multiple stability and error handling improvements in preview server
+
 ## 0.6.0
 
 ### Minor Changes
