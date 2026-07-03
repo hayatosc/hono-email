@@ -1,5 +1,11 @@
 # hono-email
 
+## 0.6.2
+
+### Patch Changes
+
+- [#110](https://github.com/hayatosc/hono-email/pull/110) [`517b9a6`](https://github.com/hayatosc/hono-email/commit/517b9a6b81413b2e575220e8a36085b25853eda8) Thanks [@hayatosc](https://github.com/hayatosc)! - bundle css-tree ESM dist to eliminate nodejs_compat requirement on Cloudflare Workers
+
 ## 0.6.1
 
 ### Patch Changes
