@@ -126,7 +126,7 @@ export const buildPerFileCssModule = (
   const lines = ['@import "tailwindcss";']
 
   if (resolved.configPath) {
-    lines.push(`@config "${resolved.configPath}";`)
+    lines.push(`@config "${normalizePathForCss(resolved.configPath).replace(/"/g, '\\"')}";`)
   }
 
   lines.push(`@source "${normalizePathForCss(sourceFilePath).replace(/"/g, '\\"')}";`)
