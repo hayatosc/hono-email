@@ -313,5 +313,10 @@ describe('email components', () => {
 
     expect(html).toContain('Your')
     expect(html).toContain('receipt')
+    // Preview pads the hidden preview text to ~200 characters so clients render
+    // the intended preview snippet. The padding includes zero-width joiners and
+    // other invisible whitespace characters.
+    expect(html).toContain('\u200c')
+    expect(html).toContain('\ufeff')
   })
 })
