@@ -1,7 +1,7 @@
 import cloudflare from '@astrojs/cloudflare'
 import starlight from '@astrojs/starlight'
 import svelte from '@astrojs/svelte'
-import { defineConfig, fontProviders, sessionDrivers, svgoOptimizer } from 'astro/config'
+import { defineConfig, fontProviders, svgoOptimizer } from 'astro/config'
 
 import { markdownExport } from './src/integrations/markdown-export'
 import { ogImage } from './src/integrations/og-image'
@@ -13,11 +13,13 @@ export default defineConfig({
   adapter: cloudflare({
     imageService: 'compile',
   }),
-  session: {
-    driver: sessionDrivers.lruCache(),
-  },
   experimental: {
     svgOptimizer: svgoOptimizer(),
+  },
+  vite: {
+    optimizeDeps: {
+      include: ['astro/zod'],
+    },
   },
   fonts: [
     {
@@ -36,6 +38,10 @@ export default defineConfig({
     ogImage(),
     starlight({
       title: 'hono-email',
+      logo: {
+        src: './src/assets/logo.svg',
+      },
+      favicon: '/favicon.svg',
       description: 'Render, validate, and send HTML email and plain text from hono/jsx.',
       disable404Route: true,
       pagefind: false,

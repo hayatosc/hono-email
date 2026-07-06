@@ -1,4 +1,6 @@
 <script>
+  import { untrack } from 'svelte';
+
   let { runtimes = [] } = $props();
 
   let active = $state(0);
@@ -21,7 +23,7 @@
     if (prefersReducedMotion || n === 0 || isPaused) return;
 
     const interval = setInterval(() => {
-      active = (active + 1) % n;
+      active = (untrack(() => active) + 1) % n;
     }, 2600);
 
     return () => clearInterval(interval);

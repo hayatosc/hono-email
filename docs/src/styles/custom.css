@@ -3,6 +3,11 @@
    Zinc-based monochrome palette + Inter font
    ============================================================ */
 
+html,
+body {
+  overflow-x: clip;
+}
+
 /* ── Fonts ─────────────────────────────────────────────────── */
 :root {
   --sl-font: 'Inter', sans-serif;
