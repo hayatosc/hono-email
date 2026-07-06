@@ -1,4 +1,4 @@
-workspace_mode = "worktree"
+workspace_mode = "local"
 include_dirty = true
 local_skip_actions = ["actions/checkout", "jdx/mise-action"]
 
