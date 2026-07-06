@@ -4,7 +4,6 @@ import svelte from '@astrojs/svelte'
 import { defineConfig, fontProviders, svgoOptimizer } from 'astro/config'
 
 import { markdownExport } from './src/integrations/markdown-export'
-import { ogImage } from './src/integrations/og-image'
 
 // https://astro.build/config
 export default defineConfig({
@@ -35,7 +34,6 @@ export default defineConfig({
   ],
   integrations: [
     markdownExport(),
-    ogImage(),
     starlight({
       title: 'hono-email',
       logo: {
