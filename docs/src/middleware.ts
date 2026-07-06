@@ -1,5 +1,7 @@
 import { defineMiddleware } from 'astro:middleware'
 
+import { patchComponentUrls } from './component-url-patch'
+
 /**
  * Dev-only workaround for `@astrojs/cloudflare` emitting absolute file-system
  * paths as `component-url` for Svelte islands in dev mode. Vite can serve
@@ -18,17 +20,7 @@ export const onRequest = defineMiddleware(async (_context, next) => {
   if (!contentType.includes('text/html')) return response
 
   const html = await response.text()
-  const fixed = html.replace(/component-url="([^"]*)"/g, (match, url: string) => {
-    // Only patch absolute file-system paths, not normal Vite URLs.
-    const isUnixAbsolute =
-      url.startsWith('/') &&
-      !(url.startsWith('/src/') || url.startsWith('/@') || url.startsWith('/_'))
-    const isWindowsAbsolute = /^[A-Za-z]:\//.test(url)
-
-    if (!isUnixAbsolute && !isWindowsAbsolute) return match
-
-    return `component-url="/@fs${url}"`
-  })
+  const fixed = patchComponentUrls(html)
 
   const headers = new Headers(response.headers)
   headers.delete('content-length')
