@@ -1,7 +1,6 @@
 /** @jsxImportSource hono/jsx */
 
 import { Style, css } from 'hono/css'
-import { renderToReadableStream } from 'hono/jsx/streaming'
 
 // Docs design tokens (dark mode zinc scale + landing accent)
 const BG = '#09090b'

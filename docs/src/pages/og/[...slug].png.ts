@@ -41,7 +41,7 @@ export const getStaticPaths = (async () => {
 
 export const GET: APIRoute<OgProps, { slug: string }> = async ({ props }) => {
   try {
-    const stream = await renderToReadableStream(OgImage(props))
+    const stream = renderToReadableStream(OgImage(props))
     const html = await new Response(stream).text()
 
     const png = await render(html, {

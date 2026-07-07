@@ -1,7 +1,8 @@
 import { describe, expect, test, mock } from 'bun:test'
+import type { APIContext } from 'astro'
 
 // Mock astro:content before importing [...slug].png
-mock.module('astro:content', () => {
+void mock.module('astro:content', () => {
   return {
     getCollection: async () => [
       {
@@ -40,7 +41,7 @@ describe('OG Image Route', () => {
         description: 'Test Description',
       },
     }
-    const response = await GET(context as any)
+    const response = await GET(context as unknown as APIContext)
     expect(response.status).toBe(200)
     expect(response.headers.get('Content-Type')).toBe('image/png')
     expect(response.headers.get('Cache-Control')).toBeDefined()
