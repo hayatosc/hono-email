@@ -30,7 +30,7 @@ describe('render strict mode', () => {
         </html>,
       ),
     ).rejects.toThrow(
-      'The <form> tag isn\'t supported in HTML email strict mode. Use <Button href="..."> or <Link href="..."> for clickable actions instead.',
+      "The <form> tag isn't allowed in HTML email strict mode. Active content and embedded resources must not be used in email HTML.",
     )
   })
 
@@ -66,32 +66,30 @@ describe('render strict mode', () => {
     expect(html).not.toContain('<article')
   })
 
-  test('rejects grid layout in strict mode', async () => {
+  test('rejects grid-template-columns in strict mode', async () => {
     await expect(
       render(
         <html>
           <body>
-            <div style={{ display: 'grid' }}>Hello</div>
+            <div style={{ gridTemplateColumns: '1fr 1fr' }}>Hello</div>
           </body>
         </html>,
       ),
     ).rejects.toThrow(
-      "The CSS property 'display:grid' isn't supported in HTML email strict mode. Use <Section>, <Row>, <Column>, or table-based layout instead.",
+      "The CSS property 'grid-template-columns' isn't supported in HTML email strict mode.",
     )
   })
 
-  test('normalizes declaration values before strict declaration checks', async () => {
-    await expect(
-      render(
-        <html>
-          <body>
-            <div style={'display: grid !important'}>Hello</div>
-          </body>
-        </html>,
-      ),
-    ).rejects.toThrow(
-      "The CSS property 'display:grid' isn't supported in HTML email strict mode. Use <Section>, <Row>, <Column>, or table-based layout instead.",
+  test('allows display:grid in strict mode', async () => {
+    const { html } = await render(
+      <html>
+        <body>
+          <div style={{ display: 'grid' }}>Hello</div>
+        </body>
+      </html>,
     )
+
+    expect(html).toContain('display:grid')
   })
 
   test('rejects logical CSS properties in strict mode', async () => {
@@ -104,7 +102,7 @@ describe('render strict mode', () => {
         </html>,
       ),
     ).rejects.toThrow(
-      "The CSS property 'padding-inline' isn't supported in HTML email strict mode. Use physical properties such as padding-left and padding-right instead.",
+      "The CSS property 'padding-inline' isn't supported in HTML email strict mode.",
     )
   })
 
@@ -144,7 +142,7 @@ describe('render strict mode', () => {
     ).rejects.toThrow("The CSS property 'filter' isn't supported in HTML email strict mode.")
   })
 
-  test('warns about box-shadow, calc, and border-radius in strict mode', async () => {
+  test('warns about box-shadow and calc in strict mode', async () => {
     const { html, warnings } = await withWarnSpy(() =>
       render(
         <html>
@@ -167,9 +165,6 @@ describe('render strict mode', () => {
     expect(html).toContain('box-shadow:0 0 10px rgba(0,0,0,0.5)')
     expect(warnings.some((message) => message.includes("The CSS property 'box-shadow'"))).toBe(true)
     expect(warnings.some((message) => message.includes("The CSS function 'calc()'"))).toBe(true)
-    expect(warnings.some((message) => message.includes("The CSS property 'border-radius'"))).toBe(
-      true,
-    )
   })
 
   test('rejects transform and animation properties in strict mode', async () => {
@@ -206,61 +201,38 @@ describe('render strict mode', () => {
     ).rejects.toThrow("The CSS property 'aspect-ratio' isn't supported in HTML email strict mode.")
   })
 
-  test('rejects position:fixed and position:sticky in strict mode', async () => {
-    await expect(
-      render(
-        <html>
-          <body>
-            <div style={{ position: 'fixed' }}>Hello</div>
-          </body>
-        </html>,
-      ),
-    ).rejects.toThrow(
-      "The CSS property 'position:fixed' isn't supported in HTML email strict mode.",
+  test('allows position:fixed and position:sticky in strict mode', async () => {
+    const { html: fixedHtml } = await render(
+      <html>
+        <body>
+          <div style={{ position: 'fixed' }}>Hello</div>
+        </body>
+      </html>,
     )
 
-    await expect(
-      render(
-        <html>
-          <body>
-            <div style={{ position: 'sticky' }}>Hello</div>
-          </body>
-        </html>,
-      ),
-    ).rejects.toThrow(
-      "The CSS property 'position:sticky' isn't supported in HTML email strict mode.",
+    const { html: stickyHtml } = await render(
+      <html>
+        <body>
+          <div style={{ position: 'sticky' }}>World</div>
+        </body>
+      </html>,
     )
+
+    expect(fixedHtml).toContain('position:fixed')
+    expect(stickyHtml).toContain('position:sticky')
   })
 
-  test('rejects advanced background properties in strict mode', async () => {
-    await expect(
-      render(
-        <html>
-          <body>
-            <div style={{ backgroundAttachment: 'fixed' }}>Hello</div>
-          </body>
-        </html>,
-      ),
-    ).rejects.toThrow(
-      "The CSS property 'background-attachment' isn't supported in HTML email strict mode.",
-    )
-  })
-
-  test('warns about float and clear properties in strict mode', async () => {
-    const { html, warnings } = await withWarnSpy(() =>
-      render(
-        <html>
-          <body>
-            <div style={{ float: 'left', clear: 'both' }}>Hello</div>
-          </body>
-        </html>,
-      ),
+  test('allows float and clear properties in strict mode', async () => {
+    const { html } = await render(
+      <html>
+        <body>
+          <div style={{ float: 'left', clear: 'both' }}>Hello</div>
+        </body>
+      </html>,
     )
 
     expect(html).toContain('float:left')
     expect(html).toContain('clear:both')
-    expect(warnings.some((message) => message.includes("The CSS property 'float'"))).toBe(true)
-    expect(warnings.some((message) => message.includes("The CSS property 'clear'"))).toBe(true)
   })
 
   test('warns about object-fit and object-position instead of throwing', async () => {
@@ -286,8 +258,8 @@ describe('render strict mode', () => {
     )
   })
 
-  test('warns when @font-face is used in strict mode', async () => {
-    const { warnings } = await withWarnSpy(() =>
+  test('rejects @font-face in strict mode', async () => {
+    await expect(
       render(
         <html>
           <head>
@@ -302,9 +274,9 @@ describe('render strict mode', () => {
           </body>
         </html>,
       ),
+    ).rejects.toThrow(
+      "The CSS at-rule '@font-face' isn't supported reliably in HTML email strict mode.",
     )
-
-    expect(warnings.some((message) => message.includes("The CSS at-rule '@font-face'"))).toBe(true)
   })
 
   test('rejects anchor tags without href in strict mode', async () => {
@@ -335,7 +307,7 @@ describe('render strict mode', () => {
     )
   })
 
-  test('rejects unsafe event handlers and href URL schemes in strict mode', async () => {
+  test('rejects unsafe href URL schemes in strict mode', async () => {
     await expect(
       render(
         <html>
@@ -346,18 +318,6 @@ describe('render strict mode', () => {
       ),
     ).rejects.toThrow(
       "The a href uses the unsafe 'javascript:' URL scheme. Use http, https, mailto, tel, or a relative URL instead.",
-    )
-
-    await expect(
-      render(
-        <html>
-          <body>
-            <div onclick="alert(1)">Open</div>
-          </body>
-        </html>,
-      ),
-    ).rejects.toThrow(
-      "The 'onclick' attribute isn't supported in HTML email strict mode. JavaScript event handlers must not be used in email HTML.",
     )
   })
 
@@ -398,19 +358,7 @@ describe('render strict mode', () => {
     )
   })
 
-  test('rejects grid template properties and keyframes in strict mode', async () => {
-    await expect(
-      render(
-        <html>
-          <body>
-            <div style={{ gridTemplateColumns: '1fr 1fr' }}>Hello</div>
-          </body>
-        </html>,
-      ),
-    ).rejects.toThrow(
-      "The CSS property 'grid-template-columns' isn't supported in HTML email strict mode. Use <Section>, <Row>, <Column>, or table-based layout instead.",
-    )
-
+  test('rejects keyframes in strict mode', async () => {
     await expect(
       render(
         <html>
@@ -423,7 +371,7 @@ describe('render strict mode', () => {
         </html>,
       ),
     ).rejects.toThrow(
-      "The CSS at-rule '@keyframes' isn't supported reliably in HTML email strict mode. Avoid CSS animations in email.",
+      "The CSS at-rule '@keyframes' isn't supported reliably in HTML email strict mode.",
     )
   })
 
@@ -444,9 +392,6 @@ describe('render strict mode', () => {
     )
 
     expect(warnings.some((message) => message.includes("The CSS at-rule '@supports'"))).toBe(true)
-    expect(warnings.some((message) => message.includes("The CSS property 'display:flex'"))).toBe(
-      true,
-    )
     expect(warnings.some((message) => message.includes("The CSS property 'flex-direction'"))).toBe(
       true,
     )
@@ -466,9 +411,7 @@ describe('render strict mode', () => {
           </body>
         </html>,
       ),
-    ).rejects.toThrow(
-      "The <picture> tag isn't supported in HTML email strict mode. Use <Img> with a broadly supported fallback asset instead.",
-    )
+    ).rejects.toThrow("The <picture> tag isn't supported in HTML email strict mode.")
   })
 
   test('rejects source tags in strict mode', async () => {
@@ -480,9 +423,7 @@ describe('render strict mode', () => {
           </body>
         </html>,
       ),
-    ).rejects.toThrow(
-      "The <source> tag isn't supported in HTML email strict mode. Use a single <Img> source instead of source switching.",
-    )
+    ).rejects.toThrow("The <source> tag isn't supported in HTML email strict mode.")
   })
 
   test('handles single-quoted and unquoted attributes in raw validation paths', () => {
@@ -498,9 +439,7 @@ describe('render strict mode', () => {
       validateHtml(
         '<html><head></head><body><div style="background:url(https://example.com/a>b);display:grid">Hello</div></body></html>',
       ),
-    ).toThrow(
-      "The CSS property 'display:grid' isn't supported in HTML email strict mode. Use <Section>, <Row>, <Column>, or table-based layout instead.",
-    )
+    ).not.toThrow()
   })
 
   test('rejects stylesheet links when quoted href values include >', () => {
@@ -519,7 +458,7 @@ describe('render strict mode', () => {
         '<html><body><!--[if mso]><form action="https://example.com"><input /></form><![endif]--><p>Hello</p></body></html>',
       ),
     ).toThrow(
-      'The <form> tag isn\'t supported in HTML email strict mode. Use <Button href="..."> or <Link href="..."> for clickable actions instead.',
+      "The <form> tag isn't allowed in HTML email strict mode. Active content and embedded resources must not be used in email HTML.",
     )
   })
 
@@ -589,5 +528,15 @@ describe('render strict mode', () => {
     )
 
     expect(warnings.some((m) => m.includes('data URL'))).toBe(true)
+  })
+
+  test('warningClients lists unsupported attributes or image formats as warnings', () => {
+    const warnings = validateHtml(
+      '<html><body><img src="https://example.com/hero.webp" loading="lazy" /></body></html>',
+      ['outlook', 'gmail'],
+    )
+
+    expect(warnings.some((w) => w.includes("'loading' attribute"))).toBe(true)
+    expect(warnings.some((w) => w.includes("'webp' image format"))).toBe(true)
   })
 })

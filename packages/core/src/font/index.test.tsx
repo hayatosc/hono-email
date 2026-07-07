@@ -37,6 +37,7 @@ describe('Font', () => {
           <p>Hello</p>
         </Body>
       </Html>,
+      { strict: false },
     )
 
     expect(html).toContain("@font-face {font-family: 'Roboto';")
@@ -64,6 +65,7 @@ describe('Font', () => {
           <p>Hello</p>
         </Body>
       </Html>,
+      { strict: false },
     )
 
     expect(html).not.toContain('<script')

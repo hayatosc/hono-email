@@ -1,33 +1,41 @@
 ---
 title: Strict Mode
-description: How hono-email validates email markup and CSS.
+description: How hono-email validates email markup and CSS using caniemail.com data.
 ---
 
-Strict mode is enabled by default in `render()`. It is meant to fail early on markup and CSS that are risky for HTML email clients.
+Strict mode is enabled by default in `render()`. It is meant to fail early on markup, CSS, and image formats that are unsupported or risky for HTML email clients.
 
-## Errors
+`hono-email` uses dynamic compatibility data derived from [caniemail.com](https://www.caniemail.com/) to analyze your markup.
 
-The following cases cause `render()` to reject when `strict: true`:
+## Validation Scope
 
-- Interactive or embedded tags such as `form`, `input`, `button` (the HTML element, not the `hono-email` component), `select`, `textarea`, `iframe`, `picture`, `source`, `svg`, and `script`.
-- `<a>` without an `href` attribute.
-- `<link rel="stylesheet">` tags.
-- `<style>` outside `<Head>`.
-- CSS declarations such as `display: grid`, `display: inline-grid`, and `display: inline-flex`.
-- Logical CSS properties such as `padding-inline`, `margin-block`, and `border-inline`.
-- Unsupported tags or CSS inside Outlook conditional comments (`<!--[if mso]>...<![endif]-->`).
+The validation engine checks the following items:
 
-## Warnings
+- **HTML Tags & Attributes**: Interactive or dangerous elements (like `<script>`, `<iframe>`) and attributes.
+- **CSS Properties & At-Rules**: Unsupported declarations (like `display: grid`) or risky layouts.
+- **Image Formats**: Compatibility checks for image formats such as `webp`, `avif`, `svg`, and `base64`.
 
-The following cases are allowed but produce compatibility warnings on `RenderResult.warnings`:
+## Global Compatibility Thresholds
 
-- `display: flex`
-- `position`
-- `object-fit` / `object-position`
-- `background-image`
-- `@font-face`
-- `@media`
-- `<img>` without an `alt` attribute
+By default, `hono-email` checks compatibility using global support ratios derived from [caniemail.com](https://www.caniemail.com/). Features that have extremely poor support across all clients will trigger strict-mode errors (blocking render) or compatibility warnings.
+
+## Warning Clients Configuration
+
+To get additional client-specific compatibility warnings for features that are unsupported or only partially supported in certain environments, configure the `warningClients` option:
+
+```tsx
+const result = await render(<MyEmail />, {
+  strict: true,
+  warningClients: ['gmail', 'apple-mail'], // Get extra warnings for Gmail and Apple Mail
+})
+```
+
+By default, `warningClients` is `[]` (no additional client-specific warnings are generated unless configured).
+
+## Errors & Warnings Behavior
+
+- **Errors**: Hard failures (like interactive tags or missing required fields) reject the `render()` promise.
+- **Warnings**: Features that have limited support or quirks on target clients produce compatibility warnings on `RenderResult.warnings`.
 
 Warnings are surfaced according to the [`onWarning`](/core/render/#onwarning) option.
 
