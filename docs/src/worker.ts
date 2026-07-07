@@ -1,6 +1,8 @@
 import { handle } from '@astrojs/cloudflare/handler'
 import { Hono } from 'hono'
 
+import { negotiateContentType } from './content-negotiation'
+
 const LLMS_FULL_PATH = '/llms-full.txt'
 
 const app = new Hono<{ Bindings: Env }>()
@@ -26,17 +28,38 @@ app.all('*', async (c) => {
     return response
   }
 
-  const accept = c.req.header('accept') || ''
-  if (accept.includes('text/markdown')) {
-    const mdUrl = new URL(url)
-    mdUrl.pathname =
-      mdUrl.pathname === '/' ? '/index.md' : mdUrl.pathname.replace(/\/$/, '') + '.md'
-    const response = await c.env.ASSETS.fetch(new Request(mdUrl, c.req.raw))
-    if (response.status === 200) {
+  const isPageRoute = !pathname.includes('.') || pathname.endsWith('/')
+
+  if (isPageRoute) {
+    const accept = c.req.header('accept')
+    const negotiated = negotiateContentType(accept)
+
+    if (negotiated === '406') {
+      return new Response('Not Acceptable', {
+        status: 406,
+        headers: {
+          vary: 'Accept',
+          'content-type': 'text/plain; charset=utf-8',
+        },
+      })
+    }
+
+    if (negotiated === 'text/markdown') {
+      const mdUrl = new URL(url)
+      mdUrl.pathname =
+        mdUrl.pathname === '/' ? '/index.md' : mdUrl.pathname.replace(/\/$/, '') + '.md'
+      const response = await c.env.ASSETS.fetch(new Request(mdUrl, c.req.raw))
+      if (response.status === 200) {
+        const newResponse = new Response(response.body, response)
+        newResponse.headers.set('content-type', 'text/markdown; charset=utf-8')
+        newResponse.headers.set('vary', 'Accept')
+        newResponse.headers.delete('content-encoding')
+        newResponse.headers.delete('content-length')
+        return newResponse
+      }
+      // If Markdown file is not found, fallback to default response with Vary header set
       const newResponse = new Response(response.body, response)
-      newResponse.headers.set('content-type', 'text/markdown; charset=utf-8')
-      newResponse.headers.delete('content-encoding')
-      newResponse.headers.delete('content-length')
+      newResponse.headers.set('vary', 'Accept')
       return newResponse
     }
   }
@@ -53,7 +76,15 @@ app.all('*', async (c) => {
     return c.env.ASSETS.fetch(c.req.raw)
   }
 
-  return handle(c.req.raw, c.env, c.executionCtx)
+  const response = await handle(c.req.raw, c.env, c.executionCtx)
+
+  if (isPageRoute) {
+    const newResponse = new Response(response.body, response)
+    newResponse.headers.set('vary', 'Accept')
+    return newResponse
+  }
+
+  return response
 })
 
 export default app
