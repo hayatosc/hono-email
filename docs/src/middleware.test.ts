@@ -1,4 +1,5 @@
 import { describe, expect, test, mock } from 'bun:test'
+
 import type { APIContext } from 'astro'
 
 // Mock astro:middleware before importing middleware.ts
