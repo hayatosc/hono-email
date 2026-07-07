@@ -22,6 +22,28 @@ describe('document semantics', () => {
     expect(html).toContain('</div><p>Hello</p></body>')
   })
 
+  test('handles nested divs in Preview content correctly', async () => {
+    const { html } = await render(
+      <Html>
+        <Preview>
+          <div>
+            <span>Nested 1</span>
+            <div>Nested 2</div>
+          </div>
+        </Preview>
+        <Body>
+          <p>Hello</p>
+        </Body>
+      </Html>,
+    )
+
+    expect(html).toContain('<body><div data-hono-email-preview="true"')
+    expect(html).toContain('Nested 1')
+    expect(html).toContain('Nested 2')
+    expect(html).toContain('</div></div>')
+    expect(html).toContain('Hello')
+  })
+
   test('pads preview text so following content stays out of the inbox snippet', async () => {
     const { html } = await render(
       <Html>

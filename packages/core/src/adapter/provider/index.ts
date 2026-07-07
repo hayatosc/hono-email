@@ -3,7 +3,7 @@ import {
   type ResolvedEmailAttachment,
   resolveEmailAttachments,
 } from '../attachment'
-import type { EmailAddress, EmailAttachmentLimits, EmailHeaders, EmailMessage } from '../index'
+import type { EmailAddress, EmailAttachmentLimits, EmailHeaders, EmailMessage, SendEmailReceipt } from '../index'
 import { addressToPath, formatEmailAddress, toAddressList, validateEmailHeaders } from '../message'
 
 export type {
@@ -114,3 +114,21 @@ export const buildProviderEmailPayload = async (
     ...(replyTo !== undefined ? { replyTo } : {}),
   }
 }
+
+export const failedReceipt = (
+  errorMessages: string[],
+  options: {
+    accepted?: string[]
+    cause?: unknown
+    rejected?: string[]
+    response?: string
+  } = {},
+): SendEmailReceipt => ({
+  successful: false,
+  accepted: options.accepted ?? [],
+  rejected: options.rejected ?? [],
+  errorMessages,
+  ...(options.response !== undefined ? { response: options.response } : {}),
+  ...(options.cause !== undefined ? { cause: options.cause } : {}),
+})
+

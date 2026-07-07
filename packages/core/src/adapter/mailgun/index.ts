@@ -7,8 +7,9 @@ import type {
   EmailMessage,
   SendEmailReceipt,
 } from '../index'
-import { addressToPath, formatEmailAddress, toAddressList, validateEmailHeaders } from '../message'
-import { bytesToBase64 } from '../utils'
+import { formatEmailAddress, toAddressList, validateEmailHeaders } from '../message'
+import { collectProviderRecipients as collectRecipients, failedReceipt } from '../provider'
+import { bytesToBase64, fetchWithTimeoutAndRetry } from '../utils'
 
 export type {
   EmailAddress,
@@ -68,22 +69,6 @@ const validateApiBaseUrl = (url: string): void => {
   throw new Error('Mailgun adapter requires HTTPS. API tokens must not be sent over plaintext.')
 }
 
-const failedReceipt = (
-  errorMessages: string[],
-  options: {
-    accepted?: string[]
-    cause?: unknown
-    rejected?: string[]
-    response?: string
-  } = {},
-): SendEmailReceipt => ({
-  successful: false,
-  accepted: options.accepted ?? [],
-  rejected: options.rejected ?? [],
-  errorMessages,
-  ...(options.response !== undefined ? { response: options.response } : {}),
-  ...(options.cause !== undefined ? { cause: options.cause } : {}),
-})
 
 const getFetch = (fetchImplementation: MailgunFetch | undefined): MailgunFetch => {
   const resolvedFetch = fetchImplementation ?? globalThis.fetch
@@ -135,15 +120,6 @@ const asErrorMessage = (value: unknown, response: Response, body: string): strin
   return `Mailgun API returned ${response.status} ${response.statusText}.`
 }
 
-const collectRecipients = (message: EmailMessage): string[] => {
-  const recipients: EmailAddress[] = [
-    ...toAddressList(message.to),
-    ...toAddressList(message.cc),
-    ...toAddressList(message.bcc),
-  ]
-
-  return [...new Set(recipients.map(addressToPath))]
-}
 
 const appendAddressFields = (
   form: FormData,

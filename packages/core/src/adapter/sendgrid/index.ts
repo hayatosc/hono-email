@@ -1,6 +1,7 @@
 import { encodeAttachmentContentBase64, resolveEmailAttachments } from '../attachment'
 import type { EmailAdapter, EmailAddress, EmailMessage, SendEmailReceipt } from '../index'
-import { addressToPath, formatEmailAddress, toAddressList, validateEmailHeaders } from '../message'
+import { formatEmailAddress, toAddressList, validateEmailHeaders } from '../message'
+import { collectProviderRecipients as collectRecipients, failedReceipt } from '../provider'
 
 export type {
   EmailAddress,
@@ -91,22 +92,6 @@ const validateApiBaseUrl = (url: string): void => {
   throw new Error('SendGrid adapter requires HTTPS. API tokens must not be sent over plaintext.')
 }
 
-const failedReceipt = (
-  errorMessages: string[],
-  options: {
-    accepted?: string[]
-    cause?: unknown
-    rejected?: string[]
-    response?: string
-  } = {},
-): SendEmailReceipt => ({
-  successful: false,
-  accepted: options.accepted ?? [],
-  rejected: options.rejected ?? [],
-  errorMessages,
-  ...(options.response !== undefined ? { response: options.response } : {}),
-  ...(options.cause !== undefined ? { cause: options.cause } : {}),
-})
 
 const getFetch = (fetchImplementation: SendGridFetch | undefined): SendGridFetch => {
   const resolvedFetch = fetchImplementation ?? globalThis.fetch
@@ -164,15 +149,6 @@ const asErrorMessages = (value: unknown, response: Response, body: string): stri
   return [`SendGrid API returned ${response.status} ${response.statusText}.`]
 }
 
-const collectRecipients = (message: EmailMessage): string[] => {
-  const recipients: EmailAddress[] = [
-    ...toAddressList(message.to),
-    ...toAddressList(message.cc),
-    ...toAddressList(message.bcc),
-  ]
-
-  return [...new Set(recipients.map(addressToPath))]
-}
 
 const asMailAddress = (address: EmailAddress): SendGridMailAddress => {
   formatEmailAddress(address)
