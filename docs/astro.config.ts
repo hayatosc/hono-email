@@ -1,7 +1,7 @@
 import cloudflare from '@astrojs/cloudflare'
 import starlight from '@astrojs/starlight'
 import svelte from '@astrojs/svelte'
-import { defineConfig, fontProviders, svgoOptimizer } from 'astro/config'
+import { defineConfig, fontProviders, svgoOptimizer, sessionDrivers } from 'astro/config'
 
 import { markdownExport } from './src/integrations/markdown-export'
 
@@ -12,6 +12,9 @@ export default defineConfig({
   adapter: cloudflare({
     imageService: 'compile',
   }),
+  session: {
+    driver: sessionDrivers.lruCache({ max: 1 }),
+  },
   experimental: {
     svgOptimizer: svgoOptimizer(),
   },
