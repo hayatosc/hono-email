@@ -111,6 +111,8 @@ a.site-title {
 .sidebar-content a {
   font-size: var(--sl-text-sm);
   border-radius: 0.3rem;
+  overflow-wrap: anywhere;
+  white-space: normal;
 }
 
 /* Active page item */
