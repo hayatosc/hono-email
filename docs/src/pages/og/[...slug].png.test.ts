@@ -2,6 +2,8 @@ import { describe, expect, test, mock } from 'bun:test'
 
 import type { APIContext } from 'astro'
 
+import type { OgProps } from './[...slug].png'
+
 // Mock astro:content before importing [...slug].png
 void mock.module('astro:content', () => {
   return {
@@ -41,8 +43,11 @@ describe('OG Image Route', () => {
         title: 'Test Title',
         description: 'Test Description',
       },
+      params: {
+        slug: 'test-slug',
+      },
     }
-    const response = await GET(context as unknown as APIContext)
+    const response = await GET(context as unknown as APIContext<OgProps, { slug: string }>)
     expect(response.status).toBe(200)
     expect(response.headers.get('Content-Type')).toBe('image/png')
     expect(response.headers.get('Cache-Control')).toBeDefined()

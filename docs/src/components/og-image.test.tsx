@@ -10,7 +10,7 @@ describe('OgImage component', () => {
       title: 'Hello World',
       description: 'This is a description.',
     }
-    const stream = await renderToReadableStream(OgImage(props))
+    const stream = renderToReadableStream(OgImage(props))
     const html = await new Response(stream).text()
 
     expect(html).toContain('Hello World')
@@ -24,7 +24,7 @@ describe('OgImage component', () => {
       title: 'A'.repeat(100),
       description: 'B'.repeat(200),
     }
-    const stream = await renderToReadableStream(OgImage(props))
+    const stream = renderToReadableStream(OgImage(props))
     const html = await new Response(stream).text()
 
     const expectedTitle = 'A'.repeat(79) + '…'

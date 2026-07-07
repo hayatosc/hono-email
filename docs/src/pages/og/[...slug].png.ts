@@ -8,7 +8,7 @@ import { OgImage } from '../../components/og-image.js'
 const CANVAS_WIDTH = 1200
 const CANVAS_HEIGHT = 630
 
-type OgProps = {
+export type OgProps = {
   description: string
   title: string
 }
