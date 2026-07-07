@@ -1,0 +1,90 @@
+---
+import Section from './Section.astro'
+
+const features = [
+  {
+    title: 'Rendered from JSX',
+    body: 'Compose emails as hono/jsx components and render to a normalized, email-safe HTML string.',
+  },
+  {
+    title: 'HTML and plain text',
+    body: 'Every render() returns a plain-text version derived from the same tree — no second template.',
+  },
+  {
+    title: 'Safe by default',
+    body: 'Strict validation flags risky tags and CSS declarations before they reach an inbox.',
+  },
+  {
+    title: 'Styling, your way',
+    body: 'Inline styles, hono/css, or Tailwind utilities — compiled and inlined at build time.',
+  },
+  {
+    title: 'Six transports',
+    body: 'Send through SMTP, Resend, SendGrid, Postmark, Mailgun, or Cloudflare Email.',
+  },
+  {
+    title: 'Live preview',
+    body: 'Browse templates and edit props in real time with @hono-email/preview.',
+  },
+]
+---
+
+<Section kicker="Why hono-email" title="Everything an email needs, nothing it doesn't.">
+  <ul class="grid">
+    {
+      features.map((f) => (
+        <li class="card">
+          <h3 class="card-title">{f.title}</h3>
+          <p class="card-body">{f.body}</p>
+        </li>
+      ))
+    }
+  </ul>
+</Section>
+
+<style>
+  .grid {
+    list-style: none;
+    margin: 2.5rem 0 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1px;
+    background: var(--sl-color-hairline);
+    border: 1px solid var(--sl-color-hairline);
+    border-radius: var(--lp-radius);
+    overflow: hidden;
+  }
+  .card {
+    margin: 0;
+    padding: 1.6rem 1.5rem;
+    background: var(--sl-color-bg);
+    transition: background-color 0.18s ease;
+  }
+  .card:hover {
+    background: var(--sl-color-bg-inline-code);
+  }
+  .card-title {
+    margin: 0 0 0.5rem;
+    font-size: 1.02rem;
+    font-weight: 600;
+    color: var(--sl-color-white);
+  }
+  .card-body {
+    margin: 0;
+    font-size: 0.92rem;
+    line-height: 1.6;
+    color: var(--sl-color-gray-3);
+  }
+
+  @media (max-width: 60rem) {
+    .grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+  @media (max-width: 40rem) {
+    .grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

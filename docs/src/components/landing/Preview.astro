@@ -1,0 +1,34 @@
+---
+import { Image } from 'astro:assets'
+
+import previewImg from '../../assets/preview.png'
+import Section from './Section.astro'
+---
+
+<Section
+  kicker="Live preview"
+  title="Edit props, see it instantly."
+  lead="Run the preview server to browse every template, edit props in a live form, switch between the HTML and plain-text output, check desktop and mobile, and catch email-client warnings before you send."
+>
+  <figure class="shot">
+    <Image
+      src={previewImg}
+      alt="The hono-email preview app showing an order-confirmation template with a live props form, HTML and plain-text tabs, and email-client warnings"
+    />
+  </figure>
+</Section>
+
+<style>
+  .shot {
+    margin: 2.5rem 0 0;
+    border: 1px solid var(--sl-color-hairline);
+    border-radius: var(--lp-radius);
+    overflow: hidden;
+    box-shadow: 0 24px 60px -34px hsl(0 0% 0% / 0.55);
+  }
+  .shot :global(img) {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+</style>
