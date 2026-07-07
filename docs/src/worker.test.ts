@@ -49,6 +49,16 @@ describe('negotiateContentType', () => {
     expect(negotiateContentType('text/markdown;q=0.9, text/html;q=0.9')).toBe('text/html')
   })
 
+  test('should respect specificity rules (precedence) of media types', () => {
+    expect(negotiateContentType('text/html;q=0.8, text/*;q=0.9')).toBe('text/markdown')
+    expect(negotiateContentType('text/*;q=0.9, text/markdown;q=0.8')).toBe('text/html')
+    expect(negotiateContentType('text/*, text/markdown')).toBe('text/markdown')
+  })
+
+  test('should handle case-insensitive q parameter and spaces around =', () => {
+    expect(negotiateContentType('text/markdown; Q=0.9, text/html; q = 0.8')).toBe('text/markdown')
+  })
+
   test('should return 406 for unsupported media types', () => {
     expect(negotiateContentType('application/json')).toBe('406')
     expect(negotiateContentType('image/png')).toBe('406')

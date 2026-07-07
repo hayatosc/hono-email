@@ -5,6 +5,18 @@ import { negotiateContentType } from './content-negotiation'
 
 const LLMS_FULL_PATH = '/llms-full.txt'
 
+function appendVaryAccept(headers: Headers) {
+  const existing = headers.get('vary')
+  if (existing) {
+    const parts = existing.split(',').map((p) => p.trim())
+    if (!parts.some((p) => p.toLowerCase() === 'accept')) {
+      headers.set('vary', `${existing}, Accept`)
+    }
+  } else {
+    headers.set('vary', 'Accept')
+  }
+}
+
 const app = new Hono<{ Bindings: Env }>()
 
 // Hand off to Astro via the Cloudflare adapter handler. The custom entrypoint
@@ -52,15 +64,10 @@ app.all('*', async (c) => {
       if (response.status === 200) {
         const newResponse = new Response(response.body, response)
         newResponse.headers.set('content-type', 'text/markdown; charset=utf-8')
-        newResponse.headers.set('vary', 'Accept')
-        newResponse.headers.delete('content-encoding')
-        newResponse.headers.delete('content-length')
+        appendVaryAccept(newResponse.headers)
         return newResponse
       }
-      // If Markdown file is not found, fallback to default response with Vary header set
-      const newResponse = new Response(response.body, response)
-      newResponse.headers.set('vary', 'Accept')
-      return newResponse
+      // If Markdown file is not found, fallback to default response (Astro HTML) by letting execution fall through
     }
   }
 
@@ -80,7 +87,7 @@ app.all('*', async (c) => {
 
   if (isPageRoute) {
     const newResponse = new Response(response.body, response)
-    newResponse.headers.set('vary', 'Accept')
+    appendVaryAccept(newResponse.headers)
     return newResponse
   }
 

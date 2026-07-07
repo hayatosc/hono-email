@@ -14,10 +14,14 @@ export function parseAccept(acceptHeader: string): AcceptType[] {
       let q = 1.0
       for (let i = 1; i < parts.length; i++) {
         const param = parts[i].trim()
-        if (param.startsWith('q=')) {
-          const val = parseFloat(param.slice(2))
-          if (!isNaN(val)) {
-            q = val
+        const eqIdx = param.indexOf('=')
+        if (eqIdx !== -1) {
+          const key = param.slice(0, eqIdx).trim().toLowerCase()
+          if (key === 'q') {
+            const val = parseFloat(param.slice(eqIdx + 1).trim())
+            if (!isNaN(val)) {
+              q = val
+            }
           }
         }
       }
@@ -46,18 +50,31 @@ export function negotiateContentType(
   const serverTypes = ['text/html', 'text/markdown'] as const
   let bestType: 'text/html' | 'text/markdown' | null = null
   let maxQ = -1
+  let bestSpecificity = 0
 
   for (const serverType of serverTypes) {
     const [sType, sSubtype] = serverType.split('/')
     let currentMaxQForType = -1
+    let currentBestSpecificityForType = 0
+
     for (const clientType of clientTypes) {
-      const match =
-        (clientType.type === '*' && clientType.subtype === '*') ||
-        (clientType.type === sType && clientType.subtype === '*') ||
-        (clientType.type === sType && clientType.subtype === sSubtype)
-      if (match) {
-        if (clientType.q > currentMaxQForType) {
+      let specificity = 0
+      if (clientType.type === sType && clientType.subtype === sSubtype) {
+        specificity = 3
+      } else if (clientType.type === sType && clientType.subtype === '*') {
+        specificity = 2
+      } else if (clientType.type === '*' && clientType.subtype === '*') {
+        specificity = 1
+      }
+
+      if (specificity > 0) {
+        if (specificity > currentBestSpecificityForType) {
+          currentBestSpecificityForType = specificity
           currentMaxQForType = clientType.q
+        } else if (specificity === currentBestSpecificityForType) {
+          if (clientType.q > currentMaxQForType) {
+            currentMaxQForType = clientType.q
+          }
         }
       }
     }
@@ -65,9 +82,15 @@ export function negotiateContentType(
     if (currentMaxQForType > maxQ) {
       maxQ = currentMaxQForType
       bestType = serverType
+      bestSpecificity = currentBestSpecificityForType
     } else if (currentMaxQForType === maxQ && maxQ !== -1) {
-      if (serverType === 'text/html') {
-        bestType = 'text/html'
+      if (currentBestSpecificityForType > bestSpecificity) {
+        bestType = serverType
+        bestSpecificity = currentBestSpecificityForType
+      } else if (currentBestSpecificityForType === bestSpecificity) {
+        if (serverType === 'text/html') {
+          bestType = 'text/html'
+        }
       }
     }
   }
