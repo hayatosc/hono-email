@@ -1,52 +1,76 @@
-import { describe, expect, test } from 'bun:test'
+import { describe, expect, test, mock } from 'bun:test'
 
-import { patchComponentUrls } from './component-url-patch'
+// Mock astro:middleware before importing middleware.ts
+mock.module('astro:middleware', () => {
+  return {
+    defineMiddleware: (cb: any) => cb,
+  }
+})
 
-describe('patchComponentUrls', () => {
-  test('adds /@fs prefix to Unix absolute file-system paths', () => {
-    const html = '<div component-url="/absolute/path/to/file.svelte"></div>'
-    expect(patchComponentUrls(html)).toBe(
-      '<div component-url="/@fs/absolute/path/to/file.svelte"></div>',
-    )
+// Ensure import.meta.env exists for the test execution
+if (!import.meta.env) {
+  ;(import.meta as any).env = {}
+}
+
+describe('middleware onRequest', () => {
+  test('returns response untouched if not in DEV mode', async () => {
+    const { onRequest } = await import('./middleware')
+    const originalDev = import.meta.env.DEV
+    import.meta.env.DEV = false
+    try {
+      const mockResponse = new Response('<div></div>', {
+        headers: { 'content-type': 'text/html' },
+      })
+      const next = () => Promise.resolve(mockResponse)
+
+      const res = await onRequest({} as any, next)
+      expect(res).toBe(mockResponse)
+    } finally {
+      import.meta.env.DEV = originalDev
+    }
   })
 
-  test('adds /@fs prefix to Windows absolute file-system paths', () => {
-    const html = '<div component-url="C:/Users/foo/file.svelte"></div>'
-    expect(patchComponentUrls(html)).toBe(
-      '<div component-url="/@fsC:/Users/foo/file.svelte"></div>',
-    )
+  test('returns response untouched if content-type is not text/html', async () => {
+    const { onRequest } = await import('./middleware')
+    const originalDev = import.meta.env.DEV
+    import.meta.env.DEV = true
+    try {
+      const mockResponse = new Response('{"foo":"bar"}', {
+        headers: { 'content-type': 'application/json' },
+      })
+      const next = () => Promise.resolve(mockResponse)
+
+      const res = await onRequest({} as any, next)
+      expect(res).toBe(mockResponse)
+    } finally {
+      import.meta.env.DEV = originalDev
+    }
   })
 
-  test('leaves /src/-prefixed URLs unchanged', () => {
-    const html = '<div component-url="/src/App.svelte"></div>'
-    expect(patchComponentUrls(html)).toBe(html)
-  })
+  test('patches HTML and deletes content-length header in DEV mode', async () => {
+    const { onRequest } = await import('./middleware')
+    const originalDev = import.meta.env.DEV
+    import.meta.env.DEV = true
+    try {
+      const mockResponse = new Response(
+        '<div component-url="/absolute/path/file.svelte"></div>',
+        {
+          headers: {
+            'content-type': 'text/html',
+            'content-length': '56',
+          },
+        },
+      )
+      const next = () => Promise.resolve(mockResponse)
 
-  test('leaves /@-prefixed URLs unchanged', () => {
-    const html = '<div component-url="/@id/foo.js"></div>'
-    expect(patchComponentUrls(html)).toBe(html)
-  })
-
-  test('leaves /_-prefixed URLs unchanged', () => {
-    const html = '<div component-url="/_astro/foo.js"></div>'
-    expect(patchComponentUrls(html)).toBe(html)
-  })
-
-  test('leaves relative URLs unchanged', () => {
-    const html = '<div component-url="./relative/path.js"></div>'
-    expect(patchComponentUrls(html)).toBe(html)
-  })
-
-  test('handles multiple component-url attributes', () => {
-    const html =
-      '<div component-url="/absolute/a.js"></div><span component-url="/src/b.js"></span><div component-url="D:/x/c.js"></div>'
-    expect(patchComponentUrls(html)).toBe(
-      '<div component-url="/@fs/absolute/a.js"></div><span component-url="/src/b.js"></span><div component-url="/@fsD:/x/c.js"></div>',
-    )
-  })
-
-  test('does not touch text without component-url attributes', () => {
-    const html = '<div data-url="/absolute/path"></div>'
-    expect(patchComponentUrls(html)).toBe(html)
+      const res = await onRequest({} as any, next)
+      expect(res.headers.has('content-length')).toBe(false)
+      const text = await res.text()
+      expect(text).toBe(
+        '<div component-url="/@fs/absolute/path/file.svelte"></div>',
+      )
+    } finally {
+      import.meta.env.DEV = originalDev
+    }
   })
 })

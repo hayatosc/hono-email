@@ -1,6 +1,6 @@
 import type { APIRoute, GetStaticPaths } from 'astro'
 import { getCollection } from 'astro:content'
-import { renderToReadableStream } from 'hono/jsx/dom/server'
+import { renderToReadableStream } from 'hono/jsx/streaming'
 import { render } from 'takumi-js'
 
 import { OgImage } from '../../components/og-image.js'
@@ -40,19 +40,29 @@ export const getStaticPaths = (async () => {
 }) satisfies GetStaticPaths
 
 export const GET: APIRoute<OgProps, { slug: string }> = async ({ props }) => {
-  const stream = await renderToReadableStream(OgImage(props))
-  const html = await new Response(stream).text()
+  try {
+    const stream = await renderToReadableStream(OgImage(props))
+    const html = await new Response(stream).text()
 
-  const png = await render(html, {
-    width: CANVAS_WIDTH,
-    height: CANVAS_HEIGHT,
-    format: 'png',
-  })
+    const png = await render(html, {
+      width: CANVAS_WIDTH,
+      height: CANVAS_HEIGHT,
+      format: 'png',
+    })
 
-  return new Response(new Uint8Array(png), {
-    headers: {
-      'Cache-Control': 'public, max-age=86400, stale-while-revalidate=604800',
-      'Content-Type': 'image/png',
-    },
-  })
+    return new Response(new Uint8Array(png), {
+      headers: {
+        'Cache-Control': 'public, max-age=86400, stale-while-revalidate=604800',
+        'Content-Type': 'image/png',
+      },
+    })
+  } catch (error) {
+    console.error('Failed to render OG image:', error)
+    return new Response('Failed to render OG image', {
+      status: 500,
+      headers: {
+        'Content-Type': 'text/plain',
+      },
+    })
+  }
 }
