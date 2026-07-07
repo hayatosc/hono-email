@@ -1,6 +1,6 @@
 /**
  * Fetches the latest caniemail.com API data and regenerates
- * `packages/core/src/validate/caniemail-data.json`.
+ * `packages/core/src/validate/caniemail-data.ts`.
  *
  * Usage:
  *   bun run packages/core/scripts/update-caniemail-data.ts
@@ -226,22 +226,14 @@ const generateDataFile = (apiData: CaniemailApiData): DataFile => {
           ? `The '${key}' attribute isn't supported in HTML email strict mode.`
           : `The '${key}' attribute has limited support in HTML email strict mode.`
 
-      if (status === 'unsupported') {
-        tables.disallowedAttributes[key] = { message, url }
-      } else {
-        tables.warningAttributes[key] = { message, url }
-      }
+      tables.warningAttributes[key] = { message, url }
     } else if (kind === 'image-format') {
       const message =
         status === 'unsupported'
           ? `The '${key}' image format isn't supported in HTML email strict mode.`
           : `The '${key}' image format has limited support in HTML email strict mode.`
 
-      if (status === 'unsupported') {
-        tables.disallowedImageFormats[key] = { message, url }
-      } else {
-        tables.warningImageFormats[key] = { message, url }
-      }
+      tables.warningImageFormats[key] = { message, url }
     }
   }
 

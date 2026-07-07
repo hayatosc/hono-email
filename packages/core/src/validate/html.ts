@@ -140,13 +140,14 @@ const detectImageFormats = (src: string | undefined, srcset: string | undefined)
   const formats = new Set<string>()
   if (src) {
     const trimmedSrc = src.trim()
-    if (trimmedSrc.startsWith('data:')) {
+    const normalizedSrc = trimmedSrc.toLowerCase()
+    if (normalizedSrc.startsWith('data:')) {
       formats.add('base64')
-      if (trimmedSrc.includes('image/webp')) formats.add('webp')
-      if (trimmedSrc.includes('image/avif')) formats.add('avif')
-      if (trimmedSrc.includes('image/svg+xml')) formats.add('svg')
+      if (normalizedSrc.includes('image/webp')) formats.add('webp')
+      if (normalizedSrc.includes('image/avif')) formats.add('avif')
+      if (normalizedSrc.includes('image/svg+xml')) formats.add('svg')
     } else {
-      const path = trimmedSrc.split('?')[0] ?? ''
+      const path = (trimmedSrc.split(/[?#]/)[0] ?? '').toLowerCase()
       if (path.endsWith('.webp')) formats.add('webp')
       if (path.endsWith('.avif')) formats.add('avif')
       if (path.endsWith('.svg')) formats.add('svg')
@@ -158,13 +159,14 @@ const detectImageFormats = (src: string | undefined, srcset: string | undefined)
       .map((s) => s.trim().split(/\s+/)[0])
       .filter((s): s is string => Boolean(s))
     for (const url of urls) {
-      if (url.startsWith('data:')) {
+      const normalizedUrl = url.toLowerCase()
+      if (normalizedUrl.startsWith('data:')) {
         formats.add('base64')
-        if (url.includes('image/webp')) formats.add('webp')
-        if (url.includes('image/avif')) formats.add('avif')
-        if (url.includes('image/svg+xml')) formats.add('svg')
+        if (normalizedUrl.includes('image/webp')) formats.add('webp')
+        if (normalizedUrl.includes('image/avif')) formats.add('avif')
+        if (normalizedUrl.includes('image/svg+xml')) formats.add('svg')
       } else {
-        const path = url.split('?')[0] ?? ''
+        const path = (url.split(/[?#]/)[0] ?? '').toLowerCase()
         if (path.endsWith('.webp')) formats.add('webp')
         if (path.endsWith('.avif')) formats.add('avif')
         if (path.endsWith('.svg')) formats.add('svg')
@@ -190,6 +192,7 @@ const validateUnsafeAttributes = (
       const disallowedAttr = tables.disallowedAttributes[attributeName]
       if (disallowedAttr) {
         warnings.add(`${disallowedAttr.message} See: ${disallowedAttr.url}`)
+        throw new Error(`${disallowedAttr.message} See: ${disallowedAttr.url}`)
       }
 
       const warningAttr = tables.warningAttributes[attributeName]
@@ -247,6 +250,7 @@ const validateUnsafeAttributes = (
         const disallowedImg = tables.disallowedImageFormats[format]
         if (disallowedImg) {
           warnings.add(`${disallowedImg.message} See: ${disallowedImg.url}`)
+          throw new Error(`${disallowedImg.message} See: ${disallowedImg.url}`)
         }
         const warningImg = tables.warningImageFormats[format]
         if (warningImg) {
@@ -377,7 +381,7 @@ const collectCssWarnings = (
   }
 
   if (warningClients.length > 0) {
-    for (const [namespacedKey] of Object.entries(clientData)) {
+    for (const namespacedKey of Object.keys(clientData)) {
       if (!namespacedKey.startsWith('css-at-rule:')) continue
       const atRule = namespacedKey.slice('css-at-rule:'.length)
       if (!normalizedCssText.includes(atRule)) continue

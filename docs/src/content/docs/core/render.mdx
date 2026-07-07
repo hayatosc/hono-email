@@ -53,9 +53,9 @@ Enable strict email validation. When `true`, `render()` throws on invalid markup
 
 ### `warningClients` <Badge text="Optional" variant="note" size="small" />
 
-**Type:** `('outlook' | 'gmail' | 'apple-mail' | 'yahoo')[]` · **Default:** `['outlook', 'gmail', 'apple-mail', 'yahoo']`
+**Type:** `('outlook' | 'gmail' | 'apple-mail' | 'yahoo')[]` · **Default:** `[]`
 
-Specify which email clients to check for compatibility during validation. Unrecognized features (HTML tags, attributes, CSS declarations, or image formats) for the specified clients will trigger warnings or errors. See [Strict Mode](/core/strict-mode/).
+Specify which email clients to check for compatibility during validation. When set, emits additional per-client compatibility warnings during strict validation for features that are unsupported or have partial support in the specified clients. See [Strict Mode](/core/strict-mode/).
 
 ### `onWarning` <Badge text="Optional" variant="note" size="small" />
 

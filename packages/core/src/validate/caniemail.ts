@@ -3,7 +3,7 @@
  *
  * This module defines how caniemail feature slugs map to validation keys used
  * by `hono-email`. The mapping is consumed both by the runtime validator and
- * by the update script that regenerates `caniemail-data.json`.
+ * by the update script that regenerates `caniemail-data.ts`.
  */
 
 export type CaniemailApiData = {

@@ -15,29 +15,22 @@ The validation engine checks the following items:
 - **CSS Properties & At-Rules**: Unsupported declarations (like `display: grid`) or risky layouts.
 - **Image Formats**: Compatibility checks for image formats such as `webp`, `avif`, `svg`, and `base64`.
 
-## Target Clients
+## Global Compatibility Thresholds
 
-By default, `hono-email` validates compatibility against the major email clients:
-
-- `outlook`
-- `gmail`
-- `apple-mail`
-- `yahoo`
-
-If a feature is completely unsupported (marked as `'n'` in caniemail.com) on any of the target clients, it will throw an error or warning depending on your configuration.
+By default, `hono-email` checks compatibility using global support ratios derived from [caniemail.com](https://www.caniemail.com/). Features that have extremely poor support across all clients will trigger strict-mode errors (blocking render) or compatibility warnings.
 
 ## Warning Clients Configuration
 
-You can customize which email clients to validate against by configuring the `warningClients` option.
+To get additional client-specific compatibility warnings for features that are unsupported or only partially supported in certain environments, configure the `warningClients` option:
 
 ```tsx
 const result = await render(<MyEmail />, {
   strict: true,
-  warningClients: ['gmail', 'apple-mail'], // Only validate for Gmail and Apple Mail
+  warningClients: ['gmail', 'apple-mail'], // Get extra warnings for Gmail and Apple Mail
 })
 ```
 
-By default, all four major clients are evaluated: `['outlook', 'gmail', 'apple-mail', 'yahoo']`.
+By default, `warningClients` is `[]` (no additional client-specific warnings are generated unless configured).
 
 ## Errors & Warnings Behavior
 
