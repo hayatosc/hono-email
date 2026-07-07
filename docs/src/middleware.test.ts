@@ -52,23 +52,18 @@ describe('middleware onRequest', () => {
     const originalDev = import.meta.env.DEV
     import.meta.env.DEV = true
     try {
-      const mockResponse = new Response(
-        '<div component-url="/absolute/path/file.svelte"></div>',
-        {
-          headers: {
-            'content-type': 'text/html',
-            'content-length': '56',
-          },
+      const mockResponse = new Response('<div component-url="/absolute/path/file.svelte"></div>', {
+        headers: {
+          'content-type': 'text/html',
+          'content-length': '56',
         },
-      )
+      })
       const next = () => Promise.resolve(mockResponse)
 
       const res = await onRequest({} as any, next)
       expect(res.headers.has('content-length')).toBe(false)
       const text = await res.text()
-      expect(text).toBe(
-        '<div component-url="/@fs/absolute/path/file.svelte"></div>',
-      )
+      expect(text).toBe('<div component-url="/@fs/absolute/path/file.svelte"></div>')
     } finally {
       import.meta.env.DEV = originalDev
     }
