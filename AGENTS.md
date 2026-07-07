@@ -46,8 +46,9 @@
 ## Strict-mode notes
 
 - Strict mode is enabled by default.
-- Validation checks include unsupported tags, risky CSS declarations/properties, style placement, anchor href requirements, stylesheet links, and image alt warnings.
+- Validation checks include dynamic HTML tags, attributes, CSS declarations/properties, and image formats (like `webp`, `avif`, `svg`, `base64`) using compat data from `caniemail.com`.
 - HTML comments are ignored for normal comments, but Outlook conditional-comment payloads are still validated.
+- `warningClients` (`('outlook' | 'gmail' | 'apple-mail' | 'yahoo')[]`) config option controls which email clients are checked during validation.
 - Errors throw and reject `render()`; warnings are collected on `RenderResult.warnings`. `onWarning` (`'warn'` default | `'error'` | `'silent'` | callback) controls how warnings are surfaced, so tests can fail on them.
 - Tailwind combinator/pseudo-element variants that get dropped are reported as warnings through the same channel (markers encoded in `packages/core/src/tailwind/`, extracted in `render()`).
 

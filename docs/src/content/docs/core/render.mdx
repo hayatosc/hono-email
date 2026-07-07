@@ -51,6 +51,12 @@ type RenderResult = {
 
 Enable strict email validation. When `true`, `render()` throws on invalid markup and collects compatibility warnings. See [Strict Mode](/core/strict-mode/).
 
+### `warningClients` <Badge text="Optional" variant="note" size="small" />
+
+**Type:** `('outlook' | 'gmail' | 'apple-mail' | 'yahoo')[]` · **Default:** `['outlook', 'gmail', 'apple-mail', 'yahoo']`
+
+Specify which email clients to check for compatibility during validation. Unrecognized features (HTML tags, attributes, CSS declarations, or image formats) for the specified clients will trigger warnings or errors. See [Strict Mode](/core/strict-mode/).
+
 ### `onWarning` <Badge text="Optional" variant="note" size="small" />
 
 **Type:** `'warn' | 'error' | 'silent' | ((warning: string) => void)` · **Default:** `'warn'`
