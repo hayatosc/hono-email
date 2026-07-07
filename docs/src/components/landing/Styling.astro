@@ -134,7 +134,7 @@ const approaches = [
     color: var(--sl-color-gray-3);
   }
   .code {
-    overflow-x: auto;
+    overflow-x: hidden;
     mask-image: linear-gradient(to right, #000 calc(100% - 1.5rem), transparent);
   }
   /* Expressive Code (frame="none") — strip its chrome so it sits inside our
@@ -175,7 +175,13 @@ const approaches = [
     }
   }
 
-  @media (max-width: 60rem) {
+  @media (max-width: 75rem) {
+    .approaches {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width: 48rem) {
     .approaches {
       grid-template-columns: 1fr;
       max-width: 32rem;

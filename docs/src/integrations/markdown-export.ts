@@ -145,17 +145,8 @@ function buildLlmsFull(pages: { pathname: string; markdown: string }[]): string 
 }
 
 async function cleanDir(dir: string): Promise<void> {
-  try {
-    const entries = await readdir(dir, { withFileTypes: true })
-    for (const entry of entries) {
-      const fullPath = join(dir, entry.name)
-      await rm(fullPath, { recursive: true, force: true })
-    }
-  } catch (err) {
-    if (!(err && typeof err === 'object' && 'code' in err && err.code === 'ENOENT')) {
-      throw err
-    }
-  }
+  await rm(dir, { recursive: true, force: true })
+  await mkdir(dir, { recursive: true })
 }
 
 async function generateIntermediate(
@@ -163,7 +154,6 @@ async function generateIntermediate(
   outputRoot: string,
 ): Promise<MarkdownManifest> {
   const pagesDir = join(outputRoot, PAGES_DIR)
-  await mkdir(pagesDir, { recursive: true })
   await cleanDir(pagesDir)
 
   const pages: MarkdownPage[] = []
@@ -347,9 +337,20 @@ export function markdownExport(): AstroIntegration {
         const manifest = await readManifest(join(outputRoot, MANIFEST_FILE))
         const llmsPages: { pathname: string; markdown: string }[] = []
 
+        // Regenerate intermediate files in case a second config:setup run
+        // (triggered by Vite dependency optimization) cleaned and rewrote the
+        // cache directory between setup and build:done.
+        await generateIntermediate(docsRoot, outputRoot)
+
         for (const page of manifest.pages) {
           const sourcePath = join(outputRoot, page.outputFile)
           const targetPath = join(buildOutputRoot, pathnameToMarkdownPath(page.pathname))
+
+          if (!(await exists(sourcePath))) {
+            logger.warn(`Intermediate file missing for ${page.pathname}, skipping: ${sourcePath}`)
+            continue
+          }
+
           const markdown = await readFile(sourcePath, 'utf-8')
           const html = await readBuiltHtml(buildOutputRoot, page.pathname)
           const builtImageUrls = html ? extractBuiltImageUrls(html) : []
