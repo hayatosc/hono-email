@@ -184,8 +184,16 @@ starlight-toc a {
   box-shadow: none;
 }
 
-/* ── Asides / callouts ──────────────────────────────────────── */
+/* ── Asides / callouts ──────────────────────────────────────────────── */
 .starlight-aside {
   border-radius: 0.5rem;
   border-width: 1px;
+}
+
+/* ── Landing page ────────────────────────────────────────────────────── */
+/* Collapse the empty first ContentPanel that Starlight generates when
+   template: 'splash' is used without a hero frontmatter. This eliminates
+   the visual gap between the site header and the landing hero section. */
+.content-panel:first-child:not(:has(.sl-container > *)) {
+  padding: 0;
 }

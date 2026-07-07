@@ -39,11 +39,13 @@ export const prerender = true
     --lp-accent-soft: hsl(18 90% 56% / 0.14);
     --lp-radius: 0.85rem;
     --lp-maxw: 70rem;
-    /* full-bleed out of Starlight's centered content column */
-    width: 100vw;
-    margin-inline: calc(50% - 50vw);
+    /* full-bleed out of Starlight's centered content column;
+       use 100% + negative margin instead of 100vw to avoid
+       triggering horizontal scroll when a scrollbar is visible */
+    width: calc(100% + 2 * var(--sl-content-pad-x, 1rem));
+    margin-inline: calc(-1 * var(--sl-content-pad-x, 1rem));
     overflow-x: clip;
-    /* pull the hero up under the site header */
-    margin-top: clamp(-2rem, -1.5vw, -1rem);
+    /* remove top gap coming from ContentPanel's 1.5rem padding-block */
+    margin-top: -1.5rem;
   }
 </style>
