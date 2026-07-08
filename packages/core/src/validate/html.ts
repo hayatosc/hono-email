@@ -542,7 +542,9 @@ const validateStyleTags = (
       const closeIndex = lowerHtml.indexOf('</style>', tag.endIndex)
       const tagContent = closeIndex >= 0 ? html.slice(tag.endIndex, closeIndex) : ''
 
-      if (tagContent.includes('supported-color-schemes:') || tagContent.includes('font-family:')) {
+      const hasAllowedProperty =
+        /font-family\s*:/i.test(tagContent) || /supported-color-schemes\s*:/i.test(tagContent)
+      if (hasAllowedProperty) {
         continue
       }
 

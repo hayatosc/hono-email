@@ -90,9 +90,13 @@ export const fetchWithTimeoutAndRetry = async <T extends { signal?: AbortSignal 
     const controller = new AbortController()
     let timeoutId: ReturnType<typeof setTimeout> | undefined
 
+    const signal = init.signal
+      ? AbortSignal.any([init.signal, controller.signal])
+      : controller.signal
+
     const promise = fetchFn(input, {
       ...init,
-      signal: controller.signal,
+      signal,
     })
 
     if (timeout > 0) {
@@ -107,8 +111,32 @@ export const fetchWithTimeoutAndRetry = async <T extends { signal?: AbortSignal 
         clearTimeout(timeoutId)
       }
 
-      if (response.status >= 500 && attempt < maxAttempts) {
-        const delay = Math.min(initialInterval * Math.pow(backoffFactor, attempt - 1), maxInterval)
+      const shouldRetry =
+        (response.status >= 500 || response.status === 429) && attempt < maxAttempts
+      if (shouldRetry) {
+        if (response.body) {
+          try {
+            await response.body.cancel()
+          } catch {
+            // Ignore error during body cancellation
+          }
+        }
+
+        let delay = Math.min(initialInterval * Math.pow(backoffFactor, attempt - 1), maxInterval)
+
+        const retryAfter = response.headers.get('retry-after')
+        if (retryAfter) {
+          const seconds = parseInt(retryAfter, 10)
+          if (!isNaN(seconds)) {
+            delay = seconds * 1000
+          } else {
+            const dateMs = Date.parse(retryAfter)
+            if (!isNaN(dateMs)) {
+              delay = Math.max(0, dateMs - Date.now())
+            }
+          }
+        }
+
         await new Promise((resolve) => setTimeout(resolve, delay))
         continue
       }
@@ -117,6 +145,10 @@ export const fetchWithTimeoutAndRetry = async <T extends { signal?: AbortSignal 
     } catch (error: unknown) {
       if (timeoutId !== undefined) {
         clearTimeout(timeoutId)
+      }
+
+      if (init.signal?.aborted) {
+        throw error
       }
 
       if (attempt < maxAttempts) {

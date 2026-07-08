@@ -1,4 +1,4 @@
-const TOKEN_PATTERN = /<!--[\s\S]*?-->|<[^>]+>|[^<]+/g
+const TOKEN_PATTERN = /<!--[\s\S]*?-->|<(?:[^>"']|"[^"]*"|'[^']*')*>|[^<]+/g
 const BODY_OPENING_TAG_PATTERN = /<body\b[^>]*>/i
 
 export const relocatePreview = (html: string): string => {
