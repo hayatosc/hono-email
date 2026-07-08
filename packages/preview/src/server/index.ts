@@ -17,6 +17,7 @@ import { createApiRoutes } from './routes.js'
 export type PreviewServerOptions = {
   dir: string
   port: number
+  host?: string
 }
 
 export type PreviewServer = {
@@ -166,7 +167,7 @@ export function serveStaticAsset(rootDir: string, pathname: string, res: AssetRe
 const TEMPLATE_EXTENSION = /\.(tsx|jsx)$/
 
 export async function startPreviewServer(options: PreviewServerOptions): Promise<PreviewServer> {
-  const { dir, port } = options
+  const { dir, port, host = '127.0.0.1' } = options
 
   const rootDir = process.cwd()
   const templateDir = resolve(rootDir, dir)
@@ -352,12 +353,15 @@ export async function startPreviewServer(options: PreviewServerOptions): Promise
 
   await new Promise<void>((resolve, reject) => {
     server.on('error', reject)
-    server.listen(port, '127.0.0.1', () => resolve())
+    server.listen(port, host, () => resolve())
   })
 
-  vite.config.logger.info(`\n  hono-email preview ready → http://localhost:${port}\n`, {
-    timestamp: false,
-  })
+  vite.config.logger.info(
+    `\n  hono-email preview ready → http://${host === '0.0.0.0' ? 'localhost' : host}:${port}\n`,
+    {
+      timestamp: false,
+    },
+  )
 
   return {
     close: async () => {
