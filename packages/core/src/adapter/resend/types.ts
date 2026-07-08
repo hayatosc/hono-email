@@ -1,10 +1,12 @@
 import type { EmailAttachmentLimits } from '../index'
 import type { ProviderEmailAddressField } from '../provider'
+import type { RequestRetryOptions } from '../utils'
 
 export type ResendFetchInit = {
   body: string
   headers: Record<string, string>
   method: 'POST'
+  signal?: AbortSignal
 }
 
 export type ResendFetch = (input: string, init: ResendFetchInit) => Promise<Response>
@@ -35,6 +37,8 @@ export type ResendAdapterOptions = {
   fetch?: ResendFetch
   limits?: EmailAttachmentLimits
   userAgent?: string
+  timeout?: number
+  retry?: RequestRetryOptions | boolean
 }
 
 export type ResendSuccessResponse = {

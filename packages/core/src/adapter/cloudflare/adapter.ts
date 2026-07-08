@@ -21,7 +21,6 @@ import {
 
 const REST_MESSAGE_ID_PREFIX = 'cloudflare-rest'
 
-
 const asSingleAddressPath = (
   addresses: EmailAddress | EmailAddress[] | undefined,
   fieldName: string,
@@ -158,7 +157,6 @@ const buildWorkersPayload = (
   }
 }
 
-
 const buildRestMessageId = (message: EmailMessage): string => {
   if (message.messageId !== undefined) {
     return message.messageId
@@ -252,8 +250,8 @@ export const CloudflareEmailAdapter = (options: CloudflareEmailAdapterOptions): 
       if (error instanceof CloudflareEmailConnectorError) {
         return failedReceipt(error.errorMessages, {
           rejected: error.rejected ?? recipients,
-          response: error.response,
           cause: error.cause,
+          ...(error.response !== undefined ? { response: error.response } : {}),
         })
       }
 

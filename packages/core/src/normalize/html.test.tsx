@@ -16,7 +16,7 @@ describe('document semantics', () => {
       </Html>,
     )
 
-    expect(html).toContain('<head><title>Welcome</title></head><body>')
+    expect(html).toContain('<title>Welcome</title></head><body>')
     expect(html).toContain('data-hono-email-preview="true"')
     expect(html).toContain('<body><div data-hono-email-preview="true"')
     expect(html).toContain('</div><p>Hello</p></body>')

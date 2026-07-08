@@ -9,7 +9,7 @@ import type {
 } from '../index'
 import { formatEmailAddress, toAddressList, validateEmailHeaders } from '../message'
 import { collectProviderRecipients as collectRecipients, failedReceipt } from '../provider'
-import { bytesToBase64, fetchWithTimeoutAndRetry } from '../utils'
+import { bytesToBase64 } from '../utils'
 
 export type {
   EmailAddress,
@@ -69,7 +69,6 @@ const validateApiBaseUrl = (url: string): void => {
   throw new Error('Mailgun adapter requires HTTPS. API tokens must not be sent over plaintext.')
 }
 
-
 const getFetch = (fetchImplementation: MailgunFetch | undefined): MailgunFetch => {
   const resolvedFetch = fetchImplementation ?? globalThis.fetch
   if (resolvedFetch === undefined) {
@@ -119,7 +118,6 @@ const asErrorMessage = (value: unknown, response: Response, body: string): strin
 
   return `Mailgun API returned ${response.status} ${response.statusText}.`
 }
-
 
 const appendAddressFields = (
   form: FormData,

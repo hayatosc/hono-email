@@ -1,6 +1,7 @@
 import { encodeAttachmentContentBase64, resolveEmailAttachments } from '../attachment'
 import type { EmailAdapter, EmailAddress, EmailMessage, SendEmailReceipt } from '../index'
 import { formatEmailAddress, toAddressList, validateEmailHeaders } from '../message'
+import { fetchWithTimeoutAndRetry, type RequestRetryOptions } from '../utils'
 import { collectProviderRecipients as collectRecipients, failedReceipt } from '../provider'
 
 export type {
@@ -25,6 +26,7 @@ export type SendGridFetchInit = {
   body: string
   headers: Record<string, string>
   method: 'POST'
+  signal?: AbortSignal
 }
 
 export type SendGridFetch = (input: string, init: SendGridFetchInit) => Promise<Response>
@@ -68,6 +70,8 @@ export type SendGridAdapterOptions = {
     maxAttachmentSize?: number
   }
   userAgent?: string
+  timeout?: number
+  retry?: RequestRetryOptions | boolean
 }
 
 export type SendGridErrorResponse = {
@@ -91,7 +95,6 @@ const validateApiBaseUrl = (url: string): void => {
   }
   throw new Error('SendGrid adapter requires HTTPS. API tokens must not be sent over plaintext.')
 }
-
 
 const getFetch = (fetchImplementation: SendGridFetch | undefined): SendGridFetch => {
   const resolvedFetch = fetchImplementation ?? globalThis.fetch
@@ -148,7 +151,6 @@ const asErrorMessages = (value: unknown, response: Response, body: string): stri
 
   return [`SendGrid API returned ${response.status} ${response.statusText}.`]
 }
-
 
 const asMailAddress = (address: EmailAddress): SendGridMailAddress => {
   formatEmailAddress(address)

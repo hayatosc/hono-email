@@ -3,7 +3,13 @@ import {
   type ResolvedEmailAttachment,
   resolveEmailAttachments,
 } from '../attachment'
-import type { EmailAddress, EmailAttachmentLimits, EmailHeaders, EmailMessage, SendEmailReceipt } from '../index'
+import type {
+  EmailAddress,
+  EmailAttachmentLimits,
+  EmailHeaders,
+  EmailMessage,
+  SendEmailReceipt,
+} from '../index'
 import { addressToPath, formatEmailAddress, toAddressList, validateEmailHeaders } from '../message'
 
 export type {
@@ -131,4 +137,3 @@ export const failedReceipt = (
   ...(options.response !== undefined ? { response: options.response } : {}),
   ...(options.cause !== undefined ? { cause: options.cause } : {}),
 })
-

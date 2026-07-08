@@ -48,3 +48,85 @@ export const base64ToBytes = (value: string, invalidDataErrorMessage: string): U
 }
 
 export const normalizeLineEndings = (value: string): string => value.replace(/\r\n|\r|\n/g, CRLF)
+
+export type RequestRetryOptions = {
+  maxAttempts?: number
+  initialInterval?: number
+  maxInterval?: number
+  backoffFactor?: number
+}
+
+const DEFAULT_TIMEOUT = 30000
+const DEFAULT_MAX_ATTEMPTS = 3
+const DEFAULT_INITIAL_INTERVAL = 1000
+const DEFAULT_MAX_INTERVAL = 10000
+const DEFAULT_BACKOFF_FACTOR = 2
+
+export const fetchWithTimeoutAndRetry = async <T extends { signal?: AbortSignal }>(
+  fetchFn: (input: string, init: T) => Promise<Response>,
+  input: string,
+  init: T,
+  options: {
+    timeout?: number
+    retry?: RequestRetryOptions | boolean
+  },
+): Promise<Response> => {
+  const timeout = options.timeout ?? DEFAULT_TIMEOUT
+  const retryOpts =
+    typeof options.retry === 'boolean'
+      ? options.retry
+        ? {}
+        : { maxAttempts: 1 }
+      : (options.retry ?? {})
+
+  const maxAttempts = retryOpts.maxAttempts ?? DEFAULT_MAX_ATTEMPTS
+  const initialInterval = retryOpts.initialInterval ?? DEFAULT_INITIAL_INTERVAL
+  const maxInterval = retryOpts.maxInterval ?? DEFAULT_MAX_INTERVAL
+  const backoffFactor = retryOpts.backoffFactor ?? DEFAULT_BACKOFF_FACTOR
+
+  let attempt = 0
+  while (true) {
+    attempt++
+    const controller = new AbortController()
+    let timeoutId: ReturnType<typeof setTimeout> | undefined
+
+    const promise = fetchFn(input, {
+      ...init,
+      signal: controller.signal,
+    })
+
+    if (timeout > 0) {
+      timeoutId = setTimeout(() => {
+        controller.abort()
+      }, timeout)
+    }
+
+    try {
+      const response = await promise
+      if (timeoutId !== undefined) {
+        clearTimeout(timeoutId)
+      }
+
+      if (response.status >= 500 && attempt < maxAttempts) {
+        const delay = Math.min(initialInterval * Math.pow(backoffFactor, attempt - 1), maxInterval)
+        await new Promise((resolve) => setTimeout(resolve, delay))
+        continue
+      }
+
+      return response
+    } catch (error: unknown) {
+      if (timeoutId !== undefined) {
+        clearTimeout(timeoutId)
+      }
+
+      if (attempt < maxAttempts) {
+        const delay = Math.min(initialInterval * Math.pow(backoffFactor, attempt - 1), maxInterval)
+        await new Promise((resolve) => setTimeout(resolve, delay))
+        continue
+      }
+
+      throw error
+    }
+  }
+}
+

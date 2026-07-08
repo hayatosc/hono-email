@@ -15,7 +15,9 @@ describe('Font', () => {
       </Html>,
     )
 
-    expect(html).toContain("<style>* { font-family: 'Roboto', 'Verdana', sans-serif; }</style>")
+    expect(html).toContain(
+      "<style data-hono-email-head=\"true\">* { font-family: 'Roboto', 'Verdana', sans-serif; }</style>",
+    )
   })
 
   test('renders @font-face when webFont is provided', async () => {
@@ -77,7 +79,6 @@ describe('Font', () => {
 
   test.skip('is rejected outside head in strict mode', async () => {
     await expect(
-
       render(
         <Html>
           <Body>
