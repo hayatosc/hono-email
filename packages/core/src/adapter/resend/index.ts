@@ -1,5 +1,6 @@
 import type { EmailAdapter, EmailMessage, SendEmailReceipt } from '../index'
 import { buildProviderEmailPayload, collectProviderRecipients } from '../provider'
+import { fetchWithTimeoutAndRetry } from '../utils'
 import type {
   ResendAdapterOptions,
   ResendAttachment,
@@ -183,15 +184,23 @@ export const ResendAdapter = (options: ResendAdapterOptions): EmailAdapter => ({
       const fetchImplementation = getFetch(options.fetch)
       const apiBaseUrl = options.apiBaseUrl ?? DEFAULT_API_BASE_URL
       validateApiBaseUrl(apiBaseUrl)
-      const response = await fetchImplementation(`${apiBaseUrl.replace(/\/$/u, '')}/emails`, {
-        body: JSON.stringify(payload),
-        headers: {
-          Authorization: `Bearer ${options.apiKey}`,
-          'Content-Type': 'application/json',
-          'User-Agent': options.userAgent ?? DEFAULT_USER_AGENT,
+      const response = await fetchWithTimeoutAndRetry(
+        fetchImplementation,
+        `${apiBaseUrl.replace(/\/$/u, '')}/emails`,
+        {
+          body: JSON.stringify(payload),
+          headers: {
+            Authorization: `Bearer ${options.apiKey}`,
+            'Content-Type': 'application/json',
+            'User-Agent': options.userAgent ?? DEFAULT_USER_AGENT,
+          },
+          method: 'POST',
         },
-        method: 'POST',
-      })
+        {
+          ...(options.timeout !== undefined ? { timeout: options.timeout } : {}),
+          ...(options.retry !== undefined ? { retry: options.retry } : {}),
+        },
+      )
       const body = await readResponseBody(response)
       const data = parseJson(body)
 

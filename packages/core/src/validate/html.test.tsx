@@ -539,4 +539,13 @@ describe('render strict mode', () => {
     expect(warnings.some((w) => w.includes("'loading' attribute"))).toBe(true)
     expect(warnings.some((w) => w.includes("'webp' image format"))).toBe(true)
   })
+
+  test('warns about raw style tags', () => {
+    const warnings = validateHtml(
+      '<html lang="en"><head><meta charset="utf-8" /><style>p { color: red; }</style></head><body>Hello</body></html>',
+    )
+    expect(warnings.some((w) => w.includes('Raw <style> tags are not automatically inlined'))).toBe(
+      true,
+    )
+  })
 })

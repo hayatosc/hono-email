@@ -1,6 +1,9 @@
 import { encodeAttachmentContentBase64, resolveEmailAttachments } from '../attachment'
 import type { EmailAdapter, EmailAddress, EmailMessage, SendEmailReceipt } from '../index'
-import { addressToPath, formatEmailAddress, toAddressList, validateEmailHeaders } from '../message'
+import { formatEmailAddress, toAddressList, validateEmailHeaders } from '../message'
+import { collectProviderRecipients as collectRecipients, failedReceipt } from '../provider'
+import { fetchWithTimeoutAndRetry } from '../utils'
+import type { RequestRetryOptions } from '../utils'
 
 export type {
   EmailAddress,
@@ -24,6 +27,7 @@ export type SendGridFetchInit = {
   body: string
   headers: Record<string, string>
   method: 'POST'
+  signal?: AbortSignal
 }
 
 export type SendGridFetch = (input: string, init: SendGridFetchInit) => Promise<Response>
@@ -67,6 +71,8 @@ export type SendGridAdapterOptions = {
     maxAttachmentSize?: number
   }
   userAgent?: string
+  timeout?: number
+  retry?: RequestRetryOptions | boolean
 }
 
 export type SendGridErrorResponse = {
@@ -90,23 +96,6 @@ const validateApiBaseUrl = (url: string): void => {
   }
   throw new Error('SendGrid adapter requires HTTPS. API tokens must not be sent over plaintext.')
 }
-
-const failedReceipt = (
-  errorMessages: string[],
-  options: {
-    accepted?: string[]
-    cause?: unknown
-    rejected?: string[]
-    response?: string
-  } = {},
-): SendEmailReceipt => ({
-  successful: false,
-  accepted: options.accepted ?? [],
-  rejected: options.rejected ?? [],
-  errorMessages,
-  ...(options.response !== undefined ? { response: options.response } : {}),
-  ...(options.cause !== undefined ? { cause: options.cause } : {}),
-})
 
 const getFetch = (fetchImplementation: SendGridFetch | undefined): SendGridFetch => {
   const resolvedFetch = fetchImplementation ?? globalThis.fetch
@@ -162,16 +151,6 @@ const asErrorMessages = (value: unknown, response: Response, body: string): stri
   }
 
   return [`SendGrid API returned ${response.status} ${response.statusText}.`]
-}
-
-const collectRecipients = (message: EmailMessage): string[] => {
-  const recipients: EmailAddress[] = [
-    ...toAddressList(message.to),
-    ...toAddressList(message.cc),
-    ...toAddressList(message.bcc),
-  ]
-
-  return [...new Set(recipients.map(addressToPath))]
 }
 
 const asMailAddress = (address: EmailAddress): SendGridMailAddress => {
@@ -280,15 +259,23 @@ export const SendGridAdapter = (options: SendGridAdapterOptions): EmailAdapter =
       const fetchImplementation = getFetch(options.fetch)
       const apiBaseUrl = options.apiBaseUrl ?? DEFAULT_API_BASE_URL
       validateApiBaseUrl(apiBaseUrl)
-      const response = await fetchImplementation(`${apiBaseUrl.replace(/\/$/u, '')}/v3/mail/send`, {
-        body: JSON.stringify(payload),
-        headers: {
-          Authorization: `Bearer ${options.apiKey}`,
-          'Content-Type': 'application/json',
-          'User-Agent': options.userAgent ?? DEFAULT_USER_AGENT,
+      const response = await fetchWithTimeoutAndRetry(
+        fetchImplementation,
+        `${apiBaseUrl.replace(/\/$/u, '')}/v3/mail/send`,
+        {
+          body: JSON.stringify(payload),
+          headers: {
+            Authorization: `Bearer ${options.apiKey}`,
+            'Content-Type': 'application/json',
+            'User-Agent': options.userAgent ?? DEFAULT_USER_AGENT,
+          },
+          method: 'POST',
         },
-        method: 'POST',
-      })
+        {
+          ...(options.timeout !== undefined ? { timeout: options.timeout } : {}),
+          ...(options.retry !== undefined ? { retry: options.retry } : {}),
+        },
+      )
       const body = await readResponseBody(response)
       const data = parseJson(body)
 

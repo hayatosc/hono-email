@@ -128,5 +128,7 @@ export const renderFontStyleTag = ({
       ].join('')
     : ''
 
-  return raw(`<style>${fontFaceCss}* { font-family: ${familyList}; }</style>`)
+  return raw(
+    `<style data-hono-email-head="true">${fontFaceCss}* { font-family: ${familyList}; }</style>`,
+  )
 }

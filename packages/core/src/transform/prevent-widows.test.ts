@@ -20,4 +20,11 @@ describe('preventWidows', () => {
     const html = '<div data-hono-email-preview="true">Hello world</div>'
     expect(preventWidows(html)).toBe(html)
   })
+
+  test('handles inline HTML tags at the end of the text block', () => {
+    expect(preventWidows('<p>Hello <b>world</b></p>')).toBe('<p>Hello&nbsp;<b>world</b></p>')
+    expect(preventWidows('<p>This is a <i>very <b>bold statement</b></i></p>')).toBe(
+      '<p>This is a <i>very <b>bold&nbsp;statement</b></i></p>',
+    )
+  })
 })

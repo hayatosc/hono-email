@@ -24,6 +24,10 @@ export const preview = defineCommand({
       description: 'Server port',
       default: '3000',
     },
+    host: {
+      type: 'string',
+      description: 'Server host (default: 127.0.0.1)',
+    },
   },
   async run({ args }) {
     const port = Number(args.port)
@@ -36,6 +40,7 @@ export const preview = defineCommand({
       const server = await startPreviewServer({
         dir: args.dir,
         port,
+        host: args.host,
       })
 
       let shuttingDown = false

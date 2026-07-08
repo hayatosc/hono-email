@@ -17,6 +17,7 @@ import { createApiRoutes } from './routes.js'
 export type PreviewServerOptions = {
   dir: string
   port: number
+  host?: string
 }
 
 export type PreviewServer = {
@@ -166,7 +167,7 @@ export function serveStaticAsset(rootDir: string, pathname: string, res: AssetRe
 const TEMPLATE_EXTENSION = /\.(tsx|jsx)$/
 
 export async function startPreviewServer(options: PreviewServerOptions): Promise<PreviewServer> {
-  const { dir, port } = options
+  const { dir, port, host = '127.0.0.1' } = options
 
   const rootDir = process.cwd()
   const templateDir = resolve(rootDir, dir)
@@ -202,29 +203,42 @@ export async function startPreviewServer(options: PreviewServerOptions): Promise
     detectTailwindInPackageJson(rootDir)
 
   if (hasTailwind) {
-    const { default: tailwindcss } = await import('@tailwindcss/vite')
-    plugins.push(tailwindcss())
+    try {
+      const tailwindcssModule = await import('@tailwindcss/vite')
+      const tailwindcss = tailwindcssModule.default
+      const tailwindPlugin = await import('@hono-email/tailwind-plugin')
 
-    const { unplugin, transformTailwindComponentSource } =
-      await import('@hono-email/tailwind-plugin')
-    plugins.push(
-      unplugin.vite({
-        ...(tailwindConfigPath ? { configPath: tailwindConfigPath } : {}),
-        runtimeModuleSpecifier: 'hono-email',
-      }),
-    )
-    plugins.push({
-      name: 'hono-email-preview-loader',
-      enforce: 'pre',
-      load(id) {
-        if (!isTemplateFile(id)) {
-          return null
-        }
-        this.addWatchFile(id)
-        const code = readFileSync(id, 'utf-8')
-        return transformTailwindComponentSource(code, id) ?? code
-      },
-    })
+      if (typeof tailwindcss !== 'function') {
+        throw new Error('Default export of @tailwindcss/vite is not a function')
+      }
+
+      plugins.push(tailwindcss())
+      plugins.push(
+        tailwindPlugin.unplugin.vite({
+          ...(tailwindConfigPath ? { configPath: tailwindConfigPath } : {}),
+          runtimeModuleSpecifier: 'hono-email',
+        }),
+      )
+      plugins.push({
+        name: 'hono-email-preview-loader',
+        enforce: 'pre',
+        load(id) {
+          if (!isTemplateFile(id)) {
+            return null
+          }
+          this.addWatchFile(id)
+          const code = readFileSync(id, 'utf-8')
+          return tailwindPlugin.transformTailwindComponentSource(code, id) ?? code
+        },
+      })
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err)
+      throw new Error(
+        `Tailwind CSS configuration detected, but "@hono-email/tailwind-plugin" or "@tailwindcss/vite" could not be loaded.\n` +
+          `Please make sure they are installed in your project: npm install -D @hono-email/tailwind-plugin @tailwindcss/vite\n` +
+          `Underlying error: ${message}`,
+      )
+    }
   }
 
   plugins.push({
@@ -339,12 +353,15 @@ export async function startPreviewServer(options: PreviewServerOptions): Promise
 
   await new Promise<void>((resolve, reject) => {
     server.on('error', reject)
-    server.listen(port, '127.0.0.1', () => resolve())
+    server.listen(port, host, () => resolve())
   })
 
-  vite.config.logger.info(`\n  hono-email preview ready → http://localhost:${port}\n`, {
-    timestamp: false,
-  })
+  vite.config.logger.info(
+    `\n  hono-email preview ready → http://${host === '0.0.0.0' ? 'localhost' : host}:${port}\n`,
+    {
+      timestamp: false,
+    },
+  )
 
   return {
     close: async () => {

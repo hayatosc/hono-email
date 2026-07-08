@@ -528,6 +528,32 @@ const validateStyleTags = (
   warnings: Set<string>,
   warningClients: EmailClient[],
 ): void => {
+  const lowerHtml = html.toLowerCase()
+
+  for (const tag of openingTags) {
+    if (tag.name !== 'style') {
+      continue
+    }
+
+    const id = tag.attributes.get('id')
+    const isHonoEmailHead = tag.attributes.get('data-hono-email-head') === 'true'
+
+    if (id !== 'hono-css' && !isHonoEmailHead) {
+      const closeIndex = lowerHtml.indexOf('</style>', tag.endIndex)
+      const tagContent = closeIndex >= 0 ? html.slice(tag.endIndex, closeIndex) : ''
+
+      const hasAllowedProperty =
+        /font-family\s*:/i.test(tagContent) || /supported-color-schemes\s*:/i.test(tagContent)
+      if (hasAllowedProperty) {
+        continue
+      }
+
+      warnings.add(
+        'Raw <style> tags are not automatically inlined and will remain in the document head. This may cause styling issues in some email clients. Use inline style props, hono/css, or <Tailwind> for automatically inlined styles.',
+      )
+    }
+  }
+
   for (const cssText of collectStyleTagContents(html, openingTags)) {
     if (cssText.trim() === '') {
       continue

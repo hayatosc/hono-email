@@ -48,3 +48,116 @@ export const base64ToBytes = (value: string, invalidDataErrorMessage: string): U
 }
 
 export const normalizeLineEndings = (value: string): string => value.replace(/\r\n|\r|\n/g, CRLF)
+
+export type RequestRetryOptions = {
+  maxAttempts?: number
+  initialInterval?: number
+  maxInterval?: number
+  backoffFactor?: number
+}
+
+const DEFAULT_TIMEOUT = 30000
+const DEFAULT_MAX_ATTEMPTS = 3
+const DEFAULT_INITIAL_INTERVAL = 1000
+const DEFAULT_MAX_INTERVAL = 10000
+const DEFAULT_BACKOFF_FACTOR = 2
+
+export const fetchWithTimeoutAndRetry = async <T extends { signal?: AbortSignal }>(
+  fetchFn: (input: string, init: T) => Promise<Response>,
+  input: string,
+  init: T,
+  options: {
+    timeout?: number | undefined
+    retry?: RequestRetryOptions | boolean | undefined
+  },
+): Promise<Response> => {
+  const timeout = options.timeout ?? DEFAULT_TIMEOUT
+  const retryOpts =
+    typeof options.retry === 'boolean'
+      ? options.retry
+        ? {}
+        : { maxAttempts: 1 }
+      : (options.retry ?? {})
+
+  const maxAttempts = retryOpts.maxAttempts ?? DEFAULT_MAX_ATTEMPTS
+  const initialInterval = retryOpts.initialInterval ?? DEFAULT_INITIAL_INTERVAL
+  const maxInterval = retryOpts.maxInterval ?? DEFAULT_MAX_INTERVAL
+  const backoffFactor = retryOpts.backoffFactor ?? DEFAULT_BACKOFF_FACTOR
+
+  let attempt = 0
+  while (true) {
+    attempt++
+    const controller = new AbortController()
+    let timeoutId: ReturnType<typeof setTimeout> | undefined
+
+    const signal = init.signal
+      ? AbortSignal.any([init.signal, controller.signal])
+      : controller.signal
+
+    const promise = fetchFn(input, {
+      ...init,
+      signal,
+    })
+
+    if (timeout > 0) {
+      timeoutId = setTimeout(() => {
+        controller.abort()
+      }, timeout)
+    }
+
+    try {
+      const response = await promise
+      if (timeoutId !== undefined) {
+        clearTimeout(timeoutId)
+      }
+
+      const shouldRetry =
+        (response.status >= 500 || response.status === 429) && attempt < maxAttempts
+      if (shouldRetry) {
+        if (response.body) {
+          try {
+            await response.body.cancel()
+          } catch {
+            // Ignore error during body cancellation
+          }
+        }
+
+        let delay = Math.min(initialInterval * Math.pow(backoffFactor, attempt - 1), maxInterval)
+
+        const retryAfter = response.headers.get('retry-after')
+        if (retryAfter) {
+          const seconds = parseInt(retryAfter, 10)
+          if (!isNaN(seconds)) {
+            delay = seconds * 1000
+          } else {
+            const dateMs = Date.parse(retryAfter)
+            if (!isNaN(dateMs)) {
+              delay = Math.max(0, dateMs - Date.now())
+            }
+          }
+        }
+
+        await new Promise((resolve) => setTimeout(resolve, delay))
+        continue
+      }
+
+      return response
+    } catch (error: unknown) {
+      if (timeoutId !== undefined) {
+        clearTimeout(timeoutId)
+      }
+
+      if (init.signal?.aborted) {
+        throw error
+      }
+
+      if (attempt < maxAttempts) {
+        const delay = Math.min(initialInterval * Math.pow(backoffFactor, attempt - 1), maxInterval)
+        await new Promise((resolve) => setTimeout(resolve, delay))
+        continue
+      }
+
+      throw error
+    }
+  }
+}

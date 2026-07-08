@@ -338,17 +338,15 @@ export const resolveEmailAttachments = async (
     return []
   }
 
-  const resolved: ResolvedEmailAttachment[] = []
-  for (const attachment of attachments) {
-    resolved.push(
+  return Promise.all(
+    attachments.map(async (attachment) =>
       buildResolvedAttachment(
         attachment,
         await resolveAttachmentContent(attachment, limits),
         limits,
       ),
-    )
-  }
-  return resolved
+    ),
+  )
 }
 
 export const resolveEmailAttachmentsSync = (

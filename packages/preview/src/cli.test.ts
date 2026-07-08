@@ -7,13 +7,14 @@ import { main, preview } from './cli'
 type CliArgs = {
   dir: { alias: string; type: 'string'; description: string; default: string }
   port: { alias: string; type: 'string'; description: string; default: string }
+  host: { type: 'string'; description: string }
 }
 
 type MockCommandContext = CommandContext<CliArgs>
 
-const createMockContext = (port: string): MockCommandContext => ({
+const createMockContext = (port: string, host: string = '127.0.0.1'): MockCommandContext => ({
   rawArgs: [],
-  args: { _: [], dir: './emails', port },
+  args: { _: [], dir: './emails', port, host },
   cmd: preview,
 })
 
@@ -52,6 +53,11 @@ describe('cli preview command', () => {
   test('dir arg is string type', () => {
     expect(preview.args).toBeDefined()
     expect(preview.args).toHaveProperty('dir.type', 'string')
+  })
+
+  test('host arg is string type', () => {
+    expect(preview.args).toBeDefined()
+    expect(preview.args).toHaveProperty('host.type', 'string')
   })
 })
 

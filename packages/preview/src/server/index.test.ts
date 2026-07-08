@@ -1,4 +1,4 @@
-import { describe, expect, test, beforeAll, afterAll } from 'bun:test'
+import { describe, expect, test, beforeAll, afterAll, mock } from 'bun:test'
 import { mkdirSync, mkdtempSync, writeFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { basename, join } from 'node:path'
@@ -11,6 +11,7 @@ import {
   prepareClientHtml,
   serveStaticAsset,
   isObject,
+  startPreviewServer,
 } from './index'
 
 describe('isObject', () => {
@@ -259,6 +260,43 @@ describe('serveStaticAsset', () => {
       expect(mock.statusCode).toBe(404)
     } finally {
       rmSync(siblingDir, { recursive: true, force: true })
+    }
+  })
+})
+
+describe('startPreviewServer', () => {
+  let tempDir: string
+
+  beforeAll(() => {
+    tempDir = mkdtempSync(join(tmpdir(), 'preview-server-tw-'))
+  })
+
+  afterAll(() => {
+    rmSync(tempDir, { recursive: true, force: true })
+  })
+
+  test('throws descriptive error when tailwind config is detected but plugin is missing', async () => {
+    const dir = mkdtempSync(join(tempDir, 'tw-server-'))
+    writeFileSync(join(dir, 'tailwind.config.js'), 'module.exports = {}')
+
+    // Mock module loading failure on property access
+    void mock.module('@hono-email/tailwind-plugin', () => {
+      return {
+        get unplugin() {
+          throw new Error('Cannot find module')
+        },
+      }
+    })
+
+    const originalCwd = process.cwd()
+    process.chdir(dir)
+
+    try {
+      await expect(startPreviewServer({ dir: '.', port: 3000 })).rejects.toThrow(
+        'Tailwind CSS configuration detected, but "@hono-email/tailwind-plugin" or "@tailwindcss/vite" could not be loaded',
+      )
+    } finally {
+      process.chdir(originalCwd)
     }
   })
 })

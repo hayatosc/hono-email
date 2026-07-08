@@ -5,6 +5,7 @@ import {
 } from '../attachment'
 import type { EmailAdapter, EmailAddress, EmailMessage, SendEmailReceipt } from '../index'
 import { addressToPath, toAddressList, validateEmailHeaders } from '../message'
+import { collectProviderRecipients as collectRecipients, failedReceipt } from '../provider'
 import {
   asCloudflareEmailRecipientField,
   CloudflareEmailConnectorError,
@@ -19,16 +20,6 @@ import {
 } from './types'
 
 const REST_MESSAGE_ID_PREFIX = 'cloudflare-rest'
-
-const collectRecipients = (message: EmailMessage): string[] => {
-  const recipients: EmailAddress[] = [
-    ...toAddressList(message.to),
-    ...toAddressList(message.cc),
-    ...toAddressList(message.bcc),
-  ]
-
-  return [...new Set(recipients.map(addressToPath))]
-}
 
 const asSingleAddressPath = (
   addresses: EmailAddress | EmailAddress[] | undefined,
@@ -166,18 +157,6 @@ const buildWorkersPayload = (
   }
 }
 
-const failedReceipt = (
-  error: unknown,
-  accepted: string[] = [],
-  rejected: string[] = [],
-): SendEmailReceipt => ({
-  successful: false,
-  accepted,
-  rejected,
-  errorMessages: [error instanceof Error ? error.message : String(error)],
-  cause: error,
-})
-
 const buildRestMessageId = (message: EmailMessage): string => {
   if (message.messageId !== undefined) {
     return message.messageId
@@ -269,17 +248,17 @@ export const CloudflareEmailAdapter = (options: CloudflareEmailAdapterOptions): 
       }
     } catch (error) {
       if (error instanceof CloudflareEmailConnectorError) {
-        return {
-          successful: false,
-          accepted: [],
+        return failedReceipt(error.errorMessages, {
           rejected: error.rejected ?? recipients,
-          errorMessages: error.errorMessages,
-          ...(error.response !== undefined ? { response: error.response } : {}),
           cause: error.cause,
-        }
+          ...(error.response !== undefined ? { response: error.response } : {}),
+        })
       }
 
-      return failedReceipt(error, [], recipients)
+      return failedReceipt([error instanceof Error ? error.message : String(error)], {
+        rejected: recipients,
+        cause: error,
+      })
     }
   },
 })

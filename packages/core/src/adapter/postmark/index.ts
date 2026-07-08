@@ -6,7 +6,10 @@ import type {
   EmailMessage,
   SendEmailReceipt,
 } from '../index'
-import { addressToPath, formatEmailAddress, toAddressList, validateEmailHeaders } from '../message'
+import { formatEmailAddress, toAddressList, validateEmailHeaders } from '../message'
+import { collectProviderRecipients as collectRecipients, failedReceipt } from '../provider'
+import { fetchWithTimeoutAndRetry } from '../utils'
+import type { RequestRetryOptions } from '../utils'
 
 export type {
   EmailAddress,
@@ -30,6 +33,7 @@ export type PostmarkFetchInit = {
   body: string
   headers: Record<string, string>
   method: 'POST'
+  signal?: AbortSignal
 }
 
 export type PostmarkFetch = (input: string, init: PostmarkFetchInit) => Promise<Response>
@@ -73,6 +77,8 @@ export type PostmarkAdapterOptions = {
   trackLinks?: 'HtmlAndText' | 'HtmlOnly' | 'None' | 'TextOnly'
   trackOpens?: boolean
   userAgent?: string
+  timeout?: number
+  retry?: RequestRetryOptions | boolean
 }
 
 export type PostmarkSuccessResponse = {
@@ -101,23 +107,6 @@ const validateApiBaseUrl = (url: string): void => {
   }
   throw new Error('Postmark adapter requires HTTPS. API tokens must not be sent over plaintext.')
 }
-
-const failedReceipt = (
-  errorMessages: string[],
-  options: {
-    accepted?: string[]
-    cause?: unknown
-    rejected?: string[]
-    response?: string
-  } = {},
-): SendEmailReceipt => ({
-  successful: false,
-  accepted: options.accepted ?? [],
-  rejected: options.rejected ?? [],
-  errorMessages,
-  ...(options.response !== undefined ? { response: options.response } : {}),
-  ...(options.cause !== undefined ? { cause: options.cause } : {}),
-})
 
 const getFetch = (fetchImplementation: PostmarkFetch | undefined): PostmarkFetch => {
   const resolvedFetch = fetchImplementation ?? globalThis.fetch
@@ -174,16 +163,6 @@ const asErrorMessage = (value: unknown, response: Response, body: string): strin
   }
 
   return `Postmark API returned ${response.status} ${response.statusText}.`
-}
-
-const collectRecipients = (message: EmailMessage): string[] => {
-  const recipients: EmailAddress[] = [
-    ...toAddressList(message.to),
-    ...toAddressList(message.cc),
-    ...toAddressList(message.bcc),
-  ]
-
-  return [...new Set(recipients.map(addressToPath))]
 }
 
 const asAddressField = (
@@ -282,16 +261,24 @@ export const PostmarkAdapter = (options: PostmarkAdapterOptions): EmailAdapter =
       const fetchImplementation = getFetch(options.fetch)
       const apiBaseUrl = options.apiBaseUrl ?? DEFAULT_API_BASE_URL
       validateApiBaseUrl(apiBaseUrl)
-      const response = await fetchImplementation(`${apiBaseUrl.replace(/\/$/u, '')}/email`, {
-        body: JSON.stringify(payload),
-        headers: {
-          Accept: 'application/json',
-          'Content-Type': 'application/json',
-          'User-Agent': options.userAgent ?? DEFAULT_USER_AGENT,
-          'X-Postmark-Server-Token': options.serverToken,
+      const response = await fetchWithTimeoutAndRetry(
+        fetchImplementation,
+        `${apiBaseUrl.replace(/\/$/u, '')}/email`,
+        {
+          body: JSON.stringify(payload),
+          headers: {
+            Accept: 'application/json',
+            'Content-Type': 'application/json',
+            'User-Agent': options.userAgent ?? DEFAULT_USER_AGENT,
+            'X-Postmark-Server-Token': options.serverToken,
+          },
+          method: 'POST',
         },
-        method: 'POST',
-      })
+        {
+          ...(options.timeout !== undefined ? { timeout: options.timeout } : {}),
+          ...(options.retry !== undefined ? { retry: options.retry } : {}),
+        },
+      )
       const body = await readResponseBody(response)
       const data = parseJson(body)
 
