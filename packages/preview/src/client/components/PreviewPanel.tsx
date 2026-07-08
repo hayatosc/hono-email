@@ -1,5 +1,6 @@
 /** @jsxImportSource hono/jsx/dom */
 import type { HtmlEscapedString } from 'hono/utils/html'
+
 export type PreviewPanelProps = {
   tab: 'html' | 'text'
   onSwitchTab: (tab: 'html' | 'text') => void

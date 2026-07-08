@@ -23,8 +23,7 @@
     "test:runtime:deno": "deno test --allow-net --allow-read runtime-tests/deno",
     "test:runtime:bun": "bun test runtime-tests/bun",
     "test:runtime:cloudflare": "vitest --run --config runtime-tests/cloudflare/vitest.config.ts",
-    "typecheck": "bun run --filter './packages/*' typecheck",
-    "typecheck:compat": "bun run --filter './packages/*' typecheck:compat"
+    "typecheck": "bun run --filter './packages/*' typecheck"
   },
   "devDependencies": {
     "@changesets/changelog-github": "^0.5.0",

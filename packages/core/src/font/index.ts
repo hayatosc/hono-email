@@ -111,7 +111,7 @@ export const renderFontStyleTag = ({
   fontStyle = 'normal',
   fontWeight = 400,
   webFont,
-}: FontProps): HtmlEscapedString | Promise<HtmlEscapedString> => {
+}: FontProps): HtmlEscapedString => {
   const fallbacks = Array.isArray(fallbackFontFamily) ? fallbackFontFamily : [fallbackFontFamily]
   const familyList = [fontFamily, ...fallbacks].map(quoteFontFamily).join(', ')
   const safeFontStyle = normalizeFontStyle(fontStyle)

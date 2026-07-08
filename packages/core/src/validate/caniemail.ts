@@ -100,7 +100,7 @@ export const EMAIL_CLIENT_LIST: readonly EmailClient[] = [
   'gmail',
   'apple-mail',
   'yahoo',
-] as const satisfies EmailClient[]
+] as const satisfies readonly EmailClient[]
 
 const SUPPORT_THRESHOLD = 0.8
 const WARNING_THRESHOLD = 0.5

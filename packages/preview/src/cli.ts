@@ -6,11 +6,13 @@ import { type CommandDef, defineCommand, runMain } from 'citty'
 
 import { startPreviewServer } from './server/index.js'
 
-export const preview: CommandDef<{
+type CliArgs = {
   dir: { alias: string; type: 'string'; description: string; default: string }
   port: { alias: string; type: 'string'; description: string; default: string }
   host: { type: 'string'; description: string }
-}> = defineCommand({
+}
+
+export const preview: CommandDef<CliArgs> = defineCommand({
   meta: {
     name: 'preview',
     description: 'Live preview server for hono-email templates',

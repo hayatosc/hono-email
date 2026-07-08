@@ -85,8 +85,7 @@
   },
   "scripts": {
     "build": "tsdown",
-    "typecheck": "tsgo --noEmit",
-    "typecheck:compat": "tsc --noEmit",
+    "typecheck": "tsc --noEmit",
     "test": "bun test ./src",
     "update-caniemail": "bun run ./scripts/update-caniemail-data.ts"
   },

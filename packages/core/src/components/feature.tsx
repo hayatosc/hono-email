@@ -70,8 +70,7 @@ type ColorSchemeProps = {
  * </Head>
  * ```
  */
-export const Font = (props: FontProps): HtmlEscapedString | Promise<HtmlEscapedString> =>
-  renderFontStyleTag(props)
+export const Font = (props: FontProps): HtmlEscapedString => renderFontStyleTag(props)
 
 /**
  * Applies a Tailwind build artifact to descendant class names.
