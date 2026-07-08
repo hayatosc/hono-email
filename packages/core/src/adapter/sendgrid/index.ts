@@ -2,7 +2,8 @@ import { encodeAttachmentContentBase64, resolveEmailAttachments } from '../attac
 import type { EmailAdapter, EmailAddress, EmailMessage, SendEmailReceipt } from '../index'
 import { formatEmailAddress, toAddressList, validateEmailHeaders } from '../message'
 import { collectProviderRecipients as collectRecipients, failedReceipt } from '../provider'
-import { fetchWithTimeoutAndRetry, type RequestRetryOptions } from '../utils'
+import { fetchWithTimeoutAndRetry } from '../utils'
+import type { RequestRetryOptions } from '../utils'
 
 export type {
   EmailAddress,

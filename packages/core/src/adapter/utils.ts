@@ -67,8 +67,8 @@ export const fetchWithTimeoutAndRetry = async <T extends { signal?: AbortSignal 
   input: string,
   init: T,
   options: {
-    timeout?: number
-    retry?: RequestRetryOptions | boolean
+    timeout?: number | undefined
+    retry?: RequestRetryOptions | boolean | undefined
   },
 ): Promise<Response> => {
   const timeout = options.timeout ?? DEFAULT_TIMEOUT

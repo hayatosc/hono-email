@@ -2,7 +2,7 @@ import { describe, expect, test, mock } from 'bun:test'
 
 import type { APIContext } from 'astro'
 
-import type { OgProps } from './pages/og/[...slug].png'
+import type { OgProps } from './[...slug].png'
 
 // Mock astro:content before importing [...slug].png
 void mock.module('astro:content', () => {
@@ -21,7 +21,7 @@ void mock.module('astro:content', () => {
 
 describe('OG Image Route', () => {
   test('getStaticPaths returns doc paths and fallback index path', async () => {
-    const { getStaticPaths } = await import('./pages/og/[...slug].png')
+    const { getStaticPaths } = await import('./[...slug].png')
     const paths = await getStaticPaths()
 
     // Verify mapped path
@@ -37,7 +37,7 @@ describe('OG Image Route', () => {
   })
 
   test('GET returns PNG response with headers', async () => {
-    const { GET } = await import('./pages/og/[...slug].png')
+    const { GET } = await import('./[...slug].png')
     const context = {
       props: {
         title: 'Test Title',
