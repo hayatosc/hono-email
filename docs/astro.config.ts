@@ -1,4 +1,3 @@
-import cloudflare from '@astrojs/cloudflare'
 import starlight from '@astrojs/starlight'
 import svelte from '@astrojs/svelte'
 import { defineConfig, fontProviders, svgoOptimizer, sessionDrivers } from 'astro/config'
@@ -8,10 +7,6 @@ import { markdownExport } from './src/integrations/markdown-export'
 // https://astro.build/config
 export default defineConfig({
   site: 'https://hono-email.hayatosc.dev',
-  output: 'server',
-  adapter: cloudflare({
-    imageService: 'compile',
-  }),
   session: {
     driver: sessionDrivers.lruCache({ max: 1 }),
   },

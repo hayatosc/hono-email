@@ -9,7 +9,7 @@ import type {
 } from '../index'
 import { formatEmailAddress, toAddressList, validateEmailHeaders } from '../message'
 import { collectProviderRecipients as collectRecipients, failedReceipt } from '../provider'
-import { bytesToBase64, fetchWithTimeoutAndRetry } from '../utils'
+import { bytesToBase64, fetchWithTimeoutAndRetry, type RequestRetryOptions } from '../utils'
 
 export type {
   EmailAddress,
@@ -249,8 +249,8 @@ export const MailgunAdapter = (options: MailgunAdapterOptions): EmailAdapter => 
           method: 'POST',
         },
         {
-          timeout: options.timeout,
-          retry: options.retry,
+          ...(options.timeout !== undefined ? { timeout: options.timeout } : {}),
+          ...(options.retry !== undefined ? { retry: options.retry } : {}),
         },
       )
       const body = await readResponseBody(response)

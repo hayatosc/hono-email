@@ -8,7 +8,8 @@ import type {
 } from '../index'
 import { formatEmailAddress, toAddressList, validateEmailHeaders } from '../message'
 import { collectProviderRecipients as collectRecipients, failedReceipt } from '../provider'
-import { fetchWithTimeoutAndRetry, type RequestRetryOptions } from '../utils'
+import { fetchWithTimeoutAndRetry } from '../utils'
+import type { RequestRetryOptions } from '../utils'
 
 export type {
   EmailAddress,
@@ -274,8 +275,8 @@ export const PostmarkAdapter = (options: PostmarkAdapterOptions): EmailAdapter =
           method: 'POST',
         },
         {
-          timeout: options.timeout,
-          retry: options.retry,
+          ...(options.timeout !== undefined ? { timeout: options.timeout } : {}),
+          ...(options.retry !== undefined ? { retry: options.retry } : {}),
         },
       )
       const body = await readResponseBody(response)

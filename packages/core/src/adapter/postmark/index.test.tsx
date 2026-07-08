@@ -211,9 +211,14 @@ describe('Postmark adapter', () => {
     const fetchImplementation: PostmarkFetch = async () => {
       attempts++
       if (attempts < 2) {
-        return new Response(JSON.stringify({ ErrorCode: 500, Message: 'Internal Server Error' }), { status: 500 })
+        return new Response(JSON.stringify({ ErrorCode: 500, Message: 'Internal Server Error' }), {
+          status: 500,
+        })
       }
-      return new Response(JSON.stringify({ ErrorCode: 0, Message: 'OK', MessageID: 'postmark-id' }), { status: 200 })
+      return new Response(
+        JSON.stringify({ ErrorCode: 0, Message: 'OK', MessageID: 'postmark-id' }),
+        { status: 200 },
+      )
     }
 
     const receipt = await PostmarkAdapter({
