@@ -33,6 +33,7 @@ export type MailgunFetchInit = {
   body: FormData
   headers: Record<string, string>
   method: 'POST'
+  signal?: AbortSignal
 }
 
 export type MailgunFetch = (input: string, init: MailgunFetchInit) => Promise<Response>
@@ -44,6 +45,8 @@ export type MailgunAdapterOptions = {
   fetch?: MailgunFetch
   limits?: EmailAttachmentLimits
   userAgent?: string
+  timeout?: number
+  retry?: RequestRetryOptions | boolean
 }
 
 export type MailgunSuccessResponse = {
@@ -234,7 +237,8 @@ export const MailgunAdapter = (options: MailgunAdapterOptions): EmailAdapter => 
       const apiBaseUrl = options.apiBaseUrl ?? DEFAULT_API_BASE_URL
       validateApiBaseUrl(apiBaseUrl)
       const domain = encodeURIComponent(options.domain)
-      const response = await fetchImplementation(
+      const response = await fetchWithTimeoutAndRetry(
+        fetchImplementation,
         `${apiBaseUrl.replace(/\/$/u, '')}/v3/${domain}/messages`,
         {
           body: form,
@@ -243,6 +247,10 @@ export const MailgunAdapter = (options: MailgunAdapterOptions): EmailAdapter => 
             'User-Agent': options.userAgent ?? DEFAULT_USER_AGENT,
           },
           method: 'POST',
+        },
+        {
+          timeout: options.timeout,
+          retry: options.retry,
         },
       )
       const body = await readResponseBody(response)

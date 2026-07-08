@@ -224,4 +224,27 @@ describe('Resend adapter', () => {
 
     expect(receipt.successful).toBe(true)
   })
+
+  test('supports custom timeout and retry options', async () => {
+    let attempts = 0
+    const fetchImplementation: ResendFetch = async () => {
+      attempts++
+      if (attempts < 2) {
+        return new Response(JSON.stringify({ message: 'Internal Server Error' }), { status: 500 })
+      }
+      return new Response(JSON.stringify({ id: 'resend-id' }), { status: 200 })
+    }
+
+    const receipt = await ResendAdapter({
+      apiKey: 're_test',
+      fetch: fetchImplementation,
+      retry: {
+        maxAttempts: 2,
+        initialInterval: 1,
+      },
+    }).send(createMessage())
+
+    expect(receipt.successful).toBe(true)
+    expect(attempts).toBe(2)
+  })
 })

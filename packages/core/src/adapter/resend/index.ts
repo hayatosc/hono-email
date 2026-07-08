@@ -197,8 +197,8 @@ export const ResendAdapter = (options: ResendAdapterOptions): EmailAdapter => ({
           method: 'POST',
         },
         {
-          timeout: options.timeout,
-          retry: options.retry,
+          ...(options.timeout !== undefined ? { timeout: options.timeout } : {}),
+          ...(options.retry !== undefined ? { retry: options.retry } : {}),
         },
       )
       const body = await readResponseBody(response)

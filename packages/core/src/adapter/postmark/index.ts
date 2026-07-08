@@ -8,6 +8,7 @@ import type {
 } from '../index'
 import { formatEmailAddress, toAddressList, validateEmailHeaders } from '../message'
 import { collectProviderRecipients as collectRecipients, failedReceipt } from '../provider'
+import { fetchWithTimeoutAndRetry, type RequestRetryOptions } from '../utils'
 
 export type {
   EmailAddress,
@@ -31,6 +32,7 @@ export type PostmarkFetchInit = {
   body: string
   headers: Record<string, string>
   method: 'POST'
+  signal?: AbortSignal
 }
 
 export type PostmarkFetch = (input: string, init: PostmarkFetchInit) => Promise<Response>
@@ -74,6 +76,8 @@ export type PostmarkAdapterOptions = {
   trackLinks?: 'HtmlAndText' | 'HtmlOnly' | 'None' | 'TextOnly'
   trackOpens?: boolean
   userAgent?: string
+  timeout?: number
+  retry?: RequestRetryOptions | boolean
 }
 
 export type PostmarkSuccessResponse = {
@@ -256,16 +260,24 @@ export const PostmarkAdapter = (options: PostmarkAdapterOptions): EmailAdapter =
       const fetchImplementation = getFetch(options.fetch)
       const apiBaseUrl = options.apiBaseUrl ?? DEFAULT_API_BASE_URL
       validateApiBaseUrl(apiBaseUrl)
-      const response = await fetchImplementation(`${apiBaseUrl.replace(/\/$/u, '')}/email`, {
-        body: JSON.stringify(payload),
-        headers: {
-          Accept: 'application/json',
-          'Content-Type': 'application/json',
-          'User-Agent': options.userAgent ?? DEFAULT_USER_AGENT,
-          'X-Postmark-Server-Token': options.serverToken,
+      const response = await fetchWithTimeoutAndRetry(
+        fetchImplementation,
+        `${apiBaseUrl.replace(/\/$/u, '')}/email`,
+        {
+          body: JSON.stringify(payload),
+          headers: {
+            Accept: 'application/json',
+            'Content-Type': 'application/json',
+            'User-Agent': options.userAgent ?? DEFAULT_USER_AGENT,
+            'X-Postmark-Server-Token': options.serverToken,
+          },
+          method: 'POST',
         },
-        method: 'POST',
-      })
+        {
+          timeout: options.timeout,
+          retry: options.retry,
+        },
+      )
       const body = await readResponseBody(response)
       const data = parseJson(body)
 

@@ -1,8 +1,8 @@
 import { encodeAttachmentContentBase64, resolveEmailAttachments } from '../attachment'
 import type { EmailAdapter, EmailAddress, EmailMessage, SendEmailReceipt } from '../index'
 import { formatEmailAddress, toAddressList, validateEmailHeaders } from '../message'
-import { fetchWithTimeoutAndRetry, type RequestRetryOptions } from '../utils'
 import { collectProviderRecipients as collectRecipients, failedReceipt } from '../provider'
+import { fetchWithTimeoutAndRetry, type RequestRetryOptions } from '../utils'
 
 export type {
   EmailAddress,
@@ -258,15 +258,23 @@ export const SendGridAdapter = (options: SendGridAdapterOptions): EmailAdapter =
       const fetchImplementation = getFetch(options.fetch)
       const apiBaseUrl = options.apiBaseUrl ?? DEFAULT_API_BASE_URL
       validateApiBaseUrl(apiBaseUrl)
-      const response = await fetchImplementation(`${apiBaseUrl.replace(/\/$/u, '')}/v3/mail/send`, {
-        body: JSON.stringify(payload),
-        headers: {
-          Authorization: `Bearer ${options.apiKey}`,
-          'Content-Type': 'application/json',
-          'User-Agent': options.userAgent ?? DEFAULT_USER_AGENT,
+      const response = await fetchWithTimeoutAndRetry(
+        fetchImplementation,
+        `${apiBaseUrl.replace(/\/$/u, '')}/v3/mail/send`,
+        {
+          body: JSON.stringify(payload),
+          headers: {
+            Authorization: `Bearer ${options.apiKey}`,
+            'Content-Type': 'application/json',
+            'User-Agent': options.userAgent ?? DEFAULT_USER_AGENT,
+          },
+          method: 'POST',
         },
-        method: 'POST',
-      })
+        {
+          ...(options.timeout !== undefined ? { timeout: options.timeout } : {}),
+          ...(options.retry !== undefined ? { retry: options.retry } : {}),
+        },
+      )
       const body = await readResponseBody(response)
       const data = parseJson(body)
 

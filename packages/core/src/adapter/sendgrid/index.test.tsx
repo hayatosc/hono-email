@@ -219,4 +219,29 @@ describe('SendGrid adapter', () => {
 
     expect(receipt.successful).toBe(true)
   })
+
+  test('supports custom timeout and retry options', async () => {
+    let attempts = 0
+    const fetchImplementation: SendGridFetch = async () => {
+      attempts++
+      if (attempts < 2) {
+        return new Response(JSON.stringify({ errors: [{ message: 'Internal error' }] }), {
+          status: 500,
+        })
+      }
+      return new Response('', { headers: { 'x-message-id': 'sendgrid-id' }, status: 202 })
+    }
+
+    const receipt = await SendGridAdapter({
+      apiKey: 'SG.test',
+      fetch: fetchImplementation,
+      retry: {
+        maxAttempts: 2,
+        initialInterval: 1,
+      },
+    }).send(createMessage())
+
+    expect(receipt.successful).toBe(true)
+    expect(attempts).toBe(2)
+  })
 })

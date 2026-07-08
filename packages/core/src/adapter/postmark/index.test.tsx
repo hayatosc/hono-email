@@ -205,4 +205,27 @@ describe('Postmark adapter', () => {
       expect(receipt.errorMessages).toEqual(['Postmark error 300: Invalid email request.'])
     }
   })
+
+  test('supports custom timeout and retry options', async () => {
+    let attempts = 0
+    const fetchImplementation: PostmarkFetch = async () => {
+      attempts++
+      if (attempts < 2) {
+        return new Response(JSON.stringify({ ErrorCode: 500, Message: 'Internal Server Error' }), { status: 500 })
+      }
+      return new Response(JSON.stringify({ ErrorCode: 0, Message: 'OK', MessageID: 'postmark-id' }), { status: 200 })
+    }
+
+    const receipt = await PostmarkAdapter({
+      serverToken: 'postmark-token',
+      fetch: fetchImplementation,
+      retry: {
+        maxAttempts: 2,
+        initialInterval: 1,
+      },
+    }).send(createMessage())
+
+    expect(receipt.successful).toBe(true)
+    expect(attempts).toBe(2)
+  })
 })
