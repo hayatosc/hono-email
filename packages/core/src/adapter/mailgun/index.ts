@@ -9,7 +9,7 @@ import type {
 } from '../index'
 import { formatEmailAddress, toAddressList, validateEmailHeaders } from '../message'
 import { collectProviderRecipients as collectRecipients, failedReceipt } from '../provider'
-import { bytesToBase64 } from '../utils'
+import { bytesToBase64, fetchWithTimeoutAndRetry } from '../utils'
 
 export type {
   EmailAddress,
