@@ -345,7 +345,7 @@ export const LinkButton: FC<ButtonProps> = ({ children, style, target = '_blank'
  * @deprecated Use `LinkButton` instead. `Button` renders an `<a>` element, which
  *   is confusing for a component named `Button`.
  */
-export const Button = LinkButton
+export const Button: FC<ButtonProps> = LinkButton
 
 /**
  * Anchor element that requires `href` and defaults to `target="_blank"`.

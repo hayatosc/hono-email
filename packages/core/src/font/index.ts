@@ -1,4 +1,5 @@
 import { raw } from 'hono/html'
+import type { HtmlEscapedString } from 'hono/utils/html'
 
 type FontStyle = 'italic' | 'normal' | 'oblique'
 type FontWeight = 'bold' | 'bolder' | 'lighter' | 'normal' | number
@@ -110,7 +111,7 @@ export const renderFontStyleTag = ({
   fontStyle = 'normal',
   fontWeight = 400,
   webFont,
-}: FontProps) => {
+}: FontProps): HtmlEscapedString | Promise<HtmlEscapedString> => {
   const fallbacks = Array.isArray(fallbackFontFamily) ? fallbackFontFamily : [fallbackFontFamily]
   const familyList = [fontFamily, ...fallbacks].map(quoteFontFamily).join(', ')
   const safeFontStyle = normalizeFontStyle(fontStyle)

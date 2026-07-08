@@ -1,5 +1,6 @@
 /** @jsxImportSource hono/jsx/dom */
 import type { Child } from 'hono/jsx'
+import type { HtmlEscapedString } from 'hono/utils/html'
 
 import type { PropsSchema } from '../../props/index.js'
 
@@ -259,7 +260,7 @@ export function PropsForm({
   jsonValue,
   jsonError,
   onJsonChange,
-}: PropsFormProps) {
+}: PropsFormProps): HtmlEscapedString | Promise<HtmlEscapedString> {
   const hasSchema = Object.keys(schema).length > 0
 
   return (

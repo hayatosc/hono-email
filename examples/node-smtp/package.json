@@ -13,8 +13,8 @@
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
-    "@typescript/native-preview": "^7.0.0-dev.20260419.1",
+    "@typescript/native-preview": "^7.0.0-dev.20260707.2",
     "tsx": "^4.19.4",
-    "typescript": "^6.0.3"
+    "typescript": "^7.0.2"
   }
 }

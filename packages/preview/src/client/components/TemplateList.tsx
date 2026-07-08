@@ -1,4 +1,5 @@
 /** @jsxImportSource hono/jsx/dom */
+import type { HtmlEscapedString } from 'hono/utils/html'
 
 type TemplateSummary = { name: string }
 
@@ -8,7 +9,11 @@ export type TemplateListProps = {
   onSelect: (name: string) => void
 }
 
-export function TemplateList({ templates, selected, onSelect }: TemplateListProps) {
+export function TemplateList({
+  templates,
+  selected,
+  onSelect,
+}: TemplateListProps): HtmlEscapedString | Promise<HtmlEscapedString> {
   return (
     <div class="template-list">
       {templates.map((template) => (

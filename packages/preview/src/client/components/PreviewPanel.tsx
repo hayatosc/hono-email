@@ -1,4 +1,5 @@
 /** @jsxImportSource hono/jsx/dom */
+import type { HtmlEscapedString } from 'hono/utils/html'
 export type PreviewPanelProps = {
   tab: 'html' | 'text'
   onSwitchTab: (tab: 'html' | 'text') => void
@@ -23,7 +24,7 @@ export function PreviewPanel({
   warnings,
   warningsOpen,
   onToggleWarnings,
-}: PreviewPanelProps) {
+}: PreviewPanelProps): HtmlEscapedString | Promise<HtmlEscapedString> {
   const hasWarnings = warnings.length > 0
 
   return (

@@ -1,5 +1,6 @@
 import { raw } from 'hono/html'
 import type { PropsWithChildren } from 'hono/jsx'
+import type { HtmlEscapedString } from 'hono/utils/html'
 
 import { renderFontStyleTag, type FontProps } from '../font'
 import {
@@ -25,11 +26,12 @@ export type {
   TailwindBuildArtifact,
 }
 
-export const TAILWIND_ARTIFACT_REQUIRED_ERROR_MESSAGE =
+export const TAILWIND_ARTIFACT_REQUIRED_ERROR_MESSAGE: string =
   '<Tailwind> requires a build artifact. Either:\n' +
   '  1. Use the bundler plugin (@hono-email/tailwind-plugin) — it injects the artifact automatically per email file.\n' +
   '  2. Pass it explicitly: <Tailwind artifact={buildTailwindArtifactFromCss({ css })}>'
-export const TAILWIND_ARTIFACT_REQUIRED_TAG_NAME = 'hono-email-internal-tailwind-artifact-required'
+export const TAILWIND_ARTIFACT_REQUIRED_TAG_NAME: string =
+  'hono-email-internal-tailwind-artifact-required'
 
 type TailwindProps = PropsWithChildren<{
   artifact?: TailwindBuildArtifact
@@ -68,7 +70,8 @@ type ColorSchemeProps = {
  * </Head>
  * ```
  */
-export const Font = (props: FontProps) => renderFontStyleTag(props)
+export const Font = (props: FontProps): HtmlEscapedString | Promise<HtmlEscapedString> =>
+  renderFontStyleTag(props)
 
 /**
  * Applies a Tailwind build artifact to descendant class names.
@@ -86,7 +89,10 @@ export const Font = (props: FontProps) => renderFontStyleTag(props)
  * </Tailwind>
  * ```
  */
-export const Tailwind = async ({ artifact, children }: TailwindProps) => {
+export const Tailwind = async ({
+  artifact,
+  children,
+}: TailwindProps): Promise<HtmlEscapedString> => {
   if (!artifact) {
     return raw(
       `<${TAILWIND_ARTIFACT_REQUIRED_TAG_NAME} hidden=""></${TAILWIND_ARTIFACT_REQUIRED_TAG_NAME}>`,
@@ -128,7 +134,7 @@ export const Markdown = async ({
   markdownCustomStyles,
   markdownStyleMode,
   sanitize,
-}: MarkdownProps) =>
+}: MarkdownProps): Promise<HtmlEscapedString> =>
   raw(
     await renderMarkdownHtml(children, {
       ...(markdownContainerClassName !== undefined ? { markdownContainerClassName } : {}),
@@ -155,7 +161,11 @@ export const Markdown = async ({
  * </Conditional>
  * ```
  */
-export const Conditional = async ({ children, mso, notMso }: ConditionalProps) => {
+export const Conditional = async ({
+  children,
+  mso,
+  notMso,
+}: ConditionalProps): Promise<HtmlEscapedString> => {
   const renderedChildren = await renderFragmentToHtml(<>{children}</>)
 
   if (notMso) {
@@ -187,7 +197,7 @@ export const Conditional = async ({ children, mso, notMso }: ConditionalProps) =
 export const ColorScheme = ({
   colorScheme = 'light dark',
   supportedColorSchemes = colorScheme,
-}: ColorSchemeProps) => (
+}: ColorSchemeProps): HtmlEscapedString | Promise<HtmlEscapedString> => (
   <>
     <meta name="color-scheme" content={colorScheme} />
     <meta name="supported-color-schemes" content={supportedColorSchemes} />
