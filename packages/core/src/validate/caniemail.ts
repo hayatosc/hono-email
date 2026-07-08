@@ -85,7 +85,7 @@ export const EMAIL_CLIENT_NAMES: Record<EmailClient, string> = {
   yahoo: 'Yahoo Mail',
 }
 
-export const ALWAYS_BLOCKED_TAGS = new Set([
+export const ALWAYS_BLOCKED_TAGS: Set<string> = new Set([
   'script',
   'iframe',
   'embed',
@@ -95,7 +95,7 @@ export const ALWAYS_BLOCKED_TAGS = new Set([
 ])
 
 // satisfies ensures all entries are valid EmailClient values without widening to string[]
-export const EMAIL_CLIENT_LIST = [
+export const EMAIL_CLIENT_LIST: readonly EmailClient[] = [
   'outlook',
   'gmail',
   'apple-mail',

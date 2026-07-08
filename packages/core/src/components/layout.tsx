@@ -1,5 +1,6 @@
 import { raw } from 'hono/html'
 import type { FC, JSX, PropsWithChildren } from 'hono/jsx'
+import type { HtmlEscapedString } from 'hono/utils/html'
 
 import { styleObjectFromUnknown } from '../style'
 
@@ -196,7 +197,11 @@ export const Body: FC<PropsWithChildren<ElementProps<'body'>>> = (props) => <bod
  * </Box>
  * ```
  */
-export const Box = <As extends BoxElement = 'div'>({ as, style, ...props }: BoxProps<As>) => {
+export const Box = <As extends BoxElement = 'div'>({
+  as,
+  style,
+  ...props
+}: BoxProps<As>): HtmlEscapedString | Promise<HtmlEscapedString> => {
   const Tag = as ?? 'div'
   return <Tag {...props} style={styleObjectFromUnknown(style)} />
 }

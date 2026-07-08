@@ -15,7 +15,7 @@ function isObject(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object' && !Array.isArray(value)
 }
 
-export function createApiRoutes(loadModule: LoadModule, templateDir: string) {
+export function createApiRoutes(loadModule: LoadModule, templateDir: string): Hono {
   const app = new Hono().basePath('/api')
 
   app.get('/templates', (c) => {

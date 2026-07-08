@@ -2,11 +2,17 @@
 import { realpathSync } from 'node:fs'
 import { pathToFileURL } from 'node:url'
 
-import { defineCommand, runMain } from 'citty'
+import { type CommandDef, defineCommand, runMain } from 'citty'
 
 import { startPreviewServer } from './server/index.js'
 
-export const preview = defineCommand({
+type CliArgs = {
+  dir: { alias: string; type: 'string'; description: string; default: string }
+  port: { alias: string; type: 'string'; description: string; default: string }
+  host: { type: 'string'; description: string }
+}
+
+export const preview: CommandDef<CliArgs> = defineCommand({
   meta: {
     name: 'preview',
     description: 'Live preview server for hono-email templates',
@@ -81,7 +87,7 @@ export const preview = defineCommand({
   },
 })
 
-export const main = defineCommand({
+export const main: CommandDef = defineCommand({
   meta: {
     name: 'hono-email',
     description: 'hono-email command line interface',

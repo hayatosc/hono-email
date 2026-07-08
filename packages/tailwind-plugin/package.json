@@ -133,8 +133,7 @@
   },
   "scripts": {
     "build": "tsdown",
-    "typecheck": "tsgo --noEmit",
-    "typecheck:compat": "tsc --noEmit",
+    "typecheck": "tsc --noEmit",
     "test": "bun test ./src"
   },
   "dependencies": {

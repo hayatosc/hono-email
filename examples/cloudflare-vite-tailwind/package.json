@@ -9,7 +9,7 @@
     "dev": "vite",
     "preview": "vite preview",
     "test": "vitest run",
-    "typecheck": "tsgo --noEmit"
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "hono": "^4.12.14",
@@ -19,9 +19,8 @@
     "@cloudflare/vite-plugin": "^1.32.3",
     "@hono-email/tailwind-plugin": "workspace:*",
     "@tailwindcss/vite": "^4.2.2",
-    "@typescript/native-preview": "^7.0.0-dev.20260419.1",
     "tailwindcss": "^4.2.2",
-    "typescript": "^6.0.3",
+    "typescript": "^7.0.2",
     "vite": "^8.0.8",
     "vitest": "^4.1.5",
     "wrangler": "^4.83.0"
