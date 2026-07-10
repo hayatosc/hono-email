@@ -65,3 +65,14 @@ const { html, text } = await render(<WelcomeEmail />)
 For full APIs, guide details, styling setup, adapters, and tools, please check the official documentation:
 
 👉 **[https://hono-email.hayatosc.dev](https://hono-email.hayatosc.dev)**
+
+## Development
+
+To set up a local development environment, install [mise](https://mise.jdx.dev/) and run:
+
+```sh
+mise bootstrap
+```
+
+For more detailed information on running tests, builds, and CI locally, please refer to [CONTRIBUTING.md](CONTRIBUTING.md).
+

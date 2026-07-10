@@ -4,5 +4,8 @@ deno = "2.7.12"
 node = "24.15.0"
 "github:mizchi/actrun" = "0.29.0"
 
+[tasks.bootstrap]
+run = "bun install && bun run build"
+
 [tasks.ci]
 run = "actrun workflow run .github/workflows/ci.yml"
