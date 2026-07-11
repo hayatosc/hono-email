@@ -17,6 +17,7 @@ mise bootstrap
 ```
 
 This task is defined in `mise.toml` and performs the following actions:
+
 1. Installs the project dependencies via `bun install`.
 2. Builds all packages in the monorepo via `bun run build`.
 

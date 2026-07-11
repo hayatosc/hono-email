@@ -75,4 +75,3 @@ mise bootstrap
 ```
 
 For more detailed information on running tests, builds, and CI locally, please refer to [CONTRIBUTING.md](CONTRIBUTING.md).
-
