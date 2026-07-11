@@ -1,5 +1,28 @@
 # hono-email
 
+## 0.7.0
+
+### Minor Changes
+
+- [#90](https://github.com/hayatosc/hono-email/pull/90) [`ef66d90`](https://github.com/hayatosc/hono-email/commit/ef66d9032974c5c444dd69b38b176da335014701) Thanks [@hayatosc](https://github.com/hayatosc)! - Support dynamic caniemail.com validation for HTML attributes and image formats in strict mode, and add `warningClients` configuration options.
+
+### Patch Changes
+
+- [#118](https://github.com/hayatosc/hono-email/pull/118) [`d160fdf`](https://github.com/hayatosc/hono-email/commit/d160fdfba6379c2029fb65e48081cf657dd43d5d) Thanks [@hayatosc](https://github.com/hayatosc)! - - Fix HTMLRewriter parsing crash caused by self-closing meta tags in layout components.
+  - Fix HTML splitting bug in TOKEN_PATTERN parser when quotes contain `>` characters in Preview relocate logic.
+  - Robust case/whitespace-insensitive style property verification in validateStyleTags.
+  - Support custom AbortSignal propagation in fetchWithTimeoutAndRetry without overwriting timeouts.
+  - Enable HTTP 429 Too Many Requests retry logic and parse Retry-After headers in adapters.
+  - Consume and cancel response bodies during retries to prevent connection pinning.
+  - Make preventWidows walk through nested inline tags (e.g. `<b>bold</b>`) to join trailing words.
+  - Resolve remote and local attachments in parallel using Promise.all during email preparation.
+  - Add `--host` option to preview CLI and server to bind to specific interfaces for mobile testing.
+
+- [#119](https://github.com/hayatosc/hono-email/pull/119) [`b8c999a`](https://github.com/hayatosc/hono-email/commit/b8c999a67e1939bcea6a53811ddf91f97cbae394) Thanks [@hayatosc](https://github.com/hayatosc)! - Migrate the codebase to TypeScript 7 (native compiler preview).
+  - Add `isolatedDeclarations: true` and `declaration: true` to TSConfigs.
+  - Add explicit type annotations to exported components, functions, and command definitions to satisfy isolated declarations requirements.
+  - Downgrade TypeScript in `docs` package to `^6.0.3` to avoid Astro check crash on native TypeScript.
+
 ## 0.6.2
 
 ### Patch Changes

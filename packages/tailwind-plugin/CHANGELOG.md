@@ -1,5 +1,14 @@
 # @hono-email/tailwind-plugin
 
+## 0.7.0
+
+### Patch Changes
+
+- [#119](https://github.com/hayatosc/hono-email/pull/119) [`b8c999a`](https://github.com/hayatosc/hono-email/commit/b8c999a67e1939bcea6a53811ddf91f97cbae394) Thanks [@hayatosc](https://github.com/hayatosc)! - Migrate the codebase to TypeScript 7 (native compiler preview).
+  - Add `isolatedDeclarations: true` and `declaration: true` to TSConfigs.
+  - Add explicit type annotations to exported components, functions, and command definitions to satisfy isolated declarations requirements.
+  - Downgrade TypeScript in `docs` package to `^6.0.3` to avoid Astro check crash on native TypeScript.
+
 ## 0.6.2
 
 ### Patch Changes

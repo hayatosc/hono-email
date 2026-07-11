@@ -1,6 +1,6 @@
 {
   "name": "@hono-email/tailwind-plugin",
-  "version": "0.6.2",
+  "version": "0.7.0",
   "description": "Bundler plugin for Tailwind integration with hono-email.",
   "keywords": [
     "email",
