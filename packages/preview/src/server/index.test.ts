@@ -299,4 +299,36 @@ describe('startPreviewServer', () => {
       process.chdir(originalCwd)
     }
   })
+
+  test('does not auto-load the user vite.config.ts from the working directory', async () => {
+    const dir = mkdtempSync(join(tempDir, 'user-config-'))
+    mkdirSync(join(dir, 'emails'))
+    // If Vite auto-detects and evaluates this file, `createServer` throws.
+    writeFileSync(
+      join(dir, 'vite.config.ts'),
+      "throw new Error('user vite.config.ts must not be loaded by the preview server')",
+    )
+
+    const originalCwd = process.cwd()
+    process.chdir(dir)
+    // `@hono/node-server`'s `getRequestListener` (used internally once the
+    // server starts) globally overrides `Request`/`Response` as a side effect.
+    // Restore them afterwards so a successful start here doesn't leak into
+    // other test files sharing this Bun test process.
+    const originalRequest = globalThis.Request
+    const originalResponse = globalThis.Response
+
+    let server: Awaited<ReturnType<typeof startPreviewServer>> | undefined
+    try {
+      server = await startPreviewServer({ dir: 'emails', port: 0 })
+    } finally {
+      await server?.close()
+      process.chdir(originalCwd)
+      Object.defineProperty(globalThis, 'Request', { value: originalRequest, configurable: true })
+      Object.defineProperty(globalThis, 'Response', {
+        value: originalResponse,
+        configurable: true,
+      })
+    }
+  })
 })

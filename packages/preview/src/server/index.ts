@@ -277,6 +277,10 @@ export async function startPreviewServer(options: PreviewServerOptions): Promise
 
   const vite = await createViteServer({
     root: rootDir,
+    // Never auto-load the user's own vite.config.* — the preview server's
+    // plugin set is intentionally self-contained (see `plugins` above), and
+    // merging in a foreign config can inject plugins that break the preview.
+    configFile: false,
     server: {
       middlewareMode: true,
       hmr: { server },
