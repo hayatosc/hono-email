@@ -177,8 +177,13 @@ export async function startPreviewServer(options: PreviewServerOptions): Promise
   const rootDir = process.cwd()
   const templateDir = resolve(rootDir, dir)
   const viteConfigFile = file ? resolve(rootDir, file) : null
-  if (viteConfigFile && !(existsSync(viteConfigFile) && statSync(viteConfigFile).isFile())) {
-    throw new Error(`Vite config file "${viteConfigFile}" does not exist.`)
+  if (viteConfigFile) {
+    if (!existsSync(viteConfigFile)) {
+      throw new Error(`Vite config file "${viteConfigFile}" does not exist.`)
+    }
+    if (!statSync(viteConfigFile).isFile()) {
+      throw new Error(`Vite config file "${viteConfigFile}" is not a file.`)
+    }
   }
   // Vite normalizes module paths to forward slashes; `templateDir` uses the
   // OS separator. Compare both in posix form so path checks work on Windows.
