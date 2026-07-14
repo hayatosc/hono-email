@@ -1,5 +1,7 @@
 # @hono-email/tailwind-plugin
 
+## 0.8.0
+
 ## 0.7.0
 
 ### Patch Changes

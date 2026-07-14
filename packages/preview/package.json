@@ -1,6 +1,6 @@
 {
   "name": "@hono-email/preview",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "Live preview server for hono-email templates with real-time props editing.",
   "keywords": [
     "cli",
