@@ -1,5 +1,5 @@
 ---
-"hono-email": patch
+'hono-email': patch
 ---
 
 fix(core): move Markdown dependencies to devDependencies to avoid leaking Node.js builtins
