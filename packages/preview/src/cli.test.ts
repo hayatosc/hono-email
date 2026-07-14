@@ -8,13 +8,18 @@ type CliArgs = {
   dir: { alias: string; type: 'string'; description: string; default: string }
   port: { alias: string; type: 'string'; description: string; default: string }
   host: { type: 'string'; description: string }
+  file: { alias: string; type: 'string'; description: string }
 }
 
 type MockCommandContext = CommandContext<CliArgs>
 
-const createMockContext = (port: string, host: string = '127.0.0.1'): MockCommandContext => ({
+const createMockContext = (
+  port: string,
+  host: string = '127.0.0.1',
+  file: string = '',
+): MockCommandContext => ({
   rawArgs: [],
-  args: { _: [], dir: './emails', port, host },
+  args: { _: [], dir: './emails', port, host, file },
   cmd: preview,
 })
 
@@ -58,6 +63,11 @@ describe('cli preview command', () => {
   test('host arg is string type', () => {
     expect(preview.args).toBeDefined()
     expect(preview.args).toHaveProperty('host.type', 'string')
+  })
+
+  test('file arg is string type', () => {
+    expect(preview.args).toBeDefined()
+    expect(preview.args).toHaveProperty('file.type', 'string')
   })
 })
 

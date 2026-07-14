@@ -7,6 +7,7 @@ import {
   detectTailwindConfig,
   detectPostCssConfig,
   detectViteConfigHasTailwind,
+  detectTailwindInFile,
   detectTailwindInPackageJson,
   prepareClientHtml,
   serveStaticAsset,
@@ -124,6 +125,34 @@ describe('detectViteConfigHasTailwind', () => {
   test('returns false when no vite config exists', () => {
     const dir = mkdtempSync(join(tempDir, 'vite-none-'))
     expect(detectViteConfigHasTailwind(dir)).toBe(false)
+  })
+})
+
+describe('detectTailwindInFile', () => {
+  let tempDir: string
+
+  beforeAll(() => {
+    tempDir = mkdtempSync(join(tmpdir(), 'preview-detect-file-'))
+  })
+
+  afterAll(() => {
+    rmSync(tempDir, { recursive: true, force: true })
+  })
+
+  test('returns true when the file contains tailwindcss', () => {
+    const path = join(tempDir, 'app.vite.config.ts')
+    writeFileSync(path, "import tailwindcss from '@tailwindcss/vite'")
+    expect(detectTailwindInFile(path)).toBe(true)
+  })
+
+  test('returns false when the file does not contain tailwind', () => {
+    const path = join(tempDir, 'plain.vite.config.ts')
+    writeFileSync(path, "import react from '@vitejs/plugin-react'")
+    expect(detectTailwindInFile(path)).toBe(false)
+  })
+
+  test('returns false when the file does not exist', () => {
+    expect(detectTailwindInFile(join(tempDir, 'missing.vite.config.ts'))).toBe(false)
   })
 })
 
@@ -329,6 +358,60 @@ describe('startPreviewServer', () => {
         value: originalResponse,
         configurable: true,
       })
+    }
+  })
+
+  test('loads the vite config file passed via `file`', async () => {
+    const dir = mkdtempSync(join(tempDir, 'explicit-config-'))
+    mkdirSync(join(dir, 'emails'))
+    writeFileSync(
+      join(dir, 'vite.config.ts'),
+      "throw new Error('explicit vite.config.ts was loaded')",
+    )
+
+    const originalCwd = process.cwd()
+    process.chdir(dir)
+
+    try {
+      await expect(
+        startPreviewServer({ dir: 'emails', port: 0, file: 'vite.config.ts' }),
+      ).rejects.toThrow('explicit vite.config.ts was loaded')
+    } finally {
+      process.chdir(originalCwd)
+    }
+  })
+
+  test('throws descriptive error when `file` does not exist', async () => {
+    const dir = mkdtempSync(join(tempDir, 'missing-config-'))
+    mkdirSync(join(dir, 'emails'))
+
+    const originalCwd = process.cwd()
+    process.chdir(dir)
+
+    try {
+      await expect(
+        startPreviewServer({ dir: 'emails', port: 0, file: 'vite.config.ts' }),
+      ).rejects.toThrow(/Vite config file ".*vite\.config\.ts" does not exist\./)
+    } finally {
+      process.chdir(originalCwd)
+    }
+  })
+
+  test('throws descriptive error when `file` points at a directory', async () => {
+    const dir = mkdtempSync(join(tempDir, 'dir-config-'))
+    mkdirSync(join(dir, 'emails'))
+
+    const originalCwd = process.cwd()
+    process.chdir(dir)
+
+    try {
+      // `.` resolves to an existing directory, not a file — this should be
+      // rejected the same way as a missing path, not passed through to Vite.
+      await expect(startPreviewServer({ dir: 'emails', port: 0, file: '.' })).rejects.toThrow(
+        /Vite config file ".*" does not exist\./,
+      )
+    } finally {
+      process.chdir(originalCwd)
     }
   })
 })

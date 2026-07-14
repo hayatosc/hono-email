@@ -33,6 +33,7 @@ bunx hono-email preview --dir ./emails
 
 - `-d, --dir <path>`: The directory to search for email templates recursively (defaults to `./emails`).
 - `-p, --port <port>`: The port to run the server on (defaults to `3000`).
+- `-f, --file <path>`: A Vite config file to load into the preview server (not loaded by default, since a project's own `vite.config.*` is otherwise ignored).
 
 ## Interactive Props Schema
 
