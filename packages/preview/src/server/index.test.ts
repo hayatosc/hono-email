@@ -344,8 +344,8 @@ describe('startPreviewServer', () => {
     // server starts) globally overrides `Request`/`Response` as a side effect.
     // Restore them afterwards so a successful start here doesn't leak into
     // other test files sharing this Bun test process.
-    const originalRequest = globalThis.Request
-    const originalResponse = globalThis.Response
+    const originalRequestDesc = Object.getOwnPropertyDescriptor(globalThis, 'Request')
+    const originalResponseDesc = Object.getOwnPropertyDescriptor(globalThis, 'Response')
 
     let server: Awaited<ReturnType<typeof startPreviewServer>> | undefined
     try {
@@ -353,11 +353,16 @@ describe('startPreviewServer', () => {
     } finally {
       await server?.close()
       process.chdir(originalCwd)
-      Object.defineProperty(globalThis, 'Request', { value: originalRequest, configurable: true })
-      Object.defineProperty(globalThis, 'Response', {
-        value: originalResponse,
-        configurable: true,
-      })
+      if (originalRequestDesc) {
+        Object.defineProperty(globalThis, 'Request', originalRequestDesc)
+      } else {
+        Reflect.deleteProperty(globalThis, 'Request')
+      }
+      if (originalResponseDesc) {
+        Object.defineProperty(globalThis, 'Response', originalResponseDesc)
+      } else {
+        Reflect.deleteProperty(globalThis, 'Response')
+      }
     }
   })
 
@@ -406,9 +411,9 @@ describe('startPreviewServer', () => {
 
     try {
       // `.` resolves to an existing directory, not a file — this should be
-      // rejected the same way as a missing path, not passed through to Vite.
+      // rejected with a specific error message, not passed through to Vite.
       await expect(startPreviewServer({ dir: 'emails', port: 0, file: '.' })).rejects.toThrow(
-        /Vite config file ".*" does not exist\./,
+        /Vite config file ".*" is not a file\./,
       )
     } finally {
       process.chdir(originalCwd)
