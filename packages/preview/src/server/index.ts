@@ -18,6 +18,7 @@ export type PreviewServerOptions = {
   dir: string
   port: number
   host?: string
+  file?: string
 }
 
 export type PreviewServer = {
@@ -38,16 +39,20 @@ export function detectPostCssConfig(rootDir: string): boolean {
   return CONFIG_EXTENSIONS.some((ext) => existsSync(resolve(rootDir, `postcss.config.${ext}`)))
 }
 
+export function detectTailwindInFile(path: string): boolean {
+  try {
+    const content = readFileSync(path, 'utf-8')
+    return content.includes('tailwindcss')
+  } catch {
+    return false
+  }
+}
+
 export function detectViteConfigHasTailwind(rootDir: string): boolean {
   for (const ext of CONFIG_EXTENSIONS) {
     const path = resolve(rootDir, `vite.config.${ext}`)
-    if (existsSync(path)) {
-      try {
-        const content = readFileSync(path, 'utf-8')
-        if (content.includes('tailwindcss') || content.includes('@tailwindcss/vite')) {
-          return true
-        }
-      } catch {}
+    if (existsSync(path) && detectTailwindInFile(path)) {
+      return true
     }
   }
   return false
@@ -167,10 +172,19 @@ export function serveStaticAsset(rootDir: string, pathname: string, res: AssetRe
 const TEMPLATE_EXTENSION = /\.(tsx|jsx)$/
 
 export async function startPreviewServer(options: PreviewServerOptions): Promise<PreviewServer> {
-  const { dir, port, host = '127.0.0.1' } = options
+  const { dir, port, host = '127.0.0.1', file } = options
 
   const rootDir = process.cwd()
   const templateDir = resolve(rootDir, dir)
+  const viteConfigFile = file ? resolve(rootDir, file) : null
+  if (viteConfigFile) {
+    if (!existsSync(viteConfigFile)) {
+      throw new Error(`Vite config file "${viteConfigFile}" does not exist.`)
+    }
+    if (!statSync(viteConfigFile).isFile()) {
+      throw new Error(`Vite config file "${viteConfigFile}" is not a file.`)
+    }
+  }
   // Vite normalizes module paths to forward slashes; `templateDir` uses the
   // OS separator. Compare both in posix form so path checks work on Windows.
   const normalizedTemplateDir = normalizePath(templateDir)
@@ -195,12 +209,19 @@ export async function startPreviewServer(options: PreviewServerOptions): Promise
   const liveClients = new Set<ServerResponse>()
   const plugins: PluginOption[] = []
 
+  // Vite's `mergeConfig` concatenates `plugins` arrays rather than replacing
+  // them, so if the `--file` config already registers `@tailwindcss/vite`,
+  // auto-injecting our own copy would register it twice and the two
+  // instances would race over the same virtual CSS module. When the
+  // explicit config owns Tailwind, skip auto-detection entirely.
+  const explicitConfigOwnsTailwind = viteConfigFile !== null && detectTailwindInFile(viteConfigFile)
   const tailwindConfigPath = detectTailwindConfig(rootDir)
   const hasTailwind =
-    tailwindConfigPath !== null ||
-    detectPostCssConfig(rootDir) ||
-    detectViteConfigHasTailwind(rootDir) ||
-    detectTailwindInPackageJson(rootDir)
+    !explicitConfigOwnsTailwind &&
+    (tailwindConfigPath !== null ||
+      detectPostCssConfig(rootDir) ||
+      detectViteConfigHasTailwind(rootDir) ||
+      detectTailwindInPackageJson(rootDir))
 
   if (hasTailwind) {
     try {
@@ -277,6 +298,11 @@ export async function startPreviewServer(options: PreviewServerOptions): Promise
 
   const vite = await createViteServer({
     root: rootDir,
+    // The preview server's plugin set is intentionally self-contained (see
+    // `plugins` above), so a user's vite.config.* is never auto-detected —
+    // it must be opted into explicitly via `--file`, since merging it in
+    // can inject plugins that break the preview.
+    configFile: viteConfigFile ?? false,
     server: {
       middlewareMode: true,
       hmr: { server },

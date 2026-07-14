@@ -10,6 +10,7 @@ type CliArgs = {
   dir: { alias: string; type: 'string'; description: string; default: string }
   port: { alias: string; type: 'string'; description: string; default: string }
   host: { type: 'string'; description: string }
+  file: { alias: string; type: 'string'; description: string }
 }
 
 export const preview: CommandDef<CliArgs> = defineCommand({
@@ -34,6 +35,11 @@ export const preview: CommandDef<CliArgs> = defineCommand({
       type: 'string',
       description: 'Server host (default: 127.0.0.1)',
     },
+    file: {
+      alias: 'f',
+      type: 'string',
+      description: 'Vite config file to load (default: none)',
+    },
   },
   async run({ args }) {
     const port = Number(args.port)
@@ -47,6 +53,7 @@ export const preview: CommandDef<CliArgs> = defineCommand({
         dir: args.dir,
         port,
         host: args.host,
+        file: args.file,
       })
 
       let shuttingDown = false

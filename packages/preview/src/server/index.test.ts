@@ -7,6 +7,7 @@ import {
   detectTailwindConfig,
   detectPostCssConfig,
   detectViteConfigHasTailwind,
+  detectTailwindInFile,
   detectTailwindInPackageJson,
   prepareClientHtml,
   serveStaticAsset,
@@ -124,6 +125,34 @@ describe('detectViteConfigHasTailwind', () => {
   test('returns false when no vite config exists', () => {
     const dir = mkdtempSync(join(tempDir, 'vite-none-'))
     expect(detectViteConfigHasTailwind(dir)).toBe(false)
+  })
+})
+
+describe('detectTailwindInFile', () => {
+  let tempDir: string
+
+  beforeAll(() => {
+    tempDir = mkdtempSync(join(tmpdir(), 'preview-detect-file-'))
+  })
+
+  afterAll(() => {
+    rmSync(tempDir, { recursive: true, force: true })
+  })
+
+  test('returns true when the file contains tailwindcss', () => {
+    const path = join(tempDir, 'app.vite.config.ts')
+    writeFileSync(path, "import tailwindcss from '@tailwindcss/vite'")
+    expect(detectTailwindInFile(path)).toBe(true)
+  })
+
+  test('returns false when the file does not contain tailwind', () => {
+    const path = join(tempDir, 'plain.vite.config.ts')
+    writeFileSync(path, "import react from '@vitejs/plugin-react'")
+    expect(detectTailwindInFile(path)).toBe(false)
+  })
+
+  test('returns false when the file does not exist', () => {
+    expect(detectTailwindInFile(join(tempDir, 'missing.vite.config.ts'))).toBe(false)
   })
 })
 
@@ -294,6 +323,97 @@ describe('startPreviewServer', () => {
     try {
       await expect(startPreviewServer({ dir: '.', port: 3000 })).rejects.toThrow(
         'Tailwind CSS configuration detected, but "@hono-email/tailwind-plugin" or "@tailwindcss/vite" could not be loaded',
+      )
+    } finally {
+      process.chdir(originalCwd)
+    }
+  })
+
+  test('does not auto-load the user vite.config.ts from the working directory', async () => {
+    const dir = mkdtempSync(join(tempDir, 'user-config-'))
+    mkdirSync(join(dir, 'emails'))
+    // If Vite auto-detects and evaluates this file, `createServer` throws.
+    writeFileSync(
+      join(dir, 'vite.config.ts'),
+      "throw new Error('user vite.config.ts must not be loaded by the preview server')",
+    )
+
+    const originalCwd = process.cwd()
+    process.chdir(dir)
+    // `@hono/node-server`'s `getRequestListener` (used internally once the
+    // server starts) globally overrides `Request`/`Response` as a side effect.
+    // Restore them afterwards so a successful start here doesn't leak into
+    // other test files sharing this Bun test process.
+    const originalRequestDesc = Object.getOwnPropertyDescriptor(globalThis, 'Request')
+    const originalResponseDesc = Object.getOwnPropertyDescriptor(globalThis, 'Response')
+
+    let server: Awaited<ReturnType<typeof startPreviewServer>> | undefined
+    try {
+      server = await startPreviewServer({ dir: 'emails', port: 0 })
+    } finally {
+      await server?.close()
+      process.chdir(originalCwd)
+      if (originalRequestDesc) {
+        Object.defineProperty(globalThis, 'Request', originalRequestDesc)
+      } else {
+        Reflect.deleteProperty(globalThis, 'Request')
+      }
+      if (originalResponseDesc) {
+        Object.defineProperty(globalThis, 'Response', originalResponseDesc)
+      } else {
+        Reflect.deleteProperty(globalThis, 'Response')
+      }
+    }
+  })
+
+  test('loads the vite config file passed via `file`', async () => {
+    const dir = mkdtempSync(join(tempDir, 'explicit-config-'))
+    mkdirSync(join(dir, 'emails'))
+    writeFileSync(
+      join(dir, 'vite.config.ts'),
+      "throw new Error('explicit vite.config.ts was loaded')",
+    )
+
+    const originalCwd = process.cwd()
+    process.chdir(dir)
+
+    try {
+      await expect(
+        startPreviewServer({ dir: 'emails', port: 0, file: 'vite.config.ts' }),
+      ).rejects.toThrow('explicit vite.config.ts was loaded')
+    } finally {
+      process.chdir(originalCwd)
+    }
+  })
+
+  test('throws descriptive error when `file` does not exist', async () => {
+    const dir = mkdtempSync(join(tempDir, 'missing-config-'))
+    mkdirSync(join(dir, 'emails'))
+
+    const originalCwd = process.cwd()
+    process.chdir(dir)
+
+    try {
+      await expect(
+        startPreviewServer({ dir: 'emails', port: 0, file: 'vite.config.ts' }),
+      ).rejects.toThrow(/Vite config file ".*vite\.config\.ts" does not exist\./)
+    } finally {
+      process.chdir(originalCwd)
+    }
+  })
+
+  test('throws descriptive error when `file` points at a directory', async () => {
+    const dir = mkdtempSync(join(tempDir, 'dir-config-'))
+    mkdirSync(join(dir, 'emails'))
+
+    const originalCwd = process.cwd()
+    process.chdir(dir)
+
+    try {
+      // `.` resolves to an existing directory, not a file — this should be
+      // rejected with a specific error message, not passed through to Vite.
+      await expect(startPreviewServer({ dir: 'emails', port: 0, file: '.' })).rejects.toThrow(
+        /Vite config file ".*" is not a file\./,
       )
     } finally {
       process.chdir(originalCwd)
