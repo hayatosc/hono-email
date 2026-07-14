@@ -42,7 +42,7 @@ export function detectPostCssConfig(rootDir: string): boolean {
 export function detectTailwindInFile(path: string): boolean {
   try {
     const content = readFileSync(path, 'utf-8')
-    return content.includes('tailwindcss') || content.includes('@tailwindcss/vite')
+    return content.includes('tailwindcss')
   } catch {
     return false
   }
