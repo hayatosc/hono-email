@@ -1,5 +1,15 @@
 # @hono-email/preview
 
+## 0.8.0
+
+### Minor Changes
+
+- [#124](https://github.com/hayatosc/hono-email/pull/124) [`57ee6b3`](https://github.com/hayatosc/hono-email/commit/57ee6b34e38e4f9ddb117804f89b2a92037b470b) Thanks [@hayatosc](https://github.com/hayatosc)! - Add a `-f, --file <path>` CLI option to `hono-email preview` to explicitly opt in to loading a Vite config file into the preview server. The default remains not loading any config, per the `configFile: false` fix. If the loaded config already registers a Tailwind CSS plugin, the preview server's built-in Tailwind auto-detection is skipped to avoid registering it twice.
+
+### Patch Changes
+
+- [#122](https://github.com/hayatosc/hono-email/pull/122) [`4bbb4fd`](https://github.com/hayatosc/hono-email/commit/4bbb4fd3d1840d01456b592dd3001cd523ed4698) Thanks [@hayatosc](https://github.com/hayatosc)! - Stop the preview server from auto-loading the user's `vite.config.*`. Previously Vite discovered and merged the project's config into the preview server's internal Vite instance, so foreign plugins (e.g. `@cloudflare/vite-plugin`) broke the preview. The preview server now always runs with its own self-contained plugin set (`configFile: false`); settings from the project's Vite config (such as `resolve.alias`) no longer apply to the preview.
+
 ## 0.7.0
 
 ### Patch Changes
