@@ -49,10 +49,8 @@ jobs:
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
-      # Type-aware rules need Astro's generated types, otherwise `astro:*`
+      # `lint` syncs Astro's generated types itself: without them `astro:*`
       # imports are unresolved and the docs sources are linted on wrong types.
-      - name: Sync docs types
-        run: bun run --filter 'hono-email-docs' sync
       - name: Lint
         run: bun run lint
 
