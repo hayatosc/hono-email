@@ -14,6 +14,7 @@ import {
   collectProviderRecipients as collectRecipients,
   failedReceipt,
   getProviderRecipientError,
+  requireProviderRecipientError,
 } from '../provider'
 import {
   asCloudflareEmailRecipientField,
@@ -134,9 +135,7 @@ const buildRestPayload = (
   const replyTo = asSingleAddressPath(message.replyTo, 'replyTo')
   const to = asCloudflareEmailRecipientField(toAddressList(message.to))
   if (to === undefined) {
-    throw new Error(
-      getProviderRecipientError(message) ?? 'Email message must include at least one recipient.',
-    )
+    throw new Error(requireProviderRecipientError(message))
   }
   const restAttachments = attachments.map(buildRestAttachment)
   validateEmailHeaders(message.headers)
@@ -164,9 +163,7 @@ const buildWorkersPayload = (
   const replyTo = asWorkerReplyTo(message.replyTo)
   const to = asCloudflareEmailRecipientField(toAddressList(message.to))
   if (to === undefined) {
-    throw new Error(
-      getProviderRecipientError(message) ?? 'Email message must include at least one recipient.',
-    )
+    throw new Error(requireProviderRecipientError(message))
   }
   const workerAttachments = attachments.map(buildWorkerAttachment)
   validateEmailHeaders(message.headers)

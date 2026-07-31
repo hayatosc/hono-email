@@ -12,6 +12,7 @@ import {
   collectProviderRecipients as collectRecipients,
   failedReceipt,
   getProviderRecipientError,
+  requireProviderRecipientError,
 } from '../provider'
 import { bytesToBase64, fetchWithTimeoutAndRetry } from '../utils'
 import type { RequestRetryOptions } from '../utils'
@@ -169,9 +170,7 @@ const buildFormData = async (
 
   const recipients = toAddressList(message.to)
   if (recipients.length === 0) {
-    throw new Error(
-      getProviderRecipientError(message) ?? 'Email message must include at least one recipient.',
-    )
+    throw new Error(requireProviderRecipientError(message))
   }
 
   const form = new FormData()

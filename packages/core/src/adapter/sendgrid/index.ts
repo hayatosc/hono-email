@@ -5,6 +5,7 @@ import {
   collectProviderRecipients as collectRecipients,
   failedReceipt,
   getProviderRecipientError,
+  requireProviderRecipientError,
 } from '../provider'
 import { fetchWithTimeoutAndRetry } from '../utils'
 import type { RequestRetryOptions } from '../utils'
@@ -182,9 +183,7 @@ const buildPayload = async (
 
   const to = asMailAddressList(message.to)
   if (to.length === 0) {
-    throw new Error(
-      getProviderRecipientError(message) ?? 'Email message must include at least one recipient.',
-    )
+    throw new Error(requireProviderRecipientError(message))
   }
 
   const cc = asMailAddressList(message.cc)

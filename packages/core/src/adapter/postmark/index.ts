@@ -11,6 +11,7 @@ import {
   collectProviderRecipients as collectRecipients,
   failedReceipt,
   getProviderRecipientError,
+  requireProviderRecipientError,
 } from '../provider'
 import { fetchWithTimeoutAndRetry } from '../utils'
 import type { RequestRetryOptions } from '../utils'
@@ -193,9 +194,7 @@ const buildPayload = async (
 ): Promise<PostmarkPayload> => {
   const to = asAddressField(message.to)
   if (to === undefined) {
-    throw new Error(
-      getProviderRecipientError(message) ?? 'Email message must include at least one recipient.',
-    )
+    throw new Error(requireProviderRecipientError(message))
   }
 
   const replyTo = asAddressField(message.replyTo)

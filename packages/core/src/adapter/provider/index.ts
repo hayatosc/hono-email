@@ -99,6 +99,16 @@ export const getProviderRecipientError = (
   return undefined
 }
 
+/**
+ * Returns the provider recipient error for a message that reached a payload
+ * builder without a `to` recipient, which is always an error condition.
+ *
+ * @param message - Email message to validate.
+ * @returns An error message describing the missing recipient.
+ */
+export const requireProviderRecipientError = (message: EmailMessage): string =>
+  getProviderRecipientError(message) ?? 'Email message must include at least one recipient.'
+
 const buildProviderAttachment = (attachment: ResolvedEmailAttachment): ProviderEmailAttachment => {
   if (attachment.filename === undefined) {
     throw new Error('Provider email attachments require a filename.')
@@ -122,9 +132,7 @@ export const buildProviderEmailPayload = async (
   const providerAttachments = attachments.map(buildProviderAttachment)
   const to = asProviderEmailAddressField(message.to)
   if (to === undefined) {
-    throw new Error(
-      getProviderRecipientError(message) ?? 'Email message must include at least one recipient.',
-    )
+    throw new Error(requireProviderRecipientError(message))
   }
 
   const cc = asProviderEmailAddressField(message.cc)
