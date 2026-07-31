@@ -91,12 +91,20 @@ const findTailwindImportLocalName = (code: string, packageNames: string[]): stri
           continue
         }
 
-        const parts = strippedSpecifier.value.trim().split(/\s+as\s+/)
-        if (parts[0] !== 'Tailwind') {
+        const tokens = strippedSpecifier.value.trim().split(/\s+/)
+        if (tokens[0] !== 'Tailwind') {
           continue
         }
 
-        const localName = parts[1]?.trim() || 'Tailwind'
+        const localName =
+          tokens.length === 1
+            ? 'Tailwind'
+            : tokens.length === 3 && tokens[1] === 'as'
+              ? tokens[2]
+              : undefined
+        if (!localName) {
+          continue
+        }
         if (/^[A-Za-z_$][\w$]*$/.test(localName)) {
           return localName
         }

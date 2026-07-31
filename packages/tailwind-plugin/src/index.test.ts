@@ -86,6 +86,18 @@ export const Email = () => <EmailTailwind />
     expect(transformed).toContain('<EmailTailwind artifact={__EmailTailwindArtifact} />')
   })
 
+  test('handles extra whitespace in an aliased Tailwind import', () => {
+    const source = `
+import {  Tailwind   as   MyTw  } from 'hono-email'
+
+export const Email = () => <MyTw />
+`
+
+    const transformed = transformTailwindComponentSource(source, TEST_FILE_ID)
+
+    expect(transformed).toContain('<MyTw artifact={__EmailTailwindArtifact} />')
+  })
+
   test('does not parse an unterminated import comment as a Tailwind specifier', () => {
     const source = `
 import { Tailwind /* unterminated } from 'hono-email'
