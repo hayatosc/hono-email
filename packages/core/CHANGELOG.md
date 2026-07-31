@@ -1,5 +1,19 @@
 # hono-email
 
+## 0.8.1
+
+### Patch Changes
+
+- [#127](https://github.com/hayatosc/hono-email/pull/127) [`0237e03`](https://github.com/hayatosc/hono-email/commit/0237e037a11175108fa58ed2ab80af2f60fa40ed) Thanks [@hayatosc](https://github.com/hayatosc)! - Validate Cloudflare adapter addresses consistently with other providers and report cc/bcc-only messages accurately.
+
+- [#132](https://github.com/hayatosc/hono-email/pull/132) [`ec9fbb7`](https://github.com/hayatosc/hono-email/commit/ec9fbb747df8fecd3145f949dca0db65fd5951c9) Thanks [@hayatosc](https://github.com/hayatosc)! - Fix strict CSS validation misreading selectors as declarations and prevent three-digit hex expansion from changing CSS id selectors.
+
+- [#128](https://github.com/hayatosc/hono-email/pull/128) [`86d66f3`](https://github.com/hayatosc/hono-email/commit/86d66f371879f9ad4961de7460810c24281f80a9) Thanks [@hayatosc](https://github.com/hayatosc)! - Fix Tailwind inlining so group and peer marker classes render without missing-class errors, CSS rule order is preserved, explicit inline styles win, and warning markers cannot be forged by document content. Markdown element styles no longer override an element's own `style` attribute. Aliased `Tailwind` imports now receive build-time artifact injection.
+
+- [#130](https://github.com/hayatosc/hono-email/pull/130) [`de2fe6c`](https://github.com/hayatosc/hono-email/commit/de2fe6c70511bcf628729a3ee8eaeac0877c7bb1) Thanks [@hayatosc](https://github.com/hayatosc)! - Keep generated MIME headers within RFC line limits, compute the correct DKIM hash for empty bodies, and reject oversized SMTP response buffers. Long custom or attachment header values that cannot be folded below the RFC line limit now fail clearly instead of producing malformed messages.
+
+- [#133](https://github.com/hayatosc/hono-email/pull/133) [`3db0b21`](https://github.com/hayatosc/hono-email/commit/3db0b21a60e1f16ce375b882f0f8a99ec88438f9) Thanks [@hayatosc](https://github.com/hayatosc)! - Preserve whitespace-sensitive HTML in pretty output and retain URLs when converting links with single-quoted or unquoted `href` attributes to plain text.
+
 ## 0.8.0
 
 ### Patch Changes
@@ -19,6 +33,7 @@
 ### Patch Changes
 
 - [#118](https://github.com/hayatosc/hono-email/pull/118) [`d160fdf`](https://github.com/hayatosc/hono-email/commit/d160fdfba6379c2029fb65e48081cf657dd43d5d) Thanks [@hayatosc](https://github.com/hayatosc)! - - Fix HTMLRewriter parsing crash caused by self-closing meta tags in layout components.
+
   - Fix HTML splitting bug in TOKEN_PATTERN parser when quotes contain `>` characters in Preview relocate logic.
   - Robust case/whitespace-insensitive style property verification in validateStyleTags.
   - Support custom AbortSignal propagation in fetchWithTimeoutAndRetry without overwriting timeouts.
@@ -78,6 +93,7 @@
 - [#47](https://github.com/hayatosc/hono-email/pull/47) [`b7d154d`](https://github.com/hayatosc/hono-email/commit/b7d154d02df0fd6df164179465078c18d184e871) Thanks [@hayatosc](https://github.com/hayatosc)! - Fix Resend adapter sending `contentId` (camelCase) instead of `content_id` (snake_case) in attachment payloads.
 
   The Resend API requires `content_id` and `content_type` (snake_case) in attachment objects, matching the shape documented in [resend-openapi](https://github.com/resend/resend-openapi) and the official Node SDK. The previous camelCase field was silently ignored by the API, causing inline image embedding via `cid:` references to silently fail.
+
   - **Fix:** attachment `contentId` is now correctly sent as `content_id`
   - **Fix:** attachment MIME type is now sent as `content_type` (previously omitted)
   - **Fix:** `ResendErrorResponse.type` removed — the Resend API only returns `name`, not `type`
