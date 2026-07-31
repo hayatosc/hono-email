@@ -4,7 +4,12 @@ import {
   resolveEmailAttachments,
 } from '../attachment'
 import type { EmailAdapter, EmailAddress, EmailMessage, SendEmailReceipt } from '../index'
-import { addressToPath, formatEmailAddress, toAddressList, validateEmailHeaders } from '../message'
+import {
+  addressToPath,
+  assertValidEmailAddress,
+  toAddressList,
+  validateEmailHeaders,
+} from '../message'
 import {
   collectProviderRecipients as collectRecipients,
   failedReceipt,
@@ -30,7 +35,7 @@ const asSingleAddressPath = (
   fieldName: string,
 ): string | undefined => {
   const paths = toAddressList(addresses).map((address) => {
-    formatEmailAddress(address)
+    assertValidEmailAddress(address)
     return addressToPath(address)
   })
   if (paths.length === 0) {
@@ -45,7 +50,7 @@ const asSingleAddressPath = (
 }
 
 const asRestNameAddress = (address: EmailAddress): string | CloudflareEmailNameAddress => {
-  formatEmailAddress(address)
+  assertValidEmailAddress(address)
 
   if (typeof address === 'string') {
     return address
@@ -57,7 +62,7 @@ const asRestNameAddress = (address: EmailAddress): string | CloudflareEmailNameA
 }
 
 const asWorkerNameAddress = (address: EmailAddress): string | CloudflareEmailWorkerNameAddress => {
-  formatEmailAddress(address)
+  assertValidEmailAddress(address)
 
   if (typeof address === 'string') {
     return address

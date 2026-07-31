@@ -1,5 +1,5 @@
 import type { EmailAddress, EmailAttachmentLimits } from '../index'
-import { formatEmailAddress } from '../message'
+import { assertValidEmailAddress } from '../message'
 
 /**
  * Name/address object shape used by the Cloudflare Email REST API payload.
@@ -227,7 +227,7 @@ export const asCloudflareEmailRecipientField = (
   addresses: EmailAddress[],
 ): CloudflareEmailRecipientField | undefined => {
   const paths = addresses.map((address) => {
-    formatEmailAddress(address)
+    assertValidEmailAddress(address)
     return typeof address === 'string' ? address : address.address
   })
   if (paths.length === 0) {
