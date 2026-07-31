@@ -90,6 +90,23 @@ describe('render output', () => {
     expect(text).toBe('GOOD')
   })
 
+  test('ignores href syntax that appears inside another attribute value', () => {
+    const text = renderPlainText(
+      `<a title=" href='https://evil.example' " href="https://real.example">C</a>`,
+    )
+
+    expect(text).toContain('C (https://real.example)')
+    expect(text).not.toContain('evil.example')
+  })
+
+  test('ignores alt syntax that appears inside another attribute value', () => {
+    const text = renderPlainText(`<img title=" alt='BAD' " alt="GOOD" src="x">`, {
+      includeImageAlt: true,
+    })
+
+    expect(text).toBe('GOOD')
+  })
+
   test('decodes HTML entities in plain text', async () => {
     const { text } = await render(
       <Html>

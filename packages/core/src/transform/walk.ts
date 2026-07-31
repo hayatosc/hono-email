@@ -1,3 +1,5 @@
+import { hasAttribute } from '../html-attribute'
+
 const PREVIEW_ATTRIBUTE = 'data-hono-email-preview'
 
 const TOKEN_PATTERN = /<!--[\s\S]*?-->|<[^>]+>|[^<]+/g
@@ -130,7 +132,8 @@ export const transformHtmlOutsideSkips = (html: string, options: HtmlWalkOptions
         const selfClosing = token.endsWith('/>')
         const parentSkipped = stack[stack.length - 1]?.skip ?? false
         const ownsSkipRegion =
-          !parentSkipped && (skipTags.has(tag) || token.includes(PREVIEW_ATTRIBUTE))
+          !parentSkipped &&
+          (skipTags.has(tag) || hasAttribute(token.slice(openMatch[0].length), PREVIEW_ATTRIBUTE))
 
         result += transform(token, {
           type: 'tag',
