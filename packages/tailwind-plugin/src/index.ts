@@ -14,7 +14,6 @@ const RESOLVED_ARTIFACT_PREFIX = '\0virtual:hono-email-tw-artifact:'
 const RESOLVED_CSS_PREFIX = '\0virtual:hono-email-tw-css:'
 const RESOLVED_CSS_SUFFIX = '.css'
 const SOURCE_MODULE_FILTER: RegExp = /\.[cm]?[jt]sx?(?:[?#]|$)/
-const TAILWIND_COMPONENT_OPEN_TAG_PATTERN: RegExp = /<Tailwind\b([^>]*?)(\/?)>/g
 
 type ResolvedPluginOptions = {
   configPath?: string
@@ -52,14 +51,81 @@ const escapeForRegExp = (value: string): string => value.replace(/[.*+?^${}()|[\
 
 const stripQueryAndHash = (id: string): string => id.replace(/[?#].*$/, '')
 
-const hasTailwindImport = (code: string, packageNames: string[]): boolean =>
-  packageNames.some(
-    (packageName) =>
-      new RegExp(`from\\s*['"]${escapeForRegExp(packageName)}['"]`).test(code) &&
-      new RegExp(
-        `import\\s*{[^}]*\\bTailwind\\b[^}]*}\\s*from\\s*['"]${escapeForRegExp(packageName)}['"]`,
-      ).test(code),
-  )
+const stripComments = (value: string): { value: string; unterminated: boolean } => {
+  let result = ''
+  let cursor = 0
+
+  while (cursor < value.length) {
+    const next = value.slice(cursor, cursor + 2)
+
+    if (next === '/*') {
+      const commentEnd = value.indexOf('*/', cursor + 2)
+      if (commentEnd === -1) {
+        return { value: result, unterminated: true }
+      }
+
+      cursor = commentEnd + 2
+      continue
+    }
+
+    if (next === '//') {
+      const lineEnd = value.indexOf('\n', cursor + 2)
+      if (lineEnd === -1) {
+        return { value: result, unterminated: false }
+      }
+
+      cursor = lineEnd + 1
+      continue
+    }
+
+    result += value[cursor]
+    cursor += 1
+  }
+
+  return { value: result, unterminated: false }
+}
+
+const findTailwindImportLocalName = (code: string, packageNames: string[]): string | undefined => {
+  for (const packageName of packageNames) {
+    const importPattern = new RegExp(
+      `import\\s*{([^}]*)}\\s*from\\s*['"]${escapeForRegExp(packageName)}['"]`,
+      'g',
+    )
+    for (const match of code.matchAll(importPattern)) {
+      const specifiers = match[1]
+      if (!specifiers) {
+        continue
+      }
+
+      const strippedSpecifiers = stripComments(specifiers)
+      if (strippedSpecifiers.unterminated) {
+        continue
+      }
+
+      for (const specifier of strippedSpecifiers.value.split(',')) {
+        const tokens = specifier.trim().split(/\s+/)
+        if (tokens[0] !== 'Tailwind') {
+          continue
+        }
+
+        const localName =
+          tokens.length === 1
+            ? 'Tailwind'
+            : tokens.length === 3 && tokens[1] === 'as'
+              ? tokens[2]
+              : undefined
+        if (!localName) {
+          continue
+        }
+        if (/^[A-Za-z_$][\w$]*$/.test(localName)) {
+          return localName
+        }
+      }
+    }
+  }
+
+  return undefined
+}
 
 /**
  * Transforms JSX source code by injecting Tailwind artifact imports into `<Tailwind>` components.
@@ -81,20 +147,25 @@ export const transformTailwindComponentSource = (
   id: string,
   packageNames: string[] = [...DEFAULT_PACKAGE_NAMES],
 ): string | null => {
-  if (!hasTailwindImport(code, packageNames) || !code.includes('<Tailwind')) {
+  const tailwindLocalName = findTailwindImportLocalName(code, packageNames)
+  if (!tailwindLocalName) {
     return null
   }
 
+  const componentOpenTagPattern = new RegExp(
+    `<${escapeForRegExp(tailwindLocalName)}(?=[\\s/>])([^>]*?)(\\/?)>`,
+    'g',
+  )
   let replaced = false
   const transformedCode = code.replace(
-    TAILWIND_COMPONENT_OPEN_TAG_PATTERN,
+    componentOpenTagPattern,
     (fullMatch, attributes: string, selfClosing: string) => {
       if (/(?:^|\s)artifact\s*=/.test(attributes)) {
         return fullMatch
       }
 
       replaced = true
-      return `<Tailwind artifact={__EmailTailwindArtifact}${attributes}${selfClosing}>`
+      return `<${tailwindLocalName} artifact={__EmailTailwindArtifact}${attributes}${selfClosing}>`
     },
   )
 

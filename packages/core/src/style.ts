@@ -83,13 +83,26 @@ export const serializeStyleAttribute = (style: Record<string, string>): string =
     .map(([property, value]) => `${property}:${value}`)
     .join(';')
 
+/**
+ * Merges style declarations, giving precedence to the first argument.
+ *
+ * Declarations in `highPrecedenceStyle` override matching properties in
+ * `lowPrecedenceStyle` and are serialized last, so they win in the resulting
+ * `style` attribute.
+ *
+ * @param highPrecedenceStyle - Declarations that win over `lowPrecedenceStyle`.
+ * @param lowPrecedenceStyle - Declarations used only for properties that
+ * `highPrecedenceStyle` does not set.
+ * @returns The merged `style` attribute value.
+ */
 export const mergeStyleAttributes = (
-  existingStyle: string | undefined,
-  additionalStyle: Record<string, string>,
+  highPrecedenceStyle: string | undefined,
+  lowPrecedenceStyle: Record<string, string>,
 ): string => {
-  const merged = {
-    ...parseStyleAttribute(existingStyle),
-    ...additionalStyle,
+  const merged = { ...lowPrecedenceStyle }
+  for (const [property, value] of Object.entries(parseStyleAttribute(highPrecedenceStyle))) {
+    delete merged[property]
+    merged[property] = value
   }
 
   return serializeStyleAttribute(merged)

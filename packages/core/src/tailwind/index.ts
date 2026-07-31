@@ -17,6 +17,7 @@ import * as csstree from './csstree'
  * @property classes - Class tokens known to the artifact.
  * @property headCssByClass - Responsive, pseudo, or head-only CSS keyed by class token.
  * @property inlineStylesByClass - Inline declarations keyed by class token.
+ * @property inlineStyleOrderByClass - CSS rule order for each inline declaration.
  * @property renamedClasses - Email-safe class tokens keyed by original token, for pseudo-class variants.
  * @property droppedClasses - Class tokens dropped because their selector is unsupported (combinator/pseudo-element).
  *
@@ -31,6 +32,7 @@ export type TailwindBuildArtifact = {
   classes: string[]
   headCssByClass: Record<string, string>
   inlineStylesByClass: Record<string, Record<string, string>>
+  inlineStyleOrderByClass?: Record<string, Record<string, number>>
   renamedClasses: Record<string, string>
   droppedClasses: string[]
 }
@@ -108,35 +110,40 @@ const readClassToken = (
   return token === '' ? undefined : { token: decodeEscapedClassToken(token), end: index }
 }
 
-const extractLastClassToken = (selector: string): string | undefined => {
-  let last: string | undefined
+const extractClassTokens = (selector: string): string[] => {
+  const tokens: string[] = []
   for (let index = 0; index < selector.length; index += 1) {
     if (selector[index] !== '.' || selector[index - 1] === '\\') {
       continue
     }
     const read = readClassToken(selector, index)
-    if (read) {
-      last = read.token
+    if (read && !tokens.includes(read.token)) {
+      tokens.push(read.token)
       index = read.end - 1
     }
   }
-  return last
+  return tokens
 }
 
 type ParsedSelector =
   | { kind: 'simple'; token: string }
   | { kind: 'pseudo'; token: string; pseudo: string }
-  | { kind: 'unsupported'; token: string | undefined }
+  | { kind: 'unsupported'; token: string | undefined; tokens: string[] }
+
+const unsupportedSelector = (selector: string): ParsedSelector => {
+  const tokens = extractClassTokens(selector)
+  return { kind: 'unsupported', token: tokens.at(-1), tokens }
+}
 
 const parseSelector = (selector: string): ParsedSelector => {
   const trimmed = selector.trim()
   if (!trimmed.startsWith('.')) {
-    return { kind: 'unsupported', token: extractLastClassToken(trimmed) }
+    return unsupportedSelector(trimmed)
   }
 
   const read = readClassToken(trimmed, 0)
   if (!read) {
-    return { kind: 'unsupported', token: extractLastClassToken(trimmed) }
+    return unsupportedSelector(trimmed)
   }
 
   const rest = trimmed.slice(read.end)
@@ -148,7 +155,7 @@ const parseSelector = (selector: string): ParsedSelector => {
     return { kind: 'pseudo', token: read.token, pseudo: rest }
   }
 
-  return { kind: 'unsupported', token: extractLastClassToken(trimmed) }
+  return unsupportedSelector(trimmed)
 }
 
 const renameVariantToken = (token: string): string => token.replaceAll(':', '-')
@@ -157,21 +164,42 @@ const droppedClassWarning = (classToken: string): string =>
   `Tailwind class '${classToken}' uses an unsupported selector (combinator or pseudo-element) and was dropped.`
 
 const TAILWIND_WARNING_COMMENT_PREFIX = 'hono-email-tw-warning:'
-const TAILWIND_WARNING_COMMENT_PATTERN = /<!--hono-email-tw-warning:([\s\S]*?)-->/g
+
+const escapeRegExp = (value: string): string => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+
+const createTailwindWarningNonce = (): string =>
+  globalThis.crypto?.randomUUID?.() ??
+  `${Date.now().toString(36)}.${Math.random().toString(36).slice(2)}`
+
+const TAILWIND_WARNING_NONCE = createTailwindWarningNonce()
+const TAILWIND_WARNING_COMMENT_PATTERN = new RegExp(
+  `<!--${escapeRegExp(TAILWIND_WARNING_COMMENT_PREFIX)}${escapeRegExp(TAILWIND_WARNING_NONCE)}:([\\s\\S]*?)-->`,
+  'g',
+)
 
 /**
  * Encodes Tailwind render warnings as HTML comment markers.
  *
  * Markers travel with the rendered fragment until `render()` extracts them, so
  * warnings raised inside the `<Tailwind>` component reach the render pipeline.
+ * Every marker carries a process-wide nonce, so document content cannot forge
+ * or consume markers.
  *
  * @param warnings - Warning messages to encode.
  * @returns Concatenated comment markers, or an empty string.
  */
-export const encodeTailwindWarnings = (warnings: string[]): string =>
-  warnings
-    .map((warning) => `<!--${TAILWIND_WARNING_COMMENT_PREFIX}${encodeURIComponent(warning)}-->`)
+export const encodeTailwindWarnings = (warnings: string[]): string => {
+  if (warnings.length === 0) {
+    return ''
+  }
+
+  return warnings
+    .map(
+      (warning) =>
+        `<!--${TAILWIND_WARNING_COMMENT_PREFIX}${TAILWIND_WARNING_NONCE}:${encodeURIComponent(warning)}-->`,
+    )
     .join('')
+}
 
 /**
  * Extracts and removes Tailwind warning markers from HTML.
@@ -181,7 +209,7 @@ export const encodeTailwindWarnings = (warnings: string[]): string =>
  */
 export const extractTailwindWarnings = (html: string): { html: string; warnings: string[] } => {
   const warnings: string[] = []
-  const stripped = html.replace(TAILWIND_WARNING_COMMENT_PATTERN, (_match, encoded: string) => {
+  const stripped = html.replace(TAILWIND_WARNING_COMMENT_PATTERN, (_marker, encoded: string) => {
     warnings.push(decodeURIComponent(encoded))
     return ''
   })
@@ -207,13 +235,20 @@ const serializeDeclarations = (declarations: Record<string, string>, important: 
 
 const mergeStylesByClass = (
   target: Record<string, Record<string, string>>,
+  orderTarget: Record<string, Record<string, number>>,
   classToken: string,
   declarations: Record<string, string>,
+  ruleOrder: number,
 ): void => {
   target[classToken] = {
     ...target[classToken],
     ...declarations,
   }
+  const orderByProperty = orderTarget[classToken] ?? {}
+  for (const property of Object.keys(declarations)) {
+    orderByProperty[property] = ruleOrder
+  }
+  orderTarget[classToken] = orderByProperty
 }
 
 const appendMediaRuleByClass = (
@@ -309,11 +344,13 @@ const buildArtifactFromCss = (cssText: string, classes?: string[]): TailwindBuil
   const rootNodes = [...parsed.children]
   const cssVariables = collectCssVariables(rootNodes)
   const inlineStylesByClass: Record<string, Record<string, string>> = {}
+  const inlineStyleOrderByClass: Record<string, Record<string, number>> = {}
   const headCssByClass: Record<string, string> = {}
   const renamedClasses: Record<string, string> = {}
   const discoveredClasses: string[] = []
   const discoveredClassSet = new Set<string>()
   const droppedClassSet = new Set<string>()
+  let ruleOrder = 0
 
   const registerClass = (classToken: string): void => {
     if (!discoveredClassSet.has(classToken)) {
@@ -337,10 +374,14 @@ const buildArtifactFromCss = (cssText: string, classes?: string[]): TailwindBuil
         continue
       }
 
+      const currentRuleOrder = ruleOrder
+      ruleOrder += 1
       const selector = parseSelector(csstree.generate(node.prelude))
       if (selector.kind === 'unsupported') {
+        for (const classToken of selector.tokens) {
+          registerClass(classToken)
+        }
         if (selector.token) {
-          registerClass(selector.token)
           droppedClassSet.add(selector.token)
         }
         continue
@@ -394,7 +435,13 @@ const buildArtifactFromCss = (cssText: string, classes?: string[]): TailwindBuil
           normalizedDirectDeclarations,
         )
       } else {
-        mergeStylesByClass(inlineStylesByClass, classToken, normalizedDirectDeclarations)
+        mergeStylesByClass(
+          inlineStylesByClass,
+          inlineStyleOrderByClass,
+          classToken,
+          normalizedDirectDeclarations,
+          currentRuleOrder,
+        )
       }
     }
   }
@@ -412,6 +459,7 @@ const buildArtifactFromCss = (cssText: string, classes?: string[]): TailwindBuil
     classes: classes ?? discoveredClasses,
     headCssByClass,
     inlineStylesByClass,
+    inlineStyleOrderByClass,
     renamedClasses,
     droppedClasses: Array.from(droppedClassSet),
   }
@@ -502,10 +550,17 @@ export const transformTailwindHtml = async (
       element(el) {
         const tokens = (el.getAttribute('class') ?? '').split(/\s+/).filter(Boolean)
         const mergedInlineStyle: Record<string, string> = {}
+        const inlineDeclarations: Array<{
+          property: string
+          value: string
+          sourceOrder: number
+          tokenIndex: number
+          declarationIndex: number
+        }> = []
         const outputTokens: string[] = []
         let renamed = false
 
-        for (const token of tokens) {
+        for (const [tokenIndex, token] of tokens.entries()) {
           if (!knownClasses.has(token)) {
             outputTokens.push(token)
             if (ignoreMissingClass?.(token)) {
@@ -535,13 +590,35 @@ export const transformTailwindHtml = async (
 
           const inlineStyle = artifact.inlineStylesByClass[token]
           if (inlineStyle) {
-            Object.assign(mergedInlineStyle, inlineStyle)
+            const orderByProperty = artifact.inlineStyleOrderByClass?.[token]
+            for (const [declarationIndex, [property, value]] of Object.entries(
+              inlineStyle,
+            ).entries()) {
+              inlineDeclarations.push({
+                property,
+                value,
+                sourceOrder: orderByProperty?.[property] ?? Number.MAX_SAFE_INTEGER,
+                tokenIndex,
+                declarationIndex,
+              })
+            }
           }
 
           const mediaRule = artifact.headCssByClass[token]
           if (mediaRule) {
             responsiveCss.add(mediaRule)
           }
+        }
+
+        inlineDeclarations.sort(
+          (left, right) =>
+            left.sourceOrder - right.sourceOrder ||
+            left.tokenIndex - right.tokenIndex ||
+            left.declarationIndex - right.declarationIndex,
+        )
+        for (const { property, value } of inlineDeclarations) {
+          delete mergedInlineStyle[property]
+          mergedInlineStyle[property] = value
         }
 
         if (renamed) {

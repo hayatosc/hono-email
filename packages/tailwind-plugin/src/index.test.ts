@@ -57,6 +57,85 @@ export const Email = () => <Tailwind />
     expect(transformed).toContain('<Tailwind artifact={__EmailTailwindArtifact} />')
   })
 
+  test('injects the artifact into an aliased Tailwind component', () => {
+    const source = `
+import { Tailwind as EmailTailwind } from 'hono-email'
+
+export const Email = () => (
+  <EmailTailwind>
+    <div>Hello</div>
+  </EmailTailwind>
+)
+`
+
+    const transformed = transformTailwindComponentSource(source, TEST_FILE_ID)
+
+    expect(transformed).toContain('<EmailTailwind artifact={__EmailTailwindArtifact}>')
+    expect(transformed).not.toContain('<Tailwind artifact=')
+  })
+
+  test('handles multiple comments before an aliased Tailwind import', () => {
+    const source = `
+import { Tailwind /* first */ /* second */ as EmailTailwind } from 'hono-email'
+
+export const Email = () => <EmailTailwind />
+`
+
+    const transformed = transformTailwindComponentSource(source, TEST_FILE_ID)
+
+    expect(transformed).toContain('<EmailTailwind artifact={__EmailTailwindArtifact} />')
+  })
+
+  test('handles extra whitespace in an aliased Tailwind import', () => {
+    const source = `
+import {  Tailwind   as   MyTw  } from 'hono-email'
+
+export const Email = () => <MyTw />
+`
+
+    const transformed = transformTailwindComponentSource(source, TEST_FILE_ID)
+
+    expect(transformed).toContain('<MyTw artifact={__EmailTailwindArtifact} />')
+  })
+
+  test('does not parse an unterminated import comment as a Tailwind specifier', () => {
+    const source = `
+import { Tailwind /* unterminated } from 'hono-email'
+
+export const Email = () => <Tailwind />
+`
+
+    expect(transformTailwindComponentSource(source, TEST_FILE_ID)).toBeNull()
+  })
+
+  test('ignores line comments containing commas in a multi-line import', () => {
+    const source = `
+import {
+  Section, // supports a, b and c
+  Tailwind,
+} from 'hono-email'
+
+export const Email = () => <Tailwind />
+`
+
+    const transformed = transformTailwindComponentSource(source, TEST_FILE_ID)
+
+    expect(transformed).toContain('<Tailwind artifact={__EmailTailwindArtifact} />')
+  })
+
+  test('ignores line comments before an aliased Tailwind import', () => {
+    const source = `
+import { Tailwind // email helper
+  as EmailTailwind } from 'hono-email'
+
+export const Email = () => <EmailTailwind />
+`
+
+    const transformed = transformTailwindComponentSource(source, TEST_FILE_ID)
+
+    expect(transformed).toContain('<EmailTailwind artifact={__EmailTailwindArtifact} />')
+  })
+
   test('builds a per-file CSS module scoped to only that email file', () => {
     const repoRoot = process.cwd().replace(/\\/g, '/')
     const cssModule = buildPerFileCssModule(TEST_FILE_ID, {
