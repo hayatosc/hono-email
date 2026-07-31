@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, statSync } from 'node:fs'
+import { existsSync, readFileSync, realpathSync, statSync } from 'node:fs'
 import { createServer as createHttpServer, type ServerResponse } from 'node:http'
 import { dirname, extname, isAbsolute, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -11,7 +11,8 @@ import {
   type PluginOption,
 } from 'vite'
 
-import { isAffectedByChange } from './hmr.js'
+import { invalidateTemplateDiscovery } from '../discovery/index.js'
+import { getLiveUpdateType } from './hmr.js'
 import { createApiRoutes } from './routes.js'
 
 export type PreviewServerOptions = {
@@ -185,9 +186,13 @@ export async function startPreviewServer(options: PreviewServerOptions): Promise
       throw new Error(`Vite config file "${viteConfigFile}" is not a file.`)
     }
   }
-  // Vite normalizes module paths to forward slashes; `templateDir` uses the
-  // OS separator. Compare both in posix form so path checks work on Windows.
-  const normalizedTemplateDir = normalizePath(templateDir)
+  if (!existsSync(templateDir)) {
+    throw new Error(`Template directory "${templateDir}" does not exist.`)
+  }
+
+  // Vite normalizes module paths to forward slashes and resolves symlinks;
+  // compare canonical paths so loader and HMR checks use the same root.
+  const normalizedTemplateDir = normalizePath(realpathSync(templateDir))
   // Match on the directory boundary so a sibling like `emails-backup/` whose
   // path shares the prefix is not mistaken for a template.
   const templateDirPrefix = normalizedTemplateDir.endsWith('/')
@@ -197,10 +202,6 @@ export async function startPreviewServer(options: PreviewServerOptions): Promise
     typeof file === 'string' &&
     normalizePath(file).startsWith(templateDirPrefix) &&
     TEMPLATE_EXTENSION.test(file)
-
-  if (!existsSync(templateDir)) {
-    throw new Error(`Template directory "${templateDir}" does not exist.`)
-  }
 
   const { dir: clientDir, prebuilt: clientPrebuilt } = resolveClient()
   // Open SSE connections used to push template-update events to the browser.
@@ -274,13 +275,18 @@ export async function startPreviewServer(options: PreviewServerOptions): Promise
       // `options.file` covers direct template edits even when the template is
       // not yet in the module graph; the importer walk covers shared components
       // a template imports (which live outside `templateDir`).
-      if (!isAffectedByChange(options.file, options.modules, isTemplateFile)) {
+      const updateType = getLiveUpdateType(options.file, options.modules, isTemplateFile)
+      if (!updateType) {
         return
+      }
+
+      if (updateType === 'templates-changed') {
+        invalidateTemplateDiscovery(templateDir)
       }
 
       for (const res of liveClients) {
         try {
-          res.write('data: update\n\n')
+          res.write(`event: ${updateType}\ndata: update\n\n`)
         } catch {
           liveClients.delete(res)
         }
@@ -399,6 +405,7 @@ export async function startPreviewServer(options: PreviewServerOptions): Promise
         }
       }
       liveClients.clear()
+      invalidateTemplateDiscovery(templateDir)
       if ('closeAllConnections' in server && typeof server.closeAllConnections === 'function') {
         server.closeAllConnections()
       }

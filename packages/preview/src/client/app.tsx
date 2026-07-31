@@ -19,6 +19,7 @@ import type { PropsSchema } from '../props/index.js'
 import { PreviewPanel } from './components/PreviewPanel.js'
 import { PropsForm } from './components/PropsForm.js'
 import { TemplateList } from './components/TemplateList.js'
+import { getApiErrorMessage, handleLiveUpdate } from './utils.js'
 
 function isObject(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object' && !Array.isArray(value)
@@ -68,6 +69,8 @@ function App() {
 
   const debounceRef = useRef<number | null>(null)
   const renderRef = useRef<() => void>(() => {})
+  const selectedRef = useRef<string | null>(null)
+  selectedRef.current = selected
 
   const fetchApi = useCallback(async (path: string, opts?: RequestInit) => {
     try {
@@ -87,11 +90,14 @@ function App() {
       body: JSON.stringify({ props: propValues }),
     })
     if (!response || !response.ok) {
-      setError(response ? await response.text() : 'Network error')
+      setError(response ? await getApiErrorMessage(response) : 'Network error')
       return
     }
-    const data = await response.json()
-    if (!isObject(data)) return
+    const data: unknown = await response.json().catch(() => null)
+    if (!isObject(data)) {
+      setError('Invalid response from server')
+      return
+    }
     setHtml(typeof data.html === 'string' ? data.html : '')
     setText(typeof data.text === 'string' ? data.text : '')
     setWarnings(Array.isArray(data.warnings) ? data.warnings.map(String) : [])
@@ -109,9 +115,19 @@ function App() {
   const loadSchema = useCallback(
     async (name: string) => {
       const response = await fetchApi(`/api/templates/${encodeURIComponent(name)}/props`)
-      if (!response || !response.ok) return
-      const newSchema = await response.json()
-      if (!isObject(newSchema)) return
+      if (!response || !response.ok) {
+        setSchema({})
+        setPropValues({})
+        setError(response ? await getApiErrorMessage(response) : 'Network error')
+        return
+      }
+      const newSchema: unknown = await response.json().catch(() => null)
+      if (!isObject(newSchema)) {
+        setSchema({})
+        setPropValues({})
+        setError('Invalid response from server')
+        return
+      }
       const schema = coerceSchema(newSchema)
       setSchema(schema)
       const defaults: Record<string, unknown> = {}
@@ -140,27 +156,50 @@ function App() {
     [loadSchema],
   )
 
-  useEffect(() => {
-    const load = async () => {
-      const response = await fetchApi('/api/templates')
-      if (!response || !response.ok) return
-      const data = await response.json()
-      const templates: TemplateSummary[] = Array.isArray(data)
-        ? data
-            .filter(isObject)
-            .map((item) => ({
-              name: typeof item.name === 'string' ? item.name : '',
-            }))
-            .filter((item) => item.name !== '')
-        : []
-      setTemplates(templates)
-      const first = templates[0]
-      if (first && !selected) {
-        selectTemplate(first.name)
-      }
+  const loadTemplates = useCallback(async () => {
+    const response = await fetchApi('/api/templates')
+    if (!response || !response.ok) {
+      setError(response ? await getApiErrorMessage(response) : 'Network error')
+      return null
     }
-    void load()
-  }, [])
+    const data: unknown = await response.json().catch(() => null)
+    if (!Array.isArray(data)) {
+      setError('Invalid response from server')
+      return null
+    }
+    const templates: TemplateSummary[] = data
+      .filter(isObject)
+      .map((item) => ({
+        name: typeof item.name === 'string' ? item.name : '',
+      }))
+      .filter((item) => item.name !== '')
+    setTemplates(templates)
+
+    const current = selectedRef.current
+    if (current && templates.some((template) => template.name === current)) {
+      return false
+    }
+
+    const first = templates[0]
+    if (first) {
+      selectTemplate(first.name)
+    } else {
+      setSelected(null)
+      setSchema({})
+      setPropValues({})
+      setHtml('')
+      setText('')
+      setWarnings([])
+      setError(null)
+      setJsonValue('')
+      setJsonError(null)
+    }
+    return true
+  }, [fetchApi, selectTemplate])
+
+  useEffect(() => {
+    void loadTemplates()
+  }, [loadTemplates])
 
   useEffect(() => {
     if (!selected) return
@@ -169,10 +208,20 @@ function App() {
   useEffect(() => {
     if (typeof EventSource === 'undefined') return
     const source = new EventSource('/__live')
-    const handler = () => renderRef.current?.()
-    source.addEventListener('message', handler)
+    const handler = (event: Event) => {
+      handleLiveUpdate(event.type, {
+        onTemplatesChanged: () => {
+          void loadTemplates().then((selectionChanged) => {
+            if (selectionChanged === false) renderRef.current?.()
+          })
+        },
+        onContentChanged: () => renderRef.current?.(),
+      })
+    }
+    source.addEventListener('templates-changed', handler)
+    source.addEventListener('content-changed', handler)
     return () => source.close()
-  }, [])
+  }, [loadTemplates])
 
   const handlePropChange = useCallback((key: string, value: unknown) => {
     setPropValues((prev) => ({ ...prev, [key]: value }))
