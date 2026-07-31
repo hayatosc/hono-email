@@ -33,6 +33,7 @@ export type {
   SuccessfulSendReceipt,
 } from '../index'
 export { buildRawEmailMessage, buildRawEmailMessageAsync } from '../message'
+export { SmtpResponseBufferLimitError } from './protocol'
 export type {
   SmtpAuth,
   SmtpConnector,

@@ -8,7 +8,16 @@ import type { EmailAddress, EmailAttachmentLimits, EmailHeaders, EmailMessage } 
 import { CRLF, bytesToBase64, normalizeLineEndings } from './utils'
 
 const BASE64_CHUNK_SIZE = 76
+const MAX_HEADER_LINE_OCTETS = 998
+const ENCODED_WORD_MAX_OCTETS = 75
+const ENCODED_WORD_PREFIX = '=?UTF-8?B?'
+const ENCODED_WORD_SUFFIX = '?='
+const MAX_ENCODED_WORD_PAYLOAD_BYTES =
+  Math.floor(
+    (ENCODED_WORD_MAX_OCTETS - ENCODED_WORD_PREFIX.length - ENCODED_WORD_SUFFIX.length) / 4,
+  ) * 3
 const EMAIL_ADDRESS_PATTERN = /^[^\s@<>]+@[^\s@<>]+$/
+const textEncoder = new TextEncoder()
 const HEADER_NAME_PATTERN = /^[A-Za-z0-9-]+$/
 const PROTECTED_CUSTOM_HEADERS = new Set(
   [
@@ -65,7 +74,32 @@ const encodeHeaderValue = (value: string, fieldName: string): string => {
     return safeValue
   }
 
-  return `=?UTF-8?B?${bytesToBase64(new TextEncoder().encode(safeValue))}?=`
+  const chunks: string[] = []
+  let chunk = ''
+  let chunkBytes = 0
+
+  for (const character of safeValue) {
+    const characterBytes = textEncoder.encode(character).byteLength
+    if (chunk !== '' && chunkBytes + characterBytes > MAX_ENCODED_WORD_PAYLOAD_BYTES) {
+      chunks.push(chunk)
+      chunk = ''
+      chunkBytes = 0
+    }
+
+    chunk += character
+    chunkBytes += characterBytes
+  }
+
+  if (chunk !== '') {
+    chunks.push(chunk)
+  }
+
+  return chunks
+    .map(
+      (chunkValue) =>
+        `${ENCODED_WORD_PREFIX}${bytesToBase64(textEncoder.encode(chunkValue))}${ENCODED_WORD_SUFFIX}`,
+    )
+    .join(`${CRLF} `)
 }
 
 const quoteDisplayName = (value: string): string => `"${value.replace(/["\\]/g, '\\$&')}"`
@@ -141,8 +175,65 @@ const getMessageIdDomain = (from: EmailAddress): string => {
   return address.slice(address.lastIndexOf('@') + 1) || 'localhost'
 }
 
+const isHeaderWhitespace = (character: string | undefined): boolean =>
+  character === ' ' || character === '\t'
+
+const findHeaderBreak = (prefix: string, value: string): number => {
+  let breakIndex = -1
+
+  for (let index = 1; index < value.length; index += 1) {
+    if (!isHeaderWhitespace(value[index]) || isHeaderWhitespace(value[index - 1])) {
+      continue
+    }
+
+    if (
+      textEncoder.encode(`${prefix}${value.slice(0, index)}`).byteLength <= MAX_HEADER_LINE_OCTETS
+    ) {
+      breakIndex = index
+    }
+  }
+
+  return breakIndex
+}
+
+const appendFoldedHeaderSegment = (
+  lines: string[],
+  prefix: string,
+  value: string,
+  fieldName: string,
+): void => {
+  let currentPrefix = prefix
+  let remaining = value
+
+  while (textEncoder.encode(`${currentPrefix}${remaining}`).byteLength > MAX_HEADER_LINE_OCTETS) {
+    const breakIndex = findHeaderBreak(currentPrefix, remaining)
+    if (breakIndex < 0) {
+      throw new Error(
+        `Header ${fieldName} cannot be folded below ${MAX_HEADER_LINE_OCTETS} octets.`,
+      )
+    }
+
+    lines.push(`${currentPrefix}${remaining.slice(0, breakIndex)}`)
+    remaining = remaining.slice(breakIndex + 1)
+    currentPrefix = ' '
+  }
+
+  lines.push(`${currentPrefix}${remaining}`)
+}
+
 const appendHeader = (lines: string[], name: string, value: string): void => {
-  lines.push(`${name}: ${value}`)
+  const segments = value.split(CRLF)
+  const firstSegment = segments.shift() ?? ''
+  appendFoldedHeaderSegment(lines, `${name}: `, firstSegment, name)
+
+  for (const segment of segments) {
+    appendFoldedHeaderSegment(
+      lines,
+      ' ',
+      segment.startsWith(' ') || segment.startsWith('\t') ? segment.slice(1) : segment,
+      name,
+    )
+  }
 }
 
 export const validateEmailHeaders = (headers: EmailHeaders | undefined): void => {

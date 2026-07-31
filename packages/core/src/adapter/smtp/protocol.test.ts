@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 
-import { openSmtpSession, runSmtpSession } from './protocol'
+import { openSmtpSession, runSmtpSession, SmtpResponseBufferLimitError } from './protocol'
 import type { SmtpSessionOptions, SmtpSendOptions } from './protocol'
 import type { SmtpSocket } from './types'
 
@@ -128,6 +128,26 @@ describe('openSmtpSession', () => {
     await expect(openSmtpSession(socket, baseOptions)).rejects.toThrow(
       'SMTP connection closed before a complete response was received',
     )
+    await wait()
+  })
+
+  test('rejects an oversized response buffer and closes the socket', async () => {
+    let closed = false
+    const { socket: baseSocket, wait } = createMockSocket(async (server) => {
+      await server.writeResponse('x'.repeat(4097))
+    })
+    const socket: SmtpSocket = {
+      ...baseSocket,
+      close: async () => {
+        closed = true
+        await baseSocket.close?.()
+      },
+    }
+
+    await expect(openSmtpSession(socket, baseOptions)).rejects.toBeInstanceOf(
+      SmtpResponseBufferLimitError,
+    )
+    expect(closed).toBe(true)
     await wait()
   })
 

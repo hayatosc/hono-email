@@ -35,6 +35,19 @@ export type SmtpSession = {
   }>
 }
 
+const MAX_SMTP_RESPONSE_BUFFER_OCTETS = 4096
+
+export class SmtpResponseBufferLimitError extends Error {
+  readonly maxOctets: number = MAX_SMTP_RESPONSE_BUFFER_OCTETS
+
+  constructor() {
+    super(
+      `SMTP response buffer exceeded ${MAX_SMTP_RESPONSE_BUFFER_OCTETS} octets before a complete line was received.`,
+    )
+    this.name = 'SmtpResponseBufferLimitError'
+  }
+}
+
 const encodeAsciiBase64 = (value: string): string => {
   const bytes = new TextEncoder().encode(value)
   const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
@@ -221,6 +234,9 @@ class SmtpProtocolClient {
       }
 
       this.#buffer += this.#decoder.decode(chunk.value, { stream: true })
+      if (this.#encoder.encode(this.#buffer).byteLength > MAX_SMTP_RESPONSE_BUFFER_OCTETS) {
+        throw new SmtpResponseBufferLimitError()
+      }
     }
   }
 }
