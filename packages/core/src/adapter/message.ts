@@ -180,17 +180,19 @@ const isHeaderWhitespace = (character: string | undefined): boolean =>
 
 const findHeaderBreak = (prefix: string, value: string): number => {
   let breakIndex = -1
+  let byteLength = textEncoder.encode(prefix).byteLength
+  let index = 0
+  let previousWhitespace = false
 
-  for (let index = 1; index < value.length; index += 1) {
-    if (!isHeaderWhitespace(value[index]) || isHeaderWhitespace(value[index - 1])) {
-      continue
-    }
-
-    if (
-      textEncoder.encode(`${prefix}${value.slice(0, index)}`).byteLength <= MAX_HEADER_LINE_OCTETS
-    ) {
+  for (const character of value) {
+    const whitespace = isHeaderWhitespace(character)
+    if (index > 0 && whitespace && !previousWhitespace && byteLength <= MAX_HEADER_LINE_OCTETS) {
       breakIndex = index
     }
+
+    byteLength += textEncoder.encode(character).byteLength
+    previousWhitespace = whitespace
+    index += character.length
   }
 
   return breakIndex
