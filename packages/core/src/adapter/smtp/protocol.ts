@@ -130,6 +130,7 @@ class SmtpProtocolClient {
   #socket: SmtpSocket
   #writer: WritableStreamDefaultWriter<Uint8Array>
   #buffer = ''
+  #bufferOctets = 0
 
   constructor(socket: SmtpSocket, responseTimeout: number | undefined) {
     this.#socket = socket
@@ -156,6 +157,7 @@ class SmtpProtocolClient {
     this.#reader = this.#socket.readable.getReader()
     this.#writer = this.#socket.writable.getWriter()
     this.#buffer = ''
+    this.#bufferOctets = 0
   }
 
   async readResponse(timeout = this.#responseTimeout): Promise<SmtpCommandResponse> {
@@ -225,7 +227,12 @@ class SmtpProtocolClient {
       if (lineEnd >= 0) {
         const line = this.#buffer.slice(0, lineEnd)
         this.#buffer = this.#buffer.slice(lineEnd + CRLF.length)
+        this.#bufferOctets -= this.#encoder.encode(line).byteLength + CRLF.length
         return line
+      }
+
+      if (this.#bufferOctets > MAX_SMTP_RESPONSE_BUFFER_OCTETS) {
+        throw new SmtpResponseBufferLimitError()
       }
 
       const chunk = await this.#reader.read()
@@ -234,9 +241,7 @@ class SmtpProtocolClient {
       }
 
       this.#buffer += this.#decoder.decode(chunk.value, { stream: true })
-      if (this.#encoder.encode(this.#buffer).byteLength > MAX_SMTP_RESPONSE_BUFFER_OCTETS) {
-        throw new SmtpResponseBufferLimitError()
-      }
+      this.#bufferOctets += chunk.value.byteLength
     }
   }
 }

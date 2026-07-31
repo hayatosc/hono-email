@@ -151,6 +151,26 @@ describe('openSmtpSession', () => {
     await wait()
   })
 
+  test('reads a large multi-line response exceeding the buffer cap', async () => {
+    const { socket, wait } = createMockSocket(async (server) => {
+      await server.writeResponse('220 ready\r\n')
+      await server.readLine()
+      const lines =
+        Array.from(
+          { length: 8 },
+          (_, index) => `250-X-EXTENSION ${'a'.repeat(600)} ${index}\r\n`,
+        ).join('') + '250 OK\r\n'
+      expect(new TextEncoder().encode(lines).byteLength).toBeGreaterThan(4096)
+      await server.writeResponse(lines)
+      await server.readLine()
+      await server.writeResponse('221 bye\r\n')
+    })
+
+    const session = await openSmtpSession(socket, baseOptions)
+    await session.close()
+    await wait()
+  })
+
   test('throws when clientName contains spaces', async () => {
     const { socket, wait } = createMockSocket(async (server) => {
       await server.writeResponse('220 ready\r\n')

@@ -1,9 +1,10 @@
 import { describe, expect, test } from 'bun:test'
 
-import { buildRawEmailMessage } from './message'
+import { buildRawEmailMessage, formatEmailAddress } from './message'
 
 const CRLF = '\r\n'
 const MAX_HEADER_LINE_OCTETS = 998
+const MAX_ENCODED_WORD_LINE_OCTETS = 76
 
 const createMessage = (overrides: Record<string, unknown> = {}) => ({
   from: 'sender@example.com',
@@ -36,6 +37,60 @@ const findHeaderLines = (raw: string, name: string): string[] => {
 }
 
 describe('buildRawEmailMessage header folding', () => {
+  test('formatEmailAddress never emits line breaks for long CJK display names', () => {
+    const formatted = formatEmailAddress({
+      name: '株式会社ほにゃららサポートチーム',
+      address: 'a@example.com',
+    })
+
+    expect(formatted).not.toContain('\r')
+    expect(formatted).not.toContain('\n')
+  })
+
+  test('raw MIME builder folds long encoded display names below the RFC 2047 line limit', () => {
+    const { raw } = buildRawEmailMessage(
+      createMessage({
+        from: {
+          name: '株式会社ほにゃららサポートチーム'.repeat(30),
+          address: 'a@example.com',
+        },
+      }),
+    )
+
+    const lines = raw.split(CRLF)
+    const fromLines = findHeaderLines(raw, 'From')
+    expect(fromLines.length).toBeGreaterThan(1)
+    expect(fromLines.slice(1).every((line) => line.startsWith(' '))).toBe(true)
+
+    const encodedWordLines = lines.filter((line) => line.includes('=?UTF-8?B?'))
+    expect(encodedWordLines.length).toBeGreaterThan(0)
+    expect(Math.max(...encodedWordLines.map(octetLength))).toBeLessThanOrEqual(
+      MAX_ENCODED_WORD_LINE_OCTETS,
+    )
+    expect(Math.max(...lines.map(octetLength))).toBeLessThanOrEqual(MAX_HEADER_LINE_OCTETS)
+  })
+
+  test('folds a long address after an encoded display name under the RFC 5322 budget', () => {
+    const address =
+      'noreply+order-confirmation-notification-service-1234567890abcdefgh@mail.subdomain.example.com'
+    const { raw } = buildRawEmailMessage(
+      createMessage({
+        to: { name: 'ほにゃららサポート', address },
+      }),
+    )
+
+    const lines = raw.split(CRLF)
+    const toLines = findHeaderLines(raw, 'To')
+    expect(toLines.some((line) => line.includes(address))).toBe(true)
+
+    const encodedWordLines = lines.filter((line) => line.includes('=?UTF-8?B?'))
+    expect(encodedWordLines.length).toBeGreaterThan(0)
+    expect(Math.max(...encodedWordLines.map(octetLength))).toBeLessThanOrEqual(
+      MAX_ENCODED_WORD_LINE_OCTETS,
+    )
+    expect(Math.max(...lines.map(octetLength))).toBeLessThanOrEqual(MAX_HEADER_LINE_OCTETS)
+  })
+
   test('folds long encoded, custom, and attachment headers below the RFC 5322 limit', () => {
     const { raw } = buildRawEmailMessage(
       createMessage({
@@ -58,7 +113,13 @@ describe('buildRawEmailMessage header folding', () => {
     expect(subjectLines.length).toBeGreaterThan(1)
     expect(subjectLines.slice(1).every((line) => line.startsWith(' '))).toBe(true)
     expect(subjectLines.slice(1).every((line) => line.includes('=?UTF-8?B?'))).toBe(true)
-    expect(findHeaderLines(raw, 'X-Custom').length).toBeGreaterThan(1)
+    expect(
+      subjectLines.map(octetLength).every((length) => length <= MAX_ENCODED_WORD_LINE_OCTETS),
+    ).toBe(true)
+
+    const customLines = findHeaderLines(raw, 'X-Custom')
+    expect(customLines.length).toBeGreaterThan(1)
+    expect(customLines.some((line) => octetLength(line) > MAX_ENCODED_WORD_LINE_OCTETS)).toBe(true)
   })
 
   test('rejects an unbreakable header value that cannot fit on a physical line', () => {

@@ -9,6 +9,7 @@ import { CRLF, bytesToBase64, normalizeLineEndings } from './utils'
 
 const BASE64_CHUNK_SIZE = 76
 const MAX_HEADER_LINE_OCTETS = 998
+const MAX_ENCODED_WORD_LINE_OCTETS = 76
 const ENCODED_WORD_MAX_OCTETS = 75
 const ENCODED_WORD_PREFIX = '=?UTF-8?B?'
 const ENCODED_WORD_SUFFIX = '?='
@@ -99,7 +100,7 @@ const encodeHeaderValue = (value: string, fieldName: string): string => {
       (chunkValue) =>
         `${ENCODED_WORD_PREFIX}${bytesToBase64(textEncoder.encode(chunkValue))}${ENCODED_WORD_SUFFIX}`,
     )
-    .join(`${CRLF} `)
+    .join(' ')
 }
 
 const quoteDisplayName = (value: string): string => `"${value.replace(/["\\]/g, '\\$&')}"`
@@ -178,7 +179,7 @@ const getMessageIdDomain = (from: EmailAddress): string => {
 const isHeaderWhitespace = (character: string | undefined): boolean =>
   character === ' ' || character === '\t'
 
-const findHeaderBreak = (prefix: string, value: string): number => {
+const findHeaderBreak = (prefix: string, value: string, maxLineOctets: number): number => {
   let breakIndex = -1
   let byteLength = textEncoder.encode(prefix).byteLength
   let index = 0
@@ -186,7 +187,7 @@ const findHeaderBreak = (prefix: string, value: string): number => {
 
   for (const character of value) {
     const whitespace = isHeaderWhitespace(character)
-    if (index > 0 && whitespace && !previousWhitespace && byteLength <= MAX_HEADER_LINE_OCTETS) {
+    if (index > 0 && whitespace && !previousWhitespace && byteLength <= maxLineOctets) {
       breakIndex = index
     }
 
@@ -206,36 +207,67 @@ const appendFoldedHeaderSegment = (
 ): void => {
   let currentPrefix = prefix
   let remaining = value
+  let firstLine = true
 
-  while (textEncoder.encode(`${currentPrefix}${remaining}`).byteLength > MAX_HEADER_LINE_OCTETS) {
-    const breakIndex = findHeaderBreak(currentPrefix, remaining)
-    if (breakIndex < 0) {
+  while (true) {
+    const line = `${currentPrefix}${remaining}`
+    const lineContainsEncodedWord = line.includes(ENCODED_WORD_PREFIX)
+    const lineMaxOctets = lineContainsEncodedWord
+      ? MAX_ENCODED_WORD_LINE_OCTETS
+      : MAX_HEADER_LINE_OCTETS
+
+    if (textEncoder.encode(line).byteLength <= lineMaxOctets) {
+      lines.push(line)
+      return
+    }
+
+    const emit = (breakIndex: number): boolean => {
+      if (breakIndex < 0) {
+        return false
+      }
+
+      lines.push(`${currentPrefix}${remaining.slice(0, breakIndex)}`)
+      remaining = remaining.slice(breakIndex + 1)
+      currentPrefix = ' '
+      firstLine = false
+      return true
+    }
+
+    const breakIndex = findHeaderBreak(currentPrefix, remaining, MAX_HEADER_LINE_OCTETS)
+    const lineAtBreakContainsEncodedWord =
+      breakIndex >= 0 &&
+      `${currentPrefix}${remaining.slice(0, breakIndex)}`.includes(ENCODED_WORD_PREFIX)
+
+    if (breakIndex >= 0 && !lineAtBreakContainsEncodedWord) {
+      emit(breakIndex)
+      continue
+    }
+
+    if (!lineContainsEncodedWord) {
       throw new Error(
         `Header ${fieldName} cannot be folded below ${MAX_HEADER_LINE_OCTETS} octets.`,
       )
     }
 
-    lines.push(`${currentPrefix}${remaining.slice(0, breakIndex)}`)
-    remaining = remaining.slice(breakIndex + 1)
-    currentPrefix = ' '
-  }
+    if (emit(findHeaderBreak(currentPrefix, remaining, MAX_ENCODED_WORD_LINE_OCTETS))) {
+      continue
+    }
 
-  lines.push(`${currentPrefix}${remaining}`)
+    if (firstLine && textEncoder.encode(currentPrefix).byteLength <= MAX_HEADER_LINE_OCTETS) {
+      lines.push(currentPrefix)
+      currentPrefix = ' '
+      firstLine = false
+      continue
+    }
+
+    throw new Error(
+      `Header ${fieldName} cannot be folded below ${MAX_ENCODED_WORD_LINE_OCTETS} octets.`,
+    )
+  }
 }
 
 const appendHeader = (lines: string[], name: string, value: string): void => {
-  const segments = value.split(CRLF)
-  const firstSegment = segments.shift() ?? ''
-  appendFoldedHeaderSegment(lines, `${name}: `, firstSegment, name)
-
-  for (const segment of segments) {
-    appendFoldedHeaderSegment(
-      lines,
-      ' ',
-      segment.startsWith(' ') || segment.startsWith('\t') ? segment.slice(1) : segment,
-      name,
-    )
-  }
+  appendFoldedHeaderSegment(lines, `${name}: `, value, name)
 }
 
 export const validateEmailHeaders = (headers: EmailHeaders | undefined): void => {
