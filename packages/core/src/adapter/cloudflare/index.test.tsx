@@ -31,6 +31,100 @@ const createMessage = () => ({
 })
 
 describe('Cloudflare Email Service adapter', () => {
+  test('rejects CRLF-bearing addresses before building the REST payload', async () => {
+    const injectedAddress = 'victim@example.com\r\nBcc: attacker@evil.com'
+    const requests: unknown[] = []
+
+    const receipt = await CloudflareEmailAdapter({
+      connector: {
+        kind: 'rest',
+        send(request) {
+          requests.push(request)
+          return {
+            delivered: ['recipient@example.com'],
+            permanentBounces: [],
+            queued: [],
+            response: 'accepted',
+          }
+        },
+      },
+    }).send({
+      from: 'sender@example.com',
+      html: '<p>Hello</p>',
+      subject: 'CRLF test',
+      text: 'Hello',
+      to: injectedAddress,
+    })
+
+    expect(receipt).toMatchObject({
+      accepted: [],
+      errorMessages: ['email address must not contain line breaks.'],
+      rejected: [injectedAddress],
+      successful: false,
+    })
+    expect(JSON.stringify(requests)).not.toContain(injectedAddress)
+  })
+
+  test('rejects CRLF-bearing addresses before building the Workers payload', async () => {
+    const injectedAddress = 'victim@example.com\r\nBcc: attacker@evil.com'
+    const requests: unknown[] = []
+
+    const receipt = await CloudflareEmailAdapter({
+      connector: {
+        kind: 'workers',
+        send(request) {
+          requests.push(request)
+          return {
+            delivered: ['recipient@example.com'],
+            permanentBounces: [],
+            queued: [],
+            response: 'accepted',
+          }
+        },
+      },
+    }).send({
+      from: 'sender@example.com',
+      html: '<p>Hello</p>',
+      subject: 'CRLF test',
+      text: 'Hello',
+      to: injectedAddress,
+    })
+
+    expect(receipt).toMatchObject({
+      accepted: [],
+      errorMessages: ['email address must not contain line breaks.'],
+      rejected: [injectedAddress],
+      successful: false,
+    })
+    expect(JSON.stringify(requests)).not.toContain(injectedAddress)
+  })
+
+  test('reports the required to recipient for cc-only messages', async () => {
+    const receipt = await CloudflareEmailAdapter({
+      connector: {
+        send() {
+          throw new Error('Cloudflare connector should not be called for cc-only messages.')
+        },
+      },
+    }).send({
+      cc: 'copy@example.com',
+      from: 'sender@example.com',
+      html: '<p>Hello</p>',
+      subject: 'CC-only test',
+      text: 'Hello',
+      to: [],
+    })
+
+    expect(receipt).toEqual({
+      accepted: [],
+      errorMessages: [
+        'This provider requires at least one `to` recipient; only cc/bcc were supplied.',
+      ],
+      rejected: [],
+      successful: false,
+    })
+  })
+
   test('sends through the REST API and exposes queued recipients', async () => {
     const requests: { input: string; init: CloudflareEmailFetchInit }[] = []
     const fetchImplementation: CloudflareEmailFetch = async (input, init) => {

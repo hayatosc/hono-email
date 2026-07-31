@@ -7,7 +7,11 @@ import type {
   SendEmailReceipt,
 } from '../index'
 import { formatEmailAddress, toAddressList, validateEmailHeaders } from '../message'
-import { collectProviderRecipients as collectRecipients, failedReceipt } from '../provider'
+import {
+  collectProviderRecipients as collectRecipients,
+  failedReceipt,
+  getProviderRecipientError,
+} from '../provider'
 import { fetchWithTimeoutAndRetry } from '../utils'
 import type { RequestRetryOptions } from '../utils'
 
@@ -189,7 +193,9 @@ const buildPayload = async (
 ): Promise<PostmarkPayload> => {
   const to = asAddressField(message.to)
   if (to === undefined) {
-    throw new Error('Email message must include at least one recipient.')
+    throw new Error(
+      getProviderRecipientError(message) ?? 'Email message must include at least one recipient.',
+    )
   }
 
   const replyTo = asAddressField(message.replyTo)
@@ -243,8 +249,9 @@ const buildPayload = async (
 export const PostmarkAdapter = (options: PostmarkAdapterOptions): EmailAdapter => ({
   async send(message: EmailMessage): Promise<SendEmailReceipt> {
     const recipients = collectRecipients(message)
-    if (recipients.length === 0) {
-      return failedReceipt(['Email message must include at least one recipient.'])
+    const recipientError = getProviderRecipientError(message, recipients)
+    if (recipientError !== undefined) {
+      return failedReceipt([recipientError])
     }
 
     let payload: PostmarkPayload

@@ -121,6 +121,29 @@ describe('Postmark adapter', () => {
     })
   })
 
+  test('reports the required to recipient for cc-only messages', async () => {
+    const receipt = await PostmarkAdapter({
+      fetch: async () => new Response('', { status: 200 }),
+      serverToken: 'postmark-token',
+    }).send({
+      cc: 'copy@example.com',
+      from: 'sender@example.com',
+      html: '<p>Hello</p>',
+      subject: 'CC-only test',
+      text: 'Hello',
+      to: [],
+    })
+
+    expect(receipt).toEqual({
+      accepted: [],
+      errorMessages: [
+        'This provider requires at least one `to` recipient; only cc/bcc were supplied.',
+      ],
+      rejected: [],
+      successful: false,
+    })
+  })
+
   test('sends TrackLinks option', async () => {
     const requests: { input: string; init: PostmarkFetchInit }[] = []
     const fetchImplementation: PostmarkFetch = async (input, init) => {

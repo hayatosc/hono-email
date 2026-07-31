@@ -115,6 +115,30 @@ describe('Mailgun adapter', () => {
     expect(form?.getAll('bcc')).toEqual(['hidden1@example.com', 'hidden2@example.com'])
   })
 
+  test('reports the required to recipient for cc-only messages', async () => {
+    const receipt = await MailgunAdapter({
+      apiKey: 'mailgun-key',
+      domain: 'mg.example.com',
+      fetch: async () => new Response('', { status: 200 }),
+    }).send({
+      cc: 'copy@example.com',
+      from: 'sender@example.com',
+      html: '<p>Hello</p>',
+      subject: 'CC-only test',
+      text: 'Hello',
+      to: [],
+    })
+
+    expect(receipt).toEqual({
+      accepted: [],
+      errorMessages: [
+        'This provider requires at least one `to` recipient; only cc/bcc were supplied.',
+      ],
+      rejected: [],
+      successful: false,
+    })
+  })
+
   test('uses domain in URL path with proper encoding', async () => {
     const requests: { input: string; init: MailgunFetchInit }[] = []
     const fetchImplementation: MailgunFetch = async (input, init) => {

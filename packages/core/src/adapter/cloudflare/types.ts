@@ -1,4 +1,5 @@
 import type { EmailAddress, EmailAttachmentLimits } from '../index'
+import { formatEmailAddress } from '../message'
 
 /**
  * Name/address object shape used by the Cloudflare Email REST API payload.
@@ -225,9 +226,10 @@ export class CloudflareEmailConnectorError extends Error {
 export const asCloudflareEmailRecipientField = (
   addresses: EmailAddress[],
 ): CloudflareEmailRecipientField | undefined => {
-  const paths = addresses.map((address) =>
-    typeof address === 'string' ? address : address.address,
-  )
+  const paths = addresses.map((address) => {
+    formatEmailAddress(address)
+    return typeof address === 'string' ? address : address.address
+  })
   if (paths.length === 0) {
     return undefined
   }

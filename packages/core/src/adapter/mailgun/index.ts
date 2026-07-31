@@ -8,7 +8,11 @@ import type {
   SendEmailReceipt,
 } from '../index'
 import { formatEmailAddress, toAddressList, validateEmailHeaders } from '../message'
-import { collectProviderRecipients as collectRecipients, failedReceipt } from '../provider'
+import {
+  collectProviderRecipients as collectRecipients,
+  failedReceipt,
+  getProviderRecipientError,
+} from '../provider'
 import { bytesToBase64, fetchWithTimeoutAndRetry } from '../utils'
 import type { RequestRetryOptions } from '../utils'
 
@@ -165,7 +169,9 @@ const buildFormData = async (
 
   const recipients = toAddressList(message.to)
   if (recipients.length === 0) {
-    throw new Error('Email message must include at least one recipient.')
+    throw new Error(
+      getProviderRecipientError(message) ?? 'Email message must include at least one recipient.',
+    )
   }
 
   const form = new FormData()
@@ -219,8 +225,9 @@ const buildAuthorizationHeader = (apiKey: string): string =>
 export const MailgunAdapter = (options: MailgunAdapterOptions): EmailAdapter => ({
   async send(message: EmailMessage): Promise<SendEmailReceipt> {
     const recipients = collectRecipients(message)
-    if (recipients.length === 0) {
-      return failedReceipt(['Email message must include at least one recipient.'])
+    const recipientError = getProviderRecipientError(message, recipients)
+    if (recipientError !== undefined) {
+      return failedReceipt([recipientError])
     }
 
     let form: FormData

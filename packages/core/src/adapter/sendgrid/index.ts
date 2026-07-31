@@ -1,7 +1,11 @@
 import { encodeAttachmentContentBase64, resolveEmailAttachments } from '../attachment'
 import type { EmailAdapter, EmailAddress, EmailMessage, SendEmailReceipt } from '../index'
 import { formatEmailAddress, toAddressList, validateEmailHeaders } from '../message'
-import { collectProviderRecipients as collectRecipients, failedReceipt } from '../provider'
+import {
+  collectProviderRecipients as collectRecipients,
+  failedReceipt,
+  getProviderRecipientError,
+} from '../provider'
 import { fetchWithTimeoutAndRetry } from '../utils'
 import type { RequestRetryOptions } from '../utils'
 
@@ -178,7 +182,9 @@ const buildPayload = async (
 
   const to = asMailAddressList(message.to)
   if (to.length === 0) {
-    throw new Error('Email message must include at least one recipient.')
+    throw new Error(
+      getProviderRecipientError(message) ?? 'Email message must include at least one recipient.',
+    )
   }
 
   const cc = asMailAddressList(message.cc)
@@ -241,8 +247,9 @@ const buildFallbackMessageId = (): string => {
 export const SendGridAdapter = (options: SendGridAdapterOptions): EmailAdapter => ({
   async send(message: EmailMessage): Promise<SendEmailReceipt> {
     const recipients = collectRecipients(message)
-    if (recipients.length === 0) {
-      return failedReceipt(['Email message must include at least one recipient.'])
+    const recipientError = getProviderRecipientError(message, recipients)
+    if (recipientError !== undefined) {
+      return failedReceipt([recipientError])
     }
 
     let payload: SendGridPayload

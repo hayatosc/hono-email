@@ -1,5 +1,9 @@
 import type { EmailAdapter, EmailMessage, SendEmailReceipt } from '../index'
-import { buildProviderEmailPayload, collectProviderRecipients } from '../provider'
+import {
+  buildProviderEmailPayload,
+  collectProviderRecipients,
+  getProviderRecipientError,
+} from '../provider'
 import { fetchWithTimeoutAndRetry } from '../utils'
 import type {
   ResendAdapterOptions,
@@ -166,8 +170,9 @@ const buildResendPayload = async (
 export const ResendAdapter = (options: ResendAdapterOptions): EmailAdapter => ({
   async send(message: EmailMessage): Promise<SendEmailReceipt> {
     const recipients = collectProviderRecipients(message)
-    if (recipients.length === 0) {
-      return failedReceipt(['Email message must include at least one recipient.'])
+    const recipientError = getProviderRecipientError(message, recipients)
+    if (recipientError !== undefined) {
+      return failedReceipt([recipientError])
     }
 
     let payload: ResendPayload
