@@ -6,11 +6,39 @@ import { type CommandDef, defineCommand, runMain } from 'citty'
 
 import { startPreviewServer } from './server/index.js'
 
-type CliArgs = {
-  dir: { alias: string; type: 'string'; description: string; default: string }
-  port: { alias: string; type: 'string'; description: string; default: string }
+// Aliases are literal types so `citty` can derive the alias keys it adds to
+// `ParsedArgs` (`d`, `p`, `f`) from this definition.
+export type CliArgs = {
+  dir: { alias: 'd'; type: 'string'; description: string; default: string }
+  port: { alias: 'p'; type: 'string'; description: string; default: string }
   host: { type: 'string'; description: string }
-  file: { alias: string; type: 'string'; description: string }
+  file: { alias: 'f'; type: 'string'; description: string }
+}
+
+// Annotated so `defineCommand` binds its generic to `CliArgs` instead of the
+// literal shape of this object.
+const previewArgs: CliArgs = {
+  dir: {
+    alias: 'd',
+    type: 'string',
+    description: 'Template directory',
+    default: './emails',
+  },
+  port: {
+    alias: 'p',
+    type: 'string',
+    description: 'Server port',
+    default: '3000',
+  },
+  host: {
+    type: 'string',
+    description: 'Server host (default: 127.0.0.1)',
+  },
+  file: {
+    alias: 'f',
+    type: 'string',
+    description: 'Vite config file to load (default: none)',
+  },
 }
 
 export const preview: CommandDef<CliArgs> = defineCommand({
@@ -18,29 +46,7 @@ export const preview: CommandDef<CliArgs> = defineCommand({
     name: 'preview',
     description: 'Live preview server for hono-email templates',
   },
-  args: {
-    dir: {
-      alias: 'd',
-      type: 'string',
-      description: 'Template directory',
-      default: './emails',
-    },
-    port: {
-      alias: 'p',
-      type: 'string',
-      description: 'Server port',
-      default: '3000',
-    },
-    host: {
-      type: 'string',
-      description: 'Server host (default: 127.0.0.1)',
-    },
-    file: {
-      alias: 'f',
-      type: 'string',
-      description: 'Vite config file to load (default: none)',
-    },
-  },
+  args: previewArgs,
   async run({ args }) {
     const port = Number(args.port)
     if (!Number.isInteger(port) || port < 1 || port > 65535) {

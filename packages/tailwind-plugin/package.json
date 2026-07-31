@@ -137,7 +137,7 @@
     "test": "bun test ./src"
   },
   "dependencies": {
-    "unplugin": "^3.0.0"
+    "unplugin": "^3.3.0"
   },
   "devDependencies": {
     "hono-email": "workspace:*"

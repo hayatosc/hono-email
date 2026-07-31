@@ -17,8 +17,8 @@ import { createApiRoutes } from './routes.js'
 export type PreviewServerOptions = {
   dir: string
   port: number
-  host?: string
-  file?: string
+  host?: string | undefined
+  file?: string | undefined
 }
 
 export type PreviewServer = {
