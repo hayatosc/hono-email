@@ -1,5 +1,13 @@
 # @hono-email/tailwind-plugin
 
+## 0.8.1
+
+### Patch Changes
+
+- [#128](https://github.com/hayatosc/hono-email/pull/128) [`86d66f3`](https://github.com/hayatosc/hono-email/commit/86d66f371879f9ad4961de7460810c24281f80a9) Thanks [@hayatosc](https://github.com/hayatosc)! - Fix Tailwind inlining so group and peer marker classes render without missing-class errors, CSS rule order is preserved, explicit inline styles win, and warning markers cannot be forged by document content. Markdown element styles no longer override an element's own `style` attribute. Aliased `Tailwind` imports now receive build-time artifact injection.
+
+- [#125](https://github.com/hayatosc/hono-email/pull/125) [`2137954`](https://github.com/hayatosc/hono-email/commit/2137954903bd40977247088d6855104c4b473f9a) Thanks [@hayatosc](https://github.com/hayatosc)! - Update runtime dependencies to pick up security fixes. `@hono/node-server` moves to v2 (fixes the `serve-static` path traversal advisory GHSA-frvp-7c67-39w9), Vite moves to v8, `citty` to 0.2, and `unplugin` to 3.3. `PreviewServerOptions.host` and `.file` now accept an explicit `undefined`.
+
 ## 0.8.0
 
 ## 0.7.0

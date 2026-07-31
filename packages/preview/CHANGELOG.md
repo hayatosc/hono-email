@@ -1,5 +1,13 @@
 # @hono-email/preview
 
+## 0.8.1
+
+### Patch Changes
+
+- [#129](https://github.com/hayatosc/hono-email/pull/129) [`6c5dfc7`](https://github.com/hayatosc/hono-email/commit/6c5dfc75a97d9504c604491ef63170b37d32012b) Thanks [@hayatosc](https://github.com/hayatosc)! - Fix template discovery to ignore dependency and build directories, avoid symlink loops, refresh cached results on template changes, and warn when external symlinks are skipped. The preview UI now updates its template list live, surfaces API errors clearly, supports JSX templates, resolves documented named components with sibling `previewProps` exports, and ignores inherited properties when checking required props.
+
+- [#125](https://github.com/hayatosc/hono-email/pull/125) [`2137954`](https://github.com/hayatosc/hono-email/commit/2137954903bd40977247088d6855104c4b473f9a) Thanks [@hayatosc](https://github.com/hayatosc)! - Update runtime dependencies to pick up security fixes. `@hono/node-server` moves to v2 (fixes the `serve-static` path traversal advisory GHSA-frvp-7c67-39w9), Vite moves to v8, `citty` to 0.2, and `unplugin` to 3.3. `PreviewServerOptions.host` and `.file` now accept an explicit `undefined`.
+
 ## 0.8.0
 
 ### Minor Changes
@@ -15,6 +23,7 @@
 ### Patch Changes
 
 - [#118](https://github.com/hayatosc/hono-email/pull/118) [`d160fdf`](https://github.com/hayatosc/hono-email/commit/d160fdfba6379c2029fb65e48081cf657dd43d5d) Thanks [@hayatosc](https://github.com/hayatosc)! - - Fix HTMLRewriter parsing crash caused by self-closing meta tags in layout components.
+
   - Fix HTML splitting bug in TOKEN_PATTERN parser when quotes contain `>` characters in Preview relocate logic.
   - Robust case/whitespace-insensitive style property verification in validateStyleTags.
   - Support custom AbortSignal propagation in fetchWithTimeoutAndRetry without overwriting timeouts.
