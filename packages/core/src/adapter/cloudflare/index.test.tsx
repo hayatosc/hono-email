@@ -62,7 +62,7 @@ describe('Cloudflare Email Service adapter', () => {
       rejected: [injectedAddress],
       successful: false,
     })
-    expect(JSON.stringify(requests)).not.toContain(injectedAddress)
+    expect(requests).toHaveLength(0)
   })
 
   test('rejects CRLF-bearing addresses before building the Workers payload', async () => {
@@ -96,7 +96,7 @@ describe('Cloudflare Email Service adapter', () => {
       rejected: [injectedAddress],
       successful: false,
     })
-    expect(JSON.stringify(requests)).not.toContain(injectedAddress)
+    expect(requests).toHaveLength(0)
   })
 
   test('reports the required to recipient for cc-only messages', async () => {
