@@ -400,6 +400,22 @@ describe('render strict mode', () => {
     )
   })
 
+  test('does not treat pseudo selectors as CSS declarations', () => {
+    expect(() =>
+      validateHtml(
+        '<html><head><style>.grid:hover { color: red; } .filter::before { content: "x"; }</style></head><body><div class="grid">Hello</div></body></html>',
+      ),
+    ).not.toThrow()
+  })
+
+  test('still rejects disallowed declarations inside media rules', () => {
+    expect(() =>
+      validateHtml(
+        '<html><head><style>@media screen { .card { filter: blur(2px); } }</style></head><body><div class="card">Hello</div></body></html>',
+      ),
+    ).toThrow("The CSS property 'filter' isn't supported in HTML email strict mode.")
+  })
+
   test('rejects picture tags in strict mode', async () => {
     await expect(
       render(

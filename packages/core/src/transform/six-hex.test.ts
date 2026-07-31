@@ -36,6 +36,16 @@ describe('ensureSixHex', () => {
     expect(ensureSixHex('<style>.a{color:#abc}</style>')).toBe('<style>.a{color:#aabbcc}</style>')
   })
 
+  test('expands declaration values without changing id selectors', () => {
+    expect(
+      ensureSixHex(
+        '<style>#abc { color: #def; } @media screen { #abc { border: 1px solid #abc; } }</style>',
+      ),
+    ).toBe(
+      '<style>#abc { color: #ddeeff; } @media screen { #abc { border: 1px solid #aabbcc; } }</style>',
+    )
+  })
+
   test('does not touch non-css hex such as anchors', () => {
     expect(ensureSixHex('<a href="#abc">Jump</a>')).toBe('<a href="#abc">Jump</a>')
   })
