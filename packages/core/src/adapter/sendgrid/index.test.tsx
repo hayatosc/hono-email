@@ -125,6 +125,29 @@ describe('SendGrid adapter', () => {
     })
   })
 
+  test('reports the required to recipient for cc-only messages', async () => {
+    const receipt = await SendGridAdapter({
+      apiKey: 'SG.test',
+      fetch: async () => new Response('', { status: 202 }),
+    }).send({
+      cc: 'copy@example.com',
+      from: 'sender@example.com',
+      html: '<p>Hello</p>',
+      subject: 'CC-only test',
+      text: 'Hello',
+      to: [],
+    })
+
+    expect(receipt).toEqual({
+      accepted: [],
+      errorMessages: [
+        'This provider requires at least one `to` recipient; only cc/bcc were supplied.',
+      ],
+      rejected: [],
+      successful: false,
+    })
+  })
+
   test('sends multiple reply_to addresses as reply_to_list', async () => {
     const requests: { input: string; init: SendGridFetchInit }[] = []
     const fetchImplementation: SendGridFetch = async (input, init) => {

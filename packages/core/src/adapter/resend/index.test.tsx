@@ -111,6 +111,55 @@ describe('Resend adapter', () => {
     })
   })
 
+  test('rejects CRLF-bearing addresses before sending', async () => {
+    const injectedAddress = 'victim@example.com\r\nBcc: attacker@evil.com'
+    let fetchCalls = 0
+    const receipt = await ResendAdapter({
+      apiKey: 're_test',
+      fetch: async () => {
+        fetchCalls++
+        return new Response('', { status: 200 })
+      },
+    }).send({
+      from: 'sender@example.com',
+      html: '<p>Hello</p>',
+      subject: 'CRLF test',
+      text: 'Hello',
+      to: injectedAddress,
+    })
+
+    expect(receipt).toMatchObject({
+      accepted: [],
+      errorMessages: ['email address must not contain line breaks.'],
+      rejected: [injectedAddress],
+      successful: false,
+    })
+    expect(fetchCalls).toBe(0)
+  })
+
+  test('reports the required to recipient for cc-only messages', async () => {
+    const receipt = await ResendAdapter({
+      apiKey: 're_test',
+      fetch: async () => new Response('', { status: 200 }),
+    }).send({
+      cc: 'copy@example.com',
+      from: 'sender@example.com',
+      html: '<p>Hello</p>',
+      subject: 'CC-only test',
+      text: 'Hello',
+      to: [],
+    })
+
+    expect(receipt).toEqual({
+      accepted: [],
+      errorMessages: [
+        'This provider requires at least one `to` recipient; only cc/bcc were supplied.',
+      ],
+      rejected: [],
+      successful: false,
+    })
+  })
+
   test('sends multiple reply_to addresses as an array', async () => {
     const requests: { input: string; init: ResendFetchInit }[] = []
     const fetchImplementation: ResendFetch = async (input, init) => {

@@ -117,6 +117,17 @@ export const formatEmailAddress = (address: EmailAddress): string => {
   return `${displayName} <${safeAddress}>`
 }
 
+/**
+ * Validates an email address without formatting it for output.
+ *
+ * @param address - Email address to validate.
+ * @returns Nothing.
+ * @throws If the address or display name is unsafe or invalid.
+ */
+export const assertValidEmailAddress = (address: EmailAddress): void => {
+  void formatEmailAddress(address)
+}
+
 const formatAddressList = (addresses: EmailAddress | EmailAddress[], fieldName: string): string => {
   const addressList = toAddressList(addresses)
   if (addressList.length === 0) {

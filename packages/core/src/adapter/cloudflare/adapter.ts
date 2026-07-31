@@ -4,8 +4,18 @@ import {
   resolveEmailAttachments,
 } from '../attachment'
 import type { EmailAdapter, EmailAddress, EmailMessage, SendEmailReceipt } from '../index'
-import { addressToPath, toAddressList, validateEmailHeaders } from '../message'
-import { collectProviderRecipients as collectRecipients, failedReceipt } from '../provider'
+import {
+  addressToPath,
+  assertValidEmailAddress,
+  toAddressList,
+  validateEmailHeaders,
+} from '../message'
+import {
+  collectProviderRecipients as collectRecipients,
+  failedReceipt,
+  getProviderRecipientError,
+  requireProviderRecipientError,
+} from '../provider'
 import {
   asCloudflareEmailRecipientField,
   CloudflareEmailConnectorError,
@@ -25,7 +35,10 @@ const asSingleAddressPath = (
   addresses: EmailAddress | EmailAddress[] | undefined,
   fieldName: string,
 ): string | undefined => {
-  const paths = toAddressList(addresses).map(addressToPath)
+  const paths = toAddressList(addresses).map((address) => {
+    assertValidEmailAddress(address)
+    return addressToPath(address)
+  })
   if (paths.length === 0) {
     return undefined
   }
@@ -38,6 +51,8 @@ const asSingleAddressPath = (
 }
 
 const asRestNameAddress = (address: EmailAddress): string | CloudflareEmailNameAddress => {
+  assertValidEmailAddress(address)
+
   if (typeof address === 'string') {
     return address
   }
@@ -48,6 +63,8 @@ const asRestNameAddress = (address: EmailAddress): string | CloudflareEmailNameA
 }
 
 const asWorkerNameAddress = (address: EmailAddress): string | CloudflareEmailWorkerNameAddress => {
+  assertValidEmailAddress(address)
+
   if (typeof address === 'string') {
     return address
   }
@@ -116,6 +133,10 @@ const buildRestPayload = (
   const cc = asCloudflareEmailRecipientField(toAddressList(message.cc))
   const bcc = asCloudflareEmailRecipientField(toAddressList(message.bcc))
   const replyTo = asSingleAddressPath(message.replyTo, 'replyTo')
+  const to = asCloudflareEmailRecipientField(toAddressList(message.to))
+  if (to === undefined) {
+    throw new Error(requireProviderRecipientError(message))
+  }
   const restAttachments = attachments.map(buildRestAttachment)
   validateEmailHeaders(message.headers)
 
@@ -124,7 +145,7 @@ const buildRestPayload = (
     html: message.html,
     subject: message.subject,
     text: message.text,
-    to: asCloudflareEmailRecipientField(toAddressList(message.to)) ?? [],
+    to,
     ...(restAttachments.length > 0 ? { attachments: restAttachments } : {}),
     ...(bcc !== undefined ? { bcc } : {}),
     ...(cc !== undefined ? { cc } : {}),
@@ -140,6 +161,10 @@ const buildWorkersPayload = (
   const cc = asCloudflareEmailRecipientField(toAddressList(message.cc))
   const bcc = asCloudflareEmailRecipientField(toAddressList(message.bcc))
   const replyTo = asWorkerReplyTo(message.replyTo)
+  const to = asCloudflareEmailRecipientField(toAddressList(message.to))
+  if (to === undefined) {
+    throw new Error(requireProviderRecipientError(message))
+  }
   const workerAttachments = attachments.map(buildWorkerAttachment)
   validateEmailHeaders(message.headers)
 
@@ -148,7 +173,7 @@ const buildWorkersPayload = (
     html: message.html,
     subject: message.subject,
     text: message.text,
-    to: asCloudflareEmailRecipientField(toAddressList(message.to)) ?? [],
+    to,
     ...(workerAttachments.length > 0 ? { attachments: workerAttachments } : {}),
     ...(bcc !== undefined ? { bcc } : {}),
     ...(cc !== undefined ? { cc } : {}),
@@ -193,13 +218,9 @@ export const CloudflareEmailAdapter = (options: CloudflareEmailAdapterOptions): 
   async send(message: EmailMessage): Promise<SendEmailReceipt> {
     const connector = options.connector
     const recipients = collectRecipients(message)
-    if (recipients.length === 0) {
-      return {
-        successful: false,
-        accepted: [],
-        rejected: [],
-        errorMessages: ['Email message must include at least one recipient.'],
-      }
+    const recipientError = getProviderRecipientError(message, recipients)
+    if (recipientError !== undefined) {
+      return failedReceipt([recipientError])
     }
 
     try {

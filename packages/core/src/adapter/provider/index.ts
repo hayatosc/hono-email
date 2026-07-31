@@ -77,6 +77,38 @@ export const collectProviderRecipients = (message: EmailMessage): string[] => {
   return [...new Set(recipients.map(addressToPath))]
 }
 
+/**
+ * Returns the provider-specific recipient error for a message that cannot be sent.
+ *
+ * @param message - Email message to validate.
+ * @param recipients - Collected envelope recipients, when already available.
+ * @returns An error message when the message has no usable provider recipient fields.
+ */
+export const getProviderRecipientError = (
+  message: EmailMessage,
+  recipients: string[] = collectProviderRecipients(message),
+): string | undefined => {
+  if (recipients.length === 0) {
+    return 'Email message must include at least one recipient.'
+  }
+
+  if (toAddressList(message.to).length === 0) {
+    return 'This provider requires at least one `to` recipient; only cc/bcc were supplied.'
+  }
+
+  return undefined
+}
+
+/**
+ * Returns the provider recipient error for a message that reached a payload
+ * builder without a `to` recipient, which is always an error condition.
+ *
+ * @param message - Email message to validate.
+ * @returns An error message describing the missing recipient.
+ */
+export const requireProviderRecipientError = (message: EmailMessage): string =>
+  getProviderRecipientError(message) ?? 'Email message must include at least one recipient.'
+
 const buildProviderAttachment = (attachment: ResolvedEmailAttachment): ProviderEmailAttachment => {
   if (attachment.filename === undefined) {
     throw new Error('Provider email attachments require a filename.')
@@ -100,7 +132,7 @@ export const buildProviderEmailPayload = async (
   const providerAttachments = attachments.map(buildProviderAttachment)
   const to = asProviderEmailAddressField(message.to)
   if (to === undefined) {
-    throw new Error('Email message must include at least one recipient.')
+    throw new Error(requireProviderRecipientError(message))
   }
 
   const cc = asProviderEmailAddressField(message.cc)
