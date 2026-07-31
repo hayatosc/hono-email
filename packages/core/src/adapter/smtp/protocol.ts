@@ -35,6 +35,19 @@ export type SmtpSession = {
   }>
 }
 
+const MAX_SMTP_RESPONSE_BUFFER_OCTETS = 4096
+
+export class SmtpResponseBufferLimitError extends Error {
+  readonly maxOctets: number = MAX_SMTP_RESPONSE_BUFFER_OCTETS
+
+  constructor() {
+    super(
+      `SMTP response buffer exceeded ${MAX_SMTP_RESPONSE_BUFFER_OCTETS} octets before a complete line was received.`,
+    )
+    this.name = 'SmtpResponseBufferLimitError'
+  }
+}
+
 const encodeAsciiBase64 = (value: string): string => {
   const bytes = new TextEncoder().encode(value)
   const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
@@ -117,6 +130,7 @@ class SmtpProtocolClient {
   #socket: SmtpSocket
   #writer: WritableStreamDefaultWriter<Uint8Array>
   #buffer = ''
+  #bufferOctets = 0
 
   constructor(socket: SmtpSocket, responseTimeout: number | undefined) {
     this.#socket = socket
@@ -143,6 +157,7 @@ class SmtpProtocolClient {
     this.#reader = this.#socket.readable.getReader()
     this.#writer = this.#socket.writable.getWriter()
     this.#buffer = ''
+    this.#bufferOctets = 0
   }
 
   async readResponse(timeout = this.#responseTimeout): Promise<SmtpCommandResponse> {
@@ -212,7 +227,12 @@ class SmtpProtocolClient {
       if (lineEnd >= 0) {
         const line = this.#buffer.slice(0, lineEnd)
         this.#buffer = this.#buffer.slice(lineEnd + CRLF.length)
+        this.#bufferOctets -= this.#encoder.encode(line).byteLength + CRLF.length
         return line
+      }
+
+      if (this.#bufferOctets > MAX_SMTP_RESPONSE_BUFFER_OCTETS) {
+        throw new SmtpResponseBufferLimitError()
       }
 
       const chunk = await this.#reader.read()
@@ -221,6 +241,7 @@ class SmtpProtocolClient {
       }
 
       this.#buffer += this.#decoder.decode(chunk.value, { stream: true })
+      this.#bufferOctets += chunk.value.byteLength
     }
   }
 }

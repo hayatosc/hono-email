@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 
-import { openSmtpSession, runSmtpSession } from './protocol'
+import { openSmtpSession, runSmtpSession, SmtpResponseBufferLimitError } from './protocol'
 import type { SmtpSessionOptions, SmtpSendOptions } from './protocol'
 import type { SmtpSocket } from './types'
 
@@ -128,6 +128,46 @@ describe('openSmtpSession', () => {
     await expect(openSmtpSession(socket, baseOptions)).rejects.toThrow(
       'SMTP connection closed before a complete response was received',
     )
+    await wait()
+  })
+
+  test('rejects an oversized response buffer and closes the socket', async () => {
+    let closed = false
+    const { socket: baseSocket, wait } = createMockSocket(async (server) => {
+      await server.writeResponse('x'.repeat(4097))
+    })
+    const socket: SmtpSocket = {
+      ...baseSocket,
+      close: async () => {
+        closed = true
+        await baseSocket.close?.()
+      },
+    }
+
+    await expect(openSmtpSession(socket, baseOptions)).rejects.toBeInstanceOf(
+      SmtpResponseBufferLimitError,
+    )
+    expect(closed).toBe(true)
+    await wait()
+  })
+
+  test('reads a large multi-line response exceeding the buffer cap', async () => {
+    const { socket, wait } = createMockSocket(async (server) => {
+      await server.writeResponse('220 ready\r\n')
+      await server.readLine()
+      const lines =
+        Array.from(
+          { length: 8 },
+          (_, index) => `250-X-EXTENSION ${'a'.repeat(600)} ${index}\r\n`,
+        ).join('') + '250 OK\r\n'
+      expect(new TextEncoder().encode(lines).byteLength).toBeGreaterThan(4096)
+      await server.writeResponse(lines)
+      await server.readLine()
+      await server.writeResponse('221 bye\r\n')
+    })
+
+    const session = await openSmtpSession(socket, baseOptions)
+    await session.close()
     await wait()
   })
 

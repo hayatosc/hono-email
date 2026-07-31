@@ -209,7 +209,8 @@ const canonicalizeBodyRelaxed = (body: string): string => {
   }
 
   if (lines.length === 0) {
-    return CRLF
+    // Relaxed canonicalization uses the null string; simple canonicalization retains CRLF.
+    return ''
   }
 
   return `${lines.join(CRLF)}${CRLF}`

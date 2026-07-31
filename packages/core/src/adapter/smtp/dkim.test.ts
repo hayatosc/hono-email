@@ -255,5 +255,6 @@ describe('applyDkimSignature', () => {
     })
 
     expect(result).toStartWith('DKIM-Signature: ')
+    expect(result).toContain('bh=47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=')
   })
 })
