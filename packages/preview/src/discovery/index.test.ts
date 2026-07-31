@@ -1,4 +1,4 @@
-import { describe, expect, test, afterAll, beforeAll } from 'bun:test'
+import { describe, expect, spyOn, test, afterAll, beforeAll } from 'bun:test'
 import { mkdtempSync, writeFileSync, rmSync, mkdirSync, symlinkSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -106,12 +106,17 @@ describe('discoverTemplates symlink cycles', () => {
   test('skips symlinked directories outside the template root', () => {
     const tempDir = mkdtempSync(join(tmpdir(), 'hono-email-symlink-outside-'))
     const outsideDir = mkdtempSync(join(tmpdir(), 'hono-email-symlink-target-'))
+    const warnSpy = spyOn(console, 'warn').mockImplementation(() => {})
     try {
       writeFileSync(join(outsideDir, 'outside.tsx'), '')
       symlinkSync(outsideDir, join(tempDir, 'shared'), 'dir')
 
       expect(discoverTemplates(tempDir)).toEqual([])
+      expect(warnSpy.mock.calls.map((call) => String(call[0] ?? ''))).toEqual([
+        expect.stringContaining(join(tempDir, 'shared')),
+      ])
     } finally {
+      warnSpy.mockRestore()
       invalidateTemplateDiscovery(tempDir)
       rmSync(tempDir, { recursive: true, force: true })
       rmSync(outsideDir, { recursive: true, force: true })

@@ -59,6 +59,9 @@ function walkDirectory(
   }
 
   if (!isWithinRoot(rootDirectory, realDirectory)) {
+    console.warn(
+      `[hono-email/preview] Skipping symlink outside template root: ${directory} (resolves to ${realDirectory})`,
+    )
     return
   }
 
@@ -87,7 +90,12 @@ function walkDirectory(
       if (shouldSkipDirectory(entry.name)) continue
       try {
         const realFilePath = realpathSync(filePath)
-        if (!isWithinRoot(rootDirectory, realFilePath)) continue
+        if (!isWithinRoot(rootDirectory, realFilePath)) {
+          console.warn(
+            `[hono-email/preview] Skipping symlink outside template root: ${filePath} (resolves to ${realFilePath})`,
+          )
+          continue
+        }
         const stat = statSync(filePath)
         if (stat.isDirectory()) {
           walkDirectory(filePath, files, visitedDirectories, rootDirectory)
