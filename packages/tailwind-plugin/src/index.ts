@@ -51,23 +51,35 @@ const escapeForRegExp = (value: string): string => value.replace(/[.*+?^${}()|[\
 
 const stripQueryAndHash = (id: string): string => id.replace(/[?#].*$/, '')
 
-const stripBlockComments = (value: string): { value: string; unterminated: boolean } => {
+const stripComments = (value: string): { value: string; unterminated: boolean } => {
   let result = ''
   let cursor = 0
 
   while (cursor < value.length) {
-    const commentStart = value.indexOf('/*', cursor)
-    if (commentStart === -1) {
-      return { value: result + value.slice(cursor), unterminated: false }
+    const next = value.slice(cursor, cursor + 2)
+
+    if (next === '/*') {
+      const commentEnd = value.indexOf('*/', cursor + 2)
+      if (commentEnd === -1) {
+        return { value: result, unterminated: true }
+      }
+
+      cursor = commentEnd + 2
+      continue
     }
 
-    result += value.slice(cursor, commentStart)
-    const commentEnd = value.indexOf('*/', commentStart + 2)
-    if (commentEnd === -1) {
-      return { value: result, unterminated: true }
+    if (next === '//') {
+      const lineEnd = value.indexOf('\n', cursor + 2)
+      if (lineEnd === -1) {
+        return { value: result, unterminated: false }
+      }
+
+      cursor = lineEnd + 1
+      continue
     }
 
-    cursor = commentEnd + 2
+    result += value[cursor]
+    cursor += 1
   }
 
   return { value: result, unterminated: false }
@@ -85,13 +97,13 @@ const findTailwindImportLocalName = (code: string, packageNames: string[]): stri
         continue
       }
 
-      for (const specifier of specifiers.split(',')) {
-        const strippedSpecifier = stripBlockComments(specifier)
-        if (strippedSpecifier.unterminated) {
-          continue
-        }
+      const strippedSpecifiers = stripComments(specifiers)
+      if (strippedSpecifiers.unterminated) {
+        continue
+      }
 
-        const tokens = strippedSpecifier.value.trim().split(/\s+/)
+      for (const specifier of strippedSpecifiers.value.split(',')) {
+        const tokens = specifier.trim().split(/\s+/)
         if (tokens[0] !== 'Tailwind') {
           continue
         }

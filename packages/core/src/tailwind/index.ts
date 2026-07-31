@@ -164,44 +164,26 @@ const droppedClassWarning = (classToken: string): string =>
   `Tailwind class '${classToken}' uses an unsupported selector (combinator or pseudo-element) and was dropped.`
 
 const TAILWIND_WARNING_COMMENT_PREFIX = 'hono-email-tw-warning:'
-const TAILWIND_WARNING_COMMENT_PATTERN =
-  /<!--hono-email-tw-warning:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}:([\s\S]*?)-->/g
-const TAILWIND_WARNING_MARKER_TTL_MS = 60_000
-const MAX_PENDING_TAILWIND_WARNINGS = 1_024
-const pendingTailwindWarnings = new Map<
-  string,
-  { warning: string; count: number; expiresAt: number }
->()
 
-const prunePendingTailwindWarnings = (now: number): void => {
-  for (const [marker, pending] of pendingTailwindWarnings) {
-    if (pending.expiresAt <= now) {
-      pendingTailwindWarnings.delete(marker)
-    }
-  }
+const escapeRegExp = (value: string): string => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 
-  while (pendingTailwindWarnings.size > MAX_PENDING_TAILWIND_WARNINGS) {
-    const oldestMarker = pendingTailwindWarnings.keys().next().value
-    if (oldestMarker === undefined) {
-      break
-    }
-    pendingTailwindWarnings.delete(oldestMarker)
-  }
-}
+const createTailwindWarningNonce = (): string =>
+  globalThis.crypto?.randomUUID?.() ??
+  `${Date.now().toString(36)}.${Math.random().toString(36).slice(2)}`
 
-const createTailwindWarningNonce = (): string => {
-  const nonce = globalThis.crypto?.randomUUID?.()
-  if (!nonce) {
-    throw new Error('Tailwind warning markers require crypto.randomUUID().')
-  }
-  return nonce
-}
+const TAILWIND_WARNING_NONCE = createTailwindWarningNonce()
+const TAILWIND_WARNING_COMMENT_PATTERN = new RegExp(
+  `<!--${escapeRegExp(TAILWIND_WARNING_COMMENT_PREFIX)}${escapeRegExp(TAILWIND_WARNING_NONCE)}:([\\s\\S]*?)-->`,
+  'g',
+)
 
 /**
  * Encodes Tailwind render warnings as HTML comment markers.
  *
  * Markers travel with the rendered fragment until `render()` extracts them, so
  * warnings raised inside the `<Tailwind>` component reach the render pipeline.
+ * Every marker carries a process-wide nonce, so document content cannot forge
+ * or consume markers.
  *
  * @param warnings - Warning messages to encode.
  * @returns Concatenated comment markers, or an empty string.
@@ -211,21 +193,11 @@ export const encodeTailwindWarnings = (warnings: string[]): string => {
     return ''
   }
 
-  const nonce = createTailwindWarningNonce()
-  const now = Date.now()
-  prunePendingTailwindWarnings(now)
   return warnings
-    .map((warning) => {
-      const marker = `<!--${TAILWIND_WARNING_COMMENT_PREFIX}${nonce}:${encodeURIComponent(warning)}-->`
-      const pending = pendingTailwindWarnings.get(marker)
-      pendingTailwindWarnings.set(marker, {
-        warning,
-        count: (pending?.count ?? 0) + 1,
-        expiresAt: now + TAILWIND_WARNING_MARKER_TTL_MS,
-      })
-      prunePendingTailwindWarnings(now)
-      return marker
-    })
+    .map(
+      (warning) =>
+        `<!--${TAILWIND_WARNING_COMMENT_PREFIX}${TAILWIND_WARNING_NONCE}:${encodeURIComponent(warning)}-->`,
+    )
     .join('')
 }
 
@@ -237,22 +209,8 @@ export const encodeTailwindWarnings = (warnings: string[]): string => {
  */
 export const extractTailwindWarnings = (html: string): { html: string; warnings: string[] } => {
   const warnings: string[] = []
-  prunePendingTailwindWarnings(Date.now())
-  const stripped = html.replace(TAILWIND_WARNING_COMMENT_PATTERN, (marker: string) => {
-    const pending = pendingTailwindWarnings.get(marker)
-    if (!pending) {
-      return marker
-    }
-
-    warnings.push(pending.warning)
-    if (pending.count === 1) {
-      pendingTailwindWarnings.delete(marker)
-    } else {
-      pendingTailwindWarnings.set(marker, {
-        ...pending,
-        count: pending.count - 1,
-      })
-    }
+  const stripped = html.replace(TAILWIND_WARNING_COMMENT_PATTERN, (_marker, encoded: string) => {
+    warnings.push(decodeURIComponent(encoded))
     return ''
   })
   return { html: stripped, warnings }
