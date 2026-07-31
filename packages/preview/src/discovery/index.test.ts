@@ -60,6 +60,19 @@ describe('discoverTemplates exclusions and cache', () => {
     }
   })
 
+  test('skips hidden template files', () => {
+    const tempDir = mkdtempSync(join(tmpdir(), 'hono-email-hidden-files-'))
+    try {
+      writeFileSync(join(tempDir, 'visible.tsx'), '')
+      writeFileSync(join(tempDir, '.hidden.tsx'), '')
+
+      expect(discoverTemplates(tempDir).map((template) => template.name)).toEqual(['Visible'])
+    } finally {
+      invalidateTemplateDiscovery(tempDir)
+      rmSync(tempDir, { recursive: true, force: true })
+    }
+  })
+
   test('caches results until invalidated', () => {
     const tempDir = mkdtempSync(join(tmpdir(), 'hono-email-cache-'))
     try {
@@ -74,6 +87,24 @@ describe('discoverTemplates exclusions and cache', () => {
         'First',
         'Second',
       ])
+    } finally {
+      invalidateTemplateDiscovery(tempDir)
+      rmSync(tempDir, { recursive: true, force: true })
+    }
+  })
+
+  test('returns fresh entry objects so callers cannot corrupt the cache', () => {
+    const tempDir = mkdtempSync(join(tmpdir(), 'hono-email-cache-copy-'))
+    try {
+      writeFileSync(join(tempDir, 'first.tsx'), '')
+
+      const first = discoverTemplates(tempDir)
+      expect(first[0]).toBeDefined()
+      if (first[0]) first[0].filePath = '/mutated'
+
+      const second = discoverTemplates(tempDir)
+      expect(second[0]).toBeDefined()
+      expect(second[0]?.filePath).toBe(join(tempDir, 'first.tsx'))
     } finally {
       invalidateTemplateDiscovery(tempDir)
       rmSync(tempDir, { recursive: true, force: true })
@@ -115,6 +146,27 @@ describe('discoverTemplates symlink cycles', () => {
       expect(warnSpy.mock.calls.map((call) => String(call[0] ?? ''))).toEqual([
         expect.stringContaining(join(tempDir, 'shared')),
       ])
+    } finally {
+      warnSpy.mockRestore()
+      invalidateTemplateDiscovery(tempDir)
+      rmSync(tempDir, { recursive: true, force: true })
+      rmSync(outsideDir, { recursive: true, force: true })
+    }
+  })
+
+  test('warns only once per resolved symlink path', () => {
+    const tempDir = mkdtempSync(join(tmpdir(), 'hono-email-symlink-warn-once-'))
+    const outsideDir = mkdtempSync(join(tmpdir(), 'hono-email-symlink-target-once-'))
+    const warnSpy = spyOn(console, 'warn').mockImplementation(() => {})
+    try {
+      writeFileSync(join(outsideDir, 'outside.tsx'), '')
+      symlinkSync(outsideDir, join(tempDir, 'shared'), 'dir')
+
+      discoverTemplates(tempDir)
+      invalidateTemplateDiscovery(tempDir)
+      discoverTemplates(tempDir)
+
+      expect(warnSpy).toHaveBeenCalledTimes(1)
     } finally {
       warnSpy.mockRestore()
       invalidateTemplateDiscovery(tempDir)

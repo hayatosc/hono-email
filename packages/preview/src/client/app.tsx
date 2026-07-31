@@ -156,16 +156,18 @@ function App() {
     [loadSchema],
   )
 
-  const loadTemplates = useCallback(async () => {
+  const loadTemplates = useCallback(async (): Promise<
+    'selection-changed' | 'selection-kept' | 'failed'
+  > => {
     const response = await fetchApi('/api/templates')
     if (!response || !response.ok) {
       setError(response ? await getApiErrorMessage(response) : 'Network error')
-      return null
+      return 'failed'
     }
     const data: unknown = await response.json().catch(() => null)
     if (!Array.isArray(data)) {
       setError('Invalid response from server')
-      return null
+      return 'failed'
     }
     const templates: TemplateSummary[] = data
       .filter(isObject)
@@ -177,7 +179,7 @@ function App() {
 
     const current = selectedRef.current
     if (current && templates.some((template) => template.name === current)) {
-      return false
+      return 'selection-kept'
     }
 
     const first = templates[0]
@@ -194,7 +196,7 @@ function App() {
       setJsonValue('')
       setJsonError(null)
     }
-    return true
+    return 'selection-changed'
   }, [fetchApi, selectTemplate])
 
   useEffect(() => {
@@ -211,8 +213,8 @@ function App() {
     const handler = (event: Event) => {
       handleLiveUpdate(event.type, {
         onTemplatesChanged: () => {
-          void loadTemplates().then((selectionChanged) => {
-            if (selectionChanged === false) renderRef.current?.()
+          void loadTemplates().then((outcome) => {
+            if (outcome === 'selection-kept') renderRef.current?.()
           })
         },
         onContentChanged: () => renderRef.current?.(),

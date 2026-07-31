@@ -35,9 +35,22 @@ const IGNORED_DIRECTORY_NAMES = new Set([
   'target',
 ])
 const templateCache = new Map<string, TemplateEntry[]>()
+const warnedSymlinkPaths = new Set<string>()
+
+function shouldSkipHidden(name: string): boolean {
+  return name.startsWith('.')
+}
 
 function shouldSkipDirectory(name: string): boolean {
-  return name.startsWith('.') || IGNORED_DIRECTORY_NAMES.has(name)
+  return shouldSkipHidden(name) || IGNORED_DIRECTORY_NAMES.has(name)
+}
+
+function warnSymlinkOutsideRoot(path: string, resolvedPath: string): void {
+  if (warnedSymlinkPaths.has(resolvedPath)) return
+  warnedSymlinkPaths.add(resolvedPath)
+  console.warn(
+    `[hono-email/preview] Skipping symlink outside template root: ${path} (resolves to ${resolvedPath})`,
+  )
 }
 
 function isWithinRoot(root: string, target: string): boolean {
@@ -59,9 +72,7 @@ function walkDirectory(
   }
 
   if (!isWithinRoot(rootDirectory, realDirectory)) {
-    console.warn(
-      `[hono-email/preview] Skipping symlink outside template root: ${directory} (resolves to ${realDirectory})`,
-    )
+    warnSymlinkOutsideRoot(directory, realDirectory)
     return
   }
 
@@ -91,9 +102,7 @@ function walkDirectory(
       try {
         const realFilePath = realpathSync(filePath)
         if (!isWithinRoot(rootDirectory, realFilePath)) {
-          console.warn(
-            `[hono-email/preview] Skipping symlink outside template root: ${filePath} (resolves to ${realFilePath})`,
-          )
+          warnSymlinkOutsideRoot(filePath, realFilePath)
           continue
         }
         const stat = statSync(filePath)
@@ -108,7 +117,7 @@ function walkDirectory(
       continue
     }
 
-    if (entry.isFile() && TEMPLATE_EXTENSION.test(entry.name)) {
+    if (entry.isFile() && !shouldSkipHidden(entry.name) && TEMPLATE_EXTENSION.test(entry.name)) {
       files.push(filePath)
     }
   }
@@ -137,11 +146,11 @@ function scanTemplates(absDir: string): TemplateEntry[] {
 export function discoverTemplates(dir: string): TemplateEntry[] {
   const absDir = resolve(dir)
   const cached = templateCache.get(absDir)
-  if (cached) return [...cached]
+  if (cached) return cached.map((entry) => ({ ...entry }))
 
   const templates = scanTemplates(absDir)
   templateCache.set(absDir, templates)
-  return [...templates]
+  return templates.map((entry) => ({ ...entry }))
 }
 
 export function invalidateTemplateDiscovery(dir: string): void {
