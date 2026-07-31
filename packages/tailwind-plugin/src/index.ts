@@ -65,7 +65,7 @@ const findTailwindImportLocalName = (code: string, packageNames: string[]): stri
 
       for (const specifier of specifiers.split(',')) {
         const parts = specifier
-          .replace(/\/\*[\s\S]*?\*\//g, '')
+          .replace(/\/\*[^*]*\*+(?:[^/*][^*]*\*+)*\//g, '')
           .trim()
           .split(/\s+as\s+/)
         if (parts[0] !== 'Tailwind') {

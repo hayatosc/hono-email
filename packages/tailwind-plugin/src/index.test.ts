@@ -74,6 +74,28 @@ export const Email = () => (
     expect(transformed).not.toContain('<Tailwind artifact=')
   })
 
+  test('handles multiple comments before an aliased Tailwind import', () => {
+    const source = `
+import { Tailwind /* first */ /* second */ as EmailTailwind } from 'hono-email'
+
+export const Email = () => <EmailTailwind />
+`
+
+    const transformed = transformTailwindComponentSource(source, TEST_FILE_ID)
+
+    expect(transformed).toContain('<EmailTailwind artifact={__EmailTailwindArtifact} />')
+  })
+
+  test('does not parse an unterminated import comment as a Tailwind specifier', () => {
+    const source = `
+import { Tailwind /* unterminated } from 'hono-email'
+
+export const Email = () => <Tailwind />
+`
+
+    expect(transformTailwindComponentSource(source, TEST_FILE_ID)).toBeNull()
+  })
+
   test('builds a per-file CSS module scoped to only that email file', () => {
     const repoRoot = process.cwd().replace(/\\/g, '/')
     const cssModule = buildPerFileCssModule(TEST_FILE_ID, {
