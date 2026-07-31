@@ -1,5 +1,6 @@
 import { HTMLRewriter } from 'htmlrewriter'
 
+import * as csstree from '../css/csstree'
 import { MARKDOWN_TAILWIND_PARENT_REQUIRED_ATTRIBUTE_NAME } from '../markdown'
 import { mergeStyleAttributes, serializeStyleAttribute } from '../style'
 import {
@@ -9,7 +10,6 @@ import {
   normalizeMediaQuery,
   resolveCssVariables,
 } from './css'
-import * as csstree from './csstree'
 
 /**
  * Compiled Tailwind CSS data consumed by `<Tailwind>`.

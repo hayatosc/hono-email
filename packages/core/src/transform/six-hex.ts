@@ -1,4 +1,4 @@
-import { collectCssDeclarations } from '../tailwind/csstree'
+import { collectCssDeclarations } from '../css/csstree'
 
 const SHORT_HEX_OR_URL_PATTERN =
   /url\([^)]*\)|#([0-9a-fA-F])([0-9a-fA-F])([0-9a-fA-F])(?![0-9a-fA-F])/gi
@@ -24,7 +24,9 @@ const expandShortHexInDeclarations = (css: string): string => {
   try {
     declarations = collectCssDeclarations(css)
   } catch {
-    return css
+    // css-tree is tolerant but can still throw on malformed CSS; fall back to
+    // the whole-text expansion rather than silently skipping hex colors.
+    return expandShortHex(css)
   }
 
   const replacements = declarations

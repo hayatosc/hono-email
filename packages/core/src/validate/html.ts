@@ -1,4 +1,4 @@
-import { collectCssDeclarations } from '../tailwind/csstree'
+import { collectCssDeclarations } from '../css/csstree'
 import { ALWAYS_BLOCKED_TAGS, EMAIL_CLIENT_NAMES, type EmailClient } from './caniemail'
 import { clientData, tables } from './caniemail-data'
 import {
