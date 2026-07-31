@@ -87,9 +87,10 @@ export const mergeStyleAttributes = (
   existingStyle: string | undefined,
   additionalStyle: Record<string, string>,
 ): string => {
-  const merged = {
-    ...parseStyleAttribute(existingStyle),
-    ...additionalStyle,
+  const merged = { ...additionalStyle }
+  for (const [property, value] of Object.entries(parseStyleAttribute(existingStyle))) {
+    delete merged[property]
+    merged[property] = value
   }
 
   return serializeStyleAttribute(merged)

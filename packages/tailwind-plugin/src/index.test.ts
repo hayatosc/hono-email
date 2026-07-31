@@ -57,6 +57,23 @@ export const Email = () => <Tailwind />
     expect(transformed).toContain('<Tailwind artifact={__EmailTailwindArtifact} />')
   })
 
+  test('injects the artifact into an aliased Tailwind component', () => {
+    const source = `
+import { Tailwind as EmailTailwind } from 'hono-email'
+
+export const Email = () => (
+  <EmailTailwind>
+    <div>Hello</div>
+  </EmailTailwind>
+)
+`
+
+    const transformed = transformTailwindComponentSource(source, TEST_FILE_ID)
+
+    expect(transformed).toContain('<EmailTailwind artifact={__EmailTailwindArtifact}>')
+    expect(transformed).not.toContain('<Tailwind artifact=')
+  })
+
   test('builds a per-file CSS module scoped to only that email file', () => {
     const repoRoot = process.cwd().replace(/\\/g, '/')
     const cssModule = buildPerFileCssModule(TEST_FILE_ID, {
