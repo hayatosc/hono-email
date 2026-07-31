@@ -51,6 +51,28 @@ const escapeForRegExp = (value: string): string => value.replace(/[.*+?^${}()|[\
 
 const stripQueryAndHash = (id: string): string => id.replace(/[?#].*$/, '')
 
+const stripBlockComments = (value: string): { value: string; unterminated: boolean } => {
+  let result = ''
+  let cursor = 0
+
+  while (cursor < value.length) {
+    const commentStart = value.indexOf('/*', cursor)
+    if (commentStart === -1) {
+      return { value: result + value.slice(cursor), unterminated: false }
+    }
+
+    result += value.slice(cursor, commentStart)
+    const commentEnd = value.indexOf('*/', commentStart + 2)
+    if (commentEnd === -1) {
+      return { value: result, unterminated: true }
+    }
+
+    cursor = commentEnd + 2
+  }
+
+  return { value: result, unterminated: false }
+}
+
 const findTailwindImportLocalName = (code: string, packageNames: string[]): string | undefined => {
   for (const packageName of packageNames) {
     const importPattern = new RegExp(
@@ -64,10 +86,12 @@ const findTailwindImportLocalName = (code: string, packageNames: string[]): stri
       }
 
       for (const specifier of specifiers.split(',')) {
-        const parts = specifier
-          .replace(/\/\*[^*]*\*+(?:[^/*][^*]*\*+)*\//g, '')
-          .trim()
-          .split(/\s+as\s+/)
+        const strippedSpecifier = stripBlockComments(specifier)
+        if (strippedSpecifier.unterminated) {
+          continue
+        }
+
+        const parts = strippedSpecifier.value.trim().split(/\s+as\s+/)
         if (parts[0] !== 'Tailwind') {
           continue
         }
