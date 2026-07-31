@@ -1,5 +1,6 @@
 import { decodeNamedCharacterReference } from 'decode-named-character-reference'
 
+import { readAttribute } from '../html-attribute'
 import { stripHtmlComments } from '../validate/tags'
 
 export type PlainTextRenderOptions = {
@@ -88,8 +89,7 @@ const formatImage = (attributes: string, includeImageAlt: boolean): string => {
     return ''
   }
 
-  const altMatch = attributes.match(/\salt="([^"]*)"/i)
-  return altMatch?.[1] ?? ''
+  return readAttribute(attributes, 'alt') ?? ''
 }
 
 export const renderPlainText = (html: string, options: PlainTextRenderOptions = {}): string => {
@@ -122,8 +122,11 @@ export const renderPlainText = (html: string, options: PlainTextRenderOptions = 
     formatImage(attributes, resolvedOptions.includeImageAlt),
   )
   text = text.replace(
-    /<a\b[^>]*href="([^"]*)"[^>]*>([\s\S]*?)<\/a>/gi,
-    (_match, href: string, label: string) => formatLink(label, href, resolvedOptions.linkFormat),
+    /<a\b([^>]*)>([\s\S]*?)<\/a>/gi,
+    (match, attributes: string, label: string) => {
+      const href = readAttribute(attributes, 'href')
+      return href === undefined ? match : formatLink(label, href, resolvedOptions.linkFormat)
+    },
   )
   do {
     prev = text

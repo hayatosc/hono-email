@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 
 import { Body, Button, Html, Preview, render, Text } from '../index'
+import { renderPlainText } from './index'
 
 describe('render output', () => {
   test('returns plain text with render options', async () => {
@@ -56,6 +57,54 @@ describe('render output', () => {
     expect(text).toContain('Hero image')
     expect(text).toContain('* One')
     expect(text).toContain('***')
+  })
+
+  test('preserves link URLs for all valid href quoting styles', () => {
+    const text = renderPlainText(
+      "<p>Single <a href='https://single.example'>link</a> and unquoted <a href=https://unquoted.example>link</a>.</p>",
+    )
+
+    expect(text).toContain(
+      'Single link (https://single.example) and unquoted link (https://unquoted.example).',
+    )
+
+    expect(
+      renderPlainText("<p>Before <img alt='single alt'> after <img alt=unquoted-alt> after.</p>"),
+    ).toBe('Before single alt after unquoted-alt after.')
+  })
+
+  test('prefers the real href over a preceding data-href', () => {
+    const text = renderPlainText(
+      '<p><a data-href="https://tracker.example/BAD" href="https://real.example/GOOD">Click</a></p>',
+    )
+
+    expect(text).toContain('Click (https://real.example/GOOD)')
+    expect(text).not.toContain('tracker.example')
+  })
+
+  test('prefers the real alt over a preceding data-alt', () => {
+    const text = renderPlainText('<img data-alt="BAD" alt="GOOD" src="x">', {
+      includeImageAlt: true,
+    })
+
+    expect(text).toBe('GOOD')
+  })
+
+  test('ignores href syntax that appears inside another attribute value', () => {
+    const text = renderPlainText(
+      `<a title=" href='https://evil.example' " href="https://real.example">C</a>`,
+    )
+
+    expect(text).toContain('C (https://real.example)')
+    expect(text).not.toContain('evil.example')
+  })
+
+  test('ignores alt syntax that appears inside another attribute value', () => {
+    const text = renderPlainText(`<img title=" alt='BAD' " alt="GOOD" src="x">`, {
+      includeImageAlt: true,
+    })
+
+    expect(text).toBe('GOOD')
   })
 
   test('decodes HTML entities in plain text', async () => {
