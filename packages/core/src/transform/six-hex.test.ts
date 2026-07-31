@@ -1,5 +1,6 @@
-import { describe, expect, test } from 'bun:test'
+import { describe, expect, spyOn, test } from 'bun:test'
 
+import * as csstree from '../css/csstree'
 import { ensureSixHex, expandShortHex } from './six-hex'
 
 describe('expandShortHex', () => {
@@ -36,7 +37,33 @@ describe('ensureSixHex', () => {
     expect(ensureSixHex('<style>.a{color:#abc}</style>')).toBe('<style>.a{color:#aabbcc}</style>')
   })
 
+  test('expands declaration values without changing id selectors', () => {
+    expect(
+      ensureSixHex(
+        '<style>#abc { color: #def; } @media screen { #abc { border: 1px solid #abc; } }</style>',
+      ),
+    ).toBe(
+      '<style>#abc { color: #ddeeff; } @media screen { #abc { border: 1px solid #aabbcc; } }</style>',
+    )
+  })
+
   test('does not touch non-css hex such as anchors', () => {
     expect(ensureSixHex('<a href="#abc">Jump</a>')).toBe('<a href="#abc">Jump</a>')
+  })
+
+  test('expands hex across the whole style block when CSS parsing fails', () => {
+    // css-tree's stylesheet parser recovers from malformed input, so no real
+    // input makes collectCssDeclarations throw. Spy to force the fallback:
+    // hex inside declarations must still be expanded, even outside selectors.
+    const spy = spyOn(csstree, 'collectCssDeclarations').mockImplementation(() => {
+      throw new Error('synthetic parse failure')
+    })
+    try {
+      expect(ensureSixHex('<style>#abc { color: #def; }</style>')).toBe(
+        '<style>#aabbcc { color: #ddeeff; }</style>',
+      )
+    } finally {
+      spy.mockRestore()
+    }
   })
 })

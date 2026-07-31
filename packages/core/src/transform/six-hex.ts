@@ -1,3 +1,5 @@
+import { collectCssDeclarations } from '../css/csstree'
+
 const SHORT_HEX_OR_URL_PATTERN =
   /url\([^)]*\)|#([0-9a-fA-F])([0-9a-fA-F])([0-9a-fA-F])(?![0-9a-fA-F])/gi
 const STYLE_BLOCK_PATTERN = /(<style\b[^>]*>)([\s\S]*?)(<\/style>)/gi
@@ -17,6 +19,33 @@ export const expandShortHex = (css: string): string =>
     red ? `#${red}${red}${green}${green}${blue}${blue}` : match,
   )
 
+const expandShortHexInDeclarations = (css: string): string => {
+  let declarations
+  try {
+    declarations = collectCssDeclarations(css)
+  } catch {
+    // css-tree is tolerant but can still throw on malformed CSS; fall back to
+    // the whole-text expansion rather than silently skipping hex colors.
+    return expandShortHex(css)
+  }
+
+  const replacements = declarations
+    .map(({ value, valueStart, valueEnd }) => ({
+      value,
+      valueStart,
+      valueEnd,
+      expanded: expandShortHex(value),
+    }))
+    .filter(({ value, expanded }) => value !== expanded)
+    .sort((left, right) => right.valueStart - left.valueStart)
+
+  let result = css
+  for (const { valueStart, valueEnd, expanded } of replacements) {
+    result = `${result.slice(0, valueStart)}${expanded}${result.slice(valueEnd)}`
+  }
+  return result
+}
+
 /**
  * Rewrites three-digit hex colors to six digits, scoped to CSS contexts.
  *
@@ -30,7 +59,7 @@ export const ensureSixHex = (html: string): string =>
   html
     .replace(
       STYLE_BLOCK_PATTERN,
-      (_match, open, css, close) => `${open}${expandShortHex(css)}${close}`,
+      (_match, open, css, close) => `${open}${expandShortHexInDeclarations(css)}${close}`,
     )
     .replace(STYLE_ATTRIBUTE_PATTERN, (_match, key, quoted) => {
       const quote = quoted[0]

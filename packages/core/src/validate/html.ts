@@ -1,3 +1,4 @@
+import { collectCssDeclarations } from '../css/csstree'
 import { ALWAYS_BLOCKED_TAGS, EMAIL_CLIENT_NAMES, type EmailClient } from './caniemail'
 import { clientData, tables } from './caniemail-data'
 import {
@@ -428,19 +429,27 @@ const validateCssDeclarations = (
   cssText: string,
   warnings: Set<string>,
   warningClients: EmailClient[],
+  declarationBlocksOnly = false,
 ): void => {
   const normalizedCssText = stripCssComments(cssText)
   collectCssWarnings(normalizedCssText, warnings, warningClients)
 
-  for (const match of normalizedCssText.matchAll(CSS_DECLARATION_PATTERN)) {
-    const property = match[1]?.toLowerCase()
-    const normalizedValue = normalizeCssValue(match[2] ?? '')
+  const declarations = declarationBlocksOnly
+    ? collectCssDeclarations(normalizedCssText)
+    : Array.from(normalizedCssText.matchAll(CSS_DECLARATION_PATTERN), (match) => ({
+        property: match[1] ?? '',
+        value: match[2] ?? '',
+      }))
+
+  for (const declaration of declarations) {
+    const property = declaration.property.toLowerCase()
+    const normalizedValue = normalizeCssValue(declaration.value)
 
     if (!property || !normalizedValue) {
       continue
     }
 
-    validateCssUrls(property, match[2] ?? '', warnings)
+    validateCssUrls(property, declaration.value, warnings)
 
     if (property.startsWith('--')) {
       throw new Error(`CSS variables ('${property}') aren't supported in HTML email strict mode.`)
@@ -559,7 +568,7 @@ const validateStyleTags = (
       continue
     }
 
-    validateCssDeclarations(cssText, warnings, warningClients)
+    validateCssDeclarations(cssText, warnings, warningClients, true)
   }
 }
 
