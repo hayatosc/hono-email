@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 
 import { Body, Button, Html, Preview, render, Text } from '../index'
+import { renderPlainText } from './index'
 
 describe('render output', () => {
   test('returns plain text with render options', async () => {
@@ -56,6 +57,20 @@ describe('render output', () => {
     expect(text).toContain('Hero image')
     expect(text).toContain('* One')
     expect(text).toContain('***')
+  })
+
+  test('preserves link URLs for all valid href quoting styles', () => {
+    const text = renderPlainText(
+      "<p>Single <a href='https://single.example'>link</a> and unquoted <a href=https://unquoted.example>link</a>.</p>",
+    )
+
+    expect(text).toContain(
+      'Single link (https://single.example) and unquoted link (https://unquoted.example).',
+    )
+
+    expect(
+      renderPlainText("<p>Before <img alt='single alt'> after <img alt=unquoted-alt> after.</p>"),
+    ).toBe('Before single alt after unquoted-alt after.')
   })
 
   test('decodes HTML entities in plain text', async () => {

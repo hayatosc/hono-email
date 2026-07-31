@@ -83,13 +83,19 @@ const formatLink = (
   return normalizedLabel === '' ? href : `${normalizedLabel} (${href})`
 }
 
+const readAttribute = (attributes: string, name: string): string | undefined => {
+  const match = new RegExp(`\\b${name}\\s*=\\s*(?:"([^"]*)"|'([^']*)'|([^\\s"'=<>]+))`, 'i').exec(
+    attributes,
+  )
+  return match?.[1] ?? match?.[2] ?? match?.[3]
+}
+
 const formatImage = (attributes: string, includeImageAlt: boolean): string => {
   if (!includeImageAlt) {
     return ''
   }
 
-  const altMatch = attributes.match(/\salt="([^"]*)"/i)
-  return altMatch?.[1] ?? ''
+  return readAttribute(attributes, 'alt') ?? ''
 }
 
 export const renderPlainText = (html: string, options: PlainTextRenderOptions = {}): string => {
@@ -122,8 +128,11 @@ export const renderPlainText = (html: string, options: PlainTextRenderOptions = 
     formatImage(attributes, resolvedOptions.includeImageAlt),
   )
   text = text.replace(
-    /<a\b[^>]*href="([^"]*)"[^>]*>([\s\S]*?)<\/a>/gi,
-    (_match, href: string, label: string) => formatLink(label, href, resolvedOptions.linkFormat),
+    /<a\b([^>]*)>([\s\S]*?)<\/a>/gi,
+    (match, attributes: string, label: string) => {
+      const href = readAttribute(attributes, 'href')
+      return href === undefined ? match : formatLink(label, href, resolvedOptions.linkFormat)
+    },
   )
   do {
     prev = text
