@@ -166,7 +166,28 @@ const droppedClassWarning = (classToken: string): string =>
 const TAILWIND_WARNING_COMMENT_PREFIX = 'hono-email-tw-warning:'
 const TAILWIND_WARNING_COMMENT_PATTERN =
   /<!--hono-email-tw-warning:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}:([\s\S]*?)-->/g
-const pendingTailwindWarnings = new Map<string, { warning: string; count: number }>()
+const TAILWIND_WARNING_MARKER_TTL_MS = 60_000
+const MAX_PENDING_TAILWIND_WARNINGS = 1_024
+const pendingTailwindWarnings = new Map<
+  string,
+  { warning: string; count: number; expiresAt: number }
+>()
+
+const prunePendingTailwindWarnings = (now: number): void => {
+  for (const [marker, pending] of pendingTailwindWarnings) {
+    if (pending.expiresAt <= now) {
+      pendingTailwindWarnings.delete(marker)
+    }
+  }
+
+  while (pendingTailwindWarnings.size > MAX_PENDING_TAILWIND_WARNINGS) {
+    const oldestMarker = pendingTailwindWarnings.keys().next().value
+    if (oldestMarker === undefined) {
+      break
+    }
+    pendingTailwindWarnings.delete(oldestMarker)
+  }
+}
 
 const createTailwindWarningNonce = (): string => {
   const nonce = globalThis.crypto?.randomUUID?.()
@@ -191,6 +212,8 @@ export const encodeTailwindWarnings = (warnings: string[]): string => {
   }
 
   const nonce = createTailwindWarningNonce()
+  const now = Date.now()
+  prunePendingTailwindWarnings(now)
   return warnings
     .map((warning) => {
       const marker = `<!--${TAILWIND_WARNING_COMMENT_PREFIX}${nonce}:${encodeURIComponent(warning)}-->`
@@ -198,7 +221,9 @@ export const encodeTailwindWarnings = (warnings: string[]): string => {
       pendingTailwindWarnings.set(marker, {
         warning,
         count: (pending?.count ?? 0) + 1,
+        expiresAt: now + TAILWIND_WARNING_MARKER_TTL_MS,
       })
+      prunePendingTailwindWarnings(now)
       return marker
     })
     .join('')
@@ -212,6 +237,7 @@ export const encodeTailwindWarnings = (warnings: string[]): string => {
  */
 export const extractTailwindWarnings = (html: string): { html: string; warnings: string[] } => {
   const warnings: string[] = []
+  prunePendingTailwindWarnings(Date.now())
   const stripped = html.replace(TAILWIND_WARNING_COMMENT_PATTERN, (marker: string) => {
     const pending = pendingTailwindWarnings.get(marker)
     if (!pending) {
@@ -222,7 +248,10 @@ export const extractTailwindWarnings = (html: string): { html: string; warnings:
     if (pending.count === 1) {
       pendingTailwindWarnings.delete(marker)
     } else {
-      pendingTailwindWarnings.set(marker, { ...pending, count: pending.count - 1 })
+      pendingTailwindWarnings.set(marker, {
+        ...pending,
+        count: pending.count - 1,
+      })
     }
     return ''
   })
