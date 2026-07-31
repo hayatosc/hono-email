@@ -83,10 +83,18 @@ const formatLink = (
   return normalizedLabel === '' ? href : `${normalizedLabel} (${href})`
 }
 
+const attributePatternCache = new Map<string, RegExp>()
+
 const readAttribute = (attributes: string, name: string): string | undefined => {
-  const match = new RegExp(`\\b${name}\\s*=\\s*(?:"([^"]*)"|'([^']*)'|([^\\s"'=<>]+))`, 'i').exec(
-    attributes,
-  )
+  let pattern = attributePatternCache.get(name)
+  if (pattern === undefined) {
+    pattern = new RegExp(
+      `(?:^|[\\s"'/])${name}\\s*=\\s*(?:"([^"]*)"|'([^']*)'|([^\\s"'=<>]+))`,
+      'i',
+    )
+    attributePatternCache.set(name, pattern)
+  }
+  const match = pattern.exec(attributes)
   return match?.[1] ?? match?.[2] ?? match?.[3]
 }
 

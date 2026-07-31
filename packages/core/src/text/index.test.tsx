@@ -73,6 +73,23 @@ describe('render output', () => {
     ).toBe('Before single alt after unquoted-alt after.')
   })
 
+  test('prefers the real href over a preceding data-href', () => {
+    const text = renderPlainText(
+      '<p><a data-href="https://tracker.example/BAD" href="https://real.example/GOOD">Click</a></p>',
+    )
+
+    expect(text).toContain('Click (https://real.example/GOOD)')
+    expect(text).not.toContain('tracker.example')
+  })
+
+  test('prefers the real alt over a preceding data-alt', () => {
+    const text = renderPlainText('<img data-alt="BAD" alt="GOOD" src="x">', {
+      includeImageAlt: true,
+    })
+
+    expect(text).toBe('GOOD')
+  })
+
   test('decodes HTML entities in plain text', async () => {
     const { text } = await render(
       <Html>
