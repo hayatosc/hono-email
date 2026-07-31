@@ -2,14 +2,7 @@ import { describe, expect, test, beforeEach, afterEach } from 'bun:test'
 
 import type { CommandContext } from 'citty'
 
-import { main, preview } from './cli'
-
-type CliArgs = {
-  dir: { alias: string; type: 'string'; description: string; default: string }
-  port: { alias: string; type: 'string'; description: string; default: string }
-  host: { type: 'string'; description: string }
-  file: { alias: string; type: 'string'; description: string }
-}
+import { type CliArgs, main, preview } from './cli'
 
 type MockCommandContext = CommandContext<CliArgs>
 
@@ -19,7 +12,8 @@ const createMockContext = (
   file: string = '',
 ): MockCommandContext => ({
   rawArgs: [],
-  args: { _: [], dir: './emails', port, host, file },
+  // `citty` mirrors each aliased arg onto its short flag in `ParsedArgs`.
+  args: { _: [], dir: './emails', d: './emails', port, p: port, host, file, f: file },
   cmd: preview,
 })
 
@@ -78,10 +72,10 @@ describe('cli port validation', () => {
   beforeEach(() => {
     expect(preview.run).toBeDefined()
     originalExit = process.exit.bind(process)
-    process.exit = ((code?: number) => {
+    process.exit = (code?: number) => {
       exitCode = code ?? 0
       throw new Error(`process.exit(${code})`)
-    }) as typeof process.exit
+    }
   })
 
   afterEach(() => {

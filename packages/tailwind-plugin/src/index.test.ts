@@ -170,7 +170,7 @@ const getTransformHandler = (plugin: UnpluginOptions) => {
 }
 
 describe('unpluginFactory', () => {
-  const meta = { framework: 'vite' as const }
+  const meta = { framework: 'vite' as const, versions: {} }
   const plugin = getPluginOptions(unpluginFactory({}, meta))
   const resolveId = getResolveIdFn(plugin)
   const load = getLoadFn(plugin)

@@ -7,13 +7,13 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "dotenv": "^16.4.7",
-    "hono": "^4.12.14",
+    "dotenv": "^17.4.2",
+    "hono": "^4.12.32",
     "hono-email": "workspace:*"
   },
   "devDependencies": {
-    "@types/node": "^22.0.0",
-    "tsx": "^4.19.4",
+    "@types/node": "^26.1.2",
+    "tsx": "^4.23.1",
     "typescript": "^7.0.2"
   }
 }
