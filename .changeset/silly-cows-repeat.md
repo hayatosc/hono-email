@@ -1,5 +1,5 @@
 ---
-'@hono-email/preview': minor
+'@hono-email/preview': patch
 '@hono-email/tailwind-plugin': patch
 ---
 
