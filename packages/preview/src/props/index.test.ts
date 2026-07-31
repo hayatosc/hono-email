@@ -188,6 +188,12 @@ describe('resolveComponent', () => {
     expect(resolveComponent(mod)).toBe(MyEmail)
   })
 
+  test('falls back to a single named function with sibling previewProps', () => {
+    const MyEmail = () => null
+    const mod = { MyEmail, previewProps: {} }
+    expect(resolveComponent(mod)).toBe(MyEmail)
+  })
+
   test('skips named function exports without previewProps', () => {
     const MyEmail = () => null
     const util = () => null
@@ -206,6 +212,14 @@ describe('resolveComponent', () => {
 })
 
 describe('mergePropsWithDefaults', () => {
+  test('does not treat inherited properties as supplied props', () => {
+    const schema = {
+      toString: { type: 'string' as const, required: true },
+    }
+
+    expect(() => mergePropsWithDefaults(schema, {})).toThrow('Missing required props: toString')
+  })
+
   test('merges user props with schema default values', () => {
     const schema = {
       customerName: { type: 'string' as const, required: false, defaultValue: 'Guest' },

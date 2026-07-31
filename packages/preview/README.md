@@ -37,7 +37,7 @@ bunx hono-email preview --dir ./emails
 
 ## Interactive Props Schema
 
-To enable structured props editing in the preview UI, export a `previewProps` configuration object alongside your default-exported email template component.
+To enable structured props editing in the preview UI, export a `previewProps` configuration object alongside your default-exported email template component. Without a default export, the module may instead contain one named component function alongside `previewProps`.
 
 ```tsx
 import type { PreviewPropsConfig } from '@hono-email/preview'

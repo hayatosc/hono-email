@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 
-import { type ImporterNode, isAffectedByChange } from './hmr'
+import { type ImporterNode, getLiveUpdateType, isAffectedByChange } from './hmr'
 
 const templateDir = '/project/emails'
 const templateDirPrefix = `${templateDir}/`
@@ -51,5 +51,25 @@ describe('isAffectedByChange', () => {
     const b = node('/project/lib/b.ts', [a])
     a.importers = [b]
     expect(isAffectedByChange('/project/lib/a.ts', [a], isTemplateFile)).toBe(false)
+  })
+})
+
+describe('getLiveUpdateType', () => {
+  test('classifies direct template changes as template updates', () => {
+    expect(getLiveUpdateType(`${templateDir}/welcome.tsx`, [], isTemplateFile)).toBe(
+      'templates-changed',
+    )
+  })
+
+  test('classifies imported module changes as content updates', () => {
+    const template = node(`${templateDir}/welcome.tsx`)
+    const shared = node('/project/components/Button.tsx', [template])
+    expect(getLiveUpdateType('/project/components/Button.tsx', [shared], isTemplateFile)).toBe(
+      'content-changed',
+    )
+  })
+
+  test('ignores unrelated changes', () => {
+    expect(getLiveUpdateType('/project/lib/util.ts', [], isTemplateFile)).toBeNull()
   })
 })

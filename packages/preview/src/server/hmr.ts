@@ -8,6 +8,8 @@ export interface ImporterNode {
   importers: Iterable<ImporterNode>
 }
 
+export type LiveUpdateType = 'templates-changed' | 'content-changed'
+
 /**
  * Decide whether a changed file should refresh the preview.
  *
@@ -41,4 +43,13 @@ export function isAffectedByChange(
   }
 
   return false
+}
+
+export function getLiveUpdateType(
+  changedFile: string,
+  modules: Iterable<ImporterNode>,
+  isTemplateFile: (file: string | null) => boolean,
+): LiveUpdateType | null {
+  if (isTemplateFile(changedFile)) return 'templates-changed'
+  return isAffectedByChange(changedFile, modules, isTemplateFile) ? 'content-changed' : null
 }

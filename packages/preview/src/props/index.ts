@@ -37,8 +37,8 @@ export type PreviewPropSpec = {
 }
 
 /**
- * Schema that template authors export as `previewProps` alongside
- * their default-exported email component.
+ * Schema that template authors export as `previewProps` alongside their email
+ * component. A module without a default export may use one named component.
  */
 export type PreviewPropsConfig = Record<string, PreviewPropSpec>
 
@@ -115,13 +115,16 @@ export function extractPropsSchema(mod: Record<string, unknown>): PropsSchema {
 /**
  * Resolve the email component from a template module.
  *
- * Checks `default` first, then falls back to the first exported function
- * (skipping `previewProps` and non-function exports).
+ * Checks `default` first, then named functions with their own `previewProps`.
+ * A module-level `previewProps` export also allows one named function.
  */
 type EmailComponent = (props: Record<string, unknown>) => Child
 
 function isEmailComponent(v: unknown, isDefault = false): v is EmailComponent {
-  return typeof v === 'function' && (isDefault || 'previewProps' in v)
+  return (
+    typeof v === 'function' &&
+    (isDefault || Object.prototype.hasOwnProperty.call(v, 'previewProps'))
+  )
 }
 
 export function resolveComponent(mod: Record<string, unknown>): EmailComponent | null {
@@ -133,6 +136,16 @@ export function resolveComponent(mod: Record<string, unknown>): EmailComponent |
     if (key === 'previewProps') continue
     if (isEmailComponent(value)) {
       return value
+    }
+  }
+
+  if (isObject(mod.previewProps)) {
+    const namedFunctions = Object.entries(mod).filter(
+      ([key, value]) => key !== 'previewProps' && typeof value === 'function',
+    )
+    const component = namedFunctions[0]?.[1]
+    if (namedFunctions.length === 1 && isEmailComponent(component, true)) {
+      return component
     }
   }
 
@@ -150,16 +163,16 @@ export function mergePropsWithDefaults(
   schema: PropsSchema,
   userProps: Record<string, unknown>,
 ): Record<string, unknown> {
-  const merged: Record<string, unknown> = {}
+  const merged: Record<string, unknown> = Object.create(null)
   for (const [key, spec] of Object.entries(schema)) {
-    if (key in userProps) {
+    if (Object.hasOwn(userProps, key)) {
       merged[key] = userProps[key]
     } else if (spec.defaultValue !== undefined) {
       merged[key] = spec.defaultValue
     }
   }
   for (const [key, value] of Object.entries(userProps)) {
-    if (!(key in merged)) {
+    if (!Object.hasOwn(merged, key)) {
       merged[key] = value
     }
   }
@@ -167,7 +180,7 @@ export function mergePropsWithDefaults(
   const missing = Object.entries(schema)
     .filter(([, spec]) => spec.required)
     .map(([key]) => key)
-    .filter((key) => !(key in merged))
+    .filter((key) => !Object.hasOwn(merged, key))
   if (missing.length > 0) {
     throw new MissingRequiredPropsError(missing)
   }
