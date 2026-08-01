@@ -1,5 +1,11 @@
 # @hono-email/preview
 
+## 0.8.2
+
+### Patch Changes
+
+- [#134](https://github.com/hayatosc/hono-email/pull/134) [`efa7223`](https://github.com/hayatosc/hono-email/commit/efa72234172c6e5c25b3e80dc8f9eef120f0e521) Thanks [@hayatosc](https://github.com/hayatosc)! - Refactor the preview API routes to use Hono middleware and centralized error handling. Template lookup, module loading, and component resolution now run once per request in a shared middleware, and unexpected errors are mapped through `app.onError`. Response shapes and status codes are unchanged.
+
 ## 0.8.1
 
 ### Patch Changes
