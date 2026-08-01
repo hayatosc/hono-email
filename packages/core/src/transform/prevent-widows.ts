@@ -59,7 +59,7 @@ export const preventWidows = (html: string): string => {
     // Find the last space before the last word
     let lastNonSpaceIndex = -1
     for (let i = combined.length - 1; i >= 0; i--) {
-      if (/\S/.test(combined[i]!)) {
+      if (/\S/.test(combined.charAt(i))) {
         lastNonSpaceIndex = i
         break
       }
@@ -68,7 +68,7 @@ export const preventWidows = (html: string): string => {
     let targetSpaceIndex = -1
     if (lastNonSpaceIndex !== -1) {
       for (let i = lastNonSpaceIndex - 1; i >= 0; i--) {
-        if (/\s/.test(combined[i]!)) {
+        if (/\s/.test(combined.charAt(i))) {
           targetSpaceIndex = i
           break
         }
@@ -95,7 +95,7 @@ export const preventWidows = (html: string): string => {
   }
 
   for (let i = 0; i < tokens.length; i++) {
-    const token = tokens[i]!
+    const token = tokens[i] ?? ''
 
     if (token.startsWith('<!--') || token.startsWith('<')) {
       const closeMatch = /^<\/([a-zA-Z0-9-]+)/.exec(token)
