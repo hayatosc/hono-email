@@ -91,7 +91,11 @@ describe('worker markdown responses', () => {
 
   test('serves .md files with cache-control header', async () => {
     const app = await createApp()
-    const response = await app.request('/docs/getting-started/overview.md', {}, assetsEnv('# Title'))
+    const response = await app.request(
+      '/docs/getting-started/overview.md',
+      {},
+      assetsEnv('# Title'),
+    )
     expect(response.headers.get('cache-control')).toBe('public, max-age=600')
     expect(response.headers.get('content-type')).toContain('text/markdown')
   })
