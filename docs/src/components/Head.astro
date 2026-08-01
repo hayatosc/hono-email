@@ -11,10 +11,12 @@ const ogFile = pagePath === '/' ? 'index.png' : `${pagePath.replace(/^\/|\/$/g, 
 const ogImageUrl = Astro.site
   ? new URL(`/og/${ogFile}`, Astro.site).toString()
   : `/og/${ogFile}`;
+const markdownUrl = pagePath === '/' ? '/index.md' : `${pagePath.replace(/\/$/, '')}.md`;
 ---
 
 <Default {...Astro.props} />
 
+<link rel="alternate" type="text/markdown" href={markdownUrl} />
 <meta property="og:title" content={title} />
 <meta property="og:description" content={description} />
 <meta property="og:image" content={ogImageUrl} />

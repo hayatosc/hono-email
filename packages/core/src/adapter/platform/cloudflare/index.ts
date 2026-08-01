@@ -44,7 +44,10 @@ const buildConnector = (bindingName: string): CloudflareEmailConnector => ({
   kind: 'workers' as const,
   async send(request: CloudflareEmailConnectorRequest): Promise<CloudflareEmailConnectorResult> {
     const binding = resolveEmailBinding(bindingName)
-    const result = await binding.send(request.workersPayload!)
+    if (request.workersPayload === undefined) {
+      throw new Error('Cloudflare Email workers connector requires a workers payload.')
+    }
+    const result = await binding.send(request.workersPayload)
 
     return {
       delivered: request.recipients,

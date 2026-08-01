@@ -1,6 +1,14 @@
-import { describe, expect, test } from 'bun:test'
+import { describe, expect, test, mock } from 'bun:test'
 
 import { parseAccept, negotiateContentType } from './content-negotiation'
+
+// Mock @astrojs/cloudflare/handler before importing worker.ts. The worker
+// only reaches `handle()` for non-markdown requests, so a stub is enough.
+void mock.module('@astrojs/cloudflare/handler', () => {
+  return {
+    handle: async () => new Response('<!doctype html><html></html>'),
+  }
+})
 
 describe('parseAccept', () => {
   test('should parse simple media types', () => {
@@ -68,5 +76,52 @@ describe('negotiateContentType', () => {
   test('should handle wildcard types correctly', () => {
     expect(negotiateContentType('text/*')).toBe('text/html')
     expect(negotiateContentType('*/*')).toBe('text/html')
+  })
+})
+
+describe('worker markdown responses', () => {
+  const createApp = async () => (await import('./worker')).default
+
+  const assetsEnv = (body: string, status = 200) =>
+    ({
+      ASSETS: {
+        fetch: async () => new Response(body, { status }),
+      },
+    }) as never
+
+  test('serves .md files with cache-control header', async () => {
+    const app = await createApp()
+    const response = await app.request('/docs/getting-started/overview.md', {}, assetsEnv('# Title'))
+    expect(response.headers.get('cache-control')).toBe('public, max-age=600')
+    expect(response.headers.get('content-type')).toContain('text/markdown')
+  })
+
+  test('serves llms-full.txt with cache-control header', async () => {
+    const app = await createApp()
+    const response = await app.request('/llms-full.txt', {}, assetsEnv('# Full'))
+    expect(response.headers.get('cache-control')).toBe('public, max-age=600')
+    expect(response.headers.get('content-type')).toContain('text/plain')
+  })
+
+  test('serves negotiated markdown with cache-control and vary headers', async () => {
+    const app = await createApp()
+    const response = await app.request(
+      '/docs/getting-started/overview/',
+      { headers: { accept: 'text/markdown' } },
+      assetsEnv('# Title'),
+    )
+    expect(response.headers.get('cache-control')).toBe('public, max-age=600')
+    expect(response.headers.get('vary')).toContain('Accept')
+  })
+
+  test('falls through to HTML when negotiated markdown file is missing', async () => {
+    const app = await createApp()
+    const response = await app.request(
+      '/docs/getting-started/overview/',
+      { headers: { accept: 'text/markdown' } },
+      assetsEnv('not found', 404),
+      { waitUntil: () => {}, passThroughOnException: () => {}, props: {} },
+    )
+    expect(response.headers.get('cache-control')).toBeNull()
   })
 })

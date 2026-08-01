@@ -4,6 +4,7 @@ import { Hono } from 'hono'
 import { negotiateContentType } from './content-negotiation'
 
 const LLMS_FULL_PATH = '/llms-full.txt'
+const MARKDOWN_CACHE_CONTROL = 'public, max-age=600'
 
 function appendVaryAccept(headers: Headers) {
   const existing = headers.get('vary')
@@ -33,6 +34,7 @@ app.all('*', async (c) => {
         'content-type',
         pathname === LLMS_FULL_PATH ? 'text/plain; charset=utf-8' : 'text/markdown; charset=utf-8',
       )
+      newResponse.headers.set('cache-control', MARKDOWN_CACHE_CONTROL)
       newResponse.headers.delete('content-encoding')
       newResponse.headers.delete('content-length')
       return newResponse
@@ -64,6 +66,7 @@ app.all('*', async (c) => {
       if (response.status === 200) {
         const newResponse = new Response(response.body, response)
         newResponse.headers.set('content-type', 'text/markdown; charset=utf-8')
+        newResponse.headers.set('cache-control', MARKDOWN_CACHE_CONTROL)
         appendVaryAccept(newResponse.headers)
         return newResponse
       }
