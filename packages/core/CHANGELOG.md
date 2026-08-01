@@ -1,5 +1,11 @@
 # hono-email
 
+## 0.8.2
+
+### Patch Changes
+
+- [#134](https://github.com/hayatosc/hono-email/pull/134) [`efa7223`](https://github.com/hayatosc/hono-email/commit/efa72234172c6e5c25b3e80dc8f9eef120f0e521) Thanks [@hayatosc](https://github.com/hayatosc)! - Replace non-null assertions in the widow-prevention transform and harden the Cloudflare Workers email connector to fail with a clear error when the workers payload is missing.
+
 ## 0.8.1
 
 ### Patch Changes
