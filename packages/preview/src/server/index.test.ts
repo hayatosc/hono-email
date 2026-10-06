@@ -1,4 +1,4 @@
-import { describe, expect, test, beforeAll, afterAll, mock } from 'bun:test'
+import { describe, expect, test, beforeAll, afterAll } from 'bun:test'
 import { mkdirSync, mkdtempSync, writeFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { basename, join } from 'node:path'
@@ -81,9 +81,18 @@ describe('detectPostCssConfig', () => {
     rmSync(tempDir, { recursive: true, force: true })
   })
 
-  test('returns true when postcss.config.js exists', () => {
+  test('returns false for a generic PostCSS config', () => {
     const dir = mkdtempSync(join(tempDir, 'postcss-yes-'))
     writeFileSync(join(dir, 'postcss.config.js'), 'module.exports = {}')
+    expect(detectPostCssConfig(dir)).toBe(false)
+  })
+
+  test('returns true for a PostCSS config referencing Tailwind', () => {
+    const dir = mkdtempSync(join(tempDir, 'postcss-tailwind-'))
+    writeFileSync(
+      join(dir, 'postcss.config.mjs'),
+      "export default { plugins: { '@tailwindcss/postcss': {} } }",
+    )
     expect(detectPostCssConfig(dir)).toBe(true)
   })
 
@@ -304,30 +313,117 @@ describe('startPreviewServer', () => {
     rmSync(tempDir, { recursive: true, force: true })
   })
 
-  test('throws descriptive error when tailwind config is detected but plugin is missing', async () => {
+  test('throws descriptive error when the project Tailwind plugin peer is missing', async () => {
     const dir = mkdtempSync(join(tempDir, 'tw-server-'))
     writeFileSync(join(dir, 'tailwind.config.js'), 'module.exports = {}')
-
-    // Simulate a broken plugin. The failure must happen when the server uses
-    // the plugin, not on export access: when the module is already loaded,
-    // `mock.module` reads every export to patch it, and a throwing getter
-    // would fail here instead of inside `startPreviewServer`.
-    void mock.module('@hono-email/tailwind-plugin', () => {
-      return {
-        unplugin: {
-          vite() {
-            throw new Error('Cannot find module')
-          },
-        },
-      }
-    })
+    const tailwindDir = join(dir, 'node_modules/tailwindcss')
+    mkdirSync(tailwindDir, { recursive: true })
+    writeFileSync(join(tailwindDir, 'package.json'), JSON.stringify({ main: './index.js' }))
+    writeFileSync(join(tailwindDir, 'index.js'), 'module.exports = {}')
+    writeFileSync(
+      join(dir, 'vite.config.ts'),
+      "throw new Error('Missing project plugin was ignored')",
+    )
 
     const originalCwd = process.cwd()
     process.chdir(dir)
 
     try {
-      await expect(startPreviewServer({ dir: '.', port: 3000 })).rejects.toThrow(
-        'Tailwind CSS configuration detected, but "@hono-email/tailwind-plugin" or "@tailwindcss/vite" could not be loaded',
+      await expect(
+        startPreviewServer({ dir: '.', port: 0, file: 'vite.config.ts' }),
+      ).rejects.toThrow(
+        'Tailwind integration requires "@hono-email/tailwind-plugin" to be installed in the project',
+      )
+    } finally {
+      process.chdir(originalCwd)
+    }
+  })
+
+  test('Tailwind false bypasses package and config detection', async () => {
+    const dir = mkdtempSync(join(tempDir, 'tw-off-'))
+    mkdirSync(join(dir, 'emails'))
+    writeFileSync(
+      join(dir, 'package.json'),
+      JSON.stringify({ dependencies: { tailwindcss: '^4' } }),
+    )
+    writeFileSync(join(dir, 'tailwind.config.js'), 'module.exports = {}')
+    writeFileSync(
+      join(dir, 'vite.config.ts'),
+      `export default { plugins: [{ name: 'assert-email-plugin-disabled', configResolved(config) {
+        if (config.plugins.some((plugin) => plugin.name === 'hono-email-tailwind')) {
+          throw new Error('Unexpected Tailwind integration')
+        }
+        throw new Error('Tailwind off reached user config')
+      } }] }`,
+    )
+    const originalCwd = process.cwd()
+    process.chdir(dir)
+
+    try {
+      const options = { dir: 'emails', port: 0, file: 'vite.config.ts', tailwind: false }
+      await expect(startPreviewServer(options)).rejects.toThrow('Tailwind off reached user config')
+    } finally {
+      process.chdir(originalCwd)
+    }
+  })
+
+  test('Tailwind true requires the project Tailwind peer even without detection signals', async () => {
+    const dir = mkdtempSync(join(tempDir, 'tw-on-'))
+    mkdirSync(join(dir, 'emails'))
+    writeFileSync(join(dir, 'vite.config.ts'), "throw new Error('User config was loaded')")
+    const originalCwd = process.cwd()
+    process.chdir(dir)
+
+    try {
+      const options = { dir: 'emails', port: 0, file: 'vite.config.ts', tailwind: true }
+      await expect(startPreviewServer(options)).rejects.toThrow(
+        'Tailwind integration requires "tailwindcss" to be installed in the project',
+      )
+    } finally {
+      process.chdir(originalCwd)
+    }
+  })
+
+  test('auto ignores generic PostCSS config and still loads the explicit Vite config', async () => {
+    const dir = mkdtempSync(join(tempDir, 'tw-postcss-'))
+    mkdirSync(join(dir, 'emails'))
+    writeFileSync(join(dir, 'postcss.config.js'), 'module.exports = {}')
+    writeFileSync(
+      join(dir, 'vite.config.ts'),
+      `export default { plugins: [{ name: 'assert-email-plugin-disabled', configResolved(config) {
+        if (config.plugins.some((plugin) => plugin.name === 'hono-email-tailwind')) {
+          throw new Error('Unexpected Tailwind integration')
+        }
+        throw new Error('Generic PostCSS reached user config')
+      } }] }`,
+    )
+    const originalCwd = process.cwd()
+    process.chdir(dir)
+
+    try {
+      await expect(
+        startPreviewServer({ dir: 'emails', port: 0, file: 'vite.config.ts' }),
+      ).rejects.toThrow('Generic PostCSS reached user config')
+    } finally {
+      process.chdir(originalCwd)
+    }
+  })
+
+  test('auto detects Tailwind in an explicit Vite config without skipping the email plugin', async () => {
+    const dir = mkdtempSync(join(tempDir, 'tw-vite-explicit-'))
+    mkdirSync(join(dir, 'emails'))
+    writeFileSync(
+      join(dir, 'custom.vite.config.ts'),
+      "// @tailwindcss/vite\nthrow new Error('User config was loaded')",
+    )
+    const originalCwd = process.cwd()
+    process.chdir(dir)
+
+    try {
+      await expect(
+        startPreviewServer({ dir: 'emails', port: 0, file: 'custom.vite.config.ts' }),
+      ).rejects.toThrow(
+        'Tailwind integration requires "tailwindcss" to be installed in the project',
       )
     } finally {
       process.chdir(originalCwd)

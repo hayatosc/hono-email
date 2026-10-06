@@ -1,6 +1,6 @@
 import { describe, expect, test, beforeEach, afterEach } from 'bun:test'
 
-import type { CommandContext } from 'citty'
+import { parseArgs, type CommandContext } from 'citty'
 
 import { type CliArgs, main, preview } from './cli'
 
@@ -13,7 +13,17 @@ const createMockContext = (
 ): MockCommandContext => ({
   rawArgs: [],
   // `citty` mirrors each aliased arg onto its short flag in `ParsedArgs`.
-  args: { _: [], dir: './emails', d: './emails', port, p: port, host, file, f: file },
+  args: {
+    _: [],
+    dir: './emails',
+    d: './emails',
+    port,
+    p: port,
+    host,
+    file,
+    f: file,
+    tailwind: 'auto',
+  },
   cmd: preview,
 })
 
@@ -62,6 +72,23 @@ describe('cli preview command', () => {
   test('file arg is string type', () => {
     expect(preview.args).toBeDefined()
     expect(preview.args).toHaveProperty('file.type', 'string')
+  })
+
+  test('Tailwind selection defaults to auto and accepts on/off/auto', async () => {
+    const args = await preview.args
+    if (!args || typeof args === 'function') throw new Error('Missing CLI args')
+
+    expect(parseArgs<CliArgs>([], args).tailwind).toBe('auto')
+    for (const selection of ['on', 'off', 'auto']) {
+      expect(parseArgs<CliArgs>(['--tailwind', selection], args).tailwind).toBe(selection)
+    }
+  })
+
+  test('rejects invalid Tailwind selection', async () => {
+    const args = await preview.args
+    if (!args || typeof args === 'function') throw new Error('Missing CLI args')
+
+    expect(() => parseArgs(['--tailwind', 'sometimes'], args)).toThrow('Expected one of:')
   })
 })
 
