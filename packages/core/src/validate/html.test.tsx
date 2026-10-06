@@ -478,6 +478,67 @@ describe('render strict mode', () => {
     )
   })
 
+  test.each([
+    ['<a title="a > b" href="javascript:alert(1)">Open</a>', "unsafe 'javascript:' URL scheme"],
+    ['<div onclick="alert(1)">Open</div>', "'onclick' attribute"],
+    ['<div style="filter:blur(1px)">Open</div>', "The CSS property 'filter'"],
+    ['<style>.x{filter:blur(1px)}</style>', "The CSS property 'filter'"],
+    [`<style>.x{background:url('javascript:alert(1)')}</style>`, "unsafe 'javascript:' URL scheme"],
+  ])('retains conditional payload restrictions for %s', (payload, message) => {
+    expect(() => validateHtml(`<!--[if mso]>${payload}<![endif]-->`)).toThrow(message)
+  })
+
+  test.each([
+    '<!--[if mso]><form>Open</form>-->',
+    '<!--[if mso]><form>Open</form><![endif]',
+    '<!--[if mso]><form>Open</form>',
+  ])('rejects active content inside an incompletely closed conditional comment: %s', (html) => {
+    expect(() => validateHtml(html)).toThrow("The <form> tag isn't allowed")
+  })
+
+  test('retains URL checks inside nested conditional comments', () => {
+    expect(() =>
+      validateHtml(
+        '<!--[if mso]><!--[if mso]><a href="javascript:alert(1)">Open</a><![endif]--><![endif]-->',
+      ),
+    ).toThrow("unsafe 'javascript:' URL scheme")
+  })
+
+  test('retains URL checks inside revealed conditional comments', () => {
+    expect(() =>
+      validateHtml('<!--[if !mso]><!--><a href="javascript:alert(1)">Open</a><!--<![endif]-->'),
+    ).toThrow("unsafe 'javascript:' URL scheme")
+  })
+
+  test('does not validate apparent tags or conditional payloads inside CSS strings', () => {
+    expect(() =>
+      validateHtml(
+        '<html><head><style>.x{content:"<form>"}.y{content:"<!--[if mso]><form><![endif]-->"}</style></head><body>Visible</body></html>',
+      ),
+    ).not.toThrow()
+  })
+
+  test('does not remove comment-like attribute values before URL checks', () => {
+    expect(() =>
+      validateHtml('<a title="<!--" href="javascript:alert(1)" data-note="-->">Open</a>'),
+    ).toThrow("unsafe 'javascript:' URL scheme")
+  })
+
+  test.each(['<script!>', '<form:custom>', '<iframe=src>'])(
+    'retains existing blocked tag-name restrictions for malformed input %s',
+    (html) => {
+      expect(() => validateHtml(html)).toThrow("isn't allowed in HTML email strict mode")
+    },
+  )
+
+  test.each([
+    '<div title="unclosed > <form>Open</form>',
+    '<a href="javascript:alert(1)',
+    '<!DOCTYPE html "unclosed > <form>Open</form>',
+  ])('rejects incomplete markup instead of hiding strict restrictions: %s', (html) => {
+    expect(() => validateHtml(html)).toThrow('Malformed HTML')
+  })
+
   test('ignores unsupported tags inside HTML comments', () => {
     expect(() =>
       validateHtml(
