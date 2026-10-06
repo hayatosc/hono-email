@@ -10,7 +10,7 @@ import {
 } from './options'
 import { openSmtpSession } from './protocol'
 import type { SmtpSession } from './protocol'
-import { CLOSED_TRANSPORT_ERROR_MESSAGE, failedReceipt, isClosedTransportError } from './receipt'
+import { failedReceipt, isClosedTransportError, SmtpTransportClosedError } from './receipt'
 import type { SmtpConnector, SmtpSecureTransport, SmtpSocket, SmtpTransportOptions } from './types'
 
 export type {
@@ -119,7 +119,7 @@ export class SmtpTransport implements EmailAdapter {
 
   async send(message: EmailMessage): Promise<SendEmailReceipt> {
     if (this.#closed) {
-      throw new Error(CLOSED_TRANSPORT_ERROR_MESSAGE)
+      throw new SmtpTransportClosedError()
     }
 
     const task = this.#send(message)
@@ -139,7 +139,7 @@ export class SmtpTransport implements EmailAdapter {
 
     this.#closed = true
 
-    const error = new Error(CLOSED_TRANSPORT_ERROR_MESSAGE)
+    const error = new SmtpTransportClosedError()
     const waiters = this.#waiters.splice(0)
     for (const waiter of waiters) {
       waiter.reject(error)
@@ -154,7 +154,7 @@ export class SmtpTransport implements EmailAdapter {
 
   async verify(): Promise<void> {
     if (this.#closed) {
-      throw new Error(CLOSED_TRANSPORT_ERROR_MESSAGE)
+      throw new SmtpTransportClosedError()
     }
 
     let socket: SmtpSocket | undefined
@@ -254,7 +254,7 @@ export class SmtpTransport implements EmailAdapter {
 
   async #acquireSlot(): Promise<SmtpConnectionSlot> {
     if (this.#closed) {
-      throw new Error(CLOSED_TRANSPORT_ERROR_MESSAGE)
+      throw new SmtpTransportClosedError()
     }
 
     const availableSlot = this.#slots.find((slot) => !slot.busy)
@@ -299,7 +299,7 @@ export class SmtpTransport implements EmailAdapter {
 
       if (this.#closed) {
         await session.destroy()
-        throw new Error(CLOSED_TRANSPORT_ERROR_MESSAGE)
+        throw new SmtpTransportClosedError()
       }
 
       const slot: SmtpConnectionSlot = { busy: true, sentMessages: 0, session }

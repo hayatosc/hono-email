@@ -230,7 +230,8 @@ export type SuccessfulSendReceipt = {
 }
 
 /**
- * Receipt returned by an adapter when delivery fails.
+ * Receipt returned by a built-in adapter when message validation or delivery fails.
+ * The original failure is available as `cause` when supplied by the adapter.
  *
  * @example
  * ```ts
@@ -265,6 +266,10 @@ export type SendEmailReceipt = SuccessfulSendReceipt | FailedSendReceipt
  * Transport interface implemented by SMTP, Cloudflare Email Service, or custom adapters.
  *
  * @property send - Sends a fully rendered message and returns a receipt.
+ * Built-in adapters return failed receipts for message validation and delivery failures.
+ * Explicit lifecycle misuse, such as sending through a closed SMTP transport, rejects.
+ * Rendering in `sendEmail()` can also reject before the adapter is called.
+ * Custom adapters may reject; callers should handle both rejected operations and receipts.
  *
  * @example
  * ```ts

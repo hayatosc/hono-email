@@ -49,6 +49,14 @@ function WelcomeEmail() {
 const { html, text } = await render(<WelcomeEmail />)
 ```
 
+## Delivery errors
+
+Built-in adapters return a receipt with `successful: false` when message validation
+or delivery fails. Check `receipt.errorMessages`; `receipt.cause` retains the original
+error when available. `sendEmail()` rejects if rendering fails before delivery, and
+sending through an explicitly closed SMTP transport also rejects. Custom adapters
+may reject their own operations, so handle promise rejection as well as the receipt.
+
 ## Documentation
 
 For advanced usages such as transport adapters, Markdown, `hono/css`, Tailwind CSS, and CLI tools, please check the [Documentation Site](https://hono-email.hayatosc.dev).

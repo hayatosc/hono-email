@@ -2,6 +2,12 @@ import type { SendEmailReceipt } from '../index'
 
 export const CLOSED_TRANSPORT_ERROR_MESSAGE = 'SMTP transport is closed.'
 
+export class SmtpTransportClosedError extends Error {
+  constructor() {
+    super(CLOSED_TRANSPORT_ERROR_MESSAGE)
+  }
+}
+
 export const failedReceipt = (
   error: unknown,
   accepted: string[] = [],
@@ -15,4 +21,4 @@ export const failedReceipt = (
 })
 
 export const isClosedTransportError = (error: unknown): boolean =>
-  error instanceof Error && error.message === CLOSED_TRANSPORT_ERROR_MESSAGE
+  error instanceof SmtpTransportClosedError
