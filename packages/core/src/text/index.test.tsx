@@ -75,8 +75,8 @@ describe('plain text HTML boundaries', () => {
     },
   )
 
-  test('skips declarations containing quoted greater-than signs', () => {
-    expect(renderPlainText('<!DOCTYPE html PUBLIC "a > b"><p>Visible</p>')).toBe('Visible')
+  test('keeps visible text after an abrupt quoted DOCTYPE ending', () => {
+    expect(renderPlainText('<!DOCTYPE html PUBLIC "a > b"><p>Visible</p>')).toBe('b">Visible')
   })
 })
 
