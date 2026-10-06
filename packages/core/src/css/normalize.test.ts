@@ -9,6 +9,15 @@ import {
 } from './normalize'
 
 describe('normalizeCssValue', () => {
+  test.each([
+    ['.5rem', '8px'],
+    ['-.5rem', '-8px'],
+    ['calc(.25rem * 4)', '16px'],
+    ['calc(1.25 / .875)', '1.4285714285714286'],
+  ])('normalizes a decimal without a leading zero: %s', (value, expected) => {
+    expect(normalizeCssValue(value)).toBe(expected)
+  })
+
   test('converts 1rem to 16px', () => {
     expect(normalizeCssValue('1rem')).toBe('16px')
   })
@@ -76,6 +85,12 @@ describe('normalizeMediaQuery', () => {
 })
 
 describe('normalizeDeclarations', () => {
+  test('normalizes oklch chroma without a leading zero', () => {
+    expect(normalizeDeclarations({ color: 'oklch(63.7% .237 25.331)' }, {})).toEqual({
+      color: '#fb2c36',
+    })
+  })
+
   test('expands border-block to border-top and border-bottom', () => {
     const result = normalizeDeclarations({ 'border-block': '1px' }, {})
     expect(result['border-top']).toBe('1px')
