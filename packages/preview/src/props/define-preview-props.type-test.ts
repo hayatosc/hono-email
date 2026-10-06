@@ -54,3 +54,5 @@ define({ items: { type: 'array', default: [{ label: 'Item', quantity: 1 }] } })
 definePreviewProps<{ count: number | null }>()({ count: { default: null } })
 // @ts-expect-error The list editor emits strings and cannot edit numeric array elements.
 definePreviewProps<{ counts: number[] }>()({ counts: { type: 'array', default: [1] } })
+// @ts-expect-error An item schema would make the string-list editor emit objects.
+definePreviewProps<{ tags: string[] }>()({ tags: { type: 'array', item: { label: {} } } })
