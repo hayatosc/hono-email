@@ -10,8 +10,14 @@ import {
 } from './options'
 import { openSmtpSession } from './protocol'
 import type { SmtpSession } from './protocol'
-import { CLOSED_TRANSPORT_ERROR_MESSAGE, failedReceipt, isClosedTransportError } from './receipt'
-import type { SmtpConnector, SmtpSecureTransport, SmtpSocket, SmtpTransportOptions } from './types'
+import { failedReceipt, isClosedTransportError, SmtpTransportClosedError } from './receipt'
+import type {
+  SmtpConnector,
+  SmtpSecureTransport,
+  SmtpSendOptions,
+  SmtpSocket,
+  SmtpTransportOptions,
+} from './types'
 
 export type {
   EmailAddress,
@@ -34,11 +40,13 @@ export type {
 } from '../index'
 export { buildRawEmailMessage, buildRawEmailMessageAsync } from '../message'
 export { SmtpResponseBufferLimitError } from './protocol'
+export { SmtpTransportClosedError } from './receipt'
 export type {
   SmtpAuth,
   SmtpConnector,
   SmtpConnectorOptions,
   SmtpSecureTransport,
+  SmtpSendOptions,
   SmtpSendResult,
   SmtpSocket,
   SmtpSocketAddress,
@@ -117,12 +125,16 @@ export class SmtpTransport implements EmailAdapter {
     this.#socketTimeout = options.socketTimeout
   }
 
-  async send(message: EmailMessage): Promise<SendEmailReceipt> {
+  /**
+   * Sends a rendered message with optional SMTP-specific DKIM settings.
+   * Per-send DKIM overrides legacy `message.dkim`, then transport defaults.
+   */
+  async send(message: EmailMessage, options?: SmtpSendOptions): Promise<SendEmailReceipt> {
     if (this.#closed) {
-      throw new Error(CLOSED_TRANSPORT_ERROR_MESSAGE)
+      throw new SmtpTransportClosedError()
     }
 
-    const task = this.#send(message)
+    const task = this.#send(message, options)
     this.#activeSends.add(task)
 
     try {
@@ -139,7 +151,7 @@ export class SmtpTransport implements EmailAdapter {
 
     this.#closed = true
 
-    const error = new Error(CLOSED_TRANSPORT_ERROR_MESSAGE)
+    const error = new SmtpTransportClosedError()
     const waiters = this.#waiters.splice(0)
     for (const waiter of waiters) {
       waiter.reject(error)
@@ -154,7 +166,7 @@ export class SmtpTransport implements EmailAdapter {
 
   async verify(): Promise<void> {
     if (this.#closed) {
-      throw new Error(CLOSED_TRANSPORT_ERROR_MESSAGE)
+      throw new SmtpTransportClosedError()
     }
 
     let socket: SmtpSocket | undefined
@@ -191,7 +203,7 @@ export class SmtpTransport implements EmailAdapter {
     }
   }
 
-  async #send(message: EmailMessage): Promise<SendEmailReceipt> {
+  async #send(message: EmailMessage, options?: SmtpSendOptions): Promise<SendEmailReceipt> {
     const envelope = resolveEmailEnvelope(message)
     if (envelope.recipients.length === 0) {
       return {
@@ -204,7 +216,7 @@ export class SmtpTransport implements EmailAdapter {
 
     try {
       const builtMessage = await buildRawEmailMessageAsync(message, this.#limits)
-      const dkim = message.dkim ?? this.#dkim
+      const dkim = options?.dkim ?? message.dkim ?? this.#dkim
       const rawMessage =
         dkim === undefined ? builtMessage.raw : await applyDkimSignature(builtMessage.raw, dkim)
       const slot = await this.#acquireSlot()
@@ -254,7 +266,7 @@ export class SmtpTransport implements EmailAdapter {
 
   async #acquireSlot(): Promise<SmtpConnectionSlot> {
     if (this.#closed) {
-      throw new Error(CLOSED_TRANSPORT_ERROR_MESSAGE)
+      throw new SmtpTransportClosedError()
     }
 
     const availableSlot = this.#slots.find((slot) => !slot.busy)
@@ -299,7 +311,7 @@ export class SmtpTransport implements EmailAdapter {
 
       if (this.#closed) {
         await session.destroy()
-        throw new Error(CLOSED_TRANSPORT_ERROR_MESSAGE)
+        throw new SmtpTransportClosedError()
       }
 
       const slot: SmtpConnectionSlot = { busy: true, sentMessages: 0, session }
