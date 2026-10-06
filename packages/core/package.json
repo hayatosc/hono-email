@@ -110,7 +110,7 @@
     "vitest": "^4.1.10"
   },
   "peerDependencies": {
-    "hono": "^4.0.0"
+    "hono": "^4.5.0"
   },
   "engines": {
     "node": ">=22.0.0"
