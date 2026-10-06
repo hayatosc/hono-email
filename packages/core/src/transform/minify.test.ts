@@ -25,4 +25,10 @@ describe('minifyHtml', () => {
     const html = '<!--[if mso]>  <td>  x  </td>  <![endif]-->'
     expect(minifyHtml(html)).toBe(html)
   })
+
+  test('preserves quoted attribute whitespace after a greater-than sign', () => {
+    expect(minifyHtml(`<p title="a >  b" data-label='c >  d'>Hello   world</p>`)).toBe(
+      `<p title="a >  b" data-label='c >  d'>Hello world</p>`,
+    )
+  })
 })
