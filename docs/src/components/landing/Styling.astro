@@ -58,9 +58,12 @@ const approaches = [
     gap: 1.25rem;
   }
 
+  /* Each card spans three rows of the parent grid (label, description, code)
+     through subgrid, so the code windows line up across the row. */
   .approach {
-    display: flex;
-    flex-direction: column;
+    display: grid;
+    grid-row: span 3;
+    grid-template-rows: subgrid;
     gap: 0.75rem;
     padding: 1.5rem 1.35rem;
     border: 1px solid var(--sl-color-hairline);
@@ -91,7 +94,7 @@ const approaches = [
 
   /* ── Code window — matches Hero chrome ─────────────────── */
   .window {
-    margin: auto 0 0;
+    margin: 0.5rem 0 0;
     border: 1px solid var(--sl-color-hairline);
     border-radius: var(--lp-radius);
     background: var(--sl-color-bg-inline-code);
@@ -134,7 +137,7 @@ const approaches = [
     color: var(--sl-color-gray-3);
   }
   .code {
-    overflow-x: hidden;
+    overflow-x: auto;
     mask-image: linear-gradient(to right, #000 calc(100% - 1.5rem), transparent);
   }
   /* Expressive Code (frame="none") — strip its chrome so it sits inside our
@@ -175,16 +178,49 @@ const approaches = [
     }
   }
 
+  /* Medium screens: one card per row, copy on the left and code on the right */
   @media (max-width: 75rem) {
     .approaches {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
+      grid-template-columns: minmax(0, 1fr);
+    }
+    .approach {
+      grid-row: auto;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr);
+      grid-template-rows: auto 1fr;
+      column-gap: 2rem;
+      align-items: start;
+    }
+    .approach-label {
+      grid-column: 1;
+    }
+    .approach-desc {
+      grid-column: 1;
+      grid-row: 2;
+    }
+    .window {
+      margin: 0;
+      grid-column: 2;
+      grid-row: 1 / span 2;
     }
   }
 
+  /* Small screens: stack copy above code */
   @media (max-width: 48rem) {
-    .approaches {
-      grid-template-columns: 1fr;
-      max-width: 32rem;
+    .approach {
+      grid-template-columns: minmax(0, 1fr);
+      grid-template-rows: none;
+      padding: 1.25rem 1.1rem 1.1rem;
+    }
+    .approach-desc {
+      grid-row: auto;
+    }
+    .window {
+      grid-column: 1;
+      grid-row: auto;
+      margin-top: 0.25rem;
+    }
+    .code :global(.expressive-code pre) {
+      padding: 1rem 1.1rem !important;
     }
   }
 

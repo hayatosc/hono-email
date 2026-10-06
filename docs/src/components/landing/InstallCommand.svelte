@@ -46,7 +46,10 @@
     user-select: none;
   }
   .cmd {
+    flex: 1;
+    text-align: start;
     color: var(--sl-color-gray-1);
+    white-space: nowrap;
   }
   .copy {
     display: inline-grid;
@@ -74,8 +77,8 @@
   }
   @media (max-width: 40rem) {
     .install {
+      display: flex;
       width: 100%;
-      justify-content: space-between;
     }
   }
 </style>

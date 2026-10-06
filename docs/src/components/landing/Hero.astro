@@ -85,7 +85,7 @@ const repo = 'https://github.com/hayatosc/hono-email'
     border: 0;
     padding: 0;
     line-height: 1.1;
-    font-size: clamp(2.5rem, 6.5vw, 4.25rem);
+    font-size: clamp(2.4rem, 5vw, 4.25rem);
     font-weight: 800;
     letter-spacing: -0.035em;
     color: var(--sl-color-white);
@@ -104,9 +104,13 @@ const repo = 'https://github.com/hayatosc/hono-email'
     color: var(--sl-color-gray-3);
   }
   .tagline code {
+    padding: 0.1em 0.4em;
+    border-radius: 0.3rem;
+    background: var(--sl-color-bg-inline-code);
     font-family: var(--sl-font-mono);
-    font-size: 0.92em;
+    font-size: 0.88em;
     color: var(--sl-color-gray-1);
+    white-space: nowrap;
   }
   .cta {
     display: flex;
@@ -249,10 +253,27 @@ const repo = 'https://github.com/hayatosc/hono-email'
 
   @media (max-width: 60rem) {
     .inner {
-      grid-template-columns: 1fr;
+      /* minmax(0, …) so the code window's long lines can't widen the column */
+      grid-template-columns: minmax(0, 1fr);
     }
     .demo {
       order: 2;
+    }
+    .title {
+      font-size: clamp(2.4rem, 8vw, 4rem);
+    }
+  }
+  @media (max-width: 40rem) {
+    .cta > :global(*) {
+      flex: 1 1 auto;
+      justify-content: center;
+      white-space: nowrap;
+    }
+    .code :global(.expressive-code pre) {
+      padding: 1rem 1.1rem !important;
+    }
+    .code :global(.expressive-code code) {
+      font-size: 0.72rem;
     }
   }
 </style>

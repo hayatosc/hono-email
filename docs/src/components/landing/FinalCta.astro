@@ -43,6 +43,7 @@ import InstallCommand from './InstallCommand.svelte'
     font-weight: 700;
     letter-spacing: -0.025em;
     color: var(--sl-color-white);
+    text-wrap: balance;
   }
   .cta {
     display: flex;
@@ -54,8 +55,15 @@ import InstallCommand from './InstallCommand.svelte'
   }
 
   @media (max-width: 40rem) {
+    .card {
+      padding-inline: 1.25rem;
+    }
     .cta {
       flex-direction: column;
+      align-items: stretch;
+    }
+    .cta > :global(.btn) {
+      justify-content: center;
     }
   }
 </style>

@@ -15,11 +15,19 @@ if (!import.meta.env) {
 }
 const metaEnv = import.meta.env as Record<string, unknown>
 
+// Under Bun, `import.meta.env` is `process.env`, which stringifies assigned
+// values (`false` -> "false", `undefined` -> "undefined", both truthy). Delete
+// the key to make it falsy instead of assigning a falsy value.
+const setDev = (value: unknown) => {
+  if (value) metaEnv.DEV = value
+  else delete metaEnv.DEV
+}
+
 describe('middleware onRequest', () => {
   test('returns response untouched if not in DEV mode', async () => {
     const { onRequest } = await import('./middleware')
     const originalDev = metaEnv.DEV
-    metaEnv.DEV = false
+    setDev(false)
     try {
       const mockResponse = new Response('<div></div>', {
         headers: { 'content-type': 'text/html' },
@@ -29,14 +37,14 @@ describe('middleware onRequest', () => {
       const res = (await onRequest({} as unknown as APIContext, next)) as Response
       expect(res).toBe(mockResponse)
     } finally {
-      metaEnv.DEV = originalDev
+      setDev(originalDev)
     }
   })
 
   test('returns response untouched if content-type is not text/html', async () => {
     const { onRequest } = await import('./middleware')
     const originalDev = metaEnv.DEV
-    metaEnv.DEV = true
+    setDev(true)
     try {
       const mockResponse = new Response('{"foo":"bar"}', {
         headers: { 'content-type': 'application/json' },
@@ -46,14 +54,14 @@ describe('middleware onRequest', () => {
       const res = (await onRequest({} as unknown as APIContext, next)) as Response
       expect(res).toBe(mockResponse)
     } finally {
-      metaEnv.DEV = originalDev
+      setDev(originalDev)
     }
   })
 
   test('patches HTML and deletes content-length header in DEV mode', async () => {
     const { onRequest } = await import('./middleware')
     const originalDev = metaEnv.DEV
-    metaEnv.DEV = true
+    setDev(true)
     try {
       const mockResponse = new Response('<div component-url="/absolute/path/file.svelte"></div>', {
         headers: {
@@ -68,7 +76,7 @@ describe('middleware onRequest', () => {
       const text = await res.text()
       expect(text).toBe('<div component-url="/@fs/absolute/path/file.svelte"></div>')
     } finally {
-      metaEnv.DEV = originalDev
+      setDev(originalDev)
     }
   })
 })

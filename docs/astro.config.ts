@@ -28,11 +28,14 @@ export default defineConfig({
       provider: fontProviders.google(),
       name: 'Inter',
       cssVariable: '--sl-font',
+      weights: ['400 800'],
     },
     {
       provider: fontProviders.google(),
       name: 'JetBrains Mono',
       cssVariable: '--sl-font-mono',
+      weights: ['400 700'],
+      fallbacks: ['monospace'],
     },
   ],
   integrations: [
