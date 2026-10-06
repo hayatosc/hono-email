@@ -81,7 +81,7 @@ describe('nested Tailwind', () => {
 
     expect(html).toContain('<p class="base hover-accent sm:accent" style="color:#112233">Inner</p>')
     expect(html).toContain(
-      '<head><style data-hono-email-head="true">.hover-accent:hover{color:#aabbcc !important}@media (min-width:640px){.sm\\:accent{color:#445566 !important}}</style></head>',
+      '<head><meta charset="utf-8"><style data-hono-email-head="true">.hover-accent:hover{color:#aabbcc !important}@media (min-width:640px){.sm\\:accent{color:#445566 !important}}</style></head>',
     )
     expect(html.match(/<style\b/g)).toHaveLength(1)
     expect(html).not.toContain('hono-email-tw-processed')
