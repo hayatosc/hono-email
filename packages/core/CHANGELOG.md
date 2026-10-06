@@ -1,5 +1,33 @@
 # hono-email
 
+## 0.9.0
+
+### Patch Changes
+
+- [#142](https://github.com/hayatosc/hono-email/pull/142) [`3dbba17`](https://github.com/hayatosc/hono-email/commit/3dbba17c6e343aacf89e9b9d936d048529929538) Thanks [@hayatosc](https://github.com/hayatosc)! - Keep SMTP connector failures in failed delivery receipts even when their message matches a closed transport error, and document the built-in adapter error contract.
+
+  Export `SmtpTransportClosedError` from `hono-email/smtp` and set its error name so consumers can identify closed-transport lifecycle rejections with `instanceof` and in logs.
+
+- [#139](https://github.com/hayatosc/hono-email/pull/139) [`3767247`](https://github.com/hayatosc/hono-email/commit/3767247f3140a0bcf1970ce240f172070e2f8371) Thanks [@hayatosc](https://github.com/hayatosc)! - Use the shared source-preserving HTML tokenizer for preview relocation, widow prevention, and strict tag validation. Preserve quoted attributes, literal less-than signs, and raw text while retaining tag, URL, and CSS restrictions in Outlook conditional comments. Reject incomplete markup in strict validation instead of hiding restricted content, and keep existing attribute parsing behavior.
+
+- [#137](https://github.com/hayatosc/hono-email/pull/137) [`8beeae6`](https://github.com/hayatosc/hono-email/commit/8beeae62dcfc55add5ca154a4f0d634c6b3a959b) Thanks [@hayatosc](https://github.com/hayatosc)! - Support nested Tailwind wrappers with explicit ownership by the nearest wrapper. Preserve inner artifacts' inline styles, original and renamed classes, head CSS, and dropped-class warnings without outer wrappers revalidating or reapplying processed HTML. Missing classes in each wrapper's own scope still reject rendering.
+
+- [#139](https://github.com/hayatosc/hono-email/pull/139) [`1d1e757`](https://github.com/hayatosc/hono-email/commit/1d1e75703586184b7c0f77aa229a85340e450eef) Thanks [@hayatosc](https://github.com/hayatosc)! - Use the shared HTML tokenizer for plain-text conversion. Respect quoted attribute boundaries, exclude entire nested preview subtrees and unclosed comments or CSS/script content, and preserve literal text while retaining plain-text formatting options and Outlook comment handling.
+
+- [#137](https://github.com/hayatosc/hono-email/pull/137) [`0aaff8f`](https://github.com/hayatosc/hono-email/commit/0aaff8f726746039f25cc4cc781e9faafc82dd8b) Thanks [@hayatosc](https://github.com/hayatosc)! - Reject synchronous and asynchronous JSX rendering failures instead of returning incomplete HTML, including missing Tailwind classes, errors inside Conditional, and rendering callback failures. Preserve the original thrown value and prevent failed drafts from reaching email adapters.
+
+- [#138](https://github.com/hayatosc/hono-email/pull/138) [`c656100`](https://github.com/hayatosc/hono-email/commit/c6561008df0ef4685c0e878dc1e2ccab17590a96) Thanks [@hayatosc](https://github.com/hayatosc)! - Extract CSS artifact building and HTML inlining into shared internal modules. Tailwind keeps its existing artifact API and rendering behavior, while hono/css uses the generic helpers directly. Preserve CSS ordering, class renaming, warnings, and Markdown parent guards.
+
+- [#142](https://github.com/hayatosc/hono-email/pull/142) [`7d116c0`](https://github.com/hayatosc/hono-email/commit/7d116c0f62d5540778336113362007f91f0c6570) Thanks [@hayatosc](https://github.com/hayatosc)! - Add SMTP-specific per-send DKIM configuration through `SmtpTransport.send(message, options)` and export `SmtpSendOptions` from `hono-email/smtp`. Per-send DKIM takes precedence over legacy `message.dkim` and transport defaults without changing later sends.
+
+  Deprecate, but retain, `EmailMessage.dkim` for backward compatibility. Document migration to SMTP send options and clarify that HTTP provider adapters do not apply local DKIM settings; signing is configured with the provider.
+
+- [#139](https://github.com/hayatosc/hono-email/pull/139) [`83af6ee`](https://github.com/hayatosc/hono-email/commit/83af6eecb61d6dc29216d0a62151bedc64bbd3c0) Thanks [@hayatosc](https://github.com/hayatosc)! - Add an internal source-preserving HTML tokenizer and use it in the shared transform walker. Preserve quoted attribute boundaries, literal less-than signs, unclosed comments, and raw text contexts while retaining existing skip-region behavior.
+
+- [#146](https://github.com/hayatosc/hono-email/pull/146) [`7cf21e5`](https://github.com/hayatosc/hono-email/commit/7cf21e5cbb66a533e8f09e52c0bcf3d82821ba35) Thanks [@hayatosc](https://github.com/hayatosc)! - Require Hono 4.5 or newer, which provides the JSX server rendering entry point used by the core, and verify hono/css against the minimum, development, and latest Hono versions in CI.
+
+- [#134](https://github.com/hayatosc/hono-email/pull/134) [`efa7223`](https://github.com/hayatosc/hono-email/commit/efa72234172c6e5c25b3e80dc8f9eef120f0e521) Thanks [@hayatosc](https://github.com/hayatosc)! - Replace non-null assertions in the widow-prevention transform and harden the Cloudflare Workers email connector to fail with a clear error when the workers payload is missing.
+
 ## 0.8.1
 
 ### Patch Changes
