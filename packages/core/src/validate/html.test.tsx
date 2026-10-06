@@ -531,6 +531,19 @@ describe('render strict mode', () => {
     },
   )
 
+  test('retains strict rejection when comments are embedded in a tag name', () => {
+    expect(() => validateHtml('<scr<!-- comment -->ipt>alert(1)</script>')).toThrow()
+  })
+
+  test.each([
+    '<!--[if mso]><a href="javascript:alert(1)">Open</a>-->',
+    '<!--[if mso]><a href="javascript:alert(1)">Open</a>',
+    '<!--[if mso]><style>.x{background:url("javascript:alert(1)")}</style>-->',
+    '<!--[if mso]><style>.x{background:url("javascript:alert(1)")}</style>',
+  ])('retains URL and CSS checks in incomplete conditionals: %s', (html) => {
+    expect(() => validateHtml(html)).toThrow("unsafe 'javascript:' URL scheme")
+  })
+
   test.each([
     '<div title="unclosed > <form>Open</form>',
     '<a href="javascript:alert(1)',

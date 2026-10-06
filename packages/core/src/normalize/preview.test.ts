@@ -60,4 +60,22 @@ describe('relocatePreview', () => {
     const html = '<body>Visible<div data-hono-email-preview="true">Preview'
     expect(relocatePreview(html)).toBe(html)
   })
+
+  test.each(['script', 'style'])(
+    'leaves apparent preview blocks inside raw %s content untouched',
+    (tag) => {
+      const html = `<${tag}>'<div data-hono-email-preview="true">Raw</div>'</${tag}><body>Visible</body>`
+      expect(relocatePreview(html)).toBe(html)
+    },
+  )
+
+  test('preserves multiple previews including self-closing source', () => {
+    expect(
+      relocatePreview(
+        '<div data-hono-email-preview="true">First</div><div data-hono-email-preview="true"/><body>Visible</body>',
+      ),
+    ).toBe(
+      '<body><div data-hono-email-preview="true">First</div><div data-hono-email-preview="true"/>Visible</body>',
+    )
+  })
 })
