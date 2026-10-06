@@ -3,7 +3,15 @@ import { describe, expect, test } from 'bun:test'
 import { Style, css } from 'hono/css'
 import { raw } from 'hono/html'
 
-import { Body, Conditional, Head, Html, Tailwind, buildTailwindArtifactFromCss, render } from '../index'
+import {
+  Body,
+  Conditional,
+  Head,
+  Html,
+  Tailwind,
+  buildTailwindArtifactFromCss,
+  render,
+} from '../index'
 
 const renderOptions = { doctype: false, minify: false, onWarning: 'error' } as const
 

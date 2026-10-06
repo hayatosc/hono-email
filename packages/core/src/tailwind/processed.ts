@@ -6,13 +6,13 @@ const markerPrefix = `hono-email-tw-processed:${nonce}`
 const startMarker = `<!--${markerPrefix}:start-->`
 const endMarker = `<!--${markerPrefix}:end-->`
 const processedPattern = new RegExp(`${startMarker}([\\s\\S]*?)${endMarker}`, 'g')
-const slotPattern = new RegExp(`<!--${markerPrefix}:slot:(\\d+)-->`, 'g')
+const slotPattern = new RegExp(`${markerPrefix}:slot:(\\d+):end`, 'g')
 
 export const wrapProcessedTailwindHtml = (html: string): string =>
   `${startMarker}${html}${endMarker}`
 
 /**
- * Temporarily replaces inner Tailwind output with comments so the outer artifact
+ * Temporarily replaces inner Tailwind output with text so the outer artifact
  * cannot validate or rewrite it. Restoring the original source also preserves
  * head styles, warning markers, and fragments inside tables without a wrapper tag.
  * Inner boundaries are consumed here; the caller wraps the completed outer output
@@ -24,7 +24,8 @@ export const protectProcessedTailwindHtml = (
   const fragments: string[] = []
   const protectedHtml = html.replace(processedPattern, (_marker, fragment: string) => {
     const index = fragments.push(fragment) - 1
-    return `<!--${markerPrefix}:slot:${index}-->`
+    // Text survives table fragments without closing a surrounding conditional comment.
+    return `${markerPrefix}:slot:${index}:end`
   })
 
   return {
