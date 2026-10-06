@@ -239,4 +239,34 @@ describe('transformHtmlOutsideSkips', () => {
       isSkipBoundary: false,
     })
   })
+
+  test.each(['pre', 'code', 'head'])(
+    'keeps existing opaque skip behavior for markup inside %s',
+    (tag) => {
+      const content = '<b>Raw</b><!-- untouched -->\n  Tail'
+      const calls = collect(`<${tag}>${content}</${tag}>Visible`, new Set([tag]))
+
+      expect(contextOf(calls, content)).toEqual({
+        type: 'text',
+        isSkipped: true,
+        isSkipBoundary: false,
+      })
+      expect(contextOf(calls, 'Visible')?.isSkipped).toBe(false)
+    },
+  )
+
+  test('does not open skip regions for void or self-closing tags', () => {
+    const calls = collect(
+      '<br>First<pre/>Second<img data-hono-email-preview>Third',
+      new Set(['br', 'pre']),
+    )
+
+    for (const token of ['First', 'Second', 'Third']) {
+      expect(contextOf(calls, token)).toEqual({
+        type: 'text',
+        isSkipped: false,
+        isSkipBoundary: false,
+      })
+    }
+  })
 })

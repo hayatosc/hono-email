@@ -1,8 +1,7 @@
 import { hasAttribute } from '../html-attribute'
+import { tokenizeHtml } from '../html-tokenizer'
 
 const PREVIEW_ATTRIBUTE = 'data-hono-email-preview'
-
-const TOKEN_PATTERN = /<!--[\s\S]*?-->|<[^>]+>|[^<]+/g
 
 const VOID_TAGS = new Set([
   'area',
@@ -63,55 +62,15 @@ export type HtmlWalkOptions = {
 export const transformHtmlOutsideSkips = (html: string, options: HtmlWalkOptions): string => {
   const { skipTags, transform } = options
   const stack: OpenElement[] = []
-  const tokenPattern = new RegExp(TOKEN_PATTERN)
+  const rawTextTags = new Set([...skipTags].filter((tag) => !VOID_TAGS.has(tag)))
   let result = ''
-  let cursor = 0
 
-  while (cursor < html.length) {
-    const current = stack[stack.length - 1]
-    if (current?.skip && skipTags.has(current.tag)) {
-      const closingTagPattern = new RegExp(`</${current.tag}\\b[^>]*>`, 'i')
-      const closingTagMatch = closingTagPattern.exec(html.slice(cursor))
-
-      if (!closingTagMatch) {
-        result += transform(html.slice(cursor), {
-          type: 'text',
-          isSkipped: true,
-          isSkipBoundary: false,
-        })
-        break
-      }
-
-      if (closingTagMatch.index > 0) {
-        result += transform(html.slice(cursor, cursor + closingTagMatch.index), {
-          type: 'text',
-          isSkipped: true,
-          isSkipBoundary: false,
-        })
-        cursor += closingTagMatch.index
-      }
-    }
-
-    tokenPattern.lastIndex = cursor
-    const match = tokenPattern.exec(html)
-    if (!match) {
-      result += transform(html.slice(cursor), {
-        type: 'text',
-        isSkipped: current?.skip ?? false,
-        isSkipBoundary: false,
-      })
-      break
-    }
-
-    const token = match[0]
-    cursor = tokenPattern.lastIndex
-
-    if (token.startsWith('<!--') || token.startsWith('<')) {
-      const closeMatch = /^<\/([a-zA-Z0-9-]+)/.exec(token)
-      if (closeMatch) {
-        const tag = closeMatch[1]?.toLowerCase()
+  for (const token of tokenizeHtml(html, { rawTextTags })) {
+    if (token.type === 'tag') {
+      const tag = token.name
+      if (token.closing) {
         const current = stack[stack.length - 1]
-        result += transform(token, {
+        result += transform(token.raw, {
           type: 'tag',
           isSkipped: current?.skip ?? false,
           isSkipBoundary: current?.tag === tag && (current?.ownsSkipRegion ?? false),
@@ -126,38 +85,25 @@ export const transformHtmlOutsideSkips = (html: string, options: HtmlWalkOptions
         continue
       }
 
-      const openMatch = /^<([a-zA-Z0-9-]+)/.exec(token)
-      if (openMatch) {
-        const tag = openMatch[1]?.toLowerCase() ?? ''
-        const selfClosing = token.endsWith('/>')
-        const parentSkipped = stack[stack.length - 1]?.skip ?? false
-        const ownsSkipRegion =
-          !parentSkipped &&
-          (skipTags.has(tag) || hasAttribute(token.slice(openMatch[0].length), PREVIEW_ATTRIBUTE))
+      const parentSkipped = stack[stack.length - 1]?.skip ?? false
+      const ownsSkipRegion =
+        !parentSkipped &&
+        (skipTags.has(tag) || hasAttribute(html.slice(token.nameEnd, token.end), PREVIEW_ATTRIBUTE))
 
-        result += transform(token, {
-          type: 'tag',
-          isSkipped: parentSkipped,
-          isSkipBoundary: ownsSkipRegion,
-        })
+      result += transform(token.raw, {
+        type: 'tag',
+        isSkipped: parentSkipped,
+        isSkipBoundary: ownsSkipRegion,
+      })
 
-        if (!selfClosing && !VOID_TAGS.has(tag)) {
-          stack.push({ tag, skip: parentSkipped || ownsSkipRegion, ownsSkipRegion })
-        }
-      }
-
-      if (!openMatch) {
-        result += transform(token, {
-          type: token.startsWith('<!--') ? 'comment' : 'tag',
-          isSkipped: stack[stack.length - 1]?.skip ?? false,
-          isSkipBoundary: false,
-        })
+      if (!token.selfClosing && !VOID_TAGS.has(tag)) {
+        stack.push({ tag, skip: parentSkipped || ownsSkipRegion, ownsSkipRegion })
       }
       continue
     }
 
-    result += transform(token, {
-      type: 'text',
+    result += transform(token.raw, {
+      type: token.type === 'declaration' ? 'tag' : token.type,
       isSkipped: stack[stack.length - 1]?.skip ?? false,
       isSkipBoundary: false,
     })
