@@ -43,7 +43,7 @@ const VOID_TAGS = new Set([
 type OpenElement = {
   tag: string
   skipped: boolean
-  link?: { href: string; start: number }
+  link?: { href: string; start: number; contentStart: number }
 }
 
 const ENTITY_PATTERN = /&(#x[0-9a-f]+|#\d+|[a-z][a-z0-9]*);/gi
@@ -80,17 +80,15 @@ const formatLink = (
   href: string,
   linkFormat: Required<PlainTextRenderOptions>['linkFormat'],
 ): string => {
-  const normalizedLabel = label.trim()
-
   if (linkFormat === 'href-only') {
     return href
   }
 
   if (linkFormat === 'text-only') {
-    return normalizedLabel
+    return label
   }
 
-  return normalizedLabel === '' ? href : `${normalizedLabel} (${href})`
+  return label.trim() === '' ? href : `${label} (${href})`
 }
 
 const formatImage = (attributes: string, includeImageAlt: boolean): string => {
@@ -130,9 +128,13 @@ export const renderPlainText = (html: string, options: PlainTextRenderOptions = 
       if (parentSkipped) continue
 
       if (element?.link) {
-        const { href, start } = element.link
-        text =
-          text.slice(0, start) + formatLink(text.slice(start), href, resolvedOptions.linkFormat)
+        const { href, start, contentStart } = element.link
+        // Trim source edges while preserving whitespace inside inline children.
+        const sourceLabel = html.slice(contentStart, token.start)
+        const leadingWhitespace = sourceLabel.length - sourceLabel.trimStart().length
+        const trailingWhitespace = sourceLabel.length - sourceLabel.trimEnd().length
+        const label = text.slice(start + leadingWhitespace, text.length - trailingWhitespace)
+        text = text.slice(0, start) + formatLink(label, href, resolvedOptions.linkFormat)
       } else if (tag === 'p') {
         text += '\n\n'
       } else if (tag === 'div') {
@@ -154,7 +156,7 @@ export const renderPlainText = (html: string, options: PlainTextRenderOptions = 
 
     if (!skipped && tag === 'a') {
       const href = readAttribute(attributes, 'href')
-      if (href !== undefined) element.link = { href, start: text.length }
+      if (href !== undefined) element.link = { href, start: text.length, contentStart: token.end }
     }
     if (!token.selfClosing && !VOID_TAGS.has(tag)) stack.push(element)
     if (skipped) continue
