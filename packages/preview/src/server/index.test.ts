@@ -472,16 +472,18 @@ describe('startPreviewServer', () => {
 
     const originalCwd = process.cwd()
     process.chdir(dir)
-    // `@hono/node-server`'s `getRequestListener` (used internally once the
-    // server starts) globally overrides `Request`/`Response` as a side effect.
-    // Restore them afterwards so a successful start here doesn't leak into
-    // other test files sharing this Bun test process.
+    const originalRequest = globalThis.Request
+    const originalResponse = globalThis.Response
+    // Keep fixtures isolated even if startup changes the Fetch globals.
     const originalRequestDesc = Object.getOwnPropertyDescriptor(globalThis, 'Request')
     const originalResponseDesc = Object.getOwnPropertyDescriptor(globalThis, 'Response')
 
     let server: Awaited<ReturnType<typeof startPreviewServer>> | undefined
     try {
       server = await startPreviewServer({ dir: 'emails', port: 0 })
+      expect(typeof server.close).toBe('function')
+      expect(globalThis.Request).toBe(originalRequest)
+      expect(globalThis.Response).toBe(originalResponse)
     } finally {
       await server?.close()
       process.chdir(originalCwd)
