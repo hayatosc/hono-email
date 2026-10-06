@@ -114,6 +114,66 @@ describe('plain text formatting compatibility', () => {
     ).toBe(expected)
   })
 
+  describe.each([
+    [
+      'text-and-href',
+      [
+        ['<em> Label</em>', 'Before Label (https://example.com)After'],
+        ['<em>Label </em>', 'BeforeLabel (https://example.com)After'],
+        ['<span> <strong>Label</strong> </span>', 'Before Label (https://example.com)After'],
+        [' \n<span> Label </span> \t', 'Before Label (https://example.com)After'],
+      ],
+    ],
+    [
+      'href-only',
+      [
+        ['<em> Label</em>', 'Beforehttps://example.comAfter'],
+        ['<em>Label </em>', 'Beforehttps://example.comAfter'],
+        ['<span> <strong>Label</strong> </span>', 'Beforehttps://example.comAfter'],
+        [' \n<span> Label </span> \t', 'Beforehttps://example.comAfter'],
+      ],
+    ],
+    [
+      'text-only',
+      [
+        ['<em> Label</em>', 'Before LabelAfter'],
+        ['<em>Label </em>', 'BeforeLabel After'],
+        ['<span> <strong>Label</strong> </span>', 'Before Label After'],
+        [' \n<span> Label </span> \t', 'Before Label After'],
+      ],
+    ],
+  ] as const)('link label whitespace (%s)', (linkFormat, cases) => {
+    for (const [label, expected] of cases) {
+      test(`preserves whitespace inside inline children: ${label}`, () => {
+        expect(
+          renderPlainText(`<p>Before<a href="https://example.com">${label}</a>After</p>`, {
+            linkFormat,
+          }),
+        ).toBe(expected)
+      })
+    }
+  })
+
+  test.each([
+    ['text-and-href', 'BeforeLabel (https://example.com)After', 'Beforehttps://example.comAfter'],
+    ['href-only', 'Beforehttps://example.comAfter', 'Beforehttps://example.comAfter'],
+    ['text-only', 'BeforeLabelAfter', 'BeforeAfter'],
+  ] as const)(
+    'preserves direct link label trimming and empty labels with %s',
+    (linkFormat, expectedLabel, expectedEmpty) => {
+      expect(
+        renderPlainText('<p>Before<a href="https://example.com"> \nLabel \t</a>After</p>', {
+          linkFormat,
+        }),
+      ).toBe(expectedLabel)
+      expect(
+        renderPlainText('<p>Before<a href="https://example.com"> \t </a>After</p>', {
+          linkFormat,
+        }),
+      ).toBe(expectedEmpty)
+    },
+  )
+
   test('preserves empty link labels and anchors without href attributes', () => {
     expect(renderPlainText('<a href="https://example.com"></a> <a>Label</a>')).toBe(
       'https://example.com Label',
