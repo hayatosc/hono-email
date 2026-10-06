@@ -33,6 +33,73 @@ const PRECOMPILED_TAILWIND_CSS = `
 `
 
 describe('Tailwind', () => {
+  test('normalizes an explicit class list without filtering CSS declarations', () => {
+    const classes = [' second ', '', 'first', 'second', '   ']
+    const artifact = buildTailwindArtifactFromCss({
+      css: '.first { color: red; } .second { color: blue; } .other { margin: 1rem; }',
+      classes,
+    })
+
+    expect(artifact).toEqual({
+      classes: ['second', 'first'],
+      inlineStylesByClass: {
+        first: { color: 'red' },
+        second: { color: 'blue' },
+        other: { margin: '16px' },
+      },
+      inlineStyleOrderByClass: {
+        first: { color: 0 },
+        second: { color: 1 },
+        other: { margin: 2 },
+      },
+      headCssByClass: {},
+      renamedClasses: {},
+      droppedClasses: [],
+    })
+    expect(classes).toEqual([' second ', '', 'first', 'second', '   '])
+    expect(
+      buildTailwindArtifactFromCss({ css: '.first { color: red; }', classes: [] }).classes,
+    ).toEqual([])
+  })
+
+  test('preserves the missing-class error and ignore options', async () => {
+    const artifact = buildTailwindArtifactFromCss({ css: '.known { color: red; }' })
+    const html = '<p class="known custom">Hello</p>'
+
+    await expect(transformTailwindHtml(html, artifact)).rejects.toThrow(
+      "Tailwind class 'custom' is missing from the build artifact. Rebuild the artifact before rendering with <Tailwind>.",
+    )
+    const expected = {
+      html: '<p class="known custom" style="color:red">Hello</p>',
+      headCss: '',
+      warnings: [],
+    }
+    expect(await transformTailwindHtml(html, artifact, { throwOnMissingClass: false })).toEqual(
+      expected,
+    )
+    expect(
+      await transformTailwindHtml(html, artifact, {
+        ignoreMissingClass: (className) => className === 'custom',
+      }),
+    ).toEqual(expected)
+  })
+
+  test('uses HTML class order for artifacts without declaration ordering metadata', async () => {
+    const artifact = {
+      classes: ['red', 'blue'],
+      inlineStylesByClass: { red: { color: 'red' }, blue: { color: 'blue' } },
+      headCssByClass: {},
+      renamedClasses: {},
+      droppedClasses: [],
+    }
+
+    expect(await transformTailwindHtml('<p class="red blue">Hello</p>', artifact)).toEqual({
+      html: '<p class="red blue" style="color:blue">Hello</p>',
+      headCss: '',
+      warnings: [],
+    })
+  })
+
   test('applies precompiled utilities as inline styles on html elements', async () => {
     const artifact = buildTailwindArtifactFromCss({
       css: PRECOMPILED_TAILWIND_CSS,

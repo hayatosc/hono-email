@@ -6,7 +6,7 @@ import {
   normalizeDeclarations,
   normalizeMediaQuery,
   resolveCssVariables,
-} from './css'
+} from './normalize'
 
 describe('normalizeCssValue', () => {
   test('converts 1rem to 16px', () => {
