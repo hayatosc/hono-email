@@ -51,14 +51,57 @@ describe('tokenizeHtml', () => {
     ])
   })
 
-  test('recognizes declarations without treating quoted greater-than signs as boundaries', () => {
-    const html = '<!DOCTYPE html PUBLIC "a > b"><p>x</p>'
-    expect([...tokenizeHtml(html)][0]).toEqual({
-      type: 'declaration',
-      raw: '<!DOCTYPE html PUBLIC "a > b">',
-      start: 0,
-      end: 30,
-    })
+  test('preserves valid quoted DOCTYPE identifiers', () => {
+    const doctype = `<!DOCTYPE html PUBLIC "-//Example//EN" 'https://example.com/dtd'>`
+    expect([...tokenizeHtml(`${doctype}<p>x</p>`)].map((token) => token.raw)).toEqual([
+      doctype,
+      '<p>',
+      'x',
+      '</p>',
+    ])
+  })
+
+  test.each(['<!-->', '<!--->', '<!-- note --!>'])(
+    'exposes markup after the HTML comment ending %s',
+    (comment) => {
+      const html = `${comment}<p>Visible</p>`
+      expect([...tokenizeHtml(html)].map((token) => [token.type, token.raw])).toEqual([
+        ['comment', comment],
+        ['tag', '<p>'],
+        ['text', 'Visible'],
+        ['tag', '</p>'],
+      ])
+    },
+  )
+
+  test.each(['<!-- note > still hidden -->', '<!---!>still hidden-->'])(
+    'does not close a nonempty comment at a lone greater-than sign: %s',
+    (comment) => {
+      expect([...tokenizeHtml(`${comment}<p>Visible</p>`)].map((token) => token.raw)).toEqual([
+        comment,
+        '<p>',
+        'Visible',
+        '</p>',
+      ])
+    },
+  )
+
+  test.each([
+    '<?x label="one >',
+    '<!x label="one >',
+    "<?xml label='one >",
+    "<!x label='one >",
+    '<!DOCTYPE html PUBLIC "one >',
+    "<!DOCTYPE html SYSTEM 'one >",
+  ])('ends a declaration at the first greater-than sign: %s', (declaration) => {
+    expect(
+      [...tokenizeHtml(`${declaration}<p>Visible</p>`)].map((token) => [token.type, token.raw]),
+    ).toEqual([
+      ['declaration', declaration],
+      ['tag', '<p>'],
+      ['text', 'Visible'],
+      ['tag', '</p>'],
+    ])
   })
 
   test('reports syntactic self-closing tags and keeps adjacent boundaries separate', () => {
