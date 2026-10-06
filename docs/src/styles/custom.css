@@ -9,10 +9,8 @@ body {
 }
 
 /* ── Fonts ─────────────────────────────────────────────────── */
-:root {
-  --sl-font: 'Inter', sans-serif;
-  --sl-font-mono: 'JetBrains Mono', monospace;
-}
+/* --sl-font (Inter) and --sl-font-mono (JetBrains Mono) are defined by the
+   Astro fonts API (see astro.config.ts and <Font> in Head.astro). */
 
 /* ── Dark mode (Starlight default — :root) ──────────────────── */
 :root,
@@ -124,24 +122,37 @@ a.site-title {
 
 /* ── Content typography ─────────────────────────────────────── */
 
+/* Headings are wrapped in `.sl-heading-wrapper` (with the heading itself
+   rendered inline next to the anchor link), so the rules go on the wrapper to
+   span the full column. `.not-content` blocks (the landing page) opt out. */
+
 /* h1 — large, tight tracking, with a bottom rule */
-.sl-markdown-content h1 {
+.sl-markdown-content h1:not(:where(.not-content *)) {
   font-weight: 700;
   letter-spacing: -0.025em;
+}
+.sl-markdown-content .sl-heading-wrapper.level-h1 {
   border-bottom: 1px solid var(--sl-color-hairline);
   padding-bottom: 0.5rem;
 }
 
 /* h2 — section separator */
-.sl-markdown-content h2 {
+.sl-markdown-content h2:not(:where(.not-content *)) {
   font-weight: 600;
   letter-spacing: -0.015em;
+}
+.sl-markdown-content .sl-heading-wrapper.level-h2 {
   border-bottom: 1px solid var(--sl-color-hairline);
   padding-bottom: 0.375rem;
 }
 
+/* An <hr> right before an h2 would draw a second rule next to the h2's own */
+.sl-markdown-content hr:has(+ .sl-heading-wrapper.level-h2) {
+  display: none;
+}
+
 /* h3 */
-.sl-markdown-content h3 {
+.sl-markdown-content h3:not(:where(.not-content *)) {
   font-weight: 600;
   letter-spacing: -0.01em;
 }
@@ -153,10 +164,18 @@ a.site-title {
 }
 
 /* Inline code — pill-shaped, subtle bg */
-.sl-markdown-content :not(pre) > code {
+.sl-markdown-content :not(pre) > code:not(:where(.not-content *)) {
   border-radius: 0.25rem;
   padding: 0.15em 0.4em;
   font-size: 0.875em;
+}
+
+/* Code in headings — keep the monospace face but drop the pill so large
+   headings don't turn into heavy blocks */
+.sl-markdown-content :is(h1, h2, h3, h4) code:not(:where(.not-content *)) {
+  padding: 0;
+  background: none;
+  font-size: 0.9em;
 }
 
 /* Fenced code blocks — bordered card */
@@ -190,10 +209,52 @@ starlight-toc a {
   border-width: 1px;
 }
 
+/* ── Badges ─────────────────────────────────────────────────────────── */
+/* "Optional" (note) badges follow the zinc palette instead of Starlight's
+   blue, so they don't compete with the "Required" (caution) badges. */
+:root {
+  --sl-badge-note-border: var(--sl-color-gray-4);
+  --sl-badge-note-bg: var(--sl-color-gray-6);
+  --sl-badge-note-text: var(--sl-color-gray-2);
+}
+:root[data-theme='light'] {
+  --sl-badge-note-border: var(--sl-color-gray-5);
+  --sl-badge-note-bg: var(--sl-color-gray-6);
+  --sl-badge-note-text: var(--sl-color-gray-2);
+}
+
 /* ── Landing page ────────────────────────────────────────────────────── */
 /* Collapse the empty first ContentPanel that Starlight generates when
    template: 'splash' is used without a hero frontmatter. This eliminates
    the visual gap between the site header and the landing hero section. */
 .content-panel:first-child:not(:has(.sl-container > *)) {
   padding: 0;
+}
+
+/* Let the landing sections run edge to edge (each section centres its own
+   content), and drop the empty footer and trailing panel padding. */
+.content-panel:has(.landing) {
+  padding-bottom: 0;
+}
+.content-panel .sl-container:has(.landing) {
+  max-width: none;
+}
+.content-panel .sl-container:has(.landing) > footer {
+  display: none;
+}
+
+/* Pages without a sidebar (the landing, 404) have no mobile menu, so keep the
+   GitHub link and theme switcher in the header on narrow screens. */
+@media (max-width: 49.99rem) {
+  :root:not([data-has-sidebar]) header .right-group {
+    display: flex;
+  }
+  :root:not([data-has-sidebar]) header .right-group .social-icons::after {
+    display: none;
+  }
+}
+@media (max-width: 22rem) {
+  :root:not([data-has-sidebar]) header starlight-theme-select {
+    display: none;
+  }
 }

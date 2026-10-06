@@ -1,4 +1,5 @@
 ---
+import { Font } from 'astro:assets';
 import Default from '@astrojs/starlight/components/Head.astro';
 
 const { entry } = Astro.locals.starlightRoute;
@@ -15,6 +16,9 @@ const markdownUrl = pagePath === '/' ? '/index.md' : `${pagePath.replace(/\/$/, 
 ---
 
 <Default {...Astro.props} />
+
+<Font cssVariable="--sl-font" preload={[{ style: 'normal' }]} />
+<Font cssVariable="--sl-font-mono" />
 
 <link rel="alternate" type="text/markdown" href={markdownUrl} />
 <meta property="og:title" content={title} />
