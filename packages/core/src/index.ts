@@ -78,6 +78,7 @@ import { transformHonoCssOutput } from './render/hono-css'
 import { renderFragmentToHtml } from './render/html'
 import { prettyPrintHtml } from './render/pretty'
 import { extractTailwindWarnings } from './tailwind'
+import { removeTailwindProcessedBoundaries } from './tailwind/processed'
 import { minifyHtml } from './transform/minify'
 import { preventWidows } from './transform/prevent-widows'
 import { ensureSixHex } from './transform/six-hex'
@@ -212,7 +213,8 @@ const renderHtml = async (
   options: BaseRenderOptions = {},
 ): Promise<{ html: string; warnings: string[] }> => {
   const strict = options.strict ?? true
-  let html = relocateHeadStyles(relocatePreview(normalizeHtml(await renderFragmentToHtml(jsx))))
+  let html = removeTailwindProcessedBoundaries(await renderFragmentToHtml(jsx))
+  html = relocateHeadStyles(relocatePreview(normalizeHtml(html)))
   html = relocateHeadStyles(await transformHonoCssOutput(html))
 
   const tailwindWarnings = extractTailwindWarnings(html)

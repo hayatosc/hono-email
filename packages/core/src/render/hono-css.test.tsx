@@ -67,6 +67,32 @@ describe('hono/css integration', () => {
     )
   })
 
+  test('inlines hono/css from async components after awaiting their callbacks', async () => {
+    const AsyncMessage = async () => {
+      await Promise.resolve()
+      const className = css`
+        color: #123456;
+      `
+      return <Text className={className}>Async styled message</Text>
+    }
+
+    const { html, text } = await render(
+      <Html>
+        <Head>
+          <Style />
+        </Head>
+        <Body>
+          <AsyncMessage />
+        </Body>
+      </Html>,
+    )
+
+    expect(html).toContain('color:#123456')
+    expect(html).not.toContain('id="hono-css"')
+    expect(html).not.toContain('<script')
+    expect(text).toBe('Async styled message')
+  })
+
   test('throws a clear error when hono/css is used without <Head><Style /></Head>', async () => {
     await expect(render(<StyledEmail includeStyle={false} />)).rejects.toThrow(
       'hono/css styles require <Head><Style /></Head> in hono-email.',

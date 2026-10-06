@@ -49,6 +49,31 @@ function WelcomeEmail() {
 const { html, text } = await render(<WelcomeEmail />)
 ```
 
+## Nested Tailwind
+
+`<Tailwind>` wrappers can be nested with the same or different build artifacts.
+Each element is handled by its nearest wrapper. Outer wrappers skip HTML already
+processed by an inner wrapper, including renamed variant classes, inline styles,
+head CSS, and dropped-class warnings. Classes needed by head CSS and unrelated
+classes such as `hono/css` tokens remain in the output; explicit inline styles
+keep their precedence.
+
+```tsx
+<Tailwind artifact={pageArtifact}>
+  <Body>
+    <Text className="text-page">Page content</Text>
+    <Tailwind artifact={cardArtifact}>
+      <Text className="text-card hover:text-accent">Card content</Text>
+    </Tailwind>
+  </Body>
+</Tailwind>
+```
+
+Each artifact must include the classes used in its own scope. A missing class
+still rejects rendering, even if another wrapper's artifact includes it.
+Responsive and pseudo-class CSS from every wrapper is moved into the document
+head, and all dropped-class warnings reach `render()`'s warning handler.
+
 ## Delivery errors
 
 Built-in adapters return a receipt with `successful: false` when message validation

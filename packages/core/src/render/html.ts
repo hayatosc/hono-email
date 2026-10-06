@@ -20,6 +20,18 @@ const readStreamAsString = async (stream: ReadableStream<Uint8Array>): Promise<s
 }
 
 export const renderFragmentToHtml = async (jsx: Child): Promise<string> => {
-  const stream = await renderToReadableStream(jsx)
-  return readStreamAsString(stream)
+  const errors: unknown[] = []
+  const stream = await renderToReadableStream(jsx, {
+    onError: (error) => {
+      errors.push(error)
+    },
+  })
+  const html = await readStreamAsString(stream)
+
+  // Hono closes the stream after reporting errors; let it drain before rejecting.
+  if (errors.length > 0) {
+    throw errors[0]
+  }
+
+  return html
 }

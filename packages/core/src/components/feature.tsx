@@ -17,6 +17,7 @@ import {
   type TailwindBuildArtifact,
   wrapGeneratedHeadCss,
 } from '../tailwind'
+import { protectProcessedTailwindHtml, wrapProcessedTailwindHtml } from '../tailwind/processed'
 
 export type {
   FontProps,
@@ -74,6 +75,7 @@ export const Font = (props: FontProps): HtmlEscapedString => renderFontStyleTag(
 
 /**
  * Applies a Tailwind build artifact to descendant class names.
+ * Nested wrappers own their descendants; outer artifacts skip their processed output.
  *
  * @param props - Tailwind wrapper props.
  * @param props.artifact - Build artifact injected by the plugin or passed explicitly.
@@ -99,11 +101,14 @@ export const Tailwind = async ({
   }
 
   const renderedChildren = await renderFragmentToHtml(<>{children}</>)
-  const transformed = await transformTailwindHtml(renderedChildren, artifact, {
+  const protectedChildren = protectProcessedTailwindHtml(renderedChildren)
+  const transformed = await transformTailwindHtml(protectedChildren.html, artifact, {
     ignoreMissingClass: (className) => className.startsWith('css-'),
   })
   return raw(
-    `${encodeTailwindWarnings(transformed.warnings)}${wrapGeneratedHeadCss(transformed.headCss)}${transformed.html}`,
+    wrapProcessedTailwindHtml(
+      `${encodeTailwindWarnings(transformed.warnings)}${wrapGeneratedHeadCss(transformed.headCss)}${protectedChildren.restore(transformed.html)}`,
+    ),
   )
 }
 
