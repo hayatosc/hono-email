@@ -1,12 +1,12 @@
 const REM_TO_PX_FACTOR = 16
 const MAX_VARIABLE_RESOLUTION_DEPTH = 8
 
-const REM_PATTERN = /(-?\d+(?:\.\d+)?)rem\b/g
+const REM_PATTERN = /(-?(?:\d*\.)?\d+)rem\b/g
 const RGB_PATTERN = /^rgb\(\s*(\d{1,3})\s+(\d{1,3})\s+(\d{1,3})\s*\)$/i
 const RGB_ALPHA_ONE_PATTERN =
   /^rgb\(\s*(\d{1,3})\s+(\d{1,3})\s+(\d{1,3})\s*\/\s*(1(?:\.0+)?|100%)\s*\)$/i
 const OKLCH_PATTERN =
-  /^oklch\(\s*(-?\d+(?:\.\d+)?)%\s+(-?\d+(?:\.\d+)?)\s+(-?\d+(?:\.\d+)?)(?:\s*\/\s*([^)]+))?\s*\)$/i
+  /^oklch\(\s*(-?(?:\d*\.)?\d+)%\s+(-?(?:\d*\.)?\d+)\s+(-?(?:\d*\.)?\d+)(?:\s*\/\s*([^)]+))?\s*\)$/i
 const VAR_FUNCTION_PATTERN = /var\(\s*(--[a-zA-Z0-9-_]+)\s*(?:,\s*([^)]+))?\)/g
 
 const LOGICAL_PROPERTY_EXPANSIONS: Record<string, string[]> = {
@@ -51,7 +51,7 @@ const isUnitless = (unit: string): boolean => unit.trim() === ''
 
 const evaluateSimpleCalcExpression = (value: string): string => {
   const calcMatch = value.match(
-    /^calc\(\s*(-?\d+(?:\.\d+)?)([a-z%]*)\s*([*/])\s*(-?\d+(?:\.\d+)?)([a-z%]*)\s*\)$/i,
+    /^calc\(\s*(-?(?:\d*\.)?\d+)([a-z%]*)\s*([*/])\s*(-?(?:\d*\.)?\d+)([a-z%]*)\s*\)$/i,
   )
   if (!calcMatch) {
     return value
