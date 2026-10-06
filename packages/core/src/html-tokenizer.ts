@@ -30,7 +30,7 @@ const sourceToken = (html: string, start: number, end: number): SourceToken => (
   end,
 })
 
-const findMarkupEnd = (html: string, start: number, declaration = false): number | null => {
+const findMarkupEnd = (html: string, start: number): number | null => {
   let state: 'attribute' | 'beforeValue' | 'unquoted' | '"' | "'" = 'attribute'
 
   for (let index = start; index < html.length; index += 1) {
@@ -46,8 +46,6 @@ const findMarkupEnd = (html: string, start: number, declaration = false): number
       state = character === '"' || character === "'" ? character : 'unquoted'
     } else if (state === 'unquoted') {
       if (WHITESPACE_PATTERN.test(character)) state = 'attribute'
-    } else if (declaration && (character === '"' || character === "'")) {
-      state = character
     } else if (character === '=') {
       state = 'beforeValue'
     }
@@ -81,16 +79,26 @@ const readTag = (html: string, start: number): HtmlTagToken | null => {
 
 const readMarkup = (html: string, start: number): HtmlToken | null => {
   if (html.startsWith('<!--', start)) {
-    const closing = html.indexOf('-->', start + 4)
-    const end = closing === -1 ? html.length : closing + 3
+    let end = html.length
+    // HTML also closes empty comments abruptly and accepts --!> as an ending.
+    if (html[start + 4] === '>') {
+      end = start + 5
+    } else if (html.startsWith('->', start + 4)) {
+      end = start + 6
+    } else {
+      const closingPattern = /--!?>/g
+      closingPattern.lastIndex = start + 4
+      if (closingPattern.test(html)) end = closingPattern.lastIndex
+    }
     return { ...sourceToken(html, start, end), type: 'comment' }
   }
 
   if (html[start + 1] === '!' || html[start + 1] === '?') {
-    const end = findMarkupEnd(html, start + 2, true)
+    // Unlike attribute values, quoted declaration identifiers do not protect >.
+    const closing = html.indexOf('>', start + 2)
     return {
-      ...sourceToken(html, start, end ?? html.length),
-      type: end === null ? 'text' : 'declaration',
+      ...sourceToken(html, start, closing === -1 ? html.length : closing + 1),
+      type: closing === -1 ? 'text' : 'declaration',
     }
   }
 
