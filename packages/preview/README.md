@@ -71,7 +71,7 @@ export default function WelcomeEmail({ name, appName, trialDays }: WelcomeEmailP
 }
 ```
 
-`definePreviewProps<Props>()` checks field names, input types, defaults, select options, and object-array item schemas against `Props`. It returns the same configuration object and may describe only a subset of the component's props. Types do not generate runtime metadata, so supply the fields needed by the form. Existing configuration objects using `satisfies PreviewPropsConfig` remain supported.
+`definePreviewProps<Props>()` checks field names, input types, defaults, select options, and object-array item schemas against `Props`. It returns the same configuration object and may describe only a subset of the component's props. Non-string fields require an explicit `type` or a non-null default so the form can infer their input type. Object arrays also require an `item` schema; primitive lists support string values. Use JSON mode for other array element types. Existing configuration objects using `satisfies PreviewPropsConfig` remain supported.
 
 ## Documentation
 

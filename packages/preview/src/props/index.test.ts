@@ -8,6 +8,32 @@ import {
 } from './index'
 
 describe('definePreviewProps', () => {
+  test('infers non-string fields from non-null defaults', () => {
+    const config = definePreviewProps<{
+      count: number
+      enabled: boolean
+      tags: string[]
+      items: { quantity: number }[]
+    }>()({
+      count: { default: 0 },
+      enabled: { default: false },
+      tags: { default: [] },
+      items: { default: [], item: { quantity: { default: 0 } } },
+    })
+
+    expect(extractPropsSchema({ previewProps: config })).toEqual({
+      count: { type: 'number', required: false, defaultValue: 0 },
+      enabled: { type: 'boolean', required: false, defaultValue: false },
+      tags: { type: 'array', required: false, defaultValue: [] },
+      items: {
+        type: 'array',
+        required: false,
+        defaultValue: [],
+        item: { quantity: { type: 'number', required: false, defaultValue: 0 } },
+      },
+    })
+  })
+
   test('preserves schema inference and supports existing schema extraction', () => {
     type Props = {
       name: string

@@ -46,22 +46,33 @@ type PreviewPropsFor<Props extends object> = {
   [Key in Extract<keyof Props, string>]?: PreviewPropSpecFor<Props[Key]>
 }
 
-type PreviewPropSpecFor<Value> = {
-  default?: Value
-  required?: boolean
-} & ([NonNullable<Value>] extends [string]
-  ? { type?: 'string' | 'select'; options?: NonNullable<Value>[]; multiline?: boolean }
+type TypedOrDefault<Value, Kind extends PreviewPropSpec['type']> =
+  | { type: Kind; default?: Value }
+  | { type?: Kind; default: NonNullable<Value> }
+
+type PreviewPropSpecFor<Value> = { required?: boolean } & ([NonNullable<Value>] extends [string]
+  ? {
+      type?: 'string' | 'select'
+      default?: Value
+      options?: NonNullable<Value>[]
+      multiline?: boolean
+    }
   : [NonNullable<Value>] extends [number]
-    ? { type?: 'number' }
+    ? TypedOrDefault<Value, 'number'>
     : [NonNullable<Value>] extends [boolean]
-      ? { type?: 'boolean' }
-      : NonNullable<Value> extends readonly (infer Item)[]
-        ? { type?: 'array'; item?: Item extends object ? PreviewPropsFor<Item> : never }
+      ? TypedOrDefault<Value, 'boolean'>
+      : [NonNullable<Value>] extends [readonly (infer Item)[]]
+        ? [Item] extends [string]
+          ? TypedOrDefault<Value, 'array'>
+          : [Item] extends [object]
+            ? TypedOrDefault<Value, 'array'> & { item: PreviewPropsFor<Item> }
+            : never
         : never)
 
 /**
  * Checks a preview schema against the email component's props without changing it.
- * Fields may describe a subset of the props. Runtime form metadata must still be supplied.
+ * Fields may describe a subset of the props. Non-string fields need a type or a
+ * non-null default. Object arrays also need an item schema; primitive lists edit strings.
  *
  * @example
  * ```ts

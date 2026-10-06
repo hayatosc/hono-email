@@ -22,6 +22,11 @@ const selectType: 'select' = config.theme.type
 void legacy
 void selectType
 
+define({ count: { default: 0 }, enabled: { default: false } })
+define({ items: { default: [], item: { quantity: { default: 0 } } } })
+definePreviewProps<{ tags: readonly string[] }>()({ tags: { default: [] } })
+definePreviewProps<{ count: number | null }>()({ count: { type: 'number', default: null } })
+
 // @ts-expect-error Unknown component prop.
 define({ missing: { type: 'string' } })
 // @ts-expect-error The input type must match the component prop.
