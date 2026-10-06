@@ -32,6 +32,7 @@ afterEach(async () => {
 const createFixture = async () => {
   const root = await mkdtemp(path.join(packageRoot, 'integration-'))
   directories.push(root)
+  await writeFile(path.join(root, '.gitignore'), '*.mjs\n')
   await mkdir(path.join(root, 'emails'))
   await mkdir(path.join(root, 'shared'))
   await writeFile(
@@ -319,4 +320,53 @@ describe('actual bundler integration', () => {
       await server.close()
     }
   }, 10_000)
+
+  test('esbuild watch discovers newly created source files', async () => {
+    const { root, entry, options } = await createFixture()
+    const output = path.join(root, 'watch.mjs')
+    let complete: (() => void) | undefined
+    const context = await esbuildContext({
+      absWorkingDir: root,
+      entryPoints: [entry],
+      outfile: output,
+      bundle: true,
+      format: 'esm',
+      platform: 'node',
+      external: ['hono-email', 'hono/jsx/jsx-runtime'],
+      jsx: 'automatic',
+      jsxImportSource: 'hono/jsx',
+      plugins: [
+        EmailEsbuild(options),
+        {
+          name: 'observe-rebuild',
+          setup(build) {
+            build.onEnd(() => complete?.())
+          },
+        },
+      ],
+    })
+    const nextBuild = async (action: () => Promise<unknown>) => {
+      let timeout: ReturnType<typeof setTimeout> | undefined
+      const finished = new Promise<void>((resolve, reject) => {
+        complete = resolve
+        timeout = setTimeout(() => reject(new Error('esbuild watch did not rebuild')), 5000)
+      })
+      try {
+        await action()
+        await finished
+      } finally {
+        clearTimeout(timeout)
+        complete = undefined
+      }
+    }
+    try {
+      await nextBuild(() => context.watch())
+      await nextBuild(() =>
+        writeFile(path.join(root, 'shared/new.tsx'), '<p className="text-[17px]" />'),
+      )
+      expect(await readFile(output, 'utf8')).toContain('"font-size": "17px"')
+    } finally {
+      await context.dispose()
+    }
+  }, 15_000)
 })
