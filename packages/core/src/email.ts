@@ -123,7 +123,8 @@ export type EmailEnvelope = {
 }
 
 /**
- * DKIM signing options applied by adapters that support DKIM.
+ * DKIM signing options applied locally by `SmtpTransport`.
+ * HTTP provider adapters do not apply these options; configure DKIM with the provider.
  *
  * @property domainName - Signing domain.
  * @property keySelector - DKIM selector.
@@ -185,6 +186,12 @@ export type EmailMessage = {
   messageId?: string
   date?: Date
   envelope?: EmailEnvelope
+  /**
+   * Legacy SMTP-only DKIM override. Retained for backward compatibility.
+   * HTTP provider adapters do not apply this field; signing is provider-side.
+   *
+   * @deprecated Use `SmtpTransport.send(message, { dkim })` or transport-level DKIM instead.
+   */
   dkim?: EmailDkimOptions
 }
 

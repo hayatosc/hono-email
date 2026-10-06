@@ -129,7 +129,7 @@ export type SmtpAuth =
  * @property port - SMTP server port.
  * @property secure - TLS mode. `true` uses implicit TLS, `'starttls'` upgrades after EHLO.
  * @property auth - Optional SMTP authentication.
- * @property dkim - Optional DKIM signing options.
+ * @property dkim - Default DKIM signing options, overridden by per-send or legacy per-message settings.
  * @property clientName - EHLO/HELO client name.
  * @property connectionTimeout - Connection timeout in milliseconds.
  * @property greetingTimeout - Greeting timeout in milliseconds.
@@ -163,6 +163,24 @@ export type SmtpTransportOptions = {
     maxConnections?: number
     maxMessages?: number
   }
+}
+
+/**
+ * SMTP-specific options for a single `SmtpTransport.send()` call.
+ *
+ * @property dkim - DKIM signing options for this send. Takes precedence over legacy
+ * `message.dkim` and transport defaults. Omit to inherit those settings.
+ *
+ * @example
+ * ```ts
+ * const options: SmtpSendOptions = {
+ *   dkim: { domainName: 'example.com', keySelector: 'mail', privateKey },
+ * }
+ * await smtp.send(message, options)
+ * ```
+ */
+export type SmtpSendOptions = {
+  dkim?: EmailDkimOptions
 }
 
 export type SmtpSendResult = SendEmailReceipt

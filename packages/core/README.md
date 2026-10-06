@@ -62,6 +62,53 @@ Import `SmtpTransportClosedError` from `hono-email/smtp` and use
 rejections from `send()` or `verify()`. Its `name` is `SmtpTransportClosedError`;
 ordinary delivery failures remain failed receipts.
 
+## SMTP DKIM
+
+Configure `SmtpTransportOptions.dkim` when all sends should use the same signing settings. For per-send signing, use the optional `SmtpSendOptions` argument to `SmtpTransport.send()`, exported from `hono-email/smtp`. Load `privateKey` from your application's secret store.
+
+```tsx
+import { Body, Html, Text } from 'hono-email'
+import { renderEmailMessage } from 'hono-email/adapter'
+import { SmtpTransport, type SmtpSendOptions } from 'hono-email/smtp'
+import { nodeSmtpConnector } from 'hono-email/smtp/node'
+
+const smtp = new SmtpTransport({
+  connector: nodeSmtpConnector,
+  hostname: 'smtp.example.com',
+  port: 587,
+  secure: 'starttls',
+})
+const message = await renderEmailMessage({
+  from: 'sender@example.com',
+  to: 'recipient@example.com',
+  subject: 'Welcome',
+  jsx: (
+    <Html>
+      <Body>
+        <Text>Hello</Text>
+      </Body>
+    </Html>
+  ),
+})
+const options: SmtpSendOptions = {
+  dkim: { domainName: 'example.com', keySelector: 'mail', privateKey },
+}
+await smtp.send(message, options)
+await smtp.close()
+```
+
+DKIM settings are selected in this order, without merging configurations:
+
+1. `smtp.send(message, { dkim })` for the current send.
+2. Legacy `message.dkim`.
+3. The transport's `dkim` default.
+
+Omitting per-send `dkim` inherits the legacy or transport setting. `false` is not supported as a DKIM value; signing is disabled only when no DKIM configuration is present. Per-send options do not mutate the message or change defaults for later sends. `SmtpTransport` remains compatible with `EmailAdapter` and `sendEmail()`.
+
+`EmailMessage.dkim` is deprecated, but it has not been removed and remains supported in `EmailMessageDraft` and `sendEmail()` options. Migrate `smtp.send({ ...message, dkim })` to `smtp.send(message, { dkim })`. For JSX drafts passed to `sendEmail({ adapter: smtp, ..., dkim })`, either move shared signing settings into the transport constructor or render with `renderEmailMessage()` and pass per-send settings to `smtp.send()` as shown above. The shared `sendEmail()` helper does not accept SMTP-specific send options.
+
+HTTP provider adapters (Resend, SendGrid, Postmark, Mailgun, and Cloudflare Email Service REST) cannot apply locally supplied DKIM settings and do not forward `message.dkim` in their payloads. Configure DKIM with the provider; signing is provider-side. The Cloudflare Email Service Workers adapter also does not apply local DKIM settings. This differs from `SmtpTransport` used with the Cloudflare SMTP connector, which signs locally.
+
 ## Documentation
 
 For advanced usages such as transport adapters, Markdown, `hono/css`, Tailwind CSS, and CLI tools, please check the [Documentation Site](https://hono-email.hayatosc.dev).

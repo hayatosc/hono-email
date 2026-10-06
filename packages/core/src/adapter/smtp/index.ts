@@ -11,7 +11,13 @@ import {
 import { openSmtpSession } from './protocol'
 import type { SmtpSession } from './protocol'
 import { failedReceipt, isClosedTransportError, SmtpTransportClosedError } from './receipt'
-import type { SmtpConnector, SmtpSecureTransport, SmtpSocket, SmtpTransportOptions } from './types'
+import type {
+  SmtpConnector,
+  SmtpSecureTransport,
+  SmtpSendOptions,
+  SmtpSocket,
+  SmtpTransportOptions,
+} from './types'
 
 export type {
   EmailAddress,
@@ -40,6 +46,7 @@ export type {
   SmtpConnector,
   SmtpConnectorOptions,
   SmtpSecureTransport,
+  SmtpSendOptions,
   SmtpSendResult,
   SmtpSocket,
   SmtpSocketAddress,
@@ -118,12 +125,16 @@ export class SmtpTransport implements EmailAdapter {
     this.#socketTimeout = options.socketTimeout
   }
 
-  async send(message: EmailMessage): Promise<SendEmailReceipt> {
+  /**
+   * Sends a rendered message with optional SMTP-specific DKIM settings.
+   * Per-send DKIM overrides legacy `message.dkim`, then transport defaults.
+   */
+  async send(message: EmailMessage, options?: SmtpSendOptions): Promise<SendEmailReceipt> {
     if (this.#closed) {
       throw new SmtpTransportClosedError()
     }
 
-    const task = this.#send(message)
+    const task = this.#send(message, options)
     this.#activeSends.add(task)
 
     try {
@@ -192,7 +203,7 @@ export class SmtpTransport implements EmailAdapter {
     }
   }
 
-  async #send(message: EmailMessage): Promise<SendEmailReceipt> {
+  async #send(message: EmailMessage, options?: SmtpSendOptions): Promise<SendEmailReceipt> {
     const envelope = resolveEmailEnvelope(message)
     if (envelope.recipients.length === 0) {
       return {
@@ -205,7 +216,7 @@ export class SmtpTransport implements EmailAdapter {
 
     try {
       const builtMessage = await buildRawEmailMessageAsync(message, this.#limits)
-      const dkim = message.dkim ?? this.#dkim
+      const dkim = options?.dkim ?? message.dkim ?? this.#dkim
       const rawMessage =
         dkim === undefined ? builtMessage.raw : await applyDkimSignature(builtMessage.raw, dkim)
       const slot = await this.#acquireSlot()
