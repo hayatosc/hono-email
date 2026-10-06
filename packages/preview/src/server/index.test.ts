@@ -308,11 +308,16 @@ describe('startPreviewServer', () => {
     const dir = mkdtempSync(join(tempDir, 'tw-server-'))
     writeFileSync(join(dir, 'tailwind.config.js'), 'module.exports = {}')
 
-    // Mock module loading failure on property access
+    // Simulate a broken plugin. The failure must happen when the server uses
+    // the plugin, not on export access: when the module is already loaded,
+    // `mock.module` reads every export to patch it, and a throwing getter
+    // would fail here instead of inside `startPreviewServer`.
     void mock.module('@hono-email/tailwind-plugin', () => {
       return {
-        get unplugin() {
-          throw new Error('Cannot find module')
+        unplugin: {
+          vite() {
+            throw new Error('Cannot find module')
+          },
         },
       }
     })
