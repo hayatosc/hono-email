@@ -170,6 +170,19 @@ export const Email = () => <EmailTailwind />
     expect(moduleCode).not.toContain('?inline')
   })
 
+  test('normalizes default utility values after CSS optimization', async () => {
+    const moduleCode = await buildPerFileArtifactModule(
+      encodeURIComponent(path.resolve(import.meta.dir, 'index.test.ts')),
+      { safelist: ['px-4', 'rounded-lg', 'text-sm', 'text-red-500'] },
+    )
+    const { inlineStylesByClass: styles } = JSON.parse(moduleCode.slice('export default '.length))
+
+    expect(styles['px-4']).toEqual({ 'padding-left': '16px', 'padding-right': '16px' })
+    expect(styles['rounded-lg']).toEqual({ 'border-radius': '8px' })
+    expect(styles['text-sm']).toEqual({ 'font-size': '14px', 'line-height': '1.4285714285714286' })
+    expect(styles['text-red-500']).toEqual({ color: '#fb2c36' })
+  })
+
   test('different email files get different virtual module IDs', () => {
     const idA = '/abs/emails/welcome.tsx'
     const idB = '/abs/emails/reset-password.tsx'
