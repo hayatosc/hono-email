@@ -38,3 +38,14 @@ define({ items: { type: 'array', item: { missing: { type: 'string' } } } })
 const extra = { name: { default: 'Guest' }, typo: { default: 'Guest' } }
 // @ts-expect-error Extra keys are rejected even when passed through a variable.
 define(extra)
+
+// @ts-expect-error A number needs an explicit type or a numeric default for runtime inference.
+define({ count: { required: true } })
+// @ts-expect-error A boolean without runtime type information becomes a string field.
+define({ enabled: {} })
+// @ts-expect-error Object arrays need an item schema for the structured form.
+define({ items: { type: 'array', default: [{ label: 'Item', quantity: 1 }] } })
+// @ts-expect-error A null default cannot infer a numeric field.
+definePreviewProps<{ count: number | null }>()({ count: { default: null } })
+// @ts-expect-error The list editor emits strings and cannot edit numeric array elements.
+definePreviewProps<{ counts: number[] }>()({ counts: { type: 'array', default: [1] } })
