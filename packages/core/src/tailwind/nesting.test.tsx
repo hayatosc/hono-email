@@ -3,11 +3,34 @@ import { describe, expect, test } from 'bun:test'
 import { Style, css } from 'hono/css'
 import { raw } from 'hono/html'
 
-import { Body, Head, Html, Tailwind, buildTailwindArtifactFromCss, render } from '../index'
+import { Body, Conditional, Head, Html, Tailwind, buildTailwindArtifactFromCss, render } from '../index'
 
 const renderOptions = { doctype: false, minify: false, onWarning: 'error' } as const
 
 describe('nested Tailwind', () => {
+  test('preserves nested output inside an Outlook conditional comment', async () => {
+    const outer = buildTailwindArtifactFromCss({ css: '.outer { color: #112233; }' })
+    const inner = buildTailwindArtifactFromCss({ css: '.inner { color: #aabbcc; }' })
+
+    const { html } = await render(
+      <Tailwind artifact={outer}>
+        <Conditional>
+          <Tailwind artifact={inner}>
+            <p className="inner">Inner</p>
+          </Tailwind>
+          <p className="unknown">Outlook sibling</p>
+        </Conditional>
+        <p className="outer">Visible</p>
+      </Tailwind>,
+      renderOptions,
+    )
+
+    expect(html).toBe(
+      '<!--[if mso]><p class="inner" style="color:#aabbcc">Inner</p><p class="unknown">Outlook sibling</p><![endif]--><p class="outer" style="color:#112233">Visible</p>',
+    )
+    expect(html).not.toContain('hono-email-tw-processed')
+  })
+
   test('applies only the nearest artifact and preserves classes and explicit styles', async () => {
     const outer = buildTailwindArtifactFromCss({
       css: '.outer { color: #112233; } .shared { background-color: #445566; }',
