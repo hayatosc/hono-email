@@ -5,13 +5,14 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import tailwindcss from '@tailwindcss/vite'
-import { build as esbuild, transform } from 'esbuild'
+import { build as esbuild, context as esbuildContext, transform } from 'esbuild'
 import { render } from 'hono-email'
 import { rolldown } from 'rolldown'
 import { rollup } from 'rollup'
-import { build as viteBuild } from 'vite'
+import { build as viteBuild, createServer } from 'vite'
 import webpack from 'webpack'
 
+import type { CssBuildArtifact } from '../../core/src/css/artifact'
 import EmailBun from './bun'
 import EmailEsbuild from './esbuild'
 import EmailRolldown from './rolldown'
@@ -50,7 +51,7 @@ export const Button = () => <div className="block mt-[8px] sm:text-brand hover:t
     entry,
     `
 import { Tailwind } from 'hono-email'
-import { Button } from '../shared/button'
+import { Button } from '../shared/button.tsx'
 const dynamicClass = ['px', 'email'].join('-')
 export const Email = () => <Tailwind><Button /><p className={dynamicClass + ' text-brand custom'}>Hello</p></Tailwind>
 `,
@@ -65,14 +66,19 @@ export const Email = () => <Tailwind><Button /><p className={dynamicClass + ' te
     safelist: ['px-email'],
     css: '.custom { font-weight: 700; }',
   }
-  return { root, entry, options }
+  return { root, entry, options, configPath }
 }
 
 const transpileJsx = {
   name: 'test-jsx',
   async transform(code: string, id: string) {
     if (!id.endsWith('.tsx')) return null
-    return transform(code, { loader: 'tsx', jsx: 'automatic', jsxImportSource: 'hono/jsx' })
+    const result = await transform(code, {
+      loader: 'tsx',
+      jsx: 'automatic',
+      jsxImportSource: 'hono/jsx',
+    })
+    return { code: result.code, map: null }
   },
 }
 
@@ -89,6 +95,7 @@ const bundleFixture = async (
   switch (bundler) {
     case 'esbuild':
       await esbuild({
+        absWorkingDir: root,
         entryPoints: [entry],
         outfile: output,
         bundle: true,
@@ -187,6 +194,7 @@ const bundleFixture = async (
         external,
         outdir: root,
         naming: path.basename(output),
+        jsx: { runtime: 'automatic', importSource: 'hono/jsx', development: false },
         plugins: [EmailBun(options)],
       })
       if (!result.success) throw new AggregateError(result.logs, 'Bun build failed')
@@ -196,9 +204,14 @@ const bundleFixture = async (
   return output
 }
 
-const expectRenderedStyles = async (output: string) => {
+const readRenderedHtml = async (output: string): Promise<string> => {
   const { Email } = (await import(output)) as { Email: () => Parameters<typeof render>[0] }
   const { html } = await render(Email(), { strict: false, onWarning: 'silent' })
+  return html
+}
+
+const expectRenderedStyles = async (output: string) => {
+  const html = await readRenderedHtml(output)
   expect(html).toContain('display:block')
   expect(html).toContain('margin-top:8px')
   expect(html).toContain('color:#123456')
@@ -225,4 +238,85 @@ describe('actual bundler integration', () => {
       expect(code).not.toContain('buildTailwindArtifactFromCss')
     }, 20_000)
   }
+
+  test('esbuild rebuilds imported CSS, config dependencies, and shared sources', async () => {
+    const fixture = await createFixture()
+    const { root, entry, options } = fixture
+    const tokens = path.join(root, 'tokens.cjs')
+    await writeFile(tokens, `module.exports = { brand: '#123456' }`)
+    await writeFile(
+      fixture.configPath,
+      `module.exports = { theme: { extend: { spacing: { email: '3px' }, colors: require('./tokens.cjs') } } }`,
+    )
+    const styles = path.join(root, 'theme.css')
+    await writeFile(styles, '.custom { font-weight: 700; }')
+    const output = path.join(root, 'rebuild.mjs')
+    const context = await esbuildContext({
+      absWorkingDir: root,
+      entryPoints: [entry],
+      outfile: output,
+      bundle: true,
+      format: 'esm',
+      platform: 'node',
+      external: ['hono-email', 'hono/jsx/jsx-runtime'],
+      jsx: 'automatic',
+      jsxImportSource: 'hono/jsx',
+      plugins: [EmailEsbuild({ ...options, css: '@import "./theme.css";' })],
+    })
+    try {
+      await context.rebuild()
+      await expectRenderedStyles(output)
+      await writeFile(tokens, `module.exports = { brand: '#654321' }`)
+      await writeFile(styles, '.custom { font-weight: 400; }')
+      await writeFile(
+        path.join(root, 'shared/button.tsx'),
+        `export const Button = () => <div className="inline mt-[9px]">Shared</div>`,
+      )
+      await context.rebuild()
+      const nextOutput = path.join(root, 'rebuilt.mjs')
+      await writeFile(nextOutput, await readFile(output))
+      const html = await readRenderedHtml(nextOutput)
+      expect(html).toContain('display:inline')
+      expect(html).toContain('margin-top:9px')
+      expect(html).toContain('color:#654321')
+      expect(html).toContain('font-weight:400')
+      expect(html).not.toContain('color:#123456')
+      expect(await readFile(output, 'utf8')).not.toContain('sm:text-brand')
+    } finally {
+      await context.dispose()
+    }
+  }, 20_000)
+
+  test('Vite invalidates artifacts when shared source files change during development', async () => {
+    const { root, entry, options } = await createFixture()
+    const server = await createServer({
+      root,
+      configFile: false,
+      logLevel: 'silent',
+      plugins: [EmailVite(options)],
+      oxc: { jsx: { runtime: 'automatic', importSource: 'hono/jsx' } },
+      server: { middlewareMode: true, hmr: false },
+    })
+    try {
+      const id = 'virtual-hono-email-tw-artifact/' + encodeURIComponent(entry)
+      const initial = (await server.ssrLoadModule(id)) as { default: CssBuildArtifact }
+      expect(initial.default.inlineStylesByClass.block).toEqual({ display: 'block' })
+      await writeFile(
+        path.join(root, 'shared/button.tsx'),
+        `export const Button = () => <div className="inline">Shared</div>`,
+      )
+      let artifact = initial.default
+      const deadline = Date.now() + 5000
+      while (Date.now() < deadline) {
+        await new Promise((resolve) => setTimeout(resolve, 50))
+        const next = (await server.ssrLoadModule(id)) as { default: CssBuildArtifact }
+        artifact = next.default
+        if (artifact.inlineStylesByClass.inline) break
+      }
+      expect(artifact.inlineStylesByClass.inline).toEqual({ display: 'inline' })
+      expect(artifact.inlineStylesByClass.block).toBeUndefined()
+    } finally {
+      await server.close()
+    }
+  }, 10_000)
 })
