@@ -1,9 +1,6 @@
-import {
-  buildTailwindArtifactFromCss,
-  encodeTailwindWarnings,
-  transformTailwindHtml,
-  wrapGeneratedHeadCss,
-} from '../tailwind'
+import { buildCssArtifact } from '../css/artifact'
+import { inlineCssArtifact, wrapGeneratedHeadCss } from '../css/inline'
+import { encodeCssWarnings, formatDroppedClassWarning } from '../css/warnings'
 
 const HONO_CSS_STYLE_ID = 'hono-css'
 const HONO_CSS_STYLE_TAG_PATTERN = new RegExp(
@@ -122,11 +119,8 @@ export const transformHonoCssOutput = async (html: string): Promise<string> => {
     return runtimeExtracted.html
   }
 
-  const artifact = buildTailwindArtifactFromCss({ css })
-  const transformed = await transformTailwindHtml(runtimeExtracted.html, artifact, {
-    preserveMarkdownTailwindParentRequiredAttribute: true,
-    throwOnMissingClass: false,
-  })
+  const artifact = buildCssArtifact({ css })
+  const transformed = await inlineCssArtifact(runtimeExtracted.html, artifact)
 
-  return `${encodeTailwindWarnings(transformed.warnings)}${wrapGeneratedHeadCss(transformed.headCss)}${transformed.html}`
+  return `${encodeCssWarnings(transformed.droppedClasses.map(formatDroppedClassWarning))}${wrapGeneratedHeadCss(transformed.headCss)}${transformed.html}`
 }

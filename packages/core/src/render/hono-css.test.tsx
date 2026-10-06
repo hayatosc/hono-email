@@ -12,6 +12,8 @@ import {
   buildTailwindArtifactFromCss,
   render,
 } from '../index'
+import { extractTailwindWarnings } from '../tailwind'
+import { transformHonoCssOutput } from './hono-css'
 
 const StyledEmail = ({ includeStyle = true }: { includeStyle?: boolean } = {}) => {
   const titleClassName = css`
@@ -33,6 +35,26 @@ const StyledEmail = ({ includeStyle = true }: { includeStyle?: boolean } = {}) =
 }
 
 describe('hono/css integration', () => {
+  test('preserves warning text, class renaming, and parent markers when using generic CSS helpers', async () => {
+    const transformed = await transformHonoCssOutput(
+      '<html><head><style id="hono-css">' +
+        '.css-base { color: red; } .css-drop::before { content: "x"; }' +
+        '.css-unused::after { content: "y"; } .hover\\:css-base:hover { color: blue; }' +
+        '</style></head><body><p class="css-base css-drop hover:css-base external" ' +
+        'data-hono-email-markdown-tailwind-parent-required="">Hello</p></body></html>',
+    )
+
+    expect(extractTailwindWarnings(transformed)).toEqual({
+      html:
+        '<style data-hono-email-head="true">.hover-css-base:hover{color:blue !important}</style>' +
+        '<html><head></head><body><p class="css-base hover-css-base external" ' +
+        'data-hono-email-markdown-tailwind-parent-required="" style="color:red">Hello</p></body></html>',
+      warnings: [
+        "Tailwind class 'css-drop' uses an unsupported selector (combinator or pseudo-element) and was dropped.",
+      ],
+    })
+  })
+
   test('inlines hono/css classes during render', async () => {
     const { html } = await render(<StyledEmail />)
 
