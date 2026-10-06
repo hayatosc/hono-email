@@ -1,6 +1,9 @@
+import { createRequire } from 'node:module'
+
 import { defineConfig } from 'tsdown'
 
-const neverBundle = [/^node:/, 'unplugin', /^hono-email(\/.*)?$/]
+const require = createRequire(new URL('../core/package.json', import.meta.url))
+const neverBundle = [/^node:/, 'unplugin', /^@tailwindcss\//, /^tailwindcss(\/.*)?$/]
 
 export default defineConfig({
   entry: {
@@ -20,5 +23,6 @@ export default defineConfig({
   dts: true,
   outDir: 'dist',
   clean: true,
-  deps: { neverBundle },
+  alias: { 'css-tree': require.resolve('css-tree/dist/csstree.esm') },
+  deps: { neverBundle, alwaysBundle: ['css-tree'] },
 })

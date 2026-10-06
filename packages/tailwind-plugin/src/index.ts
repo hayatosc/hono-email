@@ -1,25 +1,31 @@
+import { createRequire } from 'node:module'
 import path from 'node:path'
 
-import { createUnplugin, type UnpluginFactory, type UnpluginInstance } from 'unplugin'
+import { compile, optimize } from '@tailwindcss/node'
+import { clearRequireCache } from '@tailwindcss/node/require-cache'
+import { Scanner } from '@tailwindcss/oxide'
+import {
+  createUnplugin,
+  type UnpluginBuildContext,
+  type UnpluginFactory,
+  type UnpluginInstance,
+} from 'unplugin'
 
+import { buildCssArtifact } from '../../core/src/css/artifact'
 import type { EmailTailwindPluginOptions } from './types'
 
 export type { EmailTailwindPluginOptions } from './types'
 
 const PLUGIN_NAME = 'hono-email-tailwind'
 const DEFAULT_PACKAGE_NAMES = ['hono-email'] as const
-const ARTIFACT_IMPORT_PREFIX = 'virtual:hono-email-tw-artifact:'
-const CSS_IMPORT_PREFIX = 'virtual:hono-email-tw.css:'
-const RESOLVED_ARTIFACT_PREFIX = '\0virtual:hono-email-tw-artifact:'
-const RESOLVED_CSS_PREFIX = '\0virtual:hono-email-tw-css:'
-const RESOLVED_CSS_SUFFIX = '.css'
+const ARTIFACT_IMPORT_PREFIX = 'virtual-hono-email-tw-artifact/'
+const RESOLVED_ARTIFACT_PREFIX = '\0virtual-hono-email-tw-artifact/'
 const SOURCE_MODULE_FILTER: RegExp = /\.[cm]?[jt]sx?(?:[?#]|$)/
 
 type ResolvedPluginOptions = {
   configPath?: string
   css?: string
   packageNames: string[]
-  runtimeModuleSpecifier: string
   safelist: string[]
 }
 
@@ -27,11 +33,14 @@ const normalizePathForCss = (value: string): string => value.replace(/\\/g, '/')
 
 const escapeCssString = (value: string): string => value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
 
-const resolveOptionalPath = (value: string | undefined): string | undefined =>
-  value ? normalizePathForCss(path.resolve(value)) : undefined
+const resolveOptionalPath = (value: string | undefined, base: string): string | undefined =>
+  value ? normalizePathForCss(path.resolve(base, value)) : undefined
 
-const resolvePluginOptions = (options: EmailTailwindPluginOptions = {}): ResolvedPluginOptions => {
-  const configPath = resolveOptionalPath(options.configPath)
+const resolvePluginOptions = (
+  options: EmailTailwindPluginOptions = {},
+  base: string = process.cwd(),
+): ResolvedPluginOptions => {
+  const configPath = resolveOptionalPath(options.configPath, base)
   const css = options.css?.trim()
   return {
     ...(configPath !== undefined ? { configPath } : {}),
@@ -39,10 +48,6 @@ const resolvePluginOptions = (options: EmailTailwindPluginOptions = {}): Resolve
     packageNames: options.packageNames?.length
       ? [...new Set(options.packageNames)]
       : [...DEFAULT_PACKAGE_NAMES],
-    runtimeModuleSpecifier:
-      options.runtimeModuleSpecifier?.trim() ||
-      options.packageNames?.[0] ||
-      DEFAULT_PACKAGE_NAMES[0],
     safelist: options.safelist?.length ? [...new Set(options.safelist)] : [],
   }
 }
@@ -178,10 +183,11 @@ export const transformTailwindComponentSource = (
 }
 
 /**
- * Builds the per-file CSS virtual module content for Tailwind processing.
+ * Builds the per-file CSS input for Tailwind compilation.
  *
  * @param sourceFilePath - Absolute path of the email source file.
  * @param options - Plugin options.
+ * @param base - Directory used to resolve relative CSS imports and configuration references.
  * @returns CSS module string.
  *
  * @example
@@ -194,12 +200,15 @@ export const transformTailwindComponentSource = (
 export const buildPerFileCssModule = (
   sourceFilePath: string,
   options: EmailTailwindPluginOptions = {},
+  base: string = process.cwd(),
 ): string => {
-  const resolved = resolvePluginOptions(options)
+  const resolved = resolvePluginOptions(options, base)
   const lines = ['@import "tailwindcss";']
 
   if (resolved.configPath) {
-    lines.push(`@config "${escapeCssString(normalizePathForCss(resolved.configPath))}";`)
+    const configPath = normalizePathForCss(path.relative(base, resolved.configPath))
+    // Tailwind tracks transitive config dependencies only for relative module specifiers.
+    lines.push(`@config "${escapeCssString(`./${configPath}`)}";`)
   }
 
   lines.push(`@source "${escapeCssString(normalizePathForCss(sourceFilePath))}";`)
@@ -215,27 +224,85 @@ export const buildPerFileCssModule = (
   return `${lines.join('\n')}\n`
 }
 
+type CompiledArtifactModule = {
+  code: string
+  files: Set<string>
+  directories: Set<string>
+}
+
+const require = createRequire(import.meta.url)
+
+const decodeSourcePath = (encodedPath: string): string => {
+  try {
+    return decodeURIComponent(encodedPath)
+  } catch {
+    throw new Error(`Invalid encoded path in Tailwind artifact virtual module: ${encodedPath}`)
+  }
+}
+
+const compileArtifactModule = async (
+  sourceFilePath: string,
+  options: EmailTailwindPluginOptions,
+  root: string,
+  buildDependencies: Set<string>,
+): Promise<CompiledArtifactModule> => {
+  const files = new Set([sourceFilePath])
+  const compiler = await compile(buildPerFileCssModule(sourceFilePath, options, root), {
+    base: root,
+    onDependency(file) {
+      files.add(file)
+      buildDependencies.add(file)
+    },
+    // Resolve the matching Tailwind stylesheet even when the host has no CSS tooling installed.
+    async customCssResolver(id) {
+      return id === 'tailwindcss' ? require.resolve('tailwindcss/index.css') : undefined
+    },
+  })
+  const sources =
+    compiler.root === 'none'
+      ? []
+      : [{ ...(compiler.root ?? { base: root, pattern: '**/*' }), negated: false }]
+  const scanner = new Scanner({ sources: [...sources, ...compiler.sources] })
+  const candidates = scanner.scan()
+  for (const file of scanner.files) files.add(file)
+  const directories = new Set(scanner.globs.map((glob) => glob.base))
+  // Flatten Tailwind's nested selectors before the shared email CSS builder sees them.
+  const css = optimize(compiler.build(candidates), { minify: false }).code
+  const artifact = buildCssArtifact({ css })
+  return { code: `export default ${JSON.stringify(artifact)}\n`, files, directories }
+}
+
+const watchArtifact = (context: UnpluginBuildContext, artifact: CompiledArtifactModule): void => {
+  for (const file of artifact.files) context.addWatchFile(file)
+  const native = context.getNativeBuildContext?.()
+  for (const directory of artifact.directories) {
+    if (native?.framework === 'webpack' || native?.framework === 'rspack') {
+      native.loaderContext?.addContextDependency(directory)
+    } else {
+      context.addWatchFile(directory)
+    }
+  }
+}
+
 /**
- * Builds the per-file artifact virtual module content.
+ * Compiles Tailwind and returns a JavaScript module exporting a serialized email CSS artifact.
+ * Relative CSS imports resolve from the current working directory.
  *
- * @param encodedPath - URL-encoded file path.
- * @param runtimeModuleSpecifier - Module specifier for the runtime import.
- * @returns Artifact module string.
- *
- * @example
- * ```ts
- * import { buildPerFileArtifactModule } from '@hono-email/tailwind-plugin'
- *
- * const mod = buildPerFileArtifactModule(encodedPath, 'hono-email')
- * ```
+ * @param encodedPath - URL-encoded source file path.
+ * @param options - Tailwind compilation options. Legacy runtime specifiers are ignored.
  */
-export const buildPerFileArtifactModule = (
+export const buildPerFileArtifactModule = async (
   encodedPath: string,
-  runtimeModuleSpecifier: string = DEFAULT_PACKAGE_NAMES[0],
-): string =>
-  `import tailwindCss from '${CSS_IMPORT_PREFIX}${encodedPath}?inline'\n` +
-  `import { buildTailwindArtifactFromCss } from '${runtimeModuleSpecifier}'\n\n` +
-  `export default buildTailwindArtifactFromCss({ css: tailwindCss })\n`
+  options: EmailTailwindPluginOptions | string = {},
+): Promise<string> => {
+  const artifact = await compileArtifactModule(
+    decodeSourcePath(encodedPath),
+    typeof options === 'string' ? {} : options,
+    process.cwd(),
+    new Set(),
+  )
+  return artifact.code
+}
 
 /**
  * Raw unplugin factory for custom plugin wiring.
@@ -254,57 +321,116 @@ export const unpluginFactory: UnpluginFactory<EmailTailwindPluginOptions | undef
   options,
 ) => {
   const resolvedOptions = resolvePluginOptions(options)
+  let root = process.cwd()
+  const compiled = new Map<string, Promise<CompiledArtifactModule>>()
+  const buildDependencies = new Set<string>()
+  const artifactIds = new Set<string>()
+  const invalidate = (): void => {
+    clearRequireCache([...buildDependencies])
+    buildDependencies.clear()
+    compiled.clear()
+  }
+  const getArtifact = async (id: string): Promise<CompiledArtifactModule> => {
+    const sourceFilePath = decodeSourcePath(id.slice(RESOLVED_ARTIFACT_PREFIX.length))
+    artifactIds.add(id)
+    let pending = compiled.get(sourceFilePath)
+    if (!pending) {
+      pending = compileArtifactModule(sourceFilePath, options ?? {}, root, buildDependencies)
+      compiled.set(sourceFilePath, pending)
+    }
+    try {
+      return await pending
+    } catch (error) {
+      compiled.delete(sourceFilePath)
+      throw error
+    }
+  }
 
   return {
     name: PLUGIN_NAME,
     enforce: 'pre',
+    // New compilers also remove candidates deleted since the previous build.
+    buildStart: invalidate,
+    watchChange: invalidate,
+    esbuild: {
+      config(options) {
+        root = options.absWorkingDir ?? process.cwd()
+      },
+      setup(build) {
+        // Unplugin forwards watchFiles, but esbuild needs watchDirs to discover new candidates.
+        build.onLoad(
+          { filter: new RegExp(`^${RESOLVED_ARTIFACT_PREFIX}`), namespace: PLUGIN_NAME },
+          async ({ path: id }) => {
+            const artifact = await getArtifact(id)
+            return {
+              contents: artifact.code,
+              loader: 'js',
+              watchFiles: [...artifact.files],
+              watchDirs: [...artifact.directories],
+            }
+          },
+        )
+      },
+    },
+    bun: {
+      setup(build) {
+        root = path.resolve(build.config.root ?? process.cwd())
+      },
+    },
+    webpack(compiler) {
+      root = compiler.context
+    },
+    rspack(compiler) {
+      root = compiler.context
+    },
+    vite: {
+      configResolved(config) {
+        root = config.root
+      },
+      hotUpdate(context) {
+        invalidate()
+        const modules = new Set(context.modules)
+        for (const id of artifactIds) {
+          const module = this.environment.moduleGraph.getModuleById(id)
+          if (module) {
+            this.environment.moduleGraph.invalidateModule(module)
+            modules.add(module)
+          }
+        }
+        return [...modules]
+      },
+      handleHotUpdate(context) {
+        invalidate()
+        const modules = new Set(context.modules)
+        for (const id of artifactIds) {
+          const module = context.server.moduleGraph.getModuleById(id)
+          if (module) {
+            context.server.moduleGraph.invalidateModule(module)
+            modules.add(module)
+          }
+        }
+        return [...modules]
+      },
+    },
     resolveId(id) {
       if (id.startsWith(ARTIFACT_IMPORT_PREFIX)) {
         return `${RESOLVED_ARTIFACT_PREFIX}${id.slice(ARTIFACT_IMPORT_PREFIX.length)}`
       }
-
-      if (id.startsWith(CSS_IMPORT_PREFIX)) {
-        const withoutPrefix = id.slice(CSS_IMPORT_PREFIX.length)
-        const queryIndex = withoutPrefix.indexOf('?')
-        const encodedPath = queryIndex >= 0 ? withoutPrefix.slice(0, queryIndex) : withoutPrefix
-        const query = queryIndex >= 0 ? withoutPrefix.slice(queryIndex) : ''
-        return `${RESOLVED_CSS_PREFIX}${encodedPath}${RESOLVED_CSS_SUFFIX}${query}`
-      }
-
       return null
     },
-    load(id) {
-      const qIdx = id.indexOf('?')
-      const bareId = qIdx >= 0 ? id.slice(0, qIdx) : id
-      if (bareId.startsWith(RESOLVED_CSS_PREFIX) && bareId.endsWith(RESOLVED_CSS_SUFFIX)) {
-        const encodedPath = bareId.slice(RESOLVED_CSS_PREFIX.length, -RESOLVED_CSS_SUFFIX.length)
-        let sourceFilePath: string
-        try {
-          sourceFilePath = decodeURIComponent(encodedPath)
-        } catch {
-          throw new Error(`Invalid encoded path in Tailwind CSS virtual module: ${encodedPath}`)
-        }
-
-        this.addWatchFile(sourceFilePath)
-
-        if (resolvedOptions.configPath) {
-          this.addWatchFile(resolvedOptions.configPath)
-        }
-
-        return buildPerFileCssModule(sourceFilePath, resolvedOptions)
-      }
-
-      if (bareId.startsWith(RESOLVED_ARTIFACT_PREFIX)) {
-        const encodedPath = bareId.slice(RESOLVED_ARTIFACT_PREFIX.length)
-        return buildPerFileArtifactModule(encodedPath, resolvedOptions.runtimeModuleSpecifier)
-      }
-
-      return null
+    load: {
+      filter: { id: new RegExp(`^${RESOLVED_ARTIFACT_PREFIX}`) },
+      async handler(id) {
+        if (!id.startsWith(RESOLVED_ARTIFACT_PREFIX)) return null
+        const artifact = await getArtifact(id)
+        watchArtifact(this, artifact)
+        return artifact.code
+      },
     },
     transform: {
       filter: {
         id: SOURCE_MODULE_FILTER,
-        code: '<Tailwind',
+        code: 'Tailwind',
       },
       handler(code, id) {
         const normalizedId = stripQueryAndHash(id)

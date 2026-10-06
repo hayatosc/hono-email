@@ -189,6 +189,7 @@ const bundleFixture = async (
     }
     case 'bun': {
       const result = await Bun.build({
+        root,
         entrypoints: [entry],
         target: 'bun',
         format: 'esm',
@@ -252,6 +253,19 @@ describe('actual bundler integration', () => {
     )
     fixture.options.configPath = './tailwind.config.ts'
     fixture.options.css = '@import "./theme.css";'
+    await expectRenderedStyles(await bundleFixture('esbuild', fixture))
+  })
+
+  test('esbuild transforms aliased Tailwind imports', async () => {
+    const fixture = await createFixture()
+    const source = await readFile(fixture.entry, 'utf8')
+    await writeFile(
+      fixture.entry,
+      source
+        .replace('{ Tailwind }', '{ Tailwind as EmailStyles }')
+        .replaceAll('<Tailwind>', '<EmailStyles>')
+        .replaceAll('</Tailwind>', '</EmailStyles>'),
+    )
     await expectRenderedStyles(await bundleFixture('esbuild', fixture))
   })
 
