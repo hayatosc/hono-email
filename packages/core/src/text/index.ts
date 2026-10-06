@@ -1,7 +1,7 @@
 import { decodeNamedCharacterReference } from 'decode-named-character-reference'
 
 import { readAttribute } from '../html-attribute'
-import { stripHtmlComments } from '../validate/tags'
+import { tokenizeHtml } from '../html-tokenizer'
 
 export type PlainTextRenderOptions = {
   headingStyle?: 'preserve' | 'uppercase'
@@ -19,22 +19,31 @@ const DEFAULT_PLAIN_TEXT_RENDER_OPTIONS: Required<PlainTextRenderOptions> = {
   listBullet: '-',
 }
 
-const stripDoctype = (html: string): string => html.replace(/<!DOCTYPE[^>]*>/gi, '')
-
 const HEADING_START = '\uE000'
 const HEADING_END = '\uE001'
 const stripHeadingMarkers = (text: string): string => text.replace(/[\uE000\uE001]/g, '')
 
-const PREVIEW_BLOCK_PATTERN = /<div\b[^>]*data-hono-email-preview="true"[\s\S]*?<\/div>/gi
+const VOID_TAGS = new Set([
+  'area',
+  'base',
+  'br',
+  'col',
+  'embed',
+  'hr',
+  'img',
+  'input',
+  'link',
+  'meta',
+  'param',
+  'source',
+  'track',
+  'wbr',
+])
 
-const stripPreviewBlocks = (html: string): string => {
-  let result = html
-  let prev: string
-  do {
-    prev = result
-    result = result.replace(PREVIEW_BLOCK_PATTERN, '')
-  } while (result !== prev)
-  return result
+type OpenElement = {
+  tag: string
+  skipped: boolean
+  link?: { href: string; start: number }
 }
 
 const ENTITY_PATTERN = /&(#x[0-9a-f]+|#\d+|[a-z][a-z0-9]*);/gi
@@ -98,40 +107,70 @@ export const renderPlainText = (html: string, options: PlainTextRenderOptions = 
     ...options,
   }
 
-  let text = stripPreviewBlocks(stripHtmlComments(stripDoctype(html)))
+  const stack: OpenElement[] = []
+  let text = ''
 
-  let prev: string
-  do {
-    prev = text
-    text = text.replace(/<style\b[^>]*>[\s\S]*?<\/style(?:\s+[^>]*)?\s*>/gi, '')
-  } while (text !== prev)
-  do {
-    prev = text
-    text = text.replace(/<script\b[^>]*>[\s\S]*?<\/script(?:\s+[^>]*)?\s*>/gi, '')
-  } while (text !== prev)
+  for (const token of tokenizeHtml(html)) {
+    const parentSkipped = stack.at(-1)?.skipped ?? false
 
-  text = text.replace(/<hr\s*\/?>/gi, `\n${resolvedOptions.hrSeparator}\n`)
-  text = text.replace(/<br\s*\/?>/gi, '\n')
-  text = text.replace(/<\/p>/gi, '\n\n')
-  text = text.replace(/<\/div>/gi, '\n')
-  text = text.replace(/<h[1-6]\b[^>]*>/gi, `\n\n${HEADING_START}`)
-  text = text.replace(/<\/h[1-6]>/gi, `${HEADING_END}\n\n`)
-  text = text.replace(/<li[^>]*>/gi, `\n${resolvedOptions.listBullet} `)
-  text = text.replace(/<\/li>/gi, '')
-  text = text.replace(/<img\b([^>]*)\/?>/gi, (_match, attributes: string) =>
-    formatImage(attributes, resolvedOptions.includeImageAlt),
-  )
-  text = text.replace(
-    /<a\b([^>]*)>([\s\S]*?)<\/a>/gi,
-    (match, attributes: string, label: string) => {
+    if (token.type === 'text') {
+      if (!parentSkipped) text += token.raw
+      continue
+    }
+    if (token.type !== 'tag') continue
+
+    const tag = token.name
+    const heading = /^h[1-6]$/.test(tag)
+
+    if (token.closing) {
+      let index = stack.length - 1
+      while (index >= 0 && stack[index]?.tag !== tag) index -= 1
+      const element = stack[index]
+      if (index >= 0) stack.length = index
+      if (parentSkipped) continue
+
+      if (element?.link) {
+        const { href, start } = element.link
+        text =
+          text.slice(0, start) + formatLink(text.slice(start), href, resolvedOptions.linkFormat)
+      } else if (tag === 'p') {
+        text += '\n\n'
+      } else if (tag === 'div') {
+        text += '\n'
+      } else if (heading) {
+        text += `${HEADING_END}\n\n`
+      }
+      continue
+    }
+
+    const attributes = html.slice(token.nameEnd, token.end - 1)
+    const skipped =
+      parentSkipped ||
+      tag === 'style' ||
+      tag === 'script' ||
+      (tag === 'div' &&
+        readAttribute(attributes, 'data-hono-email-preview')?.toLowerCase() === 'true')
+    const element: OpenElement = { tag, skipped }
+
+    if (!skipped && tag === 'a') {
       const href = readAttribute(attributes, 'href')
-      return href === undefined ? match : formatLink(label, href, resolvedOptions.linkFormat)
-    },
-  )
-  do {
-    prev = text
-    text = text.replace(/<[^>]+>/g, '')
-  } while (text !== prev)
+      if (href !== undefined) element.link = { href, start: text.length }
+    }
+    if (!token.selfClosing && !VOID_TAGS.has(tag)) stack.push(element)
+    if (skipped) continue
+
+    if (tag === 'hr') {
+      text += `\n${resolvedOptions.hrSeparator}\n`
+    } else if (tag === 'br') {
+      text += '\n'
+    } else if (tag === 'li') {
+      text += `\n${resolvedOptions.listBullet} `
+    } else if (tag === 'img') {
+      text += formatImage(attributes, resolvedOptions.includeImageAlt)
+    } else if (heading) {
+      text += `\n\n${HEADING_START}`
+    }
+  }
 
   const collapsed = collapseWhitespace(decodeHtmlEntities(text))
 
