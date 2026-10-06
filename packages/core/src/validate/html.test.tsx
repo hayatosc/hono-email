@@ -1,5 +1,7 @@
 import { describe, expect, spyOn, test } from 'bun:test'
 
+import { raw } from 'hono/html'
+
 import { render, type RenderResult } from '../index'
 import { validateHtml } from './html'
 
@@ -475,6 +477,115 @@ describe('render strict mode', () => {
       ),
     ).toThrow(
       "The <form> tag isn't allowed in HTML email strict mode. Active content and embedded resources must not be used in email HTML.",
+    )
+  })
+
+  test.each([
+    ['<a title="a > b" href="javascript:alert(1)">Open</a>', "unsafe 'javascript:' URL scheme"],
+    ['<div onclick="alert(1)">Open</div>', "'onclick' attribute"],
+    ['<div style="filter:blur(1px)">Open</div>', "The CSS property 'filter'"],
+    ['<style>.x{filter:blur(1px)}</style>', "The CSS property 'filter'"],
+    [`<style>.x{background:url('javascript:alert(1)')}</style>`, "unsafe 'javascript:' URL scheme"],
+  ])('retains conditional payload restrictions for %s', (payload, message) => {
+    expect(() => validateHtml(`<!--[if mso]>${payload}<![endif]-->`)).toThrow(message)
+  })
+
+  test.each([
+    '<!--[if mso]><form>Open</form>-->',
+    '<!--[if mso]><form>Open</form><![endif]',
+    '<!--[if mso]><form>Open</form>',
+  ])('rejects active content inside an incompletely closed conditional comment: %s', (html) => {
+    expect(() => validateHtml(html)).toThrow("The <form> tag isn't allowed")
+  })
+
+  test('retains URL checks inside nested conditional comments', () => {
+    expect(() =>
+      validateHtml(
+        '<!--[if mso]><!--[if mso]><a href="javascript:alert(1)">Open</a><![endif]--><![endif]-->',
+      ),
+    ).toThrow("unsafe 'javascript:' URL scheme")
+  })
+
+  test('retains URL checks inside revealed conditional comments', () => {
+    expect(() =>
+      validateHtml('<!--[if !mso]><!--><a href="javascript:alert(1)">Open</a><!--<![endif]-->'),
+    ).toThrow("unsafe 'javascript:' URL scheme")
+  })
+
+  test('does not validate apparent tags or conditional payloads inside CSS strings', () => {
+    expect(() =>
+      validateHtml(
+        '<html><head><style>.x{content:"<form>"}.y{content:"<!--[if mso]><form><![endif]-->"}</style></head><body>Visible</body></html>',
+      ),
+    ).not.toThrow()
+  })
+
+  test('does not remove comment-like attribute values before URL checks', () => {
+    expect(() =>
+      validateHtml('<a title="<!--" href="javascript:alert(1)" data-note="-->">Open</a>'),
+    ).toThrow("unsafe 'javascript:' URL scheme")
+  })
+
+  test.each(['<script!>', '<form:custom>', '<iframe=src>'])(
+    'retains existing blocked tag-name restrictions for malformed input %s',
+    (html) => {
+      expect(() => validateHtml(html)).toThrow("isn't allowed in HTML email strict mode")
+    },
+  )
+
+  test('retains strict rejection when comments are embedded in a tag name', () => {
+    expect(() => validateHtml('<scr<!-- comment -->ipt>alert(1)</script>')).toThrow()
+  })
+
+  test.each([
+    '<!--[if mso]><a href="javascript:alert(1)">Open</a>-->',
+    '<!--[if mso]><a href="javascript:alert(1)">Open</a>',
+    '<!--[if mso]><style>.x{background:url("javascript:alert(1)")}</style>-->',
+    '<!--[if mso]><style>.x{background:url("javascript:alert(1)")}</style>',
+  ])('retains URL and CSS checks in incomplete conditionals: %s', (html) => {
+    expect(() => validateHtml(html)).toThrow("unsafe 'javascript:' URL scheme")
+  })
+
+  test.each(['<div title="unclosed > <form>Open</form>', '<a href="javascript:alert(1)'])(
+    'rejects incomplete markup instead of hiding strict restrictions: %s',
+    (html) => {
+      expect(() => validateHtml(html)).toThrow('Malformed HTML')
+    },
+  )
+
+  describe('visible content after HTML boundaries', () => {
+    test.each([
+      '<!-->',
+      '<!--->',
+      '<!-- note --!>',
+      '<?x label="one >',
+      '<!x label="one >',
+      "<?xml label='one >",
+      "<!x label='one >",
+      '<!DOCTYPE html PUBLIC "one >',
+      "<!DOCTYPE html SYSTEM 'one >",
+      '<!DOCTYPE html "unclosed >',
+    ])('rejects unsafe URLs after the boundary %s', (prefix) => {
+      expect(() => validateHtml(`${prefix}<a href="javascript:alert(1)">Open</a>`)).toThrow(
+        "unsafe 'javascript:' URL scheme",
+      )
+    })
+
+    test.each([
+      ['<form>Open</form>', 'The <form> tag'],
+      ['<div onclick="alert(1)">Open</div>', "'onclick' attribute"],
+      ['<div style="filter:blur(1px)">Open</div>', "The CSS property 'filter'"],
+    ])('retains strict restrictions after a comment ending for %s', (payload, message) => {
+      expect(() => validateHtml(`<!-- note --!>${payload}`)).toThrow(message)
+    })
+
+    test.each(['<!-->', '<?x label="one >'])(
+      'rejects unsafe HTML through render after the boundary %s',
+      async (prefix) => {
+        await expect(
+          render(raw(`${prefix}<a href="javascript:alert(1)">Open</a>`)),
+        ).rejects.toThrow("unsafe 'javascript:' URL scheme")
+      },
     )
   })
 

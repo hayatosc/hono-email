@@ -27,4 +27,45 @@ describe('preventWidows', () => {
       '<p>This is a <i>very <b>bold&nbsp;statement</b></i></p>',
     )
   })
+
+  test('preserves literal less-than signs in text', () => {
+    expect(preventWidows('<p>Value < 2 words</p>')).toBe('<p>Value < 2&nbsp;words</p>')
+    expect(preventWidows('<')).toBe('<')
+  })
+
+  test.each(['script', 'style', 'textarea', 'title'])(
+    'does not close a skipped preview on apparent tags inside raw %s content',
+    (tag) => {
+      const preview = `<div data-hono-email-preview="true"><${tag}>"</div><p>Raw words</p>"</${tag}>Hidden words</div>`
+      expect(preventWidows(`${preview}<p>Visible words</p>`)).toBe(
+        `${preview}<p>Visible&nbsp;words</p>`,
+      )
+    },
+  )
+
+  test('preserves unclosed comments through EOF', () => {
+    expect(preventWidows('<p>Visible words</p><!-- <p>Hidden words')).toBe(
+      '<p>Visible&nbsp;words</p><!-- <p>Hidden words',
+    )
+  })
+
+  test('preserves incomplete quoted tags through EOF', () => {
+    expect(preventWidows('<p>Visible words</p><div title="Hidden words')).toBe(
+      '<p>Visible&nbsp;words</p><div title="Hidden words',
+    )
+  })
+
+  test('does not skip visible text when marker text is inside an attribute value', () => {
+    expect(preventWidows('<div title="data-hono-email-preview">Visible words</div>')).toBe(
+      '<div title="data-hono-email-preview">Visible&nbsp;words</div>',
+    )
+  })
+
+  test('preserves conditional comments and quoted attributes verbatim', () => {
+    expect(
+      preventWidows(
+        '<!--[if mso]><p>Hidden words</p><![endif]--><p title="a > b">Visible words</p>',
+      ),
+    ).toBe('<!--[if mso]><p>Hidden words</p><![endif]--><p title="a > b">Visible&nbsp;words</p>')
+  })
 })

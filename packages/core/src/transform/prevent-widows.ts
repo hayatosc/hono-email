@@ -1,3 +1,6 @@
+import { hasAttribute } from '../html-attribute'
+import { tokenizeHtml } from '../html-tokenizer'
+
 const SKIP_TAGS = new Set(['pre', 'code', 'style', 'script', 'head', 'title', 'textarea'])
 const BLOCK_TAGS = new Set([
   'p',
@@ -29,7 +32,7 @@ const BLOCK_TAGS = new Set([
   'hr',
 ])
 
-const TOKEN_PATTERN = /<!--[\s\S]*?-->|<(?:[^>"']|"[^"]*"|'[^']*')*>|[^<]+/g
+const INCOMPLETE_MARKUP_PATTERN = /^<(?:\/?[a-z]|[!?])/i
 
 /**
  * Prevents widows by joining the last two words of each text block with `&nbsp;`.
@@ -42,7 +45,8 @@ const TOKEN_PATTERN = /<!--[\s\S]*?-->|<(?:[^>"']|"[^"]*"|'[^']*')*>|[^<]+/g
  * @returns HTML with non-breaking spaces inserted before trailing words.
  */
 export const preventWidows = (html: string): string => {
-  const tokens = html.match(TOKEN_PATTERN) || []
+  const sourceTokens = [...tokenizeHtml(html)]
+  const tokens = sourceTokens.map((token) => token.raw)
   const stack: { tag: string; skip: boolean }[] = []
 
   type ActiveText = {
@@ -94,14 +98,10 @@ export const preventWidows = (html: string): string => {
     activeTextNodes = []
   }
 
-  for (let i = 0; i < tokens.length; i++) {
-    const token = tokens[i] ?? ''
-
-    if (token.startsWith('<!--') || token.startsWith('<')) {
-      const closeMatch = /^<\/([a-zA-Z0-9-]+)/.exec(token)
-      if (closeMatch) {
-        const tag = closeMatch[1]?.toLowerCase() ?? ''
-
+  for (const [i, token] of sourceTokens.entries()) {
+    if (token.type === 'tag') {
+      const tag = token.name
+      if (token.closing) {
         // Block tags or skip tags will flush active text nodes
         if (BLOCK_TAGS.has(tag) || SKIP_TAGS.has(tag)) {
           flush()
@@ -116,32 +116,28 @@ export const preventWidows = (html: string): string => {
         continue
       }
 
-      const openMatch = /^<([a-zA-Z0-9-]+)/.exec(token)
-      if (openMatch) {
-        const tag = openMatch[1]?.toLowerCase() ?? ''
-        const selfClosing = token.endsWith('/>')
+      if (BLOCK_TAGS.has(tag) || SKIP_TAGS.has(tag)) {
+        flush()
+      }
 
-        if (BLOCK_TAGS.has(tag) || SKIP_TAGS.has(tag)) {
-          flush()
-        }
-
-        if (!selfClosing) {
-          const skip =
-            (stack[stack.length - 1]?.skip ?? false) ||
-            SKIP_TAGS.has(tag) ||
-            token.includes('data-hono-email-preview')
-          stack.push({ tag, skip })
-        }
+      if (!token.selfClosing) {
+        const skip =
+          (stack[stack.length - 1]?.skip ?? false) ||
+          SKIP_TAGS.has(tag) ||
+          hasAttribute(html.slice(token.nameEnd, token.end - 1), 'data-hono-email-preview')
+        stack.push({ tag, skip })
       }
       continue
     }
 
+    if (token.type !== 'text') continue
+
     // It's a text token
     const isSkipped = stack[stack.length - 1]?.skip ?? false
-    if (isSkipped) {
+    if (isSkipped || INCOMPLETE_MARKUP_PATTERN.test(token.raw)) {
       flush()
     } else {
-      activeTextNodes.push({ tokenIndex: i, text: token })
+      activeTextNodes.push({ tokenIndex: i, text: token.raw })
     }
   }
 
