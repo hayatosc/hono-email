@@ -106,14 +106,15 @@ jobs:
             docs:
               - 'docs/**'
 
+      # Consumer integration tests use the packages' published entry points.
+      - name: Build packages
+        run: bun run build
+
       - name: Typecheck
         run: bun run typecheck
 
       - name: Test
         run: bun run test
-
-      - name: Build packages
-        run: bun run build
 
       - name: Astro Check
         if: steps.filter.outputs.docs == 'true'

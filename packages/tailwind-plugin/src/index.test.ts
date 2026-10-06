@@ -30,7 +30,7 @@ export const Email = () => (
     const transformed = transformTailwindComponentSource(source, TEST_FILE_ID)
 
     expect(transformed).toContain(
-      `import __EmailTailwindArtifact from 'virtual:hono-email-tw-artifact:${ENCODED_TEST_FILE_ID}'`,
+      `import __EmailTailwindArtifact from 'virtual-hono-email-tw-artifact/${ENCODED_TEST_FILE_ID}'`,
     )
     expect(transformed).toContain('<Tailwind artifact={__EmailTailwindArtifact}>')
   })
@@ -136,8 +136,7 @@ export const Email = () => <EmailTailwind />
     expect(transformed).toContain('<EmailTailwind artifact={__EmailTailwindArtifact} />')
   })
 
-  test('builds a per-file CSS module scoped to only that email file', () => {
-    const repoRoot = process.cwd().replace(/\\/g, '/')
+  test('builds a per-file CSS module with additive source discovery', () => {
     const cssModule = buildPerFileCssModule(TEST_FILE_ID, {
       configPath: './tailwind.config.ts',
       css: '@theme { --color-brand-500: #0f172a; }',
@@ -145,11 +144,8 @@ export const Email = () => <EmailTailwind />
     })
 
     expect(cssModule).toContain('@import "tailwindcss";')
-    expect(cssModule).toContain(
-      `@config "${path.join(repoRoot, 'tailwind.config.ts').replace(/\\/g, '/')}";`,
-    )
+    expect(cssModule).toContain('@config "./tailwind.config.ts";')
     expect(cssModule).toContain(`@source "${TEST_FILE_ID}";`)
-    expect(cssModule).not.toContain('@source "' + repoRoot) // no extra directory sources
     expect(cssModule).toContain('@source inline("text-brand sm:text-blue-500");')
     expect(cssModule).toContain('@theme { --color-brand-500: #0f172a; }')
   })
@@ -162,16 +158,29 @@ export const Email = () => <EmailTailwind />
     expect(cssModule).toContain('wel\\"come.tsx')
   })
 
-  test('builds a per-file artifact module referencing the per-file CSS virtual module', () => {
-    const moduleCode = buildPerFileArtifactModule(ENCODED_TEST_FILE_ID, '@scope/hono-email')
+  test('serializes an artifact without CSS or runtime imports', async () => {
+    const moduleCode = await buildPerFileArtifactModule(
+      encodeURIComponent(path.resolve(import.meta.dir, 'index.test.ts')),
+      { css: '.custom { color: #123456; }', safelist: ['h-[4px]'] },
+    )
+    const artifact = JSON.parse(moduleCode.slice('export default '.length))
+    expect(artifact.inlineStylesByClass.custom).toEqual({ color: '#123456' })
+    expect(artifact.inlineStylesByClass['h-[4px]']).toEqual({ height: '4px' })
+    expect(moduleCode).not.toContain('import ')
+    expect(moduleCode).not.toContain('?inline')
+  })
 
-    expect(moduleCode).toContain(
-      `import tailwindCss from 'virtual:hono-email-tw.css:${ENCODED_TEST_FILE_ID}?inline'`,
+  test('normalizes default utility values after CSS optimization', async () => {
+    const moduleCode = await buildPerFileArtifactModule(
+      encodeURIComponent(path.resolve(import.meta.dir, 'index.test.ts')),
+      { safelist: ['px-4', 'rounded-lg', 'text-sm', 'text-red-500'] },
     )
-    expect(moduleCode).toContain("import { buildTailwindArtifactFromCss } from '@scope/hono-email'")
-    expect(moduleCode).toContain(
-      'export default buildTailwindArtifactFromCss({ css: tailwindCss })',
-    )
+    const { inlineStylesByClass: styles } = JSON.parse(moduleCode.slice('export default '.length))
+
+    expect(styles['px-4']).toEqual({ 'padding-left': '16px', 'padding-right': '16px' })
+    expect(styles['rounded-lg']).toEqual({ 'border-radius': '8px' })
+    expect(styles['text-sm']).toEqual({ 'font-size': '14px', 'line-height': '1.4285714285714286' })
+    expect(styles['text-red-500']).toEqual({ color: '#fb2c36' })
   })
 
   test('different email files get different virtual module IDs', () => {
@@ -187,8 +196,8 @@ export const Email = () => <EmailTailwind />
       idB,
     )
 
-    expect(transformedA).toContain(`virtual:hono-email-tw-artifact:${encodeURIComponent(idA)}`)
-    expect(transformedB).toContain(`virtual:hono-email-tw-artifact:${encodeURIComponent(idB)}`)
+    expect(transformedA).toContain(`virtual-hono-email-tw-artifact/${encodeURIComponent(idA)}`)
+    expect(transformedB).toContain(`virtual-hono-email-tw-artifact/${encodeURIComponent(idB)}`)
     expect(transformedA).not.toContain(encodeURIComponent(idB))
     expect(transformedB).not.toContain(encodeURIComponent(idA))
   })
@@ -257,27 +266,11 @@ describe('unpluginFactory', () => {
 
   describe('resolveId', () => {
     test('returns resolved artifact prefix for virtual artifact ids', () => {
-      const id = 'virtual:hono-email-tw-artifact:/abs/emails/welcome.tsx'
+      const id = 'virtual-hono-email-tw-artifact//abs/emails/welcome.tsx'
       const resolved = resolveId.call(createMockContext(), id, undefined, {
         isEntry: false,
       })
-      expect(resolved).toBe('\0virtual:hono-email-tw-artifact:/abs/emails/welcome.tsx')
-    })
-
-    test('returns resolved CSS prefix with .css suffix for virtual CSS ids', () => {
-      const id = 'virtual:hono-email-tw.css:/abs/emails/welcome.tsx'
-      const resolved = resolveId.call(createMockContext(), id, undefined, {
-        isEntry: false,
-      })
-      expect(resolved).toBe('\0virtual:hono-email-tw-css:/abs/emails/welcome.tsx.css')
-    })
-
-    test('handles query strings in CSS ids', () => {
-      const id = 'virtual:hono-email-tw.css:/abs/emails/welcome.tsx?inline'
-      const resolved = resolveId.call(createMockContext(), id, undefined, {
-        isEntry: false,
-      })
-      expect(resolved).toBe('\0virtual:hono-email-tw-css:/abs/emails/welcome.tsx.css?inline')
+      expect(resolved).toBe('\0virtual-hono-email-tw-artifact//abs/emails/welcome.tsx')
     })
 
     test('returns null for unrelated ids', () => {
@@ -289,49 +282,29 @@ describe('unpluginFactory', () => {
   })
 
   describe('load', () => {
-    test('returns CSS module content for resolved CSS ids', () => {
-      const id = '\0virtual:hono-email-tw-css:/abs/emails/welcome.tsx.css'
-      const result = load.call(createMockContext(), id)
-      expect(result).toContain('@import "tailwindcss";')
-      expect(result).toContain('@source "/abs/emails/welcome.tsx";')
-    })
-
-    test('calls addWatchFile for CSS ids', () => {
-      const id = '\0virtual:hono-email-tw-css:/abs/emails/welcome.tsx.css'
+    test('loads a serialized artifact and watches scanned sources', async () => {
+      const file = path.resolve(import.meta.dir, 'index.test.ts')
+      const id = '\0virtual-hono-email-tw-artifact/' + encodeURIComponent(file)
       const watchedFiles: string[] = []
       const context = {
         ...createMockContext(),
         addWatchFile: (file: string) => watchedFiles.push(file),
       }
-      void load.call(context, id)
-      expect(watchedFiles).toContain('/abs/emails/welcome.tsx')
+      const result = await load.call(context, id)
+      expect(result).toContain('export default {')
+      expect(result).not.toContain('import ')
+      expect(watchedFiles).toContain(file)
+      expect(watchedFiles.some((f) => f.endsWith('tailwindcss/index.css'))).toBe(true)
     })
 
-    test('calls addWatchFile for configPath when set', () => {
-      const pluginWithConfig = getPluginOptions(
-        unpluginFactory({ configPath: './tailwind.config.ts' }, meta),
-      )
-      const loadWithConfig = getLoadFn(pluginWithConfig)
-      const id = '\0virtual:hono-email-tw-css:/abs/emails/welcome.tsx.css'
-      const watchedFiles: string[] = []
-      const context = {
-        ...createMockContext(),
-        addWatchFile: (file: string) => watchedFiles.push(file),
-      }
-      void loadWithConfig.call(context, id)
-      expect(watchedFiles).toContain('/abs/emails/welcome.tsx')
-      expect(watchedFiles.some((f) => f.endsWith('tailwind.config.ts'))).toBe(true)
+    test('rejects malformed encoded paths', async () => {
+      await expect(
+        load.call(createMockContext(), '\0virtual-hono-email-tw-artifact/%broken'),
+      ).rejects.toThrow('Invalid encoded path')
     })
 
-    test('returns artifact module content for resolved artifact ids', () => {
-      const id = '\0virtual:hono-email-tw-artifact:/abs/emails/welcome.tsx'
-      const result = load.call(createMockContext(), id)
-      expect(result).toContain('virtual:hono-email-tw.css:')
-      expect(result).toContain('buildTailwindArtifactFromCss')
-    })
-
-    test('returns null for unrelated ids', () => {
-      const result = load.call(createMockContext(), 'some-other-module')
+    test('returns null for unrelated ids', async () => {
+      const result = await load.call(createMockContext(), 'some-other-module')
       expect(result).toBeNull()
     })
   })

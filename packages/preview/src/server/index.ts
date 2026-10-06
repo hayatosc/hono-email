@@ -1,8 +1,10 @@
 import { existsSync, readFileSync, realpathSync, statSync } from 'node:fs'
 import { createServer as createHttpServer, type ServerResponse } from 'node:http'
+import { createRequire } from 'node:module'
 import { dirname, extname, isAbsolute, relative, resolve } from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 
+import type * as TailwindPluginModule from '@hono-email/tailwind-plugin'
 import { getRequestListener } from '@hono/node-server'
 import {
   createServer as createViteServer,
@@ -20,6 +22,8 @@ export type PreviewServerOptions = {
   port: number
   host?: string | undefined
   file?: string | undefined
+  /** Select email Tailwind integration; auto detects project dependencies and Tailwind configs. */
+  tailwind?: boolean | 'auto' | undefined
 }
 
 export type PreviewServer = {
@@ -37,7 +41,9 @@ export function detectTailwindConfig(rootDir: string): string | null {
 }
 
 export function detectPostCssConfig(rootDir: string): boolean {
-  return CONFIG_EXTENSIONS.some((ext) => existsSync(resolve(rootDir, `postcss.config.${ext}`)))
+  return CONFIG_EXTENSIONS.some((ext) =>
+    detectTailwindInFile(resolve(rootDir, `postcss.config.${ext}`)),
+  )
 }
 
 export function detectTailwindInFile(path: string): boolean {
@@ -57,6 +63,18 @@ export function detectViteConfigHasTailwind(rootDir: string): boolean {
     }
   }
   return false
+}
+
+function resolveProjectPeer(rootDir: string, specifier: string): string {
+  try {
+    return createRequire(resolve(rootDir, 'package.json')).resolve(specifier)
+  } catch (err) {
+    throw new Error(
+      `Tailwind integration requires "${specifier}" to be installed in the project at "${rootDir}".\n` +
+        'Install @hono-email/tailwind-plugin as a development dependency.',
+      { cause: err },
+    )
+  }
 }
 
 export function isObject(value: unknown): value is Record<string, unknown> {
@@ -173,7 +191,7 @@ export function serveStaticAsset(rootDir: string, pathname: string, res: AssetRe
 const TEMPLATE_EXTENSION = /\.(tsx|jsx)$/
 
 export async function startPreviewServer(options: PreviewServerOptions): Promise<PreviewServer> {
-  const { dir, port, host = '127.0.0.1', file } = options
+  const { dir, port, host = '127.0.0.1', file, tailwind = 'auto' } = options
 
   const rootDir = process.cwd()
   const templateDir = resolve(rootDir, dir)
@@ -210,31 +228,22 @@ export async function startPreviewServer(options: PreviewServerOptions): Promise
   const liveClients = new Set<ServerResponse>()
   const plugins: PluginOption[] = []
 
-  // Vite's `mergeConfig` concatenates `plugins` arrays rather than replacing
-  // them, so if the `--file` config already registers `@tailwindcss/vite`,
-  // auto-injecting our own copy would register it twice and the two
-  // instances would race over the same virtual CSS module. When the
-  // explicit config owns Tailwind, skip auto-detection entirely.
-  const explicitConfigOwnsTailwind = viteConfigFile !== null && detectTailwindInFile(viteConfigFile)
-  const tailwindConfigPath = detectTailwindConfig(rootDir)
+  const tailwindConfigPath = tailwind === false ? null : detectTailwindConfig(rootDir)
   const hasTailwind =
-    !explicitConfigOwnsTailwind &&
-    (tailwindConfigPath !== null ||
-      detectPostCssConfig(rootDir) ||
-      detectViteConfigHasTailwind(rootDir) ||
-      detectTailwindInPackageJson(rootDir))
+    tailwind === true ||
+    (tailwind === 'auto' &&
+      (tailwindConfigPath !== null ||
+        detectPostCssConfig(rootDir) ||
+        detectViteConfigHasTailwind(rootDir) ||
+        (viteConfigFile !== null && detectTailwindInFile(viteConfigFile)) ||
+        detectTailwindInPackageJson(rootDir)))
 
   if (hasTailwind) {
+    const pluginPath = resolveProjectPeer(rootDir, '@hono-email/tailwind-plugin')
     try {
-      const tailwindcssModule = await import('@tailwindcss/vite')
-      const tailwindcss = tailwindcssModule.default
-      const tailwindPlugin = await import('@hono-email/tailwind-plugin')
-
-      if (typeof tailwindcss !== 'function') {
-        throw new Error('Default export of @tailwindcss/vite is not a function')
-      }
-
-      plugins.push(tailwindcss())
+      const tailwindPlugin: typeof TailwindPluginModule = await import(
+        /* @vite-ignore */ pathToFileURL(pluginPath).href
+      )
       plugins.push(
         tailwindPlugin.unplugin.vite({
           ...(tailwindConfigPath ? { configPath: tailwindConfigPath } : {}),
@@ -256,9 +265,8 @@ export async function startPreviewServer(options: PreviewServerOptions): Promise
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)
       throw new Error(
-        `Tailwind CSS configuration detected, but "@hono-email/tailwind-plugin" or "@tailwindcss/vite" could not be loaded.\n` +
-          `Please make sure they are installed in your project: npm install -D @hono-email/tailwind-plugin @tailwindcss/vite\n` +
-          `Underlying error: ${message}`,
+        `Could not load the project's "@hono-email/tailwind-plugin".\nUnderlying error: ${message}`,
+        { cause: err },
       )
     }
   }
@@ -316,7 +324,11 @@ export async function startPreviewServer(options: PreviewServerOptions): Promise
         allow: [rootDir, templateDir, clientDir, resolvePackageRoot()],
       },
     },
-    ssr: { noExternal: ['hono-email', /@hono-email/] },
+    ssr: {
+      noExternal: ['hono-email', /@hono-email/],
+      // Vite defaults to Node conditions even when its module runner uses Bun.
+      ...(process.versions.bun ? { resolve: { externalConditions: ['bun', 'node'] } } : {}),
+    },
     appType: 'custom',
     logLevel: 'info',
     plugins,
@@ -327,7 +339,10 @@ export async function startPreviewServer(options: PreviewServerOptions): Promise
     throw new Error('Vite SSR environment is not runnable')
   }
   const honoApp = createApiRoutes((url) => ssrEnv.runner.import(url), templateDir)
-  const honoHandler = getRequestListener(honoApp.fetch.bind(honoApp))
+  // The adapter's replacement Response can lock streams used by htmlrewriter.
+  const honoHandler = getRequestListener(honoApp.fetch.bind(honoApp), {
+    overrideGlobalObjects: false,
+  })
 
   server.on('request', (req, res) => {
     const host = req.headers.host ?? 'localhost'
