@@ -63,7 +63,7 @@ type PreviewPropSpecFor<Value> = { required?: boolean } & ([NonNullable<Value>] 
       ? TypedOrDefault<Value, 'boolean'>
       : [NonNullable<Value>] extends [readonly (infer Item)[]]
         ? [Item] extends [string]
-          ? TypedOrDefault<Value, 'array'>
+          ? TypedOrDefault<Value, 'array'> & { item?: never }
           : [Item] extends [object]
             ? TypedOrDefault<Value, 'array'> & { item: PreviewPropsFor<Item> }
             : never
