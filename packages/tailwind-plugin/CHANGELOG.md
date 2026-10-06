@@ -1,5 +1,13 @@
 # @hono-email/tailwind-plugin
 
+## 0.9.0
+
+### Minor Changes
+
+- [#149](https://github.com/hayatosc/hono-email/pull/149) [`a32bba1`](https://github.com/hayatosc/hono-email/commit/a32bba1206b70844afdb0ecd4f3e5adcb2a5968c) Thanks [@hayatosc](https://github.com/hayatosc)! - Compile Tailwind CSS with the Node compiler and candidate scanner at build time, then inject serialized artifacts instead of relying on host CSS `?inline` support or runtime artifact building. Preserve the runtime artifact format, custom CSS, config dependencies, safelists, and automatic source discovery across all eight bundler integrations. Invalidate compiler caches and artifact modules for watch builds and Vite development updates.
+
+  The low-level `buildPerFileArtifactModule` helper is now asynchronous and accepts compilation options. The deprecated `runtimeModuleSpecifier` option is retained but no longer generates a runtime import.
+
 ## 0.8.1
 
 ### Patch Changes

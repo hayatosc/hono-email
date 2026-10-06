@@ -1,5 +1,19 @@
 # @hono-email/preview
 
+## 0.9.0
+
+### Minor Changes
+
+- [#136](https://github.com/hayatosc/hono-email/pull/136) [`84087e2`](https://github.com/hayatosc/hono-email/commit/84087e2a5d2659ed9597be51185823b157195427) Thanks [@hayatosc](https://github.com/hayatosc)! - Add `definePreviewProps<Props>()` to check preview form schemas against component props while preserving the existing runtime schema format.
+
+### Patch Changes
+
+- [#149](https://github.com/hayatosc/hono-email/pull/149) [`96f2480`](https://github.com/hayatosc/hono-email/commit/96f2480e68e1f63a4719a6951c2ae69f34b271b1) Thanks [@hayatosc](https://github.com/hayatosc)! - Add a `tailwind` API option (`true`, `false`, or `'auto'`) and `--tailwind on|off|auto` CLI control. Keep automatic detection as the default, exclude generic PostCSS configs, and report a missing email plugin peer from the user's project. Preview now registers only the email Tailwind plugin (requiring version 0.9.0 or later), preserves project theme configuration, and exposes `tailwindcss` as an optional peer for discovery instead of installing host Tailwind Vite CSS processing. The email plugin's dependencies control the compiler version.
+
+  Preserve native Fetch globals when starting the HTTP adapter and select Bun's native HTMLRewriter entry during preview SSR to prevent empty Tailwind render output.
+
+- [#134](https://github.com/hayatosc/hono-email/pull/134) [`efa7223`](https://github.com/hayatosc/hono-email/commit/efa72234172c6e5c25b3e80dc8f9eef120f0e521) Thanks [@hayatosc](https://github.com/hayatosc)! - Refactor the preview API routes to use Hono middleware and centralized error handling. Template lookup, module loading, and component resolution now run once per request in a shared middleware, and unexpected errors are mapped through `app.onError`. Response shapes and status codes are unchanged.
+
 ## 0.8.1
 
 ### Patch Changes
