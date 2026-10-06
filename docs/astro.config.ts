@@ -78,6 +78,7 @@ export default defineConfig({
             { label: 'Quick Start', slug: 'getting-started/quick-start' },
           ],
         },
+        { label: 'Playground', link: '/playground/' },
         {
           label: 'Core',
           items: [
