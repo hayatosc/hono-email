@@ -4,7 +4,10 @@ import {
   buildRawEmailMessage,
   buildRawEmailMessageAsync,
   SmtpTransport,
+  type EmailAdapter,
+  type EmailMessage,
   type SmtpConnector,
+  type SmtpSendOptions,
   type SmtpSocket,
 } from '.'
 import { Body, Html, Text, sendEmail } from '../../index'
@@ -818,6 +821,189 @@ describe('sendEmail over SMTP', () => {
     expect(data).toContain(' d=message.example.com;')
     expect(data).toContain(' s=message;')
     expect(data).not.toContain('transport.example.com')
+  })
+
+  test.each([
+    {
+      name: 'signs with per-send DKIM without transport or legacy settings',
+      transportDkim: false,
+      legacyDkim: false,
+      sendDkim: true,
+      expectedDomain: 'send.example.com',
+      expectedSelector: 'send',
+    },
+    {
+      name: 'uses per-send DKIM instead of transport defaults',
+      transportDkim: true,
+      legacyDkim: false,
+      sendDkim: true,
+      expectedDomain: 'send.example.com',
+      expectedSelector: 'send',
+    },
+    {
+      name: 'uses per-send DKIM instead of both legacy and transport settings',
+      transportDkim: true,
+      legacyDkim: true,
+      sendDkim: true,
+      expectedDomain: 'send.example.com',
+      expectedSelector: 'send',
+    },
+    {
+      name: 'inherits legacy DKIM when per-send options omit DKIM',
+      transportDkim: true,
+      legacyDkim: true,
+      sendDkim: false,
+      expectedDomain: 'legacy.example.com',
+      expectedSelector: 'legacy',
+    },
+    {
+      name: 'inherits transport DKIM when per-send options omit DKIM',
+      transportDkim: true,
+      legacyDkim: false,
+      sendDkim: false,
+      expectedDomain: 'transport.example.com',
+      expectedSelector: 'transport',
+    },
+    {
+      name: 'leaves messages unsigned when DKIM is unconfigured',
+      transportDkim: false,
+      legacyDkim: false,
+      sendDkim: false,
+      expectedDomain: undefined,
+      expectedSelector: undefined,
+    },
+  ])('$name', async ({ transportDkim, legacyDkim, sendDkim, expectedDomain, expectedSelector }) => {
+    const privateKey = await createDkimPrivateKey()
+    let data = ''
+    const mock = createMockConnector(async (server) => {
+      await server.writeResponse('220 smtp.example.com ready\r\n')
+      await server.readLine()
+      await server.writeResponse('250 smtp.example.com\r\n')
+      await server.readLine()
+      await server.writeResponse('250 OK\r\n')
+      await server.readLine()
+      await server.writeResponse('250 Accepted\r\n')
+      await server.readLine()
+      await server.writeResponse('354 Continue\r\n')
+      data = await server.readData()
+      await server.writeResponse('250 queued\r\n')
+      expect(await server.readLine()).toBe('QUIT')
+      await server.writeResponse('221 Bye\r\n')
+    })
+    const smtp = new SmtpTransport({
+      connector: mock.connector,
+      ...(transportDkim
+        ? { dkim: { domainName: 'transport.example.com', keySelector: 'transport', privateKey } }
+        : {}),
+      hostname: 'smtp.example.com',
+      port: 465,
+      secure: true,
+    })
+    const message: EmailMessage = {
+      ...createEmailMessage('DKIM options'),
+      ...(legacyDkim
+        ? { dkim: { domainName: 'legacy.example.com', keySelector: 'legacy', privateKey } }
+        : {}),
+    }
+    const options: SmtpSendOptions = sendDkim
+      ? { dkim: { domainName: 'send.example.com', keySelector: 'send', privateKey } }
+      : {}
+
+    const receipt = await smtp.send(message, options)
+    await smtp.close()
+    await mock.wait()
+
+    expect(receipt).toMatchObject({
+      successful: true,
+      accepted: ['recipient@example.com'],
+      rejected: [],
+    })
+    expect(data).toContain('Subject: DKIM options')
+    if (expectedDomain === undefined) {
+      expect(data).not.toContain('DKIM-Signature: ')
+    } else {
+      expect(data).toStartWith('DKIM-Signature: ')
+      expect(data).toContain(` d=${expectedDomain};`)
+      expect(data).toContain(` s=${expectedSelector};`)
+      expect(data.match(/^DKIM-Signature:/gm)).toHaveLength(1)
+    }
+  })
+
+  test('keeps per-send DKIM scoped to one send on a pooled EmailAdapter', async () => {
+    const privateKey = await createDkimPrivateKey()
+    const messages: string[] = []
+    const mock = createMockConnector(async (server) => {
+      await server.writeResponse('220 smtp.example.com ready\r\n')
+      await server.readLine()
+      await server.writeResponse('250 smtp.example.com\r\n')
+      for (let index = 0; index < 2; index += 1) {
+        await server.readLine()
+        await server.writeResponse('250 OK\r\n')
+        await server.readLine()
+        await server.writeResponse('250 Accepted\r\n')
+        await server.readLine()
+        await server.writeResponse('354 Continue\r\n')
+        messages.push(await server.readData())
+        await server.writeResponse('250 queued\r\n')
+      }
+      expect(await server.readLine()).toBe('QUIT')
+      await server.writeResponse('221 Bye\r\n')
+    })
+    const smtp = new SmtpTransport({
+      connector: mock.connector,
+      dkim: { domainName: 'transport.example.com', keySelector: 'transport', privateKey },
+      hostname: 'smtp.example.com',
+      port: 465,
+      secure: true,
+      pool: { maxConnections: 1, maxMessages: 2 },
+    })
+    const adapter: EmailAdapter = smtp
+    const message = createEmailMessage('Scoped DKIM')
+    const options: SmtpSendOptions = {
+      dkim: { domainName: 'send.example.com', keySelector: 'send', privateKey },
+    }
+
+    const firstReceipt = await smtp.send(message, options)
+    const secondReceipt = await adapter.send(message)
+    await smtp.close()
+    await mock.wait()
+
+    expect(firstReceipt.successful).toBe(true)
+    expect(secondReceipt.successful).toBe(true)
+    expect(messages).toHaveLength(2)
+    expect(messages[0]).toContain(' d=send.example.com;')
+    expect(messages[1]).toContain(' d=transport.example.com;')
+    expect(message).not.toHaveProperty('dkim')
+    expect(mock.connectCount()).toBe(1)
+  })
+
+  test('validates per-send DKIM instead of falling back to transport defaults', async () => {
+    const privateKey = await createDkimPrivateKey()
+    const mock = createMockConnector(async () => {
+      throw new Error('SMTP connection should not be opened for invalid DKIM options.')
+    })
+    const smtp = new SmtpTransport({
+      connector: mock.connector,
+      dkim: { domainName: 'transport.example.com', keySelector: 'transport', privateKey },
+      hostname: 'smtp.example.com',
+      port: 465,
+      secure: true,
+    })
+
+    const receipt = await smtp.send(createEmailMessage('Invalid per-send DKIM'), {
+      dkim: { domainName: 'invalid domain', keySelector: 'send', privateKey },
+    })
+    await smtp.close()
+
+    expect(receipt).toMatchObject({
+      accepted: [],
+      errorMessages: [
+        'Invalid DKIM domainName: expected a DNS domain without whitespace or separators.',
+      ],
+      rejected: [],
+      successful: false,
+    })
+    expect(mock.connectCount()).toBe(0)
   })
 
   test('rejects malformed DKIM keys with repeated PEM markers before connecting', async () => {
