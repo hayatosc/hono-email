@@ -242,7 +242,7 @@ export async function startPreviewServer(options: PreviewServerOptions): Promise
     const pluginPath = resolveProjectPeer(rootDir, '@hono-email/tailwind-plugin')
     try {
       const tailwindPlugin: typeof TailwindPluginModule = await import(
-        pathToFileURL(pluginPath).href
+        /* @vite-ignore */ pathToFileURL(pluginPath).href
       )
       plugins.push(
         tailwindPlugin.unplugin.vite({
@@ -324,7 +324,11 @@ export async function startPreviewServer(options: PreviewServerOptions): Promise
         allow: [rootDir, templateDir, clientDir, resolvePackageRoot()],
       },
     },
-    ssr: { noExternal: ['hono-email', /@hono-email/] },
+    ssr: {
+      noExternal: ['hono-email', /@hono-email/],
+      // Vite defaults to Node conditions even when its module runner uses Bun.
+      ...(process.versions.bun ? { resolve: { externalConditions: ['bun', 'node'] } } : {}),
+    },
     appType: 'custom',
     logLevel: 'info',
     plugins,
@@ -335,7 +339,10 @@ export async function startPreviewServer(options: PreviewServerOptions): Promise
     throw new Error('Vite SSR environment is not runnable')
   }
   const honoApp = createApiRoutes((url) => ssrEnv.runner.import(url), templateDir)
-  const honoHandler = getRequestListener(honoApp.fetch.bind(honoApp))
+  // The adapter's replacement Response can lock streams used by htmlrewriter.
+  const honoHandler = getRequestListener(honoApp.fetch.bind(honoApp), {
+    overrideGlobalObjects: false,
+  })
 
   server.on('request', (req, res) => {
     const host = req.headers.host ?? 'localhost'
