@@ -1,5 +1,9 @@
-const HTML_COMMENT_PATTERN = /<!--[\s\S]*?-->/g
+import { tokenizeHtml } from '../html-tokenizer'
+
 const ATTRIBUTE_PATTERN = /([^\s"'=<>`/]+)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+)))?/gi
+const TAG_NAME_PATTERN = /^[a-z][a-z0-9-]*/i
+const INCOMPLETE_MARKUP_PATTERN = /^<(?:\/?[a-z]|[!?])/i
+const RAW_TEXT_TAGS = new Set(['script', 'style', 'textarea', 'title'])
 
 export type OpeningTag = {
   attributes: Map<string, string | undefined>
@@ -9,12 +13,10 @@ export type OpeningTag = {
 }
 
 export const stripHtmlComments = (html: string): string => {
-  let result = html
-  let prev: string
-  do {
-    prev = result
-    result = result.replace(HTML_COMMENT_PATTERN, '')
-  } while (result !== prev)
+  let result = ''
+  for (const token of tokenizeHtml(html)) {
+    if (token.type !== 'comment') result += token.raw
+  }
   return result
 }
 
@@ -35,78 +37,33 @@ const parseAttributes = (attributesText: string): Map<string, string | undefined
   return attributes
 }
 
-const isTagNameStart = (character: string | undefined): boolean =>
-  Boolean(character && /[A-Za-z]/.test(character))
-
-const isTagNameCharacter = (character: string | undefined): boolean =>
-  Boolean(character && /[A-Za-z0-9-]/.test(character))
-
-const readOpeningTag = (html: string, startIndex: number): OpeningTag | null => {
-  if (html[startIndex] !== '<') {
-    return null
-  }
-
-  if (!isTagNameStart(html[startIndex + 1])) {
-    return null
-  }
-
-  let cursor = startIndex + 1
-  while (isTagNameCharacter(html[cursor])) {
-    cursor += 1
-  }
-
-  const name = html.slice(startIndex + 1, cursor).toLowerCase()
-  const attributesStart = cursor
-  let quote: '"' | "'" | null = null
-
-  while (cursor < html.length) {
-    const character = html[cursor]
-
-    if (quote) {
-      if (character === quote) {
-        quote = null
-      }
-      cursor += 1
-      continue
-    }
-
-    if (character === '"' || character === "'") {
-      quote = character
-      cursor += 1
-      continue
-    }
-
-    if (character === '>') {
-      const attributesText = html.slice(attributesStart, cursor)
-      return {
-        attributes: parseAttributes(attributesText),
-        endIndex: cursor + 1,
-        index: startIndex,
-        name,
-      }
-    }
-
-    cursor += 1
-  }
-
-  return null
-}
-
 export const collectOpeningTags = (html: string): OpeningTag[] => {
   const tags: OpeningTag[] = []
+  let inRawText = false
 
-  for (let index = 0; index < html.length; index += 1) {
-    if (html[index] !== '<') {
+  for (const token of tokenizeHtml(html)) {
+    if (token.type !== 'tag') {
+      // Incomplete markup must not conceal tags or attributes from strict validation.
+      if (token.type === 'text' && !inRawText && INCOMPLETE_MARKUP_PATTERN.test(token.raw)) {
+        throw new Error('Malformed HTML tags are not allowed in HTML email strict mode.')
+      }
       continue
     }
 
-    const tag = readOpeningTag(html, index)
-    if (!tag) {
-      continue
+    if (token.name.includes('<')) {
+      throw new Error('Malformed HTML tags are not allowed in HTML email strict mode.')
     }
+    inRawText = !token.closing && !token.selfClosing && RAW_TEXT_TAGS.has(token.name)
+    if (token.closing) continue
 
-    tags.push(tag)
-    index = tag.endIndex - 1
+    // Preserve the legacy name boundary and attribute parser, including blocked tag prefixes.
+    const name = token.name.match(TAG_NAME_PATTERN)?.[0] ?? token.name
+    tags.push({
+      attributes: parseAttributes(html.slice(token.start + 1 + name.length, token.end - 1)),
+      endIndex: token.end,
+      index: token.start,
+      name,
+    })
   }
 
   return tags
@@ -117,22 +74,24 @@ const CONDITIONAL_COMMENT_CLOSE_PATTERN = /<!\s*\[endif\]\s*$/i
 
 export const extractConditionalCommentPayloads = (html: string): string[] => {
   const payloads: string[] = []
+  const sources = [html]
 
-  for (const [comment] of html.matchAll(HTML_COMMENT_PATTERN)) {
-    const content = comment.slice('<!--'.length, -'-->'.length)
-    const openMatch = content.match(CONDITIONAL_COMMENT_OPEN_PATTERN)
-    if (!openMatch) {
-      continue
-    }
+  for (let index = 0; index < sources.length; index += 1) {
+    for (const token of tokenizeHtml(sources[index] ?? '')) {
+      if (token.type !== 'comment') continue
 
-    const closeMatch = content.match(CONDITIONAL_COMMENT_CLOSE_PATTERN)
-    if (!closeMatch || closeMatch.index === undefined) {
-      continue
-    }
+      const content = token.raw.slice('<!--'.length, token.raw.endsWith('-->') ? -3 : undefined)
+      const openMatch = content.match(CONDITIONAL_COMMENT_OPEN_PATTERN)
+      if (!openMatch) continue
 
-    const payload = content.slice(openMatch[0].length, closeMatch.index).trim()
-    if (payload !== '') {
+      const closeMatch = content.match(CONDITIONAL_COMMENT_CLOSE_PATTERN)
+      const payload = content.slice(openMatch[0].length, closeMatch?.index).trim()
+      // Revealed conditionals have an empty opener followed by ordinary visible HTML.
+      if (payload === '' || (payload === '<!' && token.raw.endsWith('<!-->'))) continue
+
       payloads.push(payload)
+      // Nested or incompletely closed conditionals still need the full validation pipeline.
+      sources.push(payload)
     }
   }
 
