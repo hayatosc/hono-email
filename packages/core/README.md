@@ -17,6 +17,10 @@ Full documentation is available at [hono-email.hayatosc.dev](https://hono-email.
 
 ## Setup
 
+Hono 4.5 or newer is required. CI verifies `hono/css` with the minimum supported
+version, the development version, and the latest Hono release using isolated
+consumers of the built package.
+
 ```sh
 npm i hono-email
 ```

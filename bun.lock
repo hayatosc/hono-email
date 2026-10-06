@@ -73,7 +73,7 @@
     },
     "packages/core": {
       "name": "hono-email",
-      "version": "0.8.0",
+      "version": "0.8.1",
       "dependencies": {
         "htmlrewriter": "^0.0.13",
       },
@@ -95,12 +95,12 @@
         "vitest": "^4.1.10",
       },
       "peerDependencies": {
-        "hono": "^4.0.0",
+        "hono": "^4.5.0",
       },
     },
     "packages/preview": {
       "name": "@hono-email/preview",
-      "version": "0.8.0",
+      "version": "0.8.1",
       "bin": {
         "hono-email": "./dist/cli.mjs",
       },
@@ -127,7 +127,7 @@
     },
     "packages/tailwind-plugin": {
       "name": "@hono-email/tailwind-plugin",
-      "version": "0.8.0",
+      "version": "0.8.1",
       "dependencies": {
         "unplugin": "^3.3.0",
       },
