@@ -1,7 +1,8 @@
 import { describe, expect, test, beforeAll, afterAll } from 'bun:test'
-import { mkdirSync, mkdtempSync, writeFileSync, rmSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, writeFileSync, rmSync, symlinkSync } from 'node:fs'
+import { createRequire } from 'node:module'
 import { tmpdir } from 'node:os'
-import { basename, join } from 'node:path'
+import { basename, dirname, join } from 'node:path'
 
 import {
   detectTailwindConfig,
@@ -367,7 +368,7 @@ describe('startPreviewServer', () => {
     }
   })
 
-  test('Tailwind true requires the project Tailwind peer even without detection signals', async () => {
+  test('Tailwind true requires the project email plugin peer even without detection signals', async () => {
     const dir = mkdtempSync(join(tempDir, 'tw-on-'))
     mkdirSync(join(dir, 'emails'))
     writeFileSync(join(dir, 'vite.config.ts'), "throw new Error('User config was loaded')")
@@ -377,8 +378,38 @@ describe('startPreviewServer', () => {
     try {
       const options = { dir: 'emails', port: 0, file: 'vite.config.ts', tailwind: true }
       await expect(startPreviewServer(options)).rejects.toThrow(
-        'Tailwind integration requires "tailwindcss" to be installed in the project',
+        'Tailwind integration requires "@hono-email/tailwind-plugin" to be installed in the project',
       )
+    } finally {
+      process.chdir(originalCwd)
+    }
+  })
+
+  test('Tailwind true registers only the email plugin without host Tailwind tooling', async () => {
+    const dir = mkdtempSync(join(tempDir, 'tw-standalone-'))
+    mkdirSync(join(dir, 'emails'))
+    mkdirSync(join(dir, 'node_modules/@hono-email'), { recursive: true })
+    const pluginPath = createRequire(import.meta.url).resolve('@hono-email/tailwind-plugin')
+    symlinkSync(dirname(dirname(pluginPath)), join(dir, 'node_modules/@hono-email/tailwind-plugin'))
+    writeFileSync(
+      join(dir, 'vite.config.ts'),
+      `export default { plugins: [{ name: 'assert-email-plugin-enabled', configResolved(config) {
+        if (!config.plugins.some((plugin) => plugin.name === 'hono-email-tailwind')) {
+          throw new Error('Missing email plugin')
+        }
+        if (config.plugins.some((plugin) => plugin.name.startsWith('@tailwindcss/'))) {
+          throw new Error('Unexpected host Tailwind CSS plugin')
+        }
+        throw new Error('Standalone email plugin enabled')
+      } }] }`,
+    )
+    const originalCwd = process.cwd()
+    process.chdir(dir)
+
+    try {
+      await expect(
+        startPreviewServer({ dir: 'emails', port: 0, file: 'vite.config.ts', tailwind: true }),
+      ).rejects.toThrow('Standalone email plugin enabled')
     } finally {
       process.chdir(originalCwd)
     }
@@ -423,7 +454,7 @@ describe('startPreviewServer', () => {
       await expect(
         startPreviewServer({ dir: 'emails', port: 0, file: 'custom.vite.config.ts' }),
       ).rejects.toThrow(
-        'Tailwind integration requires "tailwindcss" to be installed in the project',
+        'Tailwind integration requires "@hono-email/tailwind-plugin" to be installed in the project',
       )
     } finally {
       process.chdir(originalCwd)

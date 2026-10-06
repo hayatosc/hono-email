@@ -1,6 +1,9 @@
-import { describe, expect, test, beforeEach, afterEach } from 'bun:test'
+import { describe, expect, test, beforeEach, afterEach, spyOn } from 'bun:test'
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 
-import { parseArgs, type CommandContext } from 'citty'
+import { parseArgs, runCommand, type CommandContext } from 'citty'
 
 import { type CliArgs, main, preview } from './cli'
 
@@ -79,7 +82,7 @@ describe('cli preview command', () => {
     if (!args || typeof args === 'function') throw new Error('Missing CLI args')
 
     expect(parseArgs<CliArgs>([], args).tailwind).toBe('auto')
-    for (const selection of ['on', 'off', 'auto']) {
+    for (const selection of ['on', 'off', 'auto'] as const) {
       expect(parseArgs<CliArgs>(['--tailwind', selection], args).tailwind).toBe(selection)
     }
   })
@@ -150,4 +153,45 @@ describe('cli port validation', () => {
     }
     expect(exitCode).toBe(1)
   })
+})
+
+describe('cli Tailwind controls', () => {
+  for (const selection of ['on', 'off', 'auto'] as const) {
+    test(`forwards --tailwind ${selection} to the preview server`, async () => {
+      const dir = mkdtempSync(join(tmpdir(), 'preview-cli-tailwind-'))
+      mkdirSync(join(dir, 'emails'))
+      writeFileSync(
+        join(dir, 'package.json'),
+        JSON.stringify({ dependencies: { tailwindcss: '^4' } }),
+      )
+      writeFileSync(join(dir, 'vite.config.ts'), "throw new Error('CLI off reached user config')")
+      const originalCwd = process.cwd()
+      const messages: string[] = []
+      const errorSpy = spyOn(console, 'error').mockImplementation((message: unknown) => {
+        messages.push(String(message))
+      })
+      const exitSpy = spyOn(process, 'exit').mockImplementation((code) => {
+        throw new Error(`process.exit(${code})`)
+      })
+      process.chdir(dir)
+
+      try {
+        await expect(
+          runCommand(preview, {
+            rawArgs: ['--tailwind', selection, '--file', 'vite.config.ts'],
+          }),
+        ).rejects.toThrow('process.exit(1)')
+        expect(messages.join('\n')).toContain(
+          selection === 'off'
+            ? 'Error: CLI off reached user config'
+            : 'Error: Tailwind integration requires "@hono-email/tailwind-plugin" to be installed in the project',
+        )
+      } finally {
+        exitSpy.mockRestore()
+        errorSpy.mockRestore()
+        process.chdir(originalCwd)
+        rmSync(dir, { recursive: true, force: true })
+      }
+    })
+  }
 })

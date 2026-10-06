@@ -13,6 +13,7 @@ export type CliArgs = {
   port: { alias: 'p'; type: 'string'; description: string; default: string }
   host: { type: 'string'; description: string }
   file: { alias: 'f'; type: 'string'; description: string }
+  tailwind: { type: 'enum'; options: ['on', 'off', 'auto']; description: string; default: 'auto' }
 }
 
 // Annotated so `defineCommand` binds its generic to `CliArgs` instead of the
@@ -39,6 +40,12 @@ const previewArgs: CliArgs = {
     type: 'string',
     description: 'Vite config file to load (default: none)',
   },
+  tailwind: {
+    type: 'enum',
+    options: ['on', 'off', 'auto'],
+    description: 'Email Tailwind integration (on, off, auto)',
+    default: 'auto',
+  },
 }
 
 export const preview: CommandDef<CliArgs> = defineCommand({
@@ -60,6 +67,7 @@ export const preview: CommandDef<CliArgs> = defineCommand({
         port,
         host: args.host,
         file: args.file,
+        tailwind: args.tailwind === 'auto' ? 'auto' : args.tailwind === 'on',
       })
 
       let shuttingDown = false

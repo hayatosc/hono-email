@@ -33,7 +33,39 @@ bunx hono-email preview --dir ./emails
 
 - `-d, --dir <path>`: The directory to search for email templates recursively (defaults to `./emails`).
 - `-p, --port <port>`: The port to run the server on (defaults to `3000`).
+- `--host <host>`: The server host (defaults to `127.0.0.1`).
 - `-f, --file <path>`: A Vite config file to load into the preview server (not loaded by default, since a project's own `vite.config.*` is otherwise ignored).
+- `--tailwind <on|off|auto>`: Select email Tailwind integration (defaults to `auto`).
+
+### Tailwind Integration
+
+Install the optional email plugin peer (version 0.9.0 or later) in the project containing your email templates. Earlier plugin releases require host CSS processing and are incompatible with this preview integration.
+
+```sh
+npm i -D @hono-email/tailwind-plugin@^0.9.0
+npx hono-email preview --dir ./emails --tailwind on
+```
+
+Preview registers the email plugin to compile `<Tailwind>` artifacts using the project's `tailwind.config.*`, when present. The installed email plugin's matching Tailwind compiler and default stylesheet dependencies control the compiler version; the host project's `tailwindcss` version does not. No host Tailwind installation or Vite CSS tooling is required for `on`. Preview does not register `@tailwindcss/vite` or process the host application's CSS. A Vite config supplied with `--file` still loads its own plugins, including their custom `css` and `configPath` options.
+
+The default `auto` mode preserves automatic detection for existing projects: it enables integration when `package.json` lists `tailwindcss` or `@tailwindcss/vite`, a `tailwind.config.*` exists, or a Vite/PostCSS config references `tailwindcss`. The explicitly supplied `--file` config also participates in detection. A generic PostCSS config alone does not enable Tailwind. The optional `tailwindcss` peer supports project discovery; it does not control email compilation. Detected integration requires the email plugin to resolve from the project.
+
+Use `--tailwind off` to disable preview's integration even when your frontend dependencies include Tailwind. Use `--tailwind on` to enable it without relying on detection; a missing email plugin produces a startup error naming the required package. These controls apply to plugins registered by preview; plugins in an explicitly loaded Vite config follow that config.
+
+The programmatic API accepts `true`, `false`, or `'auto'` (the default):
+
+```ts
+import { startPreviewServer } from '@hono-email/preview'
+
+const server = await startPreviewServer({
+  dir: './emails',
+  port: 3000,
+  tailwind: false,
+})
+
+// Close the server when your development process stops.
+await server.close()
+```
 
 ## Interactive Props Schema
 

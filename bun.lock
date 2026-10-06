@@ -106,23 +106,24 @@
       },
       "dependencies": {
         "@hono/node-server": "^2.0.12",
-        "@tailwindcss/vite": "^4.3.3",
         "citty": "^0.2.2",
         "hono": "^4.12.32",
-        "tailwindcss": "^4.3.3",
         "vite": "^8.2.0",
       },
       "devDependencies": {
         "@hono-email/tailwind-plugin": "workspace:*",
         "@types/bun": "^1.3.14",
         "hono-email": "workspace:*",
+        "tailwindcss": "^4.3.3",
       },
       "peerDependencies": {
-        "@hono-email/tailwind-plugin": ">=0.4.0 <1.0.0",
+        "@hono-email/tailwind-plugin": ">=0.9.0 <1.0.0",
         "hono-email": ">=0.4.0 <1.0.0",
+        "tailwindcss": "^4.0.0",
       },
       "optionalPeers": [
         "@hono-email/tailwind-plugin",
+        "tailwindcss",
       ],
     },
     "packages/tailwind-plugin": {
