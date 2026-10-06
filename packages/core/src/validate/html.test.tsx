@@ -1,5 +1,7 @@
 import { describe, expect, spyOn, test } from 'bun:test'
 
+import { raw } from 'hono/html'
+
 import { render, type RenderResult } from '../index'
 import { validateHtml } from './html'
 
@@ -544,12 +546,47 @@ describe('render strict mode', () => {
     expect(() => validateHtml(html)).toThrow("unsafe 'javascript:' URL scheme")
   })
 
-  test.each([
-    '<div title="unclosed > <form>Open</form>',
-    '<a href="javascript:alert(1)',
-    '<!DOCTYPE html "unclosed > <form>Open</form>',
-  ])('rejects incomplete markup instead of hiding strict restrictions: %s', (html) => {
-    expect(() => validateHtml(html)).toThrow('Malformed HTML')
+  test.each(['<div title="unclosed > <form>Open</form>', '<a href="javascript:alert(1)'])(
+    'rejects incomplete markup instead of hiding strict restrictions: %s',
+    (html) => {
+      expect(() => validateHtml(html)).toThrow('Malformed HTML')
+    },
+  )
+
+  describe('visible content after HTML boundaries', () => {
+    test.each([
+      '<!-->',
+      '<!--->',
+      '<!-- note --!>',
+      '<?x label="one >',
+      '<!x label="one >',
+      "<?xml label='one >",
+      "<!x label='one >",
+      '<!DOCTYPE html PUBLIC "one >',
+      "<!DOCTYPE html SYSTEM 'one >",
+      '<!DOCTYPE html "unclosed >',
+    ])('rejects unsafe URLs after the boundary %s', (prefix) => {
+      expect(() => validateHtml(`${prefix}<a href="javascript:alert(1)">Open</a>`)).toThrow(
+        "unsafe 'javascript:' URL scheme",
+      )
+    })
+
+    test.each([
+      ['<form>Open</form>', 'The <form> tag'],
+      ['<div onclick="alert(1)">Open</div>', "'onclick' attribute"],
+      ['<div style="filter:blur(1px)">Open</div>', "The CSS property 'filter'"],
+    ])('retains strict restrictions after a comment ending for %s', (payload, message) => {
+      expect(() => validateHtml(`<!-- note --!>${payload}`)).toThrow(message)
+    })
+
+    test.each(['<!-->', '<?x label="one >'])(
+      'rejects unsafe HTML through render after the boundary %s',
+      async (prefix) => {
+        await expect(
+          render(raw(`${prefix}<a href="javascript:alert(1)">Open</a>`)),
+        ).rejects.toThrow("unsafe 'javascript:' URL scheme")
+      },
+    )
   })
 
   test('ignores unsupported tags inside HTML comments', () => {
