@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 
-import { render } from './index'
+import { Conditional, Tailwind, buildTailwindArtifactFromCss, render } from './index'
 
 describe('render', () => {
   test('returns HTML and plain text by default', async () => {
@@ -58,6 +58,46 @@ describe('render', () => {
     )
 
     expect(html).toContain('<p>Done</p>')
+  })
+
+  test.each([false, true])('rejects component failures (async: %p)', async (isAsync) => {
+    const error = new Error('Email render failed')
+    const Broken = (): never => {
+      throw error
+    }
+    const AsyncBroken = async (): Promise<never> => {
+      await Promise.resolve()
+      throw error
+    }
+
+    await expect(render(isAsync ? <AsyncBroken /> : <Broken />)).rejects.toBe(error)
+  })
+
+  test.each([false, true])('rejects failures inside Conditional (async: %p)', async (isAsync) => {
+    const error = new Error('Conditional render failed')
+    const Broken = (): never => {
+      throw error
+    }
+    const AsyncBroken = async (): Promise<never> => {
+      await Promise.resolve()
+      throw error
+    }
+
+    await expect(
+      render(<Conditional>{isAsync ? <AsyncBroken /> : <Broken />}</Conditional>),
+    ).rejects.toBe(error)
+  })
+
+  test('rejects Tailwind classes missing from the build artifact', async () => {
+    const artifact = buildTailwindArtifactFromCss({ css: '.known { color: #123456; }' })
+
+    await expect(
+      render(
+        <Tailwind artifact={artifact}>
+          <p className="missing">Draft</p>
+        </Tailwind>,
+      ),
+    ).rejects.toThrow("Tailwind class 'missing' is missing from the build artifact.")
   })
 
   describe('warnings', () => {
