@@ -29,6 +29,15 @@ export const getStaticPaths = (async () => {
   })
 
   paths.push({
+    params: { slug: 'playground' },
+    props: {
+      description:
+        'Write an email in hono/jsx and see the rendered HTML and plain text in your browser.',
+      title: 'Playground',
+    } satisfies OgProps,
+  })
+
+  paths.push({
     params: { slug: 'index' },
     props: {
       description: 'Render, validate, and send HTML email and plain text from hono/jsx.',
