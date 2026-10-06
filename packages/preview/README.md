@@ -40,20 +40,20 @@ bunx hono-email preview --dir ./emails
 To enable structured props editing in the preview UI, export a `previewProps` configuration object alongside your default-exported email template component. Without a default export, the module may instead contain one named component function alongside `previewProps`.
 
 ```tsx
-import type { PreviewPropsConfig } from '@hono-email/preview'
+import { definePreviewProps } from '@hono-email/preview'
 import { Html, Body, Container, Heading, Text } from 'hono-email'
-
-export const previewProps = {
-  name: { type: 'string', default: 'Taro' },
-  appName: { type: 'string', default: 'Acme' },
-  trialDays: { type: 'number', default: 14 },
-} satisfies PreviewPropsConfig
 
 type WelcomeEmailProps = {
   name: string
   appName: string
   trialDays: number
 }
+
+export const previewProps = definePreviewProps<WelcomeEmailProps>()({
+  name: { type: 'string', default: 'Taro' },
+  appName: { type: 'string', default: 'Acme' },
+  trialDays: { type: 'number', default: 14 },
+})
 
 export default function WelcomeEmail({ name, appName, trialDays }: WelcomeEmailProps) {
   return (
@@ -70,6 +70,8 @@ export default function WelcomeEmail({ name, appName, trialDays }: WelcomeEmailP
   )
 }
 ```
+
+`definePreviewProps<Props>()` checks field names, input types, defaults, select options, and object-array item schemas against `Props`. It returns the same configuration object and may describe only a subset of the component's props. Non-string fields require an explicit `type` or a non-null default so the form can infer their input type. Object arrays also require an `item` schema; primitive lists support string values. Use JSON mode for other array element types. Existing configuration objects using `satisfies PreviewPropsConfig` remain supported.
 
 ## Documentation
 

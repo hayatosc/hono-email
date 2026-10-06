@@ -42,6 +42,53 @@ export type PreviewPropSpec = {
  */
 export type PreviewPropsConfig = Record<string, PreviewPropSpec>
 
+type PreviewPropsFor<Props extends object> = {
+  [Key in Extract<keyof Props, string>]?: PreviewPropSpecFor<Props[Key]>
+}
+
+type TypedOrDefault<Value, Kind extends PreviewPropSpec['type']> =
+  | { type: Kind; default?: Value }
+  | { type?: Kind; default: NonNullable<Value> }
+
+type PreviewPropSpecFor<Value> = { required?: boolean } & ([NonNullable<Value>] extends [string]
+  ? {
+      type?: 'string' | 'select'
+      default?: Value
+      options?: NonNullable<Value>[]
+      multiline?: boolean
+    }
+  : [NonNullable<Value>] extends [number]
+    ? TypedOrDefault<Value, 'number'>
+    : [NonNullable<Value>] extends [boolean]
+      ? TypedOrDefault<Value, 'boolean'>
+      : [NonNullable<Value>] extends [readonly (infer Item)[]]
+        ? [Item] extends [string]
+          ? TypedOrDefault<Value, 'array'> & { item?: never }
+          : [Item] extends [object]
+            ? TypedOrDefault<Value, 'array'> & { item: PreviewPropsFor<Item> }
+            : never
+        : never)
+
+/**
+ * Checks a preview schema against the email component's props without changing it.
+ * Fields may describe a subset of the props. Non-string fields need a type or a
+ * non-null default. Object arrays also need an item schema; primitive lists edit strings.
+ *
+ * @example
+ * ```ts
+ * type Props = { name: string; count: number }
+ * export const previewProps = definePreviewProps<Props>()({
+ *   name: { type: 'string', default: 'Guest' },
+ *   count: { type: 'number', default: 1 },
+ * })
+ * ```
+ */
+export function definePreviewProps<Props extends object>(): <Config extends PreviewPropsFor<Props>>(
+  config: Config & Record<Exclude<keyof Config, keyof Props>, never>,
+) => Config {
+  return (config) => config
+}
+
 export type PropsFieldSchema = {
   type: 'string' | 'number' | 'boolean' | 'select' | 'array'
   required: boolean
