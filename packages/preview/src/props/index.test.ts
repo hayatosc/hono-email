@@ -1,6 +1,37 @@
 import { describe, expect, test } from 'bun:test'
 
-import { extractPropsSchema, mergePropsWithDefaults, resolveComponent } from './index'
+import {
+  definePreviewProps,
+  extractPropsSchema,
+  mergePropsWithDefaults,
+  resolveComponent,
+} from './index'
+
+describe('definePreviewProps', () => {
+  test('preserves schema inference and supports existing schema extraction', () => {
+    type Props = {
+      name: string
+      theme: 'light' | 'dark'
+      items: { quantity: number }[]
+      optional?: boolean
+    }
+    const config = definePreviewProps<Props>()({
+      name: { type: 'string', default: 'Guest' },
+      theme: { type: 'select', options: ['light', 'dark'], default: 'light' },
+      items: { type: 'array', item: { quantity: { type: 'number' } } },
+    })
+
+    expect(extractPropsSchema({ previewProps: config })).toEqual({
+      name: { type: 'string', required: false, defaultValue: 'Guest' },
+      theme: { type: 'select', required: false, options: ['light', 'dark'], defaultValue: 'light' },
+      items: {
+        type: 'array',
+        required: false,
+        item: { quantity: { type: 'number', required: false } },
+      },
+    })
+  })
+})
 
 describe('extractPropsSchema', () => {
   test('returns empty schema when module has no previewProps', () => {

@@ -42,6 +42,42 @@ export type PreviewPropSpec = {
  */
 export type PreviewPropsConfig = Record<string, PreviewPropSpec>
 
+type PreviewPropsFor<Props extends object> = {
+  [Key in Extract<keyof Props, string>]?: PreviewPropSpecFor<Props[Key]>
+}
+
+type PreviewPropSpecFor<Value> = {
+  default?: Value
+  required?: boolean
+} & ([NonNullable<Value>] extends [string]
+  ? { type?: 'string' | 'select'; options?: NonNullable<Value>[]; multiline?: boolean }
+  : [NonNullable<Value>] extends [number]
+    ? { type?: 'number' }
+    : [NonNullable<Value>] extends [boolean]
+      ? { type?: 'boolean' }
+      : NonNullable<Value> extends readonly (infer Item)[]
+        ? { type?: 'array'; item?: Item extends object ? PreviewPropsFor<Item> : never }
+        : never)
+
+/**
+ * Checks a preview schema against the email component's props without changing it.
+ * Fields may describe a subset of the props. Runtime form metadata must still be supplied.
+ *
+ * @example
+ * ```ts
+ * type Props = { name: string; count: number }
+ * export const previewProps = definePreviewProps<Props>()({
+ *   name: { type: 'string', default: 'Guest' },
+ *   count: { type: 'number', default: 1 },
+ * })
+ * ```
+ */
+export function definePreviewProps<Props extends object>(): <Config extends PreviewPropsFor<Props>>(
+  config: Config & Record<Exclude<keyof Config, keyof Props>, never>,
+) => Config {
+  return (config) => config
+}
+
 export type PropsFieldSchema = {
   type: 'string' | 'number' | 'boolean' | 'select' | 'array'
   required: boolean
