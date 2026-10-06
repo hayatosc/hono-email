@@ -57,6 +57,11 @@ error when available. `sendEmail()` rejects if rendering fails before delivery, 
 sending through an explicitly closed SMTP transport also rejects. Custom adapters
 may reject their own operations, so handle promise rejection as well as the receipt.
 
+Import `SmtpTransportClosedError` from `hono-email/smtp` and use
+`error instanceof SmtpTransportClosedError` to identify closed-transport lifecycle
+rejections from `send()` or `verify()`. Its `name` is `SmtpTransportClosedError`;
+ordinary delivery failures remain failed receipts.
+
 ## Documentation
 
 For advanced usages such as transport adapters, Markdown, `hono/css`, Tailwind CSS, and CLI tools, please check the [Documentation Site](https://hono-email.hayatosc.dev).

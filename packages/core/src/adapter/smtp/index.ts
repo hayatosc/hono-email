@@ -34,6 +34,7 @@ export type {
 } from '../index'
 export { buildRawEmailMessage, buildRawEmailMessageAsync } from '../message'
 export { SmtpResponseBufferLimitError } from './protocol'
+export { SmtpTransportClosedError } from './receipt'
 export type {
   SmtpAuth,
   SmtpConnector,

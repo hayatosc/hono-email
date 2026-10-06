@@ -5,6 +5,7 @@ export const CLOSED_TRANSPORT_ERROR_MESSAGE = 'SMTP transport is closed.'
 export class SmtpTransportClosedError extends Error {
   constructor() {
     super(CLOSED_TRANSPORT_ERROR_MESSAGE)
+    this.name = 'SmtpTransportClosedError'
   }
 }
 
