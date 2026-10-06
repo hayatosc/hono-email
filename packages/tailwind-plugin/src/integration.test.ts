@@ -240,6 +240,21 @@ describe('actual bundler integration', () => {
     }, 20_000)
   }
 
+  test('resolves custom CSS and TypeScript config from the host project root', async () => {
+    const fixture = await createFixture()
+    await writeFile(
+      path.join(fixture.root, 'tailwind.config.ts'),
+      `export default { theme: { extend: { spacing: { email: '3px' } } } }`,
+    )
+    await writeFile(
+      path.join(fixture.root, 'theme.css'),
+      '@theme { --color-brand: #123456; } .custom { font-weight: 700; }',
+    )
+    fixture.options.configPath = './tailwind.config.ts'
+    fixture.options.css = '@import "./theme.css";'
+    await expectRenderedStyles(await bundleFixture('esbuild', fixture))
+  })
+
   test('esbuild rebuilds imported CSS, config dependencies, and shared sources', async () => {
     const fixture = await createFixture()
     const { root, entry, options } = fixture
