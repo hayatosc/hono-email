@@ -1,9 +1,11 @@
 ---
 import Default from '@astrojs/starlight/components/PageTitle.astro';
 
+import { markdownUrlForPathname } from '../markdown-alternate';
+
 const { url } = Astro;
 const pathname = url.pathname.replace(/\/$/, '');
-const markdownUrl = pathname ? `${pathname}.md` : '/index.md';
+const markdownUrl = markdownUrlForPathname(pathname);
 // The home page (`/`) renders its own hero heading, so skip the default title.
 const isHome = pathname === '';
 ---
@@ -12,6 +14,7 @@ const isHome = pathname === '';
   !isHome && (
     <>
       <Default {...Astro.props} />
+      {markdownUrl && (
       <div class="markdown-available">
         <a href={markdownUrl} class="md-badge">
           {/* Markdown mark logo */}
@@ -22,6 +25,7 @@ const isHome = pathname === '';
           View as Markdown
         </a>
       </div>
+      )}
     </>
   )
 }

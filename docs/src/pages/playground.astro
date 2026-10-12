@@ -1,0 +1,38 @@
+---
+import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro'
+
+import Playground from '../components/playground/Playground.svelte'
+
+export const prerender = true
+---
+
+<StarlightPage
+  frontmatter={{
+    title: 'Playground',
+    description: 'Write an email in hono/jsx and see the rendered HTML and plain text in your browser.',
+    template: 'splash',
+    tableOfContents: false,
+    editUrl: false,
+    lastUpdated: false,
+    prev: false,
+    next: false,
+  }}
+>
+  <p>
+    Edit the template below to render it with <code>hono-email</code>. Everything runs in your
+    browser. You can import from <code>hono-email</code>, <code>hono/jsx</code>, and
+    <code>hono/css</code>; the default export is rendered as the email.
+  </p>
+  <div class="playground-wrapper">
+    <Playground client:only="svelte" />
+  </div>
+</StarlightPage>
+
+<style>
+  /* Break out of Starlight's centered content column so the editor and preview get room. */
+  .playground-wrapper {
+    --playground-width: min(96rem, 100vw - 2 * var(--sl-content-pad-x, 1rem));
+    width: var(--playground-width);
+    margin-inline: calc((100% - var(--playground-width)) / 2);
+  }
+</style>

@@ -2,6 +2,8 @@
 import { Font } from 'astro:assets';
 import Default from '@astrojs/starlight/components/Head.astro';
 
+import { markdownUrlForPathname } from '../markdown-alternate';
+
 const { entry } = Astro.locals.starlightRoute;
 const rawTitle = entry?.data.title ?? 'hono-email';
 const title = rawTitle === 'hono-email' ? rawTitle : `${rawTitle} | hono-email`;
@@ -12,7 +14,7 @@ const ogFile = pagePath === '/' ? 'index.png' : `${pagePath.replace(/^\/|\/$/g, 
 const ogImageUrl = Astro.site
   ? new URL(`/og/${ogFile}`, Astro.site).toString()
   : `/og/${ogFile}`;
-const markdownUrl = pagePath === '/' ? '/index.md' : `${pagePath.replace(/\/$/, '')}.md`;
+const markdownUrl = markdownUrlForPathname(pagePath);
 ---
 
 <Default {...Astro.props} />
@@ -20,7 +22,7 @@ const markdownUrl = pagePath === '/' ? '/index.md' : `${pagePath.replace(/\/$/, 
 <Font cssVariable="--sl-font" preload={[{ style: 'normal' }]} />
 <Font cssVariable="--sl-font-mono" />
 
-<link rel="alternate" type="text/markdown" href={markdownUrl} />
+{markdownUrl && <link rel="alternate" type="text/markdown" href={markdownUrl} />}
 <meta property="og:title" content={title} />
 <meta property="og:description" content={description} />
 <meta property="og:image" content={ogImageUrl} />
