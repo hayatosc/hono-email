@@ -101,6 +101,15 @@ jobs:
               - 'packages/core/package.json'
               - 'bun.lock'
               - 'runtime-tests/cloudflare/**'
+            aws-ses:
+              - 'packages/core/src/**'
+              - 'packages/core/package.json'
+              - 'packages/core/tsdown.config.ts'
+              - 'package.json'
+              - 'bun.lock'
+              - 'runtime-tests/aws-ses/**'
+              - '.github/workflows/ci.yml'
+              - 'actrun.toml'
             docs:
               - 'docs/**'
 
@@ -137,3 +146,7 @@ jobs:
       - name: Runtime Test (Cloudflare)
         if: steps.filter.outputs.cloudflare == 'true'
         run: bun run test:runtime:cloudflare
+
+      - name: Runtime Test (AWS SES)
+        if: steps.filter.outputs.aws-ses == 'true'
+        run: bun run test:runtime:aws-ses

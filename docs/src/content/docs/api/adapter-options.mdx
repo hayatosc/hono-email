@@ -7,8 +7,6 @@ import { Badge } from '@astrojs/starlight/components'
 
 Each delivery adapter has specific configuration options passed when initializing the transport or adapter function.
 
----
-
 ## SMTP Options
 
 SMTP settings used with `SmtpTransport`.
@@ -108,6 +106,24 @@ Attachment size limits.
 
 ---
 
+### SmtpSendOptions
+
+Options passed to `smtp.send(message, options)`.
+
+```ts
+type SmtpSendOptions = {
+  dkim?: EmailDkimOptions
+}
+```
+
+#### `dkim` <Badge text="Optional" variant="note" size="small" />
+
+**Type:** `EmailDkimOptions`
+
+Signing settings for this send. Takes precedence over legacy `message.dkim`, then the transport's `dkim` default, without merging configurations. Omit to inherit those settings. See [DKIM signing](/adapters/smtp/#dkim-signing) for migration from `message.dkim`.
+
+---
+
 ### SmtpAuth
 
 ```ts
@@ -204,6 +220,77 @@ Custom `fetch` implementation. If omitted, uses the global `fetch` of the curren
 **Type:** `EmailAttachmentLimits`
 
 Attachment limits.
+
+---
+
+## AWS SES Options
+
+Options passed to `SesAdapter`.
+
+### SesAdapterOptions
+
+```ts
+type SesAdapterOptions = {
+  client: SesClient
+  configurationSetName?: string
+  tags?: Readonly<Record<string, string>>
+  limits?: EmailAttachmentLimits
+}
+```
+
+#### `client` <Badge text="Required" variant="caution" size="small" />
+
+**Type:** `SesClient`
+
+An AWS SDK v3 `SESv2Client`. Configure region, credentials, timeouts, and retries on this client. The adapter reuses the client without destroying it.
+
+#### `configurationSetName` <Badge text="Optional" variant="note" size="small" />
+
+**Type:** `string`
+
+Default SES configuration set.
+
+#### `tags` <Badge text="Optional" variant="note" size="small" />
+
+**Type:** `Readonly<Record<string, string>>`
+
+Default SES event tags.
+
+#### `limits` <Badge text="Optional" variant="note" size="small" />
+
+**Type:** `EmailAttachmentLimits`
+
+Attachment limits.
+
+### SesSendOptions
+
+Options passed to `adapter.send(message, options)` for individual sends. The shared `sendEmail()` helper uses the adapter defaults.
+
+```ts
+type SesSendOptions = {
+  configurationSetName?: string
+  tags?: Readonly<Record<string, string>>
+  abortSignal?: AbortSignal
+}
+```
+
+#### `configurationSetName` <Badge text="Optional" variant="note" size="small" />
+
+**Type:** `string`
+
+Overrides the default configuration set for this send.
+
+#### `tags` <Badge text="Optional" variant="note" size="small" />
+
+**Type:** `Readonly<Record<string, string>>`
+
+Merged with the default tags by key, with per-send values taking precedence.
+
+#### `abortSignal` <Badge text="Optional" variant="note" size="small" />
+
+**Type:** `AbortSignal`
+
+Cancellation signal forwarded to the SDK request. Does not cancel rendering or attachment loading.
 
 ---
 

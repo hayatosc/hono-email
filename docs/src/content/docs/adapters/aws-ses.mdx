@@ -1,0 +1,107 @@
+---
+title: AWS SES
+description: Send email through Amazon SES with hono-email.
+---
+
+import { Tabs, TabItem } from '@astrojs/starlight/components'
+
+`hono-email/aws-ses` provides `SesAdapter` for Amazon SES. The adapter uses AWS SDK v3 to handle credentials, request signing, and delivery.
+
+## Installation
+
+Install the SDK only in applications that use SES:
+
+<Tabs syncKey="package-manager">
+  <TabItem label="npm">
+
+    ```sh
+    npm i hono-email hono @aws-sdk/client-sesv2
+    ```
+
+  </TabItem>
+  <TabItem label="yarn">
+
+    ```sh
+    yarn add hono-email hono @aws-sdk/client-sesv2
+    ```
+
+  </TabItem>
+  <TabItem label="pnpm">
+
+    ```sh
+    pnpm add hono-email hono @aws-sdk/client-sesv2
+    ```
+
+  </TabItem>
+  <TabItem label="bun">
+
+    ```sh
+    bun i hono-email hono @aws-sdk/client-sesv2
+    ```
+
+  </TabItem>
+</Tabs>
+
+The SDK is an optional peer dependency and is not bundled into hono-email.
+
+## Example
+
+```tsx
+import { SESv2Client } from '@aws-sdk/client-sesv2'
+import { Body, Html, Text } from 'hono-email'
+import { SesAdapter, sendEmail } from 'hono-email/aws-ses'
+
+const client = new SESv2Client({ region: 'ap-northeast-1' })
+
+const receipt = await sendEmail({
+  adapter: SesAdapter({ client }),
+  from: { address: 'sender@example.com', name: 'Sender' },
+  to: ['recipient@example.com'],
+  subject: 'Welcome',
+  jsx: (
+    <Html>
+      <Body>
+        <Text>Hello from AWS SES.</Text>
+      </Body>
+    </Html>
+  ),
+})
+
+if (!receipt.successful) {
+  console.error(receipt.errorMessages)
+}
+```
+
+For the full list of configuration options, see the [AWS SES Options API Reference](/api/adapter-options/#aws-ses-options).
+
+## Shared adapter features
+
+Like all provider adapters, AWS SES supports `to`, `cc`, `bcc`, `replyTo`, custom `headers`, and `attachments`. Inline attachments use `cid` when the provider supports content IDs.
+
+## Options
+
+import { Badge } from '@astrojs/starlight/components'
+
+### `client` <Badge text="Required" variant="caution" size="small" />
+
+**Type:** `SesClient`
+
+An AWS SDK v3 `SESv2Client`. Configure region, credentials, timeouts, and retries on this client.
+
+### `configurationSetName` <Badge text="Optional" variant="note" size="small" />
+
+**Type:** `string`
+
+Default SES configuration set.
+
+### `tags` <Badge text="Optional" variant="note" size="small" />
+
+**Type:** `Readonly<Record<string, string>>`
+
+Default SES event tags.
+
+### `limits.maxAttachmentSize` <Badge text="Optional" variant="note" size="small" />
+
+**Type:** `number`
+
+Maximum attachment size in bytes.

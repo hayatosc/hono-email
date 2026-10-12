@@ -19,7 +19,8 @@
     "sync:docs": "bun run --filter 'hono-email-docs' sync",
     "test": "bun test --path-ignore-patterns='_build' packages/core/src packages/tailwind-plugin/src packages/preview/src docs/src",
     "test:coverage": "bun test --coverage --path-ignore-patterns='_build' packages/core/src packages/tailwind-plugin/src packages/preview/src docs/src",
-    "test:runtime": "bun run test:runtime:node && bun run test:runtime:deno && bun run test:runtime:bun && bun run test:runtime:cloudflare",
+    "test:runtime": "bun run test:runtime:node && bun run test:runtime:deno && bun run test:runtime:bun && bun run test:runtime:cloudflare && bun run test:runtime:aws-ses",
+    "test:runtime:aws-ses": "bun test runtime-tests/aws-ses/adapter.test.tsx",
     "test:runtime:node": "tsx --test runtime-tests/node/*.test.ts",
     "test:runtime:deno": "deno test --allow-net --allow-read runtime-tests/deno",
     "test:runtime:bun": "bun test runtime-tests/bun",
@@ -27,6 +28,7 @@
     "typecheck": "bun run --filter './packages/*' typecheck"
   },
   "devDependencies": {
+    "@aws-sdk/client-sesv2": "^3.1149.0",
     "@changesets/changelog-github": "^0.7.0",
     "@changesets/cli": "^2.31.1",
     "@cloudflare/vitest-pool-workers": "^0.19.1",

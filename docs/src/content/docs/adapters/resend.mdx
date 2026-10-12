@@ -15,7 +15,7 @@ const receipt = await sendEmail({
   adapter: ResendAdapter({
     apiKey: process.env.RESEND_API_KEY!,
   }),
-  from: 'Sender <sender@example.com>',
+  from: { address: 'sender@example.com', name: 'Sender' },
   to: ['recipient@example.com'],
   subject: 'Welcome',
   jsx: (

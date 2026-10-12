@@ -66,6 +66,10 @@
       "types": "./dist/adapter/resend/index.d.ts",
       "import": "./dist/adapter/resend/index.js"
     },
+    "./aws-ses": {
+      "types": "./dist/adapter/aws-ses/index.d.ts",
+      "import": "./dist/adapter/aws-ses/index.js"
+    },
     "./sendgrid": {
       "types": "./dist/adapter/sendgrid/index.d.ts",
       "import": "./dist/adapter/sendgrid/index.js"
@@ -110,7 +114,13 @@
     "vitest": "^4.1.10"
   },
   "peerDependencies": {
+    "@aws-sdk/client-sesv2": "^3.1149.0",
     "hono": "^4.5.0"
+  },
+  "peerDependenciesMeta": {
+    "@aws-sdk/client-sesv2": {
+      "optional": true
+    }
   },
   "engines": {
     "node": ">=22.0.0"
