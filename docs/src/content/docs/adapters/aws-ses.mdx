@@ -1,14 +1,11 @@
 ---
 title: AWS SES
-description: Send email with AWS SDK v3, including SQS-triggered Lambda workers.
+description: Send email through Amazon SES with hono-email.
 ---
 
 import { Tabs, TabItem } from '@astrojs/starlight/components'
 
-`hono-email/aws-ses` exports `SesAdapter`, `sendEmail`, `renderEmailMessage`, and their related types.
-The adapter maps rendered emails to SES API v2 `SendEmailCommand` requests.
-AWS SDK v3 handles credentials, request signing, HTTP connections, and retries.
-The `v2` in `SESv2Client` refers to the SES API, not the discontinued JavaScript SDK v2.
+`hono-email/aws-ses` provides `SesAdapter` for Amazon SES. The adapter uses AWS SDK v3 to handle credentials, request signing, and delivery.
 
 ## Installation
 
@@ -46,9 +43,8 @@ Install the SDK only in applications that use SES:
 </Tabs>
 
 The SDK is an optional peer dependency and is not bundled into hono-email.
-Importing `hono-email`, `hono-email/adapter`, or another adapter does not load the SES SDK.
 
-## Send an email
+## Example
 
 ```tsx
 import { SESv2Client } from '@aws-sdk/client-sesv2'
@@ -56,21 +52,16 @@ import { Body, Html, Text } from 'hono-email'
 import { SesAdapter, sendEmail } from 'hono-email/aws-ses'
 
 const client = new SESv2Client({ region: 'ap-northeast-1' })
-const adapter = SesAdapter({
-  client,
-  configurationSetName: 'transactional',
-  tags: { app: 'my-app' },
-})
 
 const receipt = await sendEmail({
-  adapter,
-  from: 'hello@example.com',
-  to: 'recipient@example.com',
-  subject: 'Welcome!',
+  adapter: SesAdapter({ client }),
+  from: 'Sender <sender@example.com>',
+  to: ['recipient@example.com'],
+  subject: 'Welcome',
   jsx: (
     <Html>
       <Body>
-        <Text>Your account is ready.</Text>
+        <Text>Hello from AWS SES.</Text>
       </Body>
     </Html>
   ),
@@ -81,101 +72,36 @@ if (!receipt.successful) {
 }
 ```
 
-The caller owns the client. Reuse it across sends and warm Lambda invocations; the adapter never destroys it.
-In Lambda, the SDK uses the execution role's credentials and the runtime's region configuration.
-Grant the role `ses:SendEmail` for the verified SES sender identity.
-SES identities and sandbox restrictions apply in the selected region.
+For the full list of configuration options, see the [AWS SES Options API Reference](/api/adapter-options/#aws-ses-options).
+
+## Shared adapter features
+
+Like all provider adapters, AWS SES supports `to`, `cc`, `bcc`, `replyTo`, custom `headers`, and `attachments`. Inline attachments use `cid` when the provider supports content IDs.
 
 ## Options
 
-| Option                 | Type                               | Behavior                                                                                                                    |
-| ---------------------- | ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| `client`               | `SesClient`                        | Required. Accepts an AWS SDK v3 `SESv2Client`. Configure region, credentials, request timeouts, and retries on this client. |
-| `configurationSetName` | `string`                           | Default SES configuration set.                                                                                              |
-| `tags`                 | `Readonly<Record<string, string>>` | Default SES event tags.                                                                                                     |
-| `limits`               | `EmailAttachmentLimits`            | Shared attachment limits, including `maxAttachmentSize`.                                                                    |
+import { Badge } from '@astrojs/starlight/components'
 
-### Per-send options
+### `client` <Badge text="Required" variant="caution" size="small" />
 
-Use `adapter.send(message, options)` for per-message settings:
+**Type:** `SesClient`
 
-```tsx
-import { renderEmailMessage } from 'hono-email/aws-ses'
+An AWS SDK v3 `SESv2Client`. Configure region, credentials, timeouts, and retries on this client.
 
-const message = await renderEmailMessage({
-  from: 'hello@example.com',
-  to: 'recipient@example.com',
-  subject: 'Welcome!',
-  jsx: (
-    <Html>
-      <Body>
-        <Text>Your account is ready.</Text>
-      </Body>
-    </Html>
-  ),
-})
+### `configurationSetName` <Badge text="Optional" variant="note" size="small" />
 
-const receipt = await adapter.send(message, {
-  configurationSetName: 'onboarding',
-  tags: { category: 'welcome' },
-  abortSignal: AbortSignal.timeout(10_000),
-})
-```
+**Type:** `string`
 
-`configurationSetName` overrides the default for that send.
-Tags merge by key, with per-send values taking precedence.
-Per-send options do not change defaults or other concurrent sends.
-`abortSignal` is forwarded to the SDK's request options; it does not cancel rendering or attachment loading.
-The shared `sendEmail()` helper uses the adapter defaults, as with other adapters.
+Default SES configuration set.
 
-## Message support and results
+### `tags` <Badge text="Optional" variant="note" size="small" />
 
-Supported fields include HTML and plain text, `to`, `cc`, `bcc`, `replyTo`, custom headers, and attachments with filenames.
-At least one recipient across `to`, `cc`, and `bcc` is required.
-Inline attachments retain their content ID and disposition.
-Attachment content is passed as bytes to the SDK, which performs the request's base64 encoding.
+**Type:** `Readonly<Record<string, string>>`
 
-The adapter uses SES Simple content; SES constructs the MIME message.
-SMTP-specific `envelope`, local `dkim`, `date`, and `messageId` fields are not forwarded.
-Configure DKIM in SES and use the returned `receipt.messageId` as the SES message identifier.
-Custom per-attachment headers are not forwarded.
+Default SES event tags.
 
-A successful receipt means SES accepted the request, not that the recipient received the email.
-Validation and SDK failures return `successful: false`; `cause` preserves the original error when available, including AWS error names and metadata.
-Rendering failures reject `sendEmail()` before delivery.
-The adapter adds no retry loop; SDK retries follow the supplied client's configuration.
+### `limits.maxAttachmentSize` <Badge text="Optional" variant="note" size="small" />
 
-## SQS → Lambda → SES
+**Type:** `number`
 
-See the [complete, tested worker example](https://github.com/hayatosc/hono-email/tree/main/examples/aws-ses-sqs) for the handler, input validation, build commands, and deployment settings.
-Each SQS record contains JSON template data rather than JSX or an SDK request:
-
-```json
-{ "to": "recipient@example.com", "name": "Alice" }
-```
-
-Create the client and adapter outside the handler, and check every receipt.
-The example uses `maxAttempts: 1` so failed sends return to SQS without additional SDK attempts.
-Choose the SDK retry policy and Lambda timeout together for your workload.
-
-Enable `ReportBatchItemFailures` on the Lambda event source mapping.
-Return failed **SQS record IDs**, not SES message IDs:
-
-```json
-{
-  "batchItemFailures": [{ "itemIdentifier": "failed-sqs-message-id" }]
-}
-```
-
-The example catches failed receipts, rendering failures, and invalid JSON per record.
-For standard queues it continues processing later records.
-For FIFO queues it stops after the first failure and also returns all unprocessed records, preserving order.
-See AWS's [partial batch response documentation](https://docs.aws.amazon.com/lambda/latest/dg/services-sqs-errorhandling.html).
-
-Configure a dead-letter queue for jobs that keep failing and limit event-source concurrency to match your SES sending quota.
-Set the SQS visibility timeout to at least six times the Lambda timeout, plus any batching window, following [AWS's queue configuration guidance](https://docs.aws.amazon.com/lambda/latest/dg/services-sqs-configure.html).
-
-SQS processing is at least once. Partial batch responses reduce unnecessary retries but cannot guarantee exactly-once email delivery.
-SES `SendEmail` has no idempotency token: a timeout can occur after SES accepts the email, and a Lambda invocation can end after sending but before acknowledging the record.
-If duplicates matter, use a durable application job ID and delivery state to detect repeats and define how to reconcile uncertain sends.
-Neither an SES tag nor a custom `Message-ID` deduplicates a send.
+Maximum attachment size in bytes.

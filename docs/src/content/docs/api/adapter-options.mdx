@@ -7,32 +7,6 @@ import { Badge } from '@astrojs/starlight/components'
 
 Each delivery adapter has specific configuration options passed when initializing the transport or adapter function.
 
-## AWS SES Options
-
-`SesAdapter` from `hono-email/aws-ses` accepts a caller-owned AWS SDK v3 client:
-
-```ts
-type SesAdapterOptions = {
-  client: SesClient
-  configurationSetName?: string
-  tags?: Readonly<Record<string, string>>
-  limits?: EmailAttachmentLimits
-}
-
-type SesSendOptions = {
-  configurationSetName?: string
-  tags?: Readonly<Record<string, string>>
-  abortSignal?: AbortSignal
-}
-```
-
-`SesClient` is the subset of `SESv2Client` needed to send a `SendEmailCommand`.
-Configure AWS credentials, region, timeouts, and retries on the SDK client.
-Pass `SesSendOptions` to `adapter.send(message, options)` to override the configuration set, merge tags by key, or pass cancellation to the SDK for one send.
-See the [AWS SES guide](/adapters/aws-ses/) for complete examples and SQS Lambda usage.
-
----
-
 ## SMTP Options
 
 SMTP settings used with `SmtpTransport`.
@@ -228,6 +202,77 @@ Custom `fetch` implementation. If omitted, uses the global `fetch` of the curren
 **Type:** `EmailAttachmentLimits`
 
 Attachment limits.
+
+---
+
+## AWS SES Options
+
+Options passed to `SesAdapter`.
+
+### SesAdapterOptions
+
+```ts
+type SesAdapterOptions = {
+  client: SesClient
+  configurationSetName?: string
+  tags?: Readonly<Record<string, string>>
+  limits?: EmailAttachmentLimits
+}
+```
+
+#### `client` <Badge text="Required" variant="caution" size="small" />
+
+**Type:** `SesClient`
+
+An AWS SDK v3 `SESv2Client`. Configure region, credentials, timeouts, and retries on this client. The adapter reuses the client without destroying it.
+
+#### `configurationSetName` <Badge text="Optional" variant="note" size="small" />
+
+**Type:** `string`
+
+Default SES configuration set.
+
+#### `tags` <Badge text="Optional" variant="note" size="small" />
+
+**Type:** `Readonly<Record<string, string>>`
+
+Default SES event tags.
+
+#### `limits` <Badge text="Optional" variant="note" size="small" />
+
+**Type:** `EmailAttachmentLimits`
+
+Attachment limits.
+
+### SesSendOptions
+
+Options passed to `adapter.send(message, options)` for individual sends. The shared `sendEmail()` helper uses the adapter defaults.
+
+```ts
+type SesSendOptions = {
+  configurationSetName?: string
+  tags?: Readonly<Record<string, string>>
+  abortSignal?: AbortSignal
+}
+```
+
+#### `configurationSetName` <Badge text="Optional" variant="note" size="small" />
+
+**Type:** `string`
+
+Overrides the default configuration set for this send.
+
+#### `tags` <Badge text="Optional" variant="note" size="small" />
+
+**Type:** `Readonly<Record<string, string>>`
+
+Merged with the default tags by key, with per-send values taking precedence.
+
+#### `abortSignal` <Badge text="Optional" variant="note" size="small" />
+
+**Type:** `AbortSignal`
+
+Cancellation signal forwarded to the SDK request. Does not cancel rendering or attachment loading.
 
 ---
 
