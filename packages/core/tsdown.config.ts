@@ -9,6 +9,7 @@ const neverBundle = [
   'cloudflare:workers',
   /^hono(\/.*)?$/,
   'htmlrewriter',
+  /^@aws-sdk\//,
 
   /^node:/,
 ]
@@ -22,6 +23,7 @@ export default defineConfig({
     './src/adapter/cloudflare/rest.ts',
     './src/adapter/provider/index.ts',
     './src/adapter/resend/index.ts',
+    './src/adapter/aws-ses/index.ts',
     './src/adapter/sendgrid/index.ts',
     './src/adapter/postmark/index.ts',
     './src/adapter/mailgun/index.ts',

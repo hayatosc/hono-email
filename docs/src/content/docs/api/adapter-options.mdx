@@ -7,6 +7,30 @@ import { Badge } from '@astrojs/starlight/components'
 
 Each delivery adapter has specific configuration options passed when initializing the transport or adapter function.
 
+## AWS SES Options
+
+`SesAdapter` from `hono-email/aws-ses` accepts a caller-owned AWS SDK v3 client:
+
+```ts
+type SesAdapterOptions = {
+  client: SesClient
+  configurationSetName?: string
+  tags?: Readonly<Record<string, string>>
+  limits?: EmailAttachmentLimits
+}
+
+type SesSendOptions = {
+  configurationSetName?: string
+  tags?: Readonly<Record<string, string>>
+  abortSignal?: AbortSignal
+}
+```
+
+`SesClient` is the subset of `SESv2Client` needed to send a `SendEmailCommand`.
+Configure AWS credentials, region, timeouts, and retries on the SDK client.
+Pass `SesSendOptions` to `adapter.send(message, options)` to override the configuration set, merge tags by key, or pass cancellation to the SDK for one send.
+See the [AWS SES guide](/adapters/aws-ses/) for complete examples and SQS Lambda usage.
+
 ---
 
 ## SMTP Options

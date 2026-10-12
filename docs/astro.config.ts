@@ -115,6 +115,7 @@ export default defineConfig({
           items: [
             { label: 'SMTP', slug: 'adapters/smtp' },
             { label: 'Resend', slug: 'adapters/resend' },
+            { label: 'AWS SES', slug: 'adapters/aws-ses' },
             { label: 'SendGrid', slug: 'adapters/sendgrid' },
             { label: 'Postmark', slug: 'adapters/postmark' },
             { label: 'Mailgun', slug: 'adapters/mailgun' },

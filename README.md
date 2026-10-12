@@ -24,7 +24,7 @@ This monorepo consists of the following packages:
 - **HTML + Plain Text**: Render beautiful HTML emails and matching plain text from a single JSX tree via `render()`.
 - **Strict Validation**: Guard against risky CSS properties and unsupported tags with strict validation rules.
 - **Styling Options**: Supports inline styles, `hono/css` (CSS-in-JS), and Tailwind CSS (build-time integration).
-- **Transport Adapters**: Built-in integrations for SMTP, Resend, SendGrid, Postmark, Mailgun, and Cloudflare Email.
+- **Transport Adapters**: Built-in integrations for SMTP, AWS SES, Resend, SendGrid, Postmark, Mailgun, and Cloudflare Email. The [SES adapter](https://hono-email.hayatosc.dev/adapters/aws-ses/) uses an optional AWS SDK v3 dependency and includes an [SQS Lambda worker example](examples/aws-ses-sqs).
 
 ## Quick Start
 
@@ -64,7 +64,7 @@ const { html, text } = await render(<WelcomeEmail />)
 
 Use `new SmtpTransport({ ..., dkim })` for default signing settings, or `smtp.send(message, { dkim })` for a single send. The optional second argument is typed as `SmtpSendOptions`, exported from `hono-email/smtp`. Per-send DKIM takes precedence over legacy `message.dkim`, followed by transport defaults.
 
-`EmailMessage.dkim` is deprecated but remains supported, including in JSX drafts and `sendEmail()` calls. To migrate per-message settings, pass them as the second argument to `smtp.send()`; for JSX, first call `renderEmailMessage()`. See the [SMTP DKIM migration example](packages/core/README.md#smtp-dkim).
+`EmailMessage.dkim` is deprecated but remains supported, including in JSX drafts and `sendEmail()` calls. To migrate per-message settings, pass them as the second argument to `smtp.send()`; for JSX, first call `renderEmailMessage()`. See the [SMTP adapter guide](https://hono-email.hayatosc.dev/adapters/smtp/).
 
 HTTP provider adapters cannot apply locally supplied DKIM settings and do not forward `message.dkim` in their payloads. Configure DKIM with the provider; signing is provider-side.
 
