@@ -115,6 +115,31 @@ For the full list of configuration options, see the [SMTP Options API Reference]
 - `envelope` lets you override the SMTP envelope sender and recipients without changing the visible `From` / `To` headers.
 - `to`, `cc`, `bcc`, and `envelope.to` accept single addresses or arrays. SMTP sends one `RCPT TO` command per resolved recipient and reports partial recipient rejection in `receipt.rejected`.
 
+## DKIM signing
+
+Configure `SmtpTransportOptions.dkim` for default signing settings. For per-send signing, pass `SmtpSendOptions` to `smtp.send()`. Load `privateKey` from your application's secret store and use a message returned by `renderEmailMessage()`:
+
+```ts
+import type { SmtpSendOptions } from 'hono-email/smtp'
+
+const options: SmtpSendOptions = {
+  dkim: { domainName: 'example.com', keySelector: 'mail', privateKey },
+}
+const receipt = await smtp.send(message, options)
+```
+
+DKIM settings are selected in this order, without merging configurations:
+
+1. `smtp.send(message, { dkim })` for the current send.
+2. Legacy `message.dkim`.
+3. The transport's `dkim` default.
+
+Omitting per-send `dkim` inherits the legacy or transport setting. `false` is not supported; signing is disabled only when no DKIM configuration is present. Per-send options do not mutate the message or change defaults for later sends.
+
+`EmailMessage.dkim` is deprecated but remains supported in `EmailMessageDraft` and `sendEmail()` options. Migrate `smtp.send({ ...message, dkim })` to `smtp.send(message, { dkim })`. For JSX drafts passed to `sendEmail({ adapter: smtp, ..., dkim })`, move shared settings into the transport constructor, or render with `renderEmailMessage()` from `hono-email/adapter` and pass per-send settings to `smtp.send()`. The shared `sendEmail()` helper uses the transport defaults and legacy message settings; it does not accept `SmtpSendOptions`.
+
+Provider adapters cannot apply locally supplied DKIM settings. Configure DKIM with the provider. `SmtpTransport` used with the Cloudflare SMTP connector signs locally, like other SMTP connectors.
+
 ## Options
 
 import { Badge } from '@astrojs/starlight/components'

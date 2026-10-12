@@ -292,7 +292,11 @@ describe('SES adapter', () => {
       expect(requests[0]?.hostname).toBe('email.ap-northeast-1.amazonaws.com')
       expect(requests[0]?.headers.authorization).toStartWith('AWS4-HMAC-SHA256')
       expect(requests[0]?.headers['x-amz-security-token']).toBe('temporary-token')
-      expect(JSON.parse(String(requests[0]?.body))).toMatchObject({
+      const body = requests[0]?.body
+      if (!(body instanceof Uint8Array)) {
+        throw new Error('Expected the SDK request body to be a Uint8Array.')
+      }
+      expect(JSON.parse(new TextDecoder().decode(body))).toMatchObject({
         Content: { Simple: { Attachments: [{ RawContent: 'AP+A' }] } },
       })
       expect(destroyed).toBe(false)

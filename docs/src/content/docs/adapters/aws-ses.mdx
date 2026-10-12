@@ -55,7 +55,7 @@ const client = new SESv2Client({ region: 'ap-northeast-1' })
 
 const receipt = await sendEmail({
   adapter: SesAdapter({ client }),
-  from: 'Sender <sender@example.com>',
+  from: { address: 'sender@example.com', name: 'Sender' },
   to: ['recipient@example.com'],
   subject: 'Welcome',
   jsx: (

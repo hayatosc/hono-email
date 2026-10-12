@@ -64,7 +64,7 @@ const { html, text } = await render(<WelcomeEmail />)
 
 Use `new SmtpTransport({ ..., dkim })` for default signing settings, or `smtp.send(message, { dkim })` for a single send. The optional second argument is typed as `SmtpSendOptions`, exported from `hono-email/smtp`. Per-send DKIM takes precedence over legacy `message.dkim`, followed by transport defaults.
 
-`EmailMessage.dkim` is deprecated but remains supported, including in JSX drafts and `sendEmail()` calls. To migrate per-message settings, pass them as the second argument to `smtp.send()`; for JSX, first call `renderEmailMessage()`. See the [SMTP adapter guide](https://hono-email.hayatosc.dev/adapters/smtp/).
+`EmailMessage.dkim` is deprecated but remains supported, including in JSX drafts and `sendEmail()` calls. To migrate per-message settings, pass them as the second argument to `smtp.send()`; for JSX, first call `renderEmailMessage()`. See the [SMTP adapter guide](https://hono-email.hayatosc.dev/adapters/smtp/#dkim-signing).
 
 HTTP provider adapters cannot apply locally supplied DKIM settings and do not forward `message.dkim` in their payloads. Configure DKIM with the provider; signing is provider-side.
 

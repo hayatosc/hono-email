@@ -106,6 +106,24 @@ Attachment size limits.
 
 ---
 
+### SmtpSendOptions
+
+Options passed to `smtp.send(message, options)`.
+
+```ts
+type SmtpSendOptions = {
+  dkim?: EmailDkimOptions
+}
+```
+
+#### `dkim` <Badge text="Optional" variant="note" size="small" />
+
+**Type:** `EmailDkimOptions`
+
+Signing settings for this send. Takes precedence over legacy `message.dkim`, then the transport's `dkim` default, without merging configurations. Omit to inherit those settings. See [DKIM signing](/adapters/smtp/#dkim-signing) for migration from `message.dkim`.
+
+---
+
 ### SmtpAuth
 
 ```ts
