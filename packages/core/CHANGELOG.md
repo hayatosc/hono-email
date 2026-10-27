@@ -1,5 +1,11 @@
 # hono-email
 
+## 0.10.0
+
+### Minor Changes
+
+- [#154](https://github.com/hayatosc/hono-email/pull/154) [`77fefcc`](https://github.com/hayatosc/hono-email/commit/77fefcc546972e6c7e984154e3135da8f0ed038e) Thanks [@hayatosc](https://github.com/hayatosc)! - Add `hono-email/aws-ses` with an AWS SDK v3 SES adapter, rendering helpers, per-send configuration sets and tags, attachment support, and SDK error preservation. Keep the SDK optional for non-SES consumers and document a tested SQS-triggered Lambda worker with partial batch failure handling.
+
 ## 0.9.0
 
 ### Patch Changes
