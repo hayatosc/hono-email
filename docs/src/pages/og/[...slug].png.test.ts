@@ -20,7 +20,7 @@ void mock.module('astro:content', () => {
 })
 
 describe('OG Image Route', () => {
-  test('getStaticPaths returns doc paths and fallback index path', async () => {
+  test('getStaticPaths returns doc, playground, and fallback index paths', async () => {
     const { getStaticPaths } = await import('./[...slug].png')
     const paths = await getStaticPaths()
 
@@ -29,6 +29,10 @@ describe('OG Image Route', () => {
     expect(docPath).toBeDefined()
     expect(docPath?.props.title).toBe('Overview')
     expect(docPath?.props.description).toBe('Introduction to hono-email.')
+
+    // Verify playground path
+    const playgroundPath = paths.find((p) => p.params.slug === 'playground')
+    expect(playgroundPath?.props.title).toBe('Playground')
 
     // Verify index fallback path
     const indexPath = paths.find((p) => p.params.slug === 'index')
