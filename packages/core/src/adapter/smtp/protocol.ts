@@ -6,9 +6,17 @@ export type SmtpCommandResponse = {
   lines: string[]
 }
 
+export type SmtpRecipientRejection = {
+  recipient: string
+  code: number
+  enhancedCode?: string
+  response: string
+}
+
 export type SmtpRecipientResult = {
   accepted: string[]
   rejected: string[]
+  rejections?: SmtpRecipientRejection[]
 }
 
 export type SmtpSessionOptions = {
@@ -25,17 +33,56 @@ export type SmtpSendOptions = {
   rawMessage: string
 }
 
+export type SmtpSendResult = {
+  accepted: string[]
+  rejected: string[]
+  response: string
+  code?: number
+  enhancedCode?: string
+  permanent?: boolean
+}
+
 export type SmtpSession = {
   close(): Promise<void>
   destroy(): Promise<void>
-  send(options: SmtpSendOptions): Promise<{
-    accepted: string[]
-    rejected: string[]
-    response: string
-  }>
+  send(options: SmtpSendOptions): Promise<SmtpSendResult>
 }
 
 const MAX_SMTP_RESPONSE_BUFFER_OCTETS = 4096
+
+const responseText = (response: SmtpCommandResponse): string =>
+  response.lines.length > 0 ? response.lines.join('\n') : `${response.code}`
+
+const ENHANCED_CODE_PATTERN = /^([245]\.\d{1,3}\.\d{1,3})\b/
+
+export class SmtpCommandError extends Error {
+  readonly code: number
+  readonly enhancedCode?: string
+  readonly command: string
+  readonly response: string
+  readonly permanent: boolean
+
+  constructor(
+    command: string,
+    response: SmtpCommandResponse,
+    describedCommand?: string,
+    customMessage?: string,
+  ) {
+    const text = responseText(response)
+    super(customMessage ?? `Unexpected SMTP response to ${describedCommand ?? command}: ${text}`)
+    this.name = 'SmtpCommandError'
+    this.code = response.code
+    this.command = command
+    this.response = text
+    this.permanent = response.code >= 500 && response.code < 600
+
+    const firstLineRest = response.lines[0]?.slice(4).trim() ?? ''
+    const match = ENHANCED_CODE_PATTERN.exec(firstLineRest)
+    if (match?.[1]) {
+      this.enhancedCode = match[1]
+    }
+  }
+}
 
 export class SmtpResponseBufferLimitError extends Error {
   readonly maxOctets: number = MAX_SMTP_RESPONSE_BUFFER_OCTETS
@@ -67,8 +114,6 @@ const encodeAsciiBase64 = (value: string): string => {
 
   return output
 }
-const responseText = (response: SmtpCommandResponse): string =>
-  response.lines.length > 0 ? response.lines.join('\n') : `${response.code}`
 
 const isExpectedCode = (response: SmtpCommandResponse, expectedCodes: number[]): boolean =>
   expectedCodes.includes(response.code)
@@ -208,9 +253,7 @@ class SmtpProtocolClient {
     await this.sendRaw(`${command}${CRLF}`)
     const response = await this.readResponse()
     if (!isExpectedCode(response, expectedCodes)) {
-      throw new Error(
-        `Unexpected SMTP response to ${this.describeCommandForError(command)}: ${responseText(response)}`,
-      )
+      throw new SmtpCommandError(command, response, this.describeCommandForError(command))
     }
 
     return response
@@ -308,6 +351,7 @@ const sendRecipients = async (
 ): Promise<SmtpRecipientResult> => {
   const accepted: string[] = []
   const rejected: string[] = []
+  const rejections: SmtpRecipientRejection[] = []
 
   for (const recipient of recipients) {
     validateSmtpPath(recipient, 'SMTP recipient')
@@ -316,10 +360,20 @@ const sendRecipients = async (
       accepted.push(recipient)
     } else {
       rejected.push(recipient)
+      const text = responseText(response)
+      const firstLineRest = response.lines[0]?.slice(4).trim() ?? ''
+      const match = ENHANCED_CODE_PATTERN.exec(firstLineRest)
+      const enhancedCode = match?.[1]
+      rejections.push({
+        recipient,
+        code: response.code,
+        response: text,
+        ...(enhancedCode !== undefined ? { enhancedCode } : {}),
+      })
     }
   }
 
-  return { accepted, rejected }
+  return { accepted, rejected, rejections }
 }
 
 class ReusableSmtpSession implements SmtpSession {
@@ -355,11 +409,7 @@ class ReusableSmtpSession implements SmtpSession {
     await this.#client.close()
   }
 
-  async send(options: SmtpSendOptions): Promise<{
-    accepted: string[]
-    rejected: string[]
-    response: string
-  }> {
+  async send(options: SmtpSendOptions): Promise<SmtpSendResult> {
     if (this.#closed) {
       throw new Error('SMTP session is closed.')
     }
@@ -370,9 +420,21 @@ class ReusableSmtpSession implements SmtpSession {
     const recipients = await sendRecipients(this.#client, options.recipients)
     if (recipients.accepted.length === 0) {
       await this.#client.command('RSET', [250])
+      const rejections = recipients.rejections ?? []
+      const allPermanent =
+        rejections.length > 0 && rejections.every((r) => r.code >= 500 && r.code < 600)
+      const primaryRejection = allPermanent
+        ? (rejections.find((r) => r.code >= 500 && r.code < 600) ?? rejections[0])
+        : (rejections.find((r) => r.code >= 400 && r.code < 500) ?? rejections[0])
       return {
-        ...recipients,
+        accepted: recipients.accepted,
+        rejected: recipients.rejected,
         response: 'No SMTP recipients were accepted.',
+        permanent: allPermanent,
+        ...(primaryRejection?.code !== undefined ? { code: primaryRejection.code } : {}),
+        ...(primaryRejection?.enhancedCode !== undefined
+          ? { enhancedCode: primaryRejection.enhancedCode }
+          : {}),
       }
     }
 
@@ -382,11 +444,12 @@ class ReusableSmtpSession implements SmtpSession {
     await this.#client.sendRaw(`${rawMessage}${dataTerminator}`)
     const dataResponse = await this.#client.readResponse()
     if (!isExpectedCode(dataResponse, [250])) {
-      throw new Error(`Unexpected SMTP response to DATA: ${responseText(dataResponse)}`)
+      throw new SmtpCommandError('DATA', dataResponse)
     }
 
     return {
-      ...recipients,
+      accepted: recipients.accepted,
+      rejected: recipients.rejected,
       response: responseText(dataResponse),
     }
   }
@@ -401,7 +464,12 @@ export const openSmtpSession = async (
   try {
     const greeting = await client.readResponse(options.greetingTimeout)
     if (!isExpectedCode(greeting, [220])) {
-      throw new Error(`Unexpected SMTP greeting: ${responseText(greeting)}`)
+      throw new SmtpCommandError(
+        'GREETING',
+        greeting,
+        'greeting',
+        `Unexpected SMTP greeting: ${responseText(greeting)}`,
+      )
     }
 
     validateClientName(options.clientName)
@@ -435,7 +503,7 @@ export const openSmtpSession = async (
 export const runSmtpSession = async (
   socket: SmtpSocket,
   options: SmtpSessionOptions & SmtpSendOptions,
-): Promise<{ accepted: string[]; rejected: string[]; response: string }> => {
+): Promise<SmtpSendResult> => {
   const session = await openSmtpSession(socket, options)
 
   try {

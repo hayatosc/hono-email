@@ -145,6 +145,8 @@ describe('SendGrid adapter', () => {
       ],
       rejected: [],
       successful: false,
+      category: 'validation',
+      permanent: true,
     })
   })
 
@@ -266,5 +268,82 @@ describe('SendGrid adapter', () => {
 
     expect(receipt.successful).toBe(true)
     expect(attempts).toBe(2)
+  })
+
+  test('classifies attachment validation failure as permanent', async () => {
+    const receipt = await SendGridAdapter({ apiKey: 'SG.test' }).send({
+      from: 'sender@example.com',
+      html: '<p>Hello</p>',
+      subject: 'Attachment without filename',
+      text: 'Hello',
+      to: 'recipient@example.com',
+      attachments: [
+        {
+          content: 'plain text',
+          contentType: 'text/plain',
+        },
+      ],
+    })
+
+    expect(receipt).toMatchObject({
+      successful: false,
+      category: 'validation',
+      permanent: true,
+      errorMessages: ['SendGrid attachments require a filename.'],
+    })
+  })
+
+  test('classifies attachment URL fetch network error as transient connection failure', async () => {
+    const originalFetch = globalThis.fetch
+    try {
+      globalThis.fetch = (async () => {
+        throw new TypeError('fetch failed')
+      }) as unknown as typeof fetch
+
+      const receipt = await SendGridAdapter({ apiKey: 'SG.test' }).send({
+        from: 'sender@example.com',
+        html: '<p>Hello</p>',
+        subject: 'Attachment URL fail',
+        text: 'Hello',
+        to: 'recipient@example.com',
+        attachments: [
+          {
+            path: 'https://example.com/file.pdf',
+            filename: 'file.pdf',
+          },
+        ],
+      })
+
+      expect(receipt).toMatchObject({
+        successful: false,
+        category: 'connection',
+        permanent: false,
+        errorMessages: ['fetch failed'],
+      })
+    } finally {
+      globalThis.fetch = originalFetch
+    }
+  })
+
+  test('classifies insecure HTTP apiBaseUrl as permanent validation error', async () => {
+    const receipt = await SendGridAdapter({
+      apiKey: 'SG.test',
+      apiBaseUrl: 'http://insecure.example.com',
+    }).send({
+      from: 'sender@example.com',
+      html: '<p>Hello</p>',
+      subject: 'Insecure URL',
+      text: 'Hello',
+      to: 'recipient@example.com',
+    })
+
+    expect(receipt).toMatchObject({
+      successful: false,
+      category: 'validation',
+      permanent: true,
+      errorMessages: [
+        'SendGrid adapter requires HTTPS. API tokens must not be sent over plaintext.',
+      ],
+    })
   })
 })

@@ -14,7 +14,13 @@ import {
   getProviderRecipientError,
   requireProviderRecipientError,
 } from '../provider'
-import { bytesToBase64, fetchWithTimeoutAndRetry } from '../utils'
+import {
+  bytesToBase64,
+  classifyFetchError,
+  fetchWithTimeoutAndRetry,
+  isPermanentHttpStatus,
+  parseRetryAfterMs,
+} from '../utils'
 import type { RequestRetryOptions } from '../utils'
 
 export type {
@@ -25,6 +31,7 @@ export type {
   EmailAttachmentDisposition,
   EmailAttachmentEncoding,
   EmailAttachmentLimits,
+  EmailErrorCategory,
   EmailHeaders,
   EmailMessage,
   EmailMessageDraft,
@@ -226,7 +233,10 @@ export const MailgunAdapter = (options: MailgunAdapterOptions): EmailAdapter => 
     const recipients = collectRecipients(message)
     const recipientError = getProviderRecipientError(message, recipients)
     if (recipientError !== undefined) {
-      return failedReceipt([recipientError])
+      return failedReceipt([recipientError], {
+        category: 'validation',
+        permanent: true,
+      })
     }
 
     let form: FormData
@@ -236,6 +246,7 @@ export const MailgunAdapter = (options: MailgunAdapterOptions): EmailAdapter => 
       return failedReceipt([error instanceof Error ? error.message : String(error)], {
         cause: error,
         rejected: recipients,
+        ...classifyFetchError(error),
       })
     }
 
@@ -264,9 +275,14 @@ export const MailgunAdapter = (options: MailgunAdapterOptions): EmailAdapter => 
       const data = parseJson(body)
 
       if (!response.ok || !isMailgunSuccessResponse(data)) {
+        const retryAfterMs = parseRetryAfterMs(response.headers.get('retry-after'))
         return failedReceipt([asErrorMessage(data, response, body)], {
+          category: 'provider',
+          code: response.status,
+          permanent: isPermanentHttpStatus(response.status),
           rejected: recipients,
           response: body,
+          ...(retryAfterMs !== undefined ? { retryAfterMs } : {}),
         })
       }
 
@@ -281,6 +297,7 @@ export const MailgunAdapter = (options: MailgunAdapterOptions): EmailAdapter => 
       return failedReceipt([error instanceof Error ? error.message : String(error)], {
         cause: error,
         rejected: recipients,
+        ...classifyFetchError(error),
       })
     }
   },

@@ -203,6 +203,8 @@ export class CloudflareEmailConnectorError extends Error {
   readonly errorMessages: string[]
   readonly rejected: string[] | undefined
   readonly response: string | undefined
+  readonly status: number | undefined
+  readonly retryAfterMs: number | undefined
 
   constructor(
     errorMessages: string[],
@@ -211,6 +213,8 @@ export class CloudflareEmailConnectorError extends Error {
       message?: string
       rejected?: string[]
       response?: string
+      status?: number
+      retryAfterMs?: number
     },
   ) {
     super(options?.message ?? errorMessages[0] ?? 'Cloudflare Email connector failed.', {
@@ -220,6 +224,8 @@ export class CloudflareEmailConnectorError extends Error {
     this.errorMessages = errorMessages
     this.rejected = options?.rejected
     this.response = options?.response
+    this.status = options?.status
+    this.retryAfterMs = options?.retryAfterMs
   }
 }
 

@@ -1,3 +1,5 @@
+import type { EmailErrorCategory } from '../email'
+
 export const BASE64_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
 
 export const CRLF = '\r\n'
@@ -48,6 +50,94 @@ export const base64ToBytes = (value: string, invalidDataErrorMessage: string): U
 }
 
 export const normalizeLineEndings = (value: string): string => value.replace(/\r\n|\r|\n/g, CRLF)
+
+/**
+ * Parses HTTP Retry-After header into a delay in milliseconds.
+ * Supports both delay-seconds and HTTP-date formats.
+ */
+export const parseRetryAfterMs = (retryAfter: string | null | undefined): number | undefined => {
+  if (retryAfter === null || retryAfter === undefined || retryAfter === '') {
+    return undefined
+  }
+
+  const trimmed = retryAfter.trim()
+  const seconds = Number.parseInt(trimmed, 10)
+  if (!Number.isNaN(seconds) && String(seconds) === trimmed && seconds >= 0) {
+    return seconds * 1000
+  }
+
+  const dateMs = Date.parse(trimmed)
+  if (!Number.isNaN(dateMs)) {
+    return Math.max(0, dateMs - Date.now())
+  }
+
+  return undefined
+}
+
+/**
+ * Classifies whether an HTTP response status represents a permanent failure (cannot succeed on retry).
+ * 408 (Request Timeout), 429 (Too Many Requests), and 5xx are transient (false).
+ * 409 (Conflict) and other 4xx client errors (400, 401, 403, 404, 422, etc.) are permanent (true).
+ */
+export const isPermanentHttpStatus = (status: number): boolean => {
+  if (status === 408 || status === 429 || status >= 500) {
+    return false
+  }
+
+  return status >= 400 && status < 500
+}
+
+/**
+ * Determines whether an error is a permanent message or configuration validation error.
+ */
+export const isValidationError = (error: unknown): boolean => {
+  if (!(error instanceof Error)) {
+    return false
+  }
+
+  if (error.name === 'ValidationException' || error.name === 'MessageRejected') {
+    return true
+  }
+
+  const message = error.message
+  return (
+    /^Invalid (email|header|attachment|URL|DKIM)/i.test(message) ||
+    /^Invalid SMTP (recipient|envelope sender|client name)/i.test(message) ||
+    /invalid (base64|hex) data/i.test(message) ||
+    /must not contain/i.test(message) ||
+    /is managed by hono-email/i.test(message) ||
+    /cannot be folded/i.test(message) ||
+    /exceeds (maximum size|maxAttachmentSize)/i.test(message) ||
+    /maxAttachmentSize must be/i.test(message) ||
+    /attachments? require[^\n]{0,100}filename/i.test(message) ||
+    /supports at most one/i.test(message) ||
+    /requires[^\n]{0,100}support/i.test(message) ||
+    /requires at least one/i.test(message) ||
+    /must include at least one (recipient|address)/i.test(message) ||
+    /requires https/i.test(message) ||
+    /must not be sent over plaintext/i.test(message) ||
+    /requires a fetch implementation/i.test(message)
+  )
+}
+
+/**
+ * Classifies an unknown fetch or network error into category and permanence.
+ */
+export const classifyFetchError = (
+  error: unknown,
+): { category: EmailErrorCategory; permanent: boolean } => {
+  if (error instanceof Error) {
+    if (error.name === 'AbortError' || /timed out/i.test(error.message)) {
+      return { category: 'timeout', permanent: false }
+    }
+
+    if (isValidationError(error)) {
+      return { category: 'validation', permanent: true }
+    }
+  }
+
+  return { category: 'connection', permanent: false }
+}
 
 export type RequestRetryOptions = {
   maxAttempts?: number

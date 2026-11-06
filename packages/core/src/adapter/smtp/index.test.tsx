@@ -632,6 +632,9 @@ describe('sendEmail over SMTP', () => {
     expect(failedReceipt.errorMessages).toEqual([
       'Unexpected SMTP response to DATA: 451 temporary failure',
     ])
+    expect(failedReceipt.category).toBe('smtp')
+    expect(failedReceipt.code).toBe(451)
+    expect(failedReceipt.permanent).toBe(false)
     expect(successfulReceipt.successful).toBe(true)
     expect(mock.connectCount()).toBe(2)
   })
@@ -729,6 +732,54 @@ describe('sendEmail over SMTP', () => {
       errorMessages: ['No SMTP recipients were accepted.'],
       rejected: ['missing@example.com'],
       successful: false,
+      category: 'recipients_rejected',
+      code: 550,
+      permanent: true,
+    })
+  })
+
+  test('returns non-permanent failure and selects transient code when RCPT TO has mixed 5xx and 4xx rejections', async () => {
+    const mock = createMockConnector(async (server) => {
+      await server.writeResponse('220 smtp.example.com ready\r\n')
+      expect(await server.readLine()).toBe('EHLO localhost')
+      await server.writeResponse('250 smtp.example.com\r\n')
+      expect(await server.readLine()).toBe('MAIL FROM:<sender@example.com>')
+      await server.writeResponse('250 OK\r\n')
+      expect(await server.readLine()).toBe('RCPT TO:<perm-fail@example.com>')
+      await server.writeResponse('550 User unknown\r\n')
+      expect(await server.readLine()).toBe('RCPT TO:<temp-fail@example.com>')
+      await server.writeResponse('450 Greylisted, please try again later\r\n')
+      expect(await server.readLine()).toBe('RSET')
+      await server.writeResponse('250 OK\r\n')
+      expect(await server.readLine()).toBe('QUIT')
+      await server.writeResponse('221 bye\r\n')
+    })
+
+    const smtp = new SmtpTransport({
+      connector: mock.connector,
+      hostname: 'smtp.example.com',
+      port: 465,
+      secure: true,
+    })
+
+    const receipt = await smtp.send({
+      from: 'sender@example.com',
+      html: '<p>Hello</p>',
+      subject: 'Hello',
+      text: 'Hello',
+      to: ['perm-fail@example.com', 'temp-fail@example.com'],
+    })
+    await smtp.close()
+    await mock.wait()
+
+    expect(receipt).toMatchObject({
+      accepted: [],
+      errorMessages: ['No SMTP recipients were accepted.'],
+      rejected: ['perm-fail@example.com', 'temp-fail@example.com'],
+      successful: false,
+      category: 'recipients_rejected',
+      code: 450,
+      permanent: false,
     })
   })
 
