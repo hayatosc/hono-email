@@ -4,6 +4,7 @@ import {
   classifyFetchError,
   fetchWithTimeoutAndRetry,
   isPermanentHttpStatus,
+  isValidationError,
   parseRetryAfterMs,
 } from './utils'
 
@@ -276,12 +277,12 @@ describe('isPermanentHttpStatus', () => {
     expect(isPermanentHttpStatus(401)).toBe(true)
     expect(isPermanentHttpStatus(403)).toBe(true)
     expect(isPermanentHttpStatus(404)).toBe(true)
+    expect(isPermanentHttpStatus(409)).toBe(true)
     expect(isPermanentHttpStatus(422)).toBe(true)
   })
 
   test('marks transient 4xx status codes as non-permanent', () => {
     expect(isPermanentHttpStatus(408)).toBe(false)
-    expect(isPermanentHttpStatus(409)).toBe(false)
     expect(isPermanentHttpStatus(429)).toBe(false)
   })
 
@@ -290,6 +291,46 @@ describe('isPermanentHttpStatus', () => {
     expect(isPermanentHttpStatus(502)).toBe(false)
     expect(isPermanentHttpStatus(503)).toBe(false)
     expect(isPermanentHttpStatus(504)).toBe(false)
+  })
+})
+
+describe('isValidationError', () => {
+  test('identifies validation errors by name or pattern', () => {
+    expect(isValidationError(new Error('Invalid email address'))).toBe(true)
+    expect(isValidationError(new Error('Invalid header name: bad'))).toBe(true)
+    expect(isValidationError(new Error('Invalid attachment content'))).toBe(true)
+    expect(isValidationError(new Error('Invalid SMTP recipient: <bad>'))).toBe(true)
+    expect(isValidationError(new Error('Invalid SMTP envelope sender'))).toBe(true)
+    expect(
+      isValidationError(
+        new Error('Header "Bcc" is managed by hono-email and cannot be set directly.'),
+      ),
+    ).toBe(true)
+    expect(
+      isValidationError(
+        new Error('Cloudflare Email Service supports at most one replyTo address.'),
+      ),
+    ).toBe(true)
+    expect(isValidationError(new Error('SendGrid attachments require a filename.'))).toBe(true)
+    expect(isValidationError(new Error('Attachment exceeds maximum size'))).toBe(true)
+    expect(isValidationError(new Error('Payload requires DKIM support'))).toBe(true)
+    expect(isValidationError(new Error('SES must include at least one recipient.'))).toBe(true)
+    expect(
+      isValidationError(Object.assign(new Error('Rejected'), { name: 'ValidationException' })),
+    ).toBe(true)
+    expect(
+      isValidationError(Object.assign(new Error('Rejected'), { name: 'MessageRejected' })),
+    ).toBe(true)
+  })
+
+  test('does not classify non-validation or protocol errors as validation', () => {
+    expect(isValidationError(new Error('Invalid SMTP response: 550 Mailbox unavailable'))).toBe(
+      false,
+    )
+    expect(isValidationError(new Error('Failed to fetch'))).toBe(false)
+    expect(isValidationError(new Error('Connection reset by peer'))).toBe(false)
+    expect(isValidationError(undefined)).toBe(false)
+    expect(isValidationError('string error')).toBe(false)
   })
 })
 

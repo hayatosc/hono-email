@@ -246,8 +246,7 @@ export const MailgunAdapter = (options: MailgunAdapterOptions): EmailAdapter => 
       return failedReceipt([error instanceof Error ? error.message : String(error)], {
         cause: error,
         rejected: recipients,
-        category: 'validation',
-        permanent: true,
+        ...classifyFetchError(error),
       })
     }
 

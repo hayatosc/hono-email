@@ -5,7 +5,7 @@ import { resolveEmailAttachments } from '../attachment'
 import type { EmailErrorCategory, EmailMessage, SendEmailReceipt } from '../index'
 import { formatEmailAddress, toAddressList, validateEmailHeaders } from '../message'
 import { collectProviderRecipients, failedReceipt } from '../provider'
-import { isPermanentHttpStatus } from '../utils'
+import { isPermanentHttpStatus, isValidationError } from '../utils'
 import type { SesAdapterOptions, SesEmailAdapter, SesSendOptions } from './types'
 
 export { renderEmailMessage, sendEmail } from '../index'
@@ -132,17 +132,11 @@ export const SesAdapter = (defaults: SesAdapterOptions): SesEmailAdapter => ({
         response: `SES accepted email ${result.MessageId}.`,
       }
     } catch (error) {
-      const isValidationError =
-        error instanceof Error &&
-        (/^Invalid (email|header|attachment)/i.test(error.message) ||
-          /must not contain/i.test(error.message) ||
-          /SES attachments require a filename/i.test(error.message) ||
-          error.name === 'ValidationException' ||
-          error.name === 'MessageRejected')
+      const isValidation = isValidationError(error)
 
       const httpStatus = getAwsHttpStatusCode(error)
 
-      const category: EmailErrorCategory = isValidationError
+      const category: EmailErrorCategory = isValidation
         ? 'validation'
         : httpStatus !== undefined
           ? 'provider'
@@ -151,7 +145,7 @@ export const SesAdapter = (defaults: SesAdapterOptions): SesEmailAdapter => ({
             ? 'timeout'
             : 'connection'
 
-      const permanent = isValidationError
+      const permanent = isValidation
         ? true
         : httpStatus !== undefined
           ? isPermanentHttpStatus(httpStatus)

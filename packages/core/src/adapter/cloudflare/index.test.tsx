@@ -229,12 +229,57 @@ describe('Cloudflare Email Service adapter', () => {
       }),
     }).send(createMessage())
 
-    expect(receipt.successful).toBe(false)
-    if (!receipt.successful) {
-      expect(receipt.accepted).toEqual([])
-      expect(receipt.rejected).toEqual(['first@example.com', 'second@example.com'])
-      expect(receipt.errorMessages).toEqual(['10001: email.sending.error.invalid_request_schema'])
-    }
+    expect(receipt).toMatchObject({
+      accepted: [],
+      errorMessages: ['10001: email.sending.error.invalid_request_schema'],
+      rejected: ['first@example.com', 'second@example.com'],
+      successful: false,
+      code: 400,
+      permanent: true,
+      category: 'provider',
+    })
+  })
+
+  test('maps REST API 429 error and Retry-After header to a transient failed receipt', async () => {
+    const fetchImplementation: CloudflareEmailFetch = async () =>
+      new Response(
+        JSON.stringify({
+          errors: [
+            {
+              code: 10020,
+              message: 'Rate limit exceeded',
+            },
+          ],
+          messages: [],
+          result: null,
+          success: false,
+        }),
+        {
+          status: 429,
+          headers: {
+            'Retry-After': '3',
+          },
+        },
+      )
+
+    const receipt = await CloudflareEmailAdapter({
+      connector: RESTConnector({
+        accountId: 'account-123',
+        apiToken: 'token-123',
+        fetch: fetchImplementation,
+      }),
+    }).send(createMessage())
+
+    expect(receipt).toMatchObject({
+      accepted: [],
+      rejected: ['first@example.com', 'second@example.com'],
+      errorMessages: ['10020: Rate limit exceeded'],
+      successful: false,
+      code: 429,
+      permanent: false,
+      retryAfterMs: 3000,
+      category: 'provider',
+    })
   })
 
   test('rejects protected custom headers before sending', async () => {

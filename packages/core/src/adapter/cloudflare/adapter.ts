@@ -16,7 +16,7 @@ import {
   getProviderRecipientError,
   requireProviderRecipientError,
 } from '../provider'
-import { classifyFetchError } from '../utils'
+import { classifyFetchError, isPermanentHttpStatus, isValidationError } from '../utils'
 import {
   asCloudflareEmailRecipientField,
   CloudflareEmailConnectorError,
@@ -276,17 +276,16 @@ export const CloudflareEmailAdapter = (options: CloudflareEmailAdapterOptions): 
       }
     } catch (error) {
       if (error instanceof CloudflareEmailConnectorError) {
-        const isValidation = error.errorMessages.some(
-          (msg) =>
-            /^Invalid (email|header|attachment)/i.test(msg) ||
-            /supports at most one/i.test(msg) ||
-            /must not contain/i.test(msg),
-        )
+        const isValidation = error.errorMessages.some((msg) => isValidationError(new Error(msg)))
+        const permanent =
+          error.status !== undefined ? isPermanentHttpStatus(error.status) : isValidation
         return failedReceipt(error.errorMessages, {
           rejected: error.rejected ?? recipients,
           cause: error.cause,
           category: isValidation ? 'validation' : 'provider',
-          permanent: isValidation,
+          permanent,
+          ...(error.status !== undefined ? { code: error.status } : {}),
+          ...(error.retryAfterMs !== undefined ? { retryAfterMs: error.retryAfterMs } : {}),
           ...(error.response !== undefined ? { response: error.response } : {}),
         })
       }

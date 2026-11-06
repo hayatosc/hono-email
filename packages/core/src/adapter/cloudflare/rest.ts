@@ -1,3 +1,4 @@
+import { parseRetryAfterMs } from '../utils'
 import type {
   CloudflareEmailConnector,
   CloudflareEmailConnectorRequest,
@@ -93,8 +94,11 @@ const readJsonResponse = async (response: Response): Promise<unknown> => {
   try {
     return JSON.parse(text) as unknown
   } catch (error) {
+    const retryAfterMs = parseRetryAfterMs(response.headers.get('retry-after'))
     throw new CloudflareEmailConnectorError(['Cloudflare Email REST API returned invalid JSON.'], {
       cause: error,
+      status: response.status,
+      ...(retryAfterMs !== undefined ? { retryAfterMs } : {}),
     })
   }
 }
@@ -143,11 +147,16 @@ export const RESTConnector = (
           method: 'POST',
         },
       )
+      const retryAfterMs = parseRetryAfterMs(response.headers.get('retry-after'))
       const json = await readJsonResponse(response)
       if (!isCloudflareRestResponse(json)) {
-        throw new CloudflareEmailConnectorError([
-          'Cloudflare Email REST API returned an unexpected response.',
-        ])
+        throw new CloudflareEmailConnectorError(
+          ['Cloudflare Email REST API returned an unexpected response.'],
+          {
+            status: response.status,
+            ...(retryAfterMs !== undefined ? { retryAfterMs } : {}),
+          },
+        )
       }
 
       if (!response.ok || !json.success || json.result === null) {
@@ -159,6 +168,8 @@ export const RESTConnector = (
           {
             rejected: request.recipients,
             response: JSON.stringify(json),
+            status: response.status,
+            ...(retryAfterMs !== undefined ? { retryAfterMs } : {}),
           },
         )
       }

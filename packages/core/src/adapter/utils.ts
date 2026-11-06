@@ -76,15 +76,45 @@ export const parseRetryAfterMs = (retryAfter: string | null | undefined): number
 
 /**
  * Classifies whether an HTTP response status represents a permanent failure (cannot succeed on retry).
- * 408 (Request Timeout), 409 (Conflict), 429 (Too Many Requests), and 5xx are transient (false).
- * Other 4xx client errors (400, 401, 403, 404, 422, etc.) are permanent (true).
+ * 408 (Request Timeout), 429 (Too Many Requests), and 5xx are transient (false).
+ * 409 (Conflict) and other 4xx client errors (400, 401, 403, 404, 422, etc.) are permanent (true).
  */
 export const isPermanentHttpStatus = (status: number): boolean => {
-  if (status === 408 || status === 409 || status === 429 || status >= 500) {
+  if (status === 408 || status === 429 || status >= 500) {
     return false
   }
 
   return status >= 400 && status < 500
+}
+
+/**
+ * Determines whether an error is a permanent message or configuration validation error.
+ */
+export const isValidationError = (error: unknown): boolean => {
+  if (!(error instanceof Error)) {
+    return false
+  }
+
+  if (error.name === 'ValidationException' || error.name === 'MessageRejected') {
+    return true
+  }
+
+  const message = error.message
+  return (
+    /^Invalid (email|header|attachment)/i.test(message) ||
+    /^Invalid SMTP (recipient|envelope sender|client name)/i.test(message) ||
+    /must not contain/i.test(message) ||
+    /is managed by hono-email/i.test(message) ||
+    /cannot be folded/i.test(message) ||
+    /exceeds maximum size/i.test(message) ||
+    /attachments? require[^\n]{0,100}filename/i.test(message) ||
+    /supports at most one/i.test(message) ||
+    /requires[^\n]{0,100}support/i.test(message) ||
+    /requires at least one/i.test(message) ||
+    /must include at least one recipient/i.test(message) ||
+    /must use https/i.test(message) ||
+    /Invalid API base URL/i.test(message)
+  )
 }
 
 /**
@@ -98,13 +128,7 @@ export const classifyFetchError = (
       return { category: 'timeout', permanent: false }
     }
 
-    if (
-      /^Invalid (email|header|attachment)/i.test(error.message) ||
-      /must not contain/i.test(error.message) ||
-      /cannot be folded/i.test(error.message) ||
-      /requires.*support/i.test(error.message) ||
-      /requires at least one/i.test(error.message)
-    ) {
+    if (isValidationError(error)) {
       return { category: 'validation', permanent: true }
     }
   }

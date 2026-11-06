@@ -420,13 +420,17 @@ class ReusableSmtpSession implements SmtpSession {
     const recipients = await sendRecipients(this.#client, options.recipients)
     if (recipients.accepted.length === 0) {
       await this.#client.command('RSET', [250])
-      const primaryRejection = recipients.rejections?.[0]
-      const has5xx = recipients.rejections?.some((r) => r.code >= 500 && r.code < 600) ?? false
+      const rejections = recipients.rejections ?? []
+      const allPermanent =
+        rejections.length > 0 && rejections.every((r) => r.code >= 500 && r.code < 600)
+      const primaryRejection = allPermanent
+        ? (rejections.find((r) => r.code >= 500 && r.code < 600) ?? rejections[0])
+        : (rejections.find((r) => r.code >= 400 && r.code < 500) ?? rejections[0])
       return {
         accepted: recipients.accepted,
         rejected: recipients.rejected,
         response: 'No SMTP recipients were accepted.',
-        permanent: has5xx,
+        permanent: allPermanent,
         ...(primaryRejection?.code !== undefined ? { code: primaryRejection.code } : {}),
         ...(primaryRejection?.enhancedCode !== undefined
           ? { enhancedCode: primaryRejection.enhancedCode }

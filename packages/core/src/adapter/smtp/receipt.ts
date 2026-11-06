@@ -1,4 +1,5 @@
 import type { EmailErrorCategory, SendEmailReceipt } from '../index'
+import { isValidationError } from '../utils'
 import { SmtpCommandError, SmtpResponseBufferLimitError } from './protocol'
 
 export const CLOSED_TRANSPORT_ERROR_MESSAGE = 'SMTP transport is closed.'
@@ -39,15 +40,7 @@ export const classifySmtpFailure = (error: unknown): SmtpFailureClassification =
       return { category: 'timeout', permanent: false }
     }
 
-    if (
-      /^Invalid (email|header|attachment|SMTP)/i.test(error.message) ||
-      /exceeds maximum size/i.test(error.message) ||
-      /must not contain/i.test(error.message) ||
-      /cannot be folded/i.test(error.message) ||
-      /requires.*support/i.test(error.message) ||
-      /requires at least one/i.test(error.message) ||
-      /must include at least one recipient/i.test(error.message)
-    ) {
+    if (isValidationError(error)) {
       return { category: 'validation', permanent: true }
     }
 
