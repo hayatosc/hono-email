@@ -312,7 +312,16 @@ describe('isValidationError', () => {
       ),
     ).toBe(true)
     expect(isValidationError(new Error('SendGrid attachments require a filename.'))).toBe(true)
-    expect(isValidationError(new Error('Attachment exceeds maximum size'))).toBe(true)
+    expect(isValidationError(new Error('Attachment "file.pdf" exceeds maxAttachmentSize.'))).toBe(
+      true,
+    )
+    expect(isValidationError(new Error('maxAttachmentSize must be a positive integer.'))).toBe(true)
+    expect(isValidationError(new Error('Attachment content contains invalid base64 data.'))).toBe(
+      true,
+    )
+    expect(isValidationError(new Error('Attachment content contains invalid hex data.'))).toBe(true)
+    expect(isValidationError(new Error('Invalid DKIM private key.'))).toBe(true)
+    expect(isValidationError(new Error('to must include at least one address.'))).toBe(true)
     expect(isValidationError(new Error('Payload requires DKIM support'))).toBe(true)
     expect(isValidationError(new Error('SES must include at least one recipient.'))).toBe(true)
     expect(

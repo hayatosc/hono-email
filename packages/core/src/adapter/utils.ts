@@ -101,22 +101,22 @@ export const isValidationError = (error: unknown): boolean => {
 
   const message = error.message
   return (
-    /^Invalid (email|header|attachment|URL)/i.test(message) ||
+    /^Invalid (email|header|attachment|URL|DKIM)/i.test(message) ||
     /^Invalid SMTP (recipient|envelope sender|client name)/i.test(message) ||
+    /invalid (base64|hex) data/i.test(message) ||
     /must not contain/i.test(message) ||
     /is managed by hono-email/i.test(message) ||
     /cannot be folded/i.test(message) ||
-    /exceeds maximum size/i.test(message) ||
+    /exceeds (maximum size|maxAttachmentSize)/i.test(message) ||
+    /maxAttachmentSize must be/i.test(message) ||
     /attachments? require[^\n]{0,100}filename/i.test(message) ||
     /supports at most one/i.test(message) ||
     /requires[^\n]{0,100}support/i.test(message) ||
     /requires at least one/i.test(message) ||
-    /must include at least one recipient/i.test(message) ||
-    /must use https/i.test(message) ||
+    /must include at least one (recipient|address)/i.test(message) ||
     /requires https/i.test(message) ||
     /must not be sent over plaintext/i.test(message) ||
-    /requires a fetch implementation/i.test(message) ||
-    /Invalid API base URL/i.test(message)
+    /requires a fetch implementation/i.test(message)
   )
 }
 
