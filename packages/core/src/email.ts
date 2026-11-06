@@ -184,6 +184,12 @@ export type EmailMessage = {
   attachments?: EmailAttachment[]
   headers?: EmailHeaders
   messageId?: string
+  /**
+   * Idempotency key used to prevent duplicate deliveries on retries.
+   * - When `messageId` is omitted, derives a deterministic RFC 5322 `Message-ID`.
+   * - In `ResendAdapter`, forwarded as the `Idempotency-Key` HTTP header.
+   */
+  idempotencyKey?: string
   date?: Date
   envelope?: EmailEnvelope
   /**
@@ -380,6 +386,7 @@ export const renderEmailMessage = async (
     ...(draft.dkim !== undefined ? { dkim: draft.dkim } : {}),
     ...(draft.envelope !== undefined ? { envelope: draft.envelope } : {}),
     ...(draft.headers !== undefined ? { headers: draft.headers } : {}),
+    ...(draft.idempotencyKey !== undefined ? { idempotencyKey: draft.idempotencyKey } : {}),
     ...(draft.messageId !== undefined ? { messageId: draft.messageId } : {}),
     ...(draft.replyTo !== undefined ? { replyTo: draft.replyTo } : {}),
   }

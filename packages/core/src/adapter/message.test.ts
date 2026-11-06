@@ -1,6 +1,11 @@
 import { describe, expect, test } from 'bun:test'
 
-import { buildRawEmailMessage, formatEmailAddress } from './message'
+import {
+  buildRawEmailMessage,
+  deriveDeterministicId,
+  formatEmailAddress,
+  resolveMessageId,
+} from './message'
 
 const CRLF = '\r\n'
 const MAX_HEADER_LINE_OCTETS = 998
@@ -139,5 +144,109 @@ describe('buildRawEmailMessage header folding', () => {
     expect(
       toLines.map((line, index) => (index === 0 ? line.slice('To: '.length) : line)).join(''),
     ).toBe(addresses.join(', '))
+  })
+})
+
+describe('idempotencyKey and deterministic Message-ID', () => {
+  test('deriveDeterministicId returns 32 hex chars and is deterministic', () => {
+    const id1 = deriveDeterministicId('order-12345')
+    const id2 = deriveDeterministicId('order-12345')
+    const id3 = deriveDeterministicId('order-67890')
+
+    expect(id1).toBe(id2)
+    expect(id1).not.toBe(id3)
+    expect(id1).toMatch(/^[0-9a-f]{32}$/)
+  })
+
+  test('deriveDeterministicId rejects line breaks', () => {
+    expect(() => deriveDeterministicId('order-123\n45')).toThrow(
+      'idempotencyKey must not contain line breaks.',
+    )
+    expect(() => deriveDeterministicId('order-123\r\n45')).toThrow(
+      'idempotencyKey must not contain line breaks.',
+    )
+  })
+
+  test('resolveMessageId produces deterministic Message-ID from idempotencyKey when messageId is not set', () => {
+    const msg = {
+      from: 'sender@example.com',
+      to: 'recipient@example.com',
+      subject: 'Test',
+      html: '<p>Hi</p>',
+      text: 'Hi',
+      idempotencyKey: 'tx-abc-123',
+    }
+    const resolvedId1 = resolveMessageId(msg)
+    const resolvedId2 = resolveMessageId(msg)
+
+    expect(resolvedId1).toBe(resolvedId2)
+    expect(resolvedId1).toMatch(/^<idemp-[0-9a-f]{32}@example\.com>$/)
+  })
+
+  test('buildRawEmailMessage produces identical Message-ID headers for the same idempotencyKey', () => {
+    const msg1 = {
+      from: 'sender@example.com',
+      to: 'recipient@example.com',
+      subject: 'Test',
+      html: '<p>Hi</p>',
+      text: 'Hi',
+      idempotencyKey: 'retry-request-999',
+    }
+    const msg2 = {
+      ...msg1,
+      date: new Date('2026-02-01T12:00:00Z'),
+    }
+
+    const { messageId: id1, raw: raw1 } = buildRawEmailMessage(msg1)
+    const { messageId: id2, raw: raw2 } = buildRawEmailMessage(msg2)
+
+    expect(id1).toBe(id2)
+    expect(findHeaderLines(raw1, 'Message-ID')).toEqual([`Message-ID: ${id1}`])
+    expect(findHeaderLines(raw2, 'Message-ID')).toEqual([`Message-ID: ${id2}`])
+  })
+
+  test('explicit messageId takes precedence over idempotencyKey', () => {
+    const explicitId = '<explicit-id-999@example.com>'
+    const msg = {
+      from: 'sender@example.com',
+      to: 'recipient@example.com',
+      subject: 'Test',
+      html: '<p>Hi</p>',
+      text: 'Hi',
+      messageId: explicitId,
+      idempotencyKey: 'some-key',
+    }
+
+    const { messageId, raw } = buildRawEmailMessage(msg)
+    expect(messageId).toBe(explicitId)
+    expect(findHeaderLines(raw, 'Message-ID')).toEqual([`Message-ID: ${explicitId}`])
+  })
+
+  test('buildRawEmailMessage rejects line breaks in idempotencyKey even when messageId is set', () => {
+    expect(() =>
+      buildRawEmailMessage({
+        from: 'sender@example.com',
+        to: 'recipient@example.com',
+        subject: 'Test',
+        html: '<p>Hi</p>',
+        text: 'Hi',
+        messageId: '<valid@example.com>',
+        idempotencyKey: 'injected\r\nX-Bad-Header: evil',
+      }),
+    ).toThrow('idempotencyKey must not contain line breaks.')
+  })
+
+  test('empty string idempotencyKey falls back to random Message-ID', () => {
+    const msg = {
+      from: 'sender@example.com',
+      to: 'recipient@example.com',
+      subject: 'Test',
+      html: '<p>Hi</p>',
+      text: 'Hi',
+      idempotencyKey: '',
+    }
+    const { messageId } = buildRawEmailMessage(msg)
+    expect(messageId).not.toContain('idemp-')
+    expect(messageId).toMatch(/^<.+@example\.com>$/)
   })
 })

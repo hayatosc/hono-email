@@ -168,6 +168,16 @@ export const ResendAdapter = (options: ResendAdapterOptions): EmailAdapter => ({
       })
     }
 
+    if (message.idempotencyKey !== undefined && message.idempotencyKey !== '') {
+      if (/[\r\n]/.test(message.idempotencyKey)) {
+        return failedReceipt(['idempotencyKey must not contain line breaks.'], {
+          rejected: recipients,
+          permanent: true,
+          category: 'validation',
+        })
+      }
+    }
+
     let payload: ResendPayload
     try {
       payload = await buildResendPayload(message, options)
@@ -192,6 +202,9 @@ export const ResendAdapter = (options: ResendAdapterOptions): EmailAdapter => ({
             Authorization: `Bearer ${options.apiKey}`,
             'Content-Type': 'application/json',
             'User-Agent': options.userAgent ?? DEFAULT_USER_AGENT,
+            ...(message.idempotencyKey !== undefined && message.idempotencyKey !== ''
+              ? { 'Idempotency-Key': message.idempotencyKey }
+              : {}),
           },
           method: 'POST',
         },

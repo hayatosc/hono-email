@@ -187,6 +187,53 @@ const getMessageIdDomain = (from: EmailAddress): string => {
   return address.slice(address.lastIndexOf('@') + 1) || 'localhost'
 }
 
+/**
+ * Derives a deterministic 128-bit hexadecimal identifier from an idempotency key.
+ * Uses double 64-bit FNV-1a hashing for collision resistance in synchronous environments.
+ *
+ * @param idempotencyKey - Key to hash.
+ * @returns 32-character hexadecimal token.
+ * @throws If `idempotencyKey` contains line breaks.
+ */
+export const deriveDeterministicId = (idempotencyKey: string): string => {
+  ensureSafeHeaderValue(idempotencyKey, 'idempotencyKey')
+  const bytes = textEncoder.encode(idempotencyKey)
+  let h1 = 0xcbf29ce484222325n
+  let h2 = 0x84222325cbf29ce4n
+  const prime = 0x100000001b3n
+  for (const byte of bytes) {
+    h1 ^= BigInt(byte)
+    h1 = (h1 * prime) & 0xffffffffffffffffn
+    h2 ^= BigInt(byte ^ 0x5c)
+    h2 = (h2 * prime) & 0xffffffffffffffffn
+  }
+  return `${h1.toString(16).padStart(16, '0')}${h2.toString(16).padStart(16, '0')}`
+}
+
+/**
+ * Resolves the RFC 5322 Message-ID for an email message.
+ * - When `messageId` is explicitly provided, validates and returns it.
+ * - When `idempotencyKey` is provided (and non-empty), derives a deterministic Message-ID.
+ * - Otherwise generates a random Message-ID scoped to the sender domain.
+ *
+ * @param message - Email message.
+ * @returns Angle-bracketed Message-ID string.
+ * @throws If `messageId` or `idempotencyKey` contains line breaks.
+ */
+export const resolveMessageId = (message: EmailMessage): string => {
+  if (message.idempotencyKey !== undefined) {
+    ensureSafeHeaderValue(message.idempotencyKey, 'idempotencyKey')
+  }
+  if (message.messageId !== undefined) {
+    return ensureSafeHeaderValue(message.messageId, 'messageId')
+  }
+  const domain = getMessageIdDomain(message.from)
+  if (message.idempotencyKey !== undefined && message.idempotencyKey !== '') {
+    return `<idemp-${deriveDeterministicId(message.idempotencyKey)}@${domain}>`
+  }
+  return buildMessageId(domain)
+}
+
 const isHeaderWhitespace = (character: string | undefined): boolean =>
   character === ' ' || character === '\t'
 
@@ -397,7 +444,7 @@ const buildRawEmailMessageWithAttachments = (
   message: EmailMessage,
   options: BuildRawEmailMessageOptions = {},
 ): { messageId: string; raw: string } => {
-  const messageId = message.messageId ?? buildMessageId(getMessageIdDomain(message.from))
+  const messageId = resolveMessageId(message)
   const alternativeBoundary = buildBoundary()
   const attachments =
     options.resolvedAttachments ?? resolveEmailAttachmentsSync(message.attachments, options)
@@ -425,7 +472,7 @@ const buildRawEmailMessageWithAttachments = (
 
   appendHeader(headers, 'Subject', encodeHeaderValue(message.subject, 'subject'))
   appendHeader(headers, 'Date', (message.date ?? new Date()).toUTCString())
-  appendHeader(headers, 'Message-ID', ensureSafeHeaderValue(messageId, 'messageId'))
+  appendHeader(headers, 'Message-ID', messageId)
   appendHeader(headers, 'MIME-Version', '1.0')
   appendCustomHeaders(headers, message.headers)
 
