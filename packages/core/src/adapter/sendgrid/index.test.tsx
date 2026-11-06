@@ -324,4 +324,26 @@ describe('SendGrid adapter', () => {
       globalThis.fetch = originalFetch
     }
   })
+
+  test('classifies insecure HTTP apiBaseUrl as permanent validation error', async () => {
+    const receipt = await SendGridAdapter({
+      apiKey: 'SG.test',
+      apiBaseUrl: 'http://insecure.example.com',
+    }).send({
+      from: 'sender@example.com',
+      html: '<p>Hello</p>',
+      subject: 'Insecure URL',
+      text: 'Hello',
+      to: 'recipient@example.com',
+    })
+
+    expect(receipt).toMatchObject({
+      successful: false,
+      category: 'validation',
+      permanent: true,
+      errorMessages: [
+        'SendGrid adapter requires HTTPS. API tokens must not be sent over plaintext.',
+      ],
+    })
+  })
 })

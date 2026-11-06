@@ -321,6 +321,39 @@ describe('isValidationError', () => {
     expect(
       isValidationError(Object.assign(new Error('Rejected'), { name: 'MessageRejected' })),
     ).toBe(true)
+    expect(
+      isValidationError(
+        new Error('SendGrid adapter requires HTTPS. API tokens must not be sent over plaintext.'),
+      ),
+    ).toBe(true)
+    expect(
+      isValidationError(
+        new Error('Resend adapter requires HTTPS. API tokens must not be sent over plaintext.'),
+      ),
+    ).toBe(true)
+    expect(
+      isValidationError(
+        new Error(
+          'Postmark adapter requires HTTPS. Server tokens must not be sent over plaintext.',
+        ),
+      ),
+    ).toBe(true)
+    expect(
+      isValidationError(
+        new Error('Mailgun adapter requires HTTPS. API keys must not be sent over plaintext.'),
+      ),
+    ).toBe(true)
+    expect(
+      isValidationError(
+        new Error(
+          'Cloudflare REST adapter requires HTTPS. API tokens must not be sent over plaintext.',
+        ),
+      ),
+    ).toBe(true)
+    expect(isValidationError(new Error('SendGridAdapter requires a fetch implementation.'))).toBe(
+      true,
+    )
+    expect(isValidationError(new Error('Invalid URL'))).toBe(true)
   })
 
   test('does not classify non-validation or protocol errors as validation', () => {
