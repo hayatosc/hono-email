@@ -16,6 +16,7 @@ import {
   getProviderRecipientError,
   requireProviderRecipientError,
 } from '../provider'
+import { classifyFetchError } from '../utils'
 import {
   asCloudflareEmailRecipientField,
   CloudflareEmailConnectorError,
@@ -220,7 +221,10 @@ export const CloudflareEmailAdapter = (options: CloudflareEmailAdapterOptions): 
     const recipients = collectRecipients(message)
     const recipientError = getProviderRecipientError(message, recipients)
     if (recipientError !== undefined) {
-      return failedReceipt([recipientError])
+      return failedReceipt([recipientError], {
+        category: 'validation',
+        permanent: true,
+      })
     }
 
     try {
@@ -250,12 +254,15 @@ export const CloudflareEmailAdapter = (options: CloudflareEmailAdapterOptions): 
       const queuedRecipients = result.queued.length > 0 ? result.queued : undefined
 
       if (accepted.length === 0) {
+        const permanent = result.permanentBounces.length > 0
         return {
           successful: false,
           accepted,
           rejected: result.permanentBounces,
           errorMessages: [result.response],
           response: result.response,
+          category: permanent ? 'recipients_rejected' : 'provider',
+          permanent,
         }
       }
 
@@ -269,9 +276,17 @@ export const CloudflareEmailAdapter = (options: CloudflareEmailAdapterOptions): 
       }
     } catch (error) {
       if (error instanceof CloudflareEmailConnectorError) {
+        const isValidation = error.errorMessages.some(
+          (msg) =>
+            /^Invalid (email|header|attachment)/i.test(msg) ||
+            /supports at most one/i.test(msg) ||
+            /must not contain/i.test(msg),
+        )
         return failedReceipt(error.errorMessages, {
           rejected: error.rejected ?? recipients,
           cause: error.cause,
+          category: isValidation ? 'validation' : 'provider',
+          permanent: isValidation,
           ...(error.response !== undefined ? { response: error.response } : {}),
         })
       }
@@ -279,6 +294,7 @@ export const CloudflareEmailAdapter = (options: CloudflareEmailAdapterOptions): 
       return failedReceipt([error instanceof Error ? error.message : String(error)], {
         rejected: recipients,
         cause: error,
+        ...classifyFetchError(error),
       })
     }
   },

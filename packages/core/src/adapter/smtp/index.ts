@@ -39,8 +39,8 @@ export type {
   SuccessfulSendReceipt,
 } from '../index'
 export { buildRawEmailMessage, buildRawEmailMessageAsync } from '../message'
-export { SmtpResponseBufferLimitError } from './protocol'
-export { SmtpTransportClosedError } from './receipt'
+export { SmtpCommandError, SmtpResponseBufferLimitError } from './protocol'
+export { classifySmtpFailure, SmtpTransportClosedError } from './receipt'
 export type {
   SmtpAuth,
   SmtpConnector,
@@ -211,6 +211,8 @@ export class SmtpTransport implements EmailAdapter {
         accepted: [],
         rejected: [],
         errorMessages: ['Email message must include at least one recipient.'],
+        category: 'validation',
+        permanent: true,
       }
     }
 
@@ -245,6 +247,10 @@ export class SmtpTransport implements EmailAdapter {
           rejected: result.rejected,
           errorMessages: [result.response],
           response: result.response,
+          category: 'recipients_rejected',
+          ...(result.permanent !== undefined ? { permanent: result.permanent } : {}),
+          ...(result.code !== undefined ? { code: result.code } : {}),
+          ...(result.enhancedCode !== undefined ? { enhancedCode: result.enhancedCode } : {}),
         }
       }
 

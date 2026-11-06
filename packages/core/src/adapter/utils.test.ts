@@ -1,6 +1,11 @@
 import { describe, expect, test } from 'bun:test'
 
-import { fetchWithTimeoutAndRetry } from './utils'
+import {
+  classifyFetchError,
+  fetchWithTimeoutAndRetry,
+  isPermanentHttpStatus,
+  parseRetryAfterMs,
+} from './utils'
 
 describe('fetchWithTimeoutAndRetry', () => {
   test('returns successful response directly', async () => {
@@ -236,5 +241,80 @@ describe('fetchWithTimeoutAndRetry', () => {
     ).rejects.toThrow()
 
     expect(attempts).toBe(1)
+  })
+})
+
+describe('parseRetryAfterMs', () => {
+  test('returns undefined for empty, null, or undefined values', () => {
+    expect(parseRetryAfterMs(undefined)).toBeUndefined()
+    expect(parseRetryAfterMs(null)).toBeUndefined()
+    expect(parseRetryAfterMs('')).toBeUndefined()
+  })
+
+  test('parses integer seconds into milliseconds', () => {
+    expect(parseRetryAfterMs('0')).toBe(0)
+    expect(parseRetryAfterMs('5')).toBe(5000)
+    expect(parseRetryAfterMs('120')).toBe(120000)
+  })
+
+  test('parses HTTP date strings into milliseconds from now', () => {
+    const futureDate = new Date(Date.now() + 60000).toUTCString()
+    const ms = parseRetryAfterMs(futureDate)
+    expect(ms).toBeDefined()
+    expect(ms).toBeGreaterThanOrEqual(50000)
+    expect(ms).toBeLessThanOrEqual(61000)
+  })
+
+  test('returns undefined for invalid format', () => {
+    expect(parseRetryAfterMs('not-a-number-or-date')).toBeUndefined()
+  })
+})
+
+describe('isPermanentHttpStatus', () => {
+  test('marks client errors as permanent by default', () => {
+    expect(isPermanentHttpStatus(400)).toBe(true)
+    expect(isPermanentHttpStatus(401)).toBe(true)
+    expect(isPermanentHttpStatus(403)).toBe(true)
+    expect(isPermanentHttpStatus(404)).toBe(true)
+    expect(isPermanentHttpStatus(422)).toBe(true)
+  })
+
+  test('marks transient 4xx status codes as non-permanent', () => {
+    expect(isPermanentHttpStatus(408)).toBe(false)
+    expect(isPermanentHttpStatus(409)).toBe(false)
+    expect(isPermanentHttpStatus(429)).toBe(false)
+  })
+
+  test('marks 5xx server errors as non-permanent', () => {
+    expect(isPermanentHttpStatus(500)).toBe(false)
+    expect(isPermanentHttpStatus(502)).toBe(false)
+    expect(isPermanentHttpStatus(503)).toBe(false)
+    expect(isPermanentHttpStatus(504)).toBe(false)
+  })
+})
+
+describe('classifyFetchError', () => {
+  test('classifies timeout and abort errors', () => {
+    const abortError = new DOMException('The operation was aborted.', 'AbortError')
+    expect(classifyFetchError(abortError)).toEqual({ category: 'timeout', permanent: false })
+
+    const timeoutError = new Error('Request timed out after 30000ms.')
+    expect(classifyFetchError(timeoutError)).toEqual({ category: 'timeout', permanent: false })
+  })
+
+  test('classifies validation errors', () => {
+    const invalidEmail = new Error('Invalid email address')
+    expect(classifyFetchError(invalidEmail)).toEqual({ category: 'validation', permanent: true })
+
+    const lineBreak = new Error('Header must not contain line breaks.')
+    expect(classifyFetchError(lineBreak)).toEqual({ category: 'validation', permanent: true })
+
+    const folded = new Error('Header cannot be folded')
+    expect(classifyFetchError(folded)).toEqual({ category: 'validation', permanent: true })
+  })
+
+  test('classifies generic network/connection errors', () => {
+    const connError = new TypeError('Failed to fetch')
+    expect(classifyFetchError(connError)).toEqual({ category: 'connection', permanent: false })
   })
 })

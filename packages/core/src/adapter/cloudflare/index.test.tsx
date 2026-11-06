@@ -122,6 +122,8 @@ describe('Cloudflare Email Service adapter', () => {
       ],
       rejected: [],
       successful: false,
+      category: 'validation',
+      permanent: true,
     })
   })
 

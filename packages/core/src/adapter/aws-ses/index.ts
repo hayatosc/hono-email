@@ -2,9 +2,10 @@ import { SendEmailCommand } from '@aws-sdk/client-sesv2'
 import type { Attachment, SendEmailCommandInput } from '@aws-sdk/client-sesv2'
 
 import { resolveEmailAttachments } from '../attachment'
-import type { EmailMessage, SendEmailReceipt } from '../index'
+import type { EmailErrorCategory, EmailMessage, SendEmailReceipt } from '../index'
 import { formatEmailAddress, toAddressList, validateEmailHeaders } from '../message'
 import { collectProviderRecipients, failedReceipt } from '../provider'
+import { isPermanentHttpStatus } from '../utils'
 import type { SesAdapterOptions, SesEmailAdapter, SesSendOptions } from './types'
 
 export { renderEmailMessage, sendEmail } from '../index'
@@ -16,6 +17,7 @@ export type {
   EmailAttachmentDisposition,
   EmailAttachmentEncoding,
   EmailAttachmentLimits,
+  EmailErrorCategory,
   EmailHeaders,
   EmailMessage,
   EmailMessageDraft,
@@ -82,6 +84,18 @@ const buildInput = async (
   }
 }
 
+const getAwsHttpStatusCode = (error: unknown): number | undefined => {
+  if (typeof error !== 'object' || error === null || !('$metadata' in error)) {
+    return undefined
+  }
+  const metadata = Reflect.get(error, '$metadata')
+  if (typeof metadata !== 'object' || metadata === null || !('httpStatusCode' in metadata)) {
+    return undefined
+  }
+  const status = Reflect.get(metadata, 'httpStatusCode')
+  return typeof status === 'number' ? status : undefined
+}
+
 /**
  * Sends through a caller-owned AWS SDK v3 SESv2Client. The SDK owns authentication,
  * signing, networking, and retries. Reuse the adapter across Lambda invocations.
@@ -90,7 +104,10 @@ export const SesAdapter = (defaults: SesAdapterOptions): SesEmailAdapter => ({
   async send(message: EmailMessage, options: SesSendOptions = {}): Promise<SendEmailReceipt> {
     const recipients = collectProviderRecipients(message)
     if (recipients.length === 0) {
-      return failedReceipt(['Email message must include at least one recipient.'])
+      return failedReceipt(['Email message must include at least one recipient.'], {
+        category: 'validation',
+        permanent: true,
+      })
     }
 
     try {
@@ -100,7 +117,11 @@ export const SesAdapter = (defaults: SesAdapterOptions): SesEmailAdapter => ({
         options.abortSignal === undefined ? undefined : { abortSignal: options.abortSignal },
       )
       if (!result.MessageId) {
-        return failedReceipt(['SES returned no message ID.'], { rejected: recipients })
+        return failedReceipt(['SES returned no message ID.'], {
+          rejected: recipients,
+          category: 'provider',
+          permanent: false,
+        })
       }
 
       return {
@@ -111,9 +132,37 @@ export const SesAdapter = (defaults: SesAdapterOptions): SesEmailAdapter => ({
         response: `SES accepted email ${result.MessageId}.`,
       }
     } catch (error) {
+      const isValidationError =
+        error instanceof Error &&
+        (/^Invalid (email|header|attachment)/i.test(error.message) ||
+          /must not contain/i.test(error.message) ||
+          /SES attachments require a filename/i.test(error.message) ||
+          error.name === 'ValidationException' ||
+          error.name === 'MessageRejected')
+
+      const httpStatus = getAwsHttpStatusCode(error)
+
+      const category: EmailErrorCategory = isValidationError
+        ? 'validation'
+        : httpStatus !== undefined
+          ? 'provider'
+          : error instanceof Error &&
+              (error.name === 'AbortError' || /timed out/i.test(error.message))
+            ? 'timeout'
+            : 'connection'
+
+      const permanent = isValidationError
+        ? true
+        : httpStatus !== undefined
+          ? isPermanentHttpStatus(httpStatus)
+          : false
+
       return failedReceipt([error instanceof Error ? error.message : String(error)], {
         cause: error,
         rejected: recipients,
+        category,
+        permanent,
+        ...(httpStatus !== undefined ? { code: httpStatus } : {}),
       })
     }
   },

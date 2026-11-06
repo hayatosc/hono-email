@@ -632,6 +632,9 @@ describe('sendEmail over SMTP', () => {
     expect(failedReceipt.errorMessages).toEqual([
       'Unexpected SMTP response to DATA: 451 temporary failure',
     ])
+    expect(failedReceipt.category).toBe('smtp')
+    expect(failedReceipt.code).toBe(451)
+    expect(failedReceipt.permanent).toBe(false)
     expect(successfulReceipt.successful).toBe(true)
     expect(mock.connectCount()).toBe(2)
   })
@@ -729,6 +732,9 @@ describe('sendEmail over SMTP', () => {
       errorMessages: ['No SMTP recipients were accepted.'],
       rejected: ['missing@example.com'],
       successful: false,
+      category: 'recipients_rejected',
+      code: 550,
+      permanent: true,
     })
   })
 

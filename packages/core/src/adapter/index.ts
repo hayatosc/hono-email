@@ -15,6 +15,7 @@ export type {
   EmailAttachmentLimits,
   EmailDkimOptions,
   EmailEnvelope,
+  EmailErrorCategory,
   EmailHeaders,
   EmailMessage,
   EmailMessageDraft,

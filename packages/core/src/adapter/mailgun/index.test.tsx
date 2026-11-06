@@ -136,6 +136,8 @@ describe('Mailgun adapter', () => {
       ],
       rejected: [],
       successful: false,
+      category: 'validation',
+      permanent: true,
     })
   })
 

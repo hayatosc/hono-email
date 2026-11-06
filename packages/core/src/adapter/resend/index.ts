@@ -2,9 +2,15 @@ import type { EmailAdapter, EmailMessage, SendEmailReceipt } from '../index'
 import {
   buildProviderEmailPayload,
   collectProviderRecipients,
+  failedReceipt,
   getProviderRecipientError,
 } from '../provider'
-import { fetchWithTimeoutAndRetry } from '../utils'
+import {
+  classifyFetchError,
+  fetchWithTimeoutAndRetry,
+  isPermanentHttpStatus,
+  parseRetryAfterMs,
+} from '../utils'
 import type {
   ResendAdapterOptions,
   ResendAttachment,
@@ -22,6 +28,7 @@ export type {
   EmailAttachmentDisposition,
   EmailAttachmentEncoding,
   EmailAttachmentLimits,
+  EmailErrorCategory,
   EmailHeaders,
   EmailMessage,
   EmailMessageDraft,
@@ -54,23 +61,6 @@ const validateApiBaseUrl = (url: string): void => {
   }
   throw new Error('Resend adapter requires HTTPS. API tokens must not be sent over plaintext.')
 }
-
-const failedReceipt = (
-  errorMessages: string[],
-  options: {
-    accepted?: string[]
-    cause?: unknown
-    rejected?: string[]
-    response?: string
-  } = {},
-): SendEmailReceipt => ({
-  successful: false,
-  accepted: options.accepted ?? [],
-  rejected: options.rejected ?? [],
-  errorMessages,
-  ...(options.response !== undefined ? { response: options.response } : {}),
-  ...(options.cause !== undefined ? { cause: options.cause } : {}),
-})
 
 const getFetch = (fetchImplementation: ResendFetch | undefined): ResendFetch => {
   const resolvedFetch = fetchImplementation ?? globalThis.fetch
@@ -172,7 +162,10 @@ export const ResendAdapter = (options: ResendAdapterOptions): EmailAdapter => ({
     const recipients = collectProviderRecipients(message)
     const recipientError = getProviderRecipientError(message, recipients)
     if (recipientError !== undefined) {
-      return failedReceipt([recipientError])
+      return failedReceipt([recipientError], {
+        category: 'validation',
+        permanent: true,
+      })
     }
 
     let payload: ResendPayload
@@ -182,6 +175,8 @@ export const ResendAdapter = (options: ResendAdapterOptions): EmailAdapter => ({
       return failedReceipt([error instanceof Error ? error.message : String(error)], {
         cause: error,
         rejected: recipients,
+        category: 'validation',
+        permanent: true,
       })
     }
 
@@ -210,9 +205,14 @@ export const ResendAdapter = (options: ResendAdapterOptions): EmailAdapter => ({
       const data = parseJson(body)
 
       if (!response.ok || !isResendSuccessResponse(data)) {
+        const retryAfterMs = parseRetryAfterMs(response.headers.get('retry-after'))
         return failedReceipt([asErrorMessage(data, response, body)], {
+          category: 'provider',
+          code: response.status,
+          permanent: isPermanentHttpStatus(response.status),
           rejected: recipients,
           response: body,
+          ...(retryAfterMs !== undefined ? { retryAfterMs } : {}),
         })
       }
 
@@ -227,6 +227,7 @@ export const ResendAdapter = (options: ResendAdapterOptions): EmailAdapter => ({
       return failedReceipt([error instanceof Error ? error.message : String(error)], {
         cause: error,
         rejected: recipients,
+        ...classifyFetchError(error),
       })
     }
   },

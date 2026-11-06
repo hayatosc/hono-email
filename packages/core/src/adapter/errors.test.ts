@@ -101,6 +101,8 @@ describe('built-in adapter error contract', () => {
         accepted: [],
         errorMessages: ['Delivery unavailable'],
         cause: failure,
+        category: 'connection',
+        permanent: false,
       })
     } finally {
       if (adapter instanceof SmtpTransport) await adapter.close()
@@ -120,6 +122,8 @@ describe('built-in adapter error contract', () => {
           successful: false,
           accepted: [],
           errorMessages: ['X-Test must not contain line breaks.'],
+          category: 'validation',
+          permanent: true,
         })
       } finally {
         if (adapter instanceof SmtpTransport) await adapter.close()
@@ -146,9 +150,53 @@ describe('built-in adapter error contract', () => {
         rejected: [],
         errorMessages: ['SMTP transport is closed.'],
         cause: failure,
+        category: 'connection',
+        permanent: false,
       })
     } finally {
       await smtp.close()
     }
+  })
+
+  test('HTTP adapter classifies 4xx permanent vs 429 transient with retryAfterMs', async () => {
+    const resend422 = ResendAdapter({
+      apiKey: 'test',
+      retry: false,
+      fetch: async () =>
+        new Response(JSON.stringify({ message: 'Validation failed' }), {
+          status: 422,
+          headers: { 'content-type': 'application/json' },
+        }),
+    })
+
+    const receipt422 = await resend422.send(message)
+    expect(receipt422).toMatchObject({
+      successful: false,
+      category: 'provider',
+      code: 422,
+      permanent: true,
+    })
+
+    const resend429 = ResendAdapter({
+      apiKey: 'test',
+      retry: false,
+      fetch: async () =>
+        new Response(JSON.stringify({ message: 'Rate limit exceeded' }), {
+          status: 429,
+          headers: {
+            'content-type': 'application/json',
+            'retry-after': '5',
+          },
+        }),
+    })
+
+    const receipt429 = await resend429.send(message)
+    expect(receipt429).toMatchObject({
+      successful: false,
+      category: 'provider',
+      code: 429,
+      permanent: false,
+      retryAfterMs: 5000,
+    })
   })
 })

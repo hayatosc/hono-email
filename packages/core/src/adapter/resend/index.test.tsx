@@ -157,6 +157,8 @@ describe('Resend adapter', () => {
       ],
       rejected: [],
       successful: false,
+      category: 'validation',
+      permanent: true,
     })
   })
 

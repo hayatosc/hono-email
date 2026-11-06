@@ -237,6 +237,18 @@ export type SuccessfulSendReceipt = {
 }
 
 /**
+ * Classification category for email delivery failures.
+ */
+export type EmailErrorCategory =
+  | 'validation'
+  | 'connection'
+  | 'timeout'
+  | 'smtp'
+  | 'recipients_rejected'
+  | 'provider'
+  | 'unknown'
+
+/**
  * Receipt returned by a built-in adapter when message validation or delivery fails.
  * The original failure is available as `cause` when supplied by the adapter.
  *
@@ -252,6 +264,29 @@ export type FailedSendReceipt = {
   accepted: string[]
   rejected: string[]
   errorMessages: string[]
+  /**
+   * `true` when retrying the same message cannot succeed (e.g. 5xx SMTP replies,
+   * 4xx HTTP client/validation errors, malformed addresses, header injections).
+   * `false` when the failure is transient and can be retried (e.g. 4xx SMTP greylisting,
+   * 429/5xx HTTP responses, timeouts, dropped connections).
+   */
+  permanent?: boolean
+  /**
+   * High-level error classification category.
+   */
+  category?: EmailErrorCategory
+  /**
+   * SMTP reply code (e.g. 550, 421) or HTTP response status (e.g. 429, 503).
+   */
+  code?: number | string
+  /**
+   * Enhanced status code reported by SMTP (e.g. "5.1.1").
+   */
+  enhancedCode?: string
+  /**
+   * Recommended retry delay in milliseconds, parsed from HTTP Retry-After headers.
+   */
+  retryAfterMs?: number
   response?: string
   cause?: unknown
 }

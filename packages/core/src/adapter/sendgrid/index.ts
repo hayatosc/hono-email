@@ -7,7 +7,12 @@ import {
   getProviderRecipientError,
   requireProviderRecipientError,
 } from '../provider'
-import { fetchWithTimeoutAndRetry } from '../utils'
+import {
+  classifyFetchError,
+  fetchWithTimeoutAndRetry,
+  isPermanentHttpStatus,
+  parseRetryAfterMs,
+} from '../utils'
 import type { RequestRetryOptions } from '../utils'
 
 export type {
@@ -18,6 +23,7 @@ export type {
   EmailAttachmentDisposition,
   EmailAttachmentEncoding,
   EmailAttachmentLimits,
+  EmailErrorCategory,
   EmailHeaders,
   EmailMessage,
   EmailMessageDraft,
@@ -248,7 +254,10 @@ export const SendGridAdapter = (options: SendGridAdapterOptions): EmailAdapter =
     const recipients = collectRecipients(message)
     const recipientError = getProviderRecipientError(message, recipients)
     if (recipientError !== undefined) {
-      return failedReceipt([recipientError])
+      return failedReceipt([recipientError], {
+        category: 'validation',
+        permanent: true,
+      })
     }
 
     let payload: SendGridPayload
@@ -258,6 +267,8 @@ export const SendGridAdapter = (options: SendGridAdapterOptions): EmailAdapter =
       return failedReceipt([error instanceof Error ? error.message : String(error)], {
         cause: error,
         rejected: recipients,
+        category: 'validation',
+        permanent: true,
       })
     }
 
@@ -286,9 +297,14 @@ export const SendGridAdapter = (options: SendGridAdapterOptions): EmailAdapter =
       const data = parseJson(body)
 
       if (!response.ok) {
+        const retryAfterMs = parseRetryAfterMs(response.headers.get('retry-after'))
         return failedReceipt(asErrorMessages(data, response, body), {
+          category: 'provider',
+          code: response.status,
+          permanent: isPermanentHttpStatus(response.status),
           rejected: recipients,
           response: body,
+          ...(retryAfterMs !== undefined ? { retryAfterMs } : {}),
         })
       }
 
@@ -306,6 +322,7 @@ export const SendGridAdapter = (options: SendGridAdapterOptions): EmailAdapter =
       return failedReceipt([error instanceof Error ? error.message : String(error)], {
         cause: error,
         rejected: recipients,
+        ...classifyFetchError(error),
       })
     }
   },

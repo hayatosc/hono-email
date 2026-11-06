@@ -6,9 +6,10 @@ import {
 import type {
   EmailAddress,
   EmailAttachmentLimits,
+  EmailErrorCategory,
   EmailHeaders,
   EmailMessage,
-  SendEmailReceipt,
+  FailedSendReceipt,
 } from '../index'
 import { addressToPath, formatEmailAddress, toAddressList, validateEmailHeaders } from '../message'
 
@@ -20,6 +21,7 @@ export type {
   EmailAttachmentDisposition,
   EmailAttachmentEncoding,
   EmailAttachmentLimits,
+  EmailErrorCategory,
   EmailHeaders,
   EmailMessage,
   EmailMessageDraft,
@@ -160,12 +162,22 @@ export const failedReceipt = (
     cause?: unknown
     rejected?: string[]
     response?: string
+    permanent?: boolean
+    category?: EmailErrorCategory
+    code?: number | string
+    enhancedCode?: string
+    retryAfterMs?: number
   } = {},
-): SendEmailReceipt => ({
+): FailedSendReceipt => ({
   successful: false,
   accepted: options.accepted ?? [],
   rejected: options.rejected ?? [],
   errorMessages,
+  ...(options.permanent !== undefined ? { permanent: options.permanent } : {}),
+  ...(options.category !== undefined ? { category: options.category } : {}),
+  ...(options.code !== undefined ? { code: options.code } : {}),
+  ...(options.enhancedCode !== undefined ? { enhancedCode: options.enhancedCode } : {}),
+  ...(options.retryAfterMs !== undefined ? { retryAfterMs: options.retryAfterMs } : {}),
   ...(options.response !== undefined ? { response: options.response } : {}),
   ...(options.cause !== undefined ? { cause: options.cause } : {}),
 })

@@ -141,6 +141,8 @@ describe('Postmark adapter', () => {
       ],
       rejected: [],
       successful: false,
+      category: 'validation',
+      permanent: true,
     })
   })
 
