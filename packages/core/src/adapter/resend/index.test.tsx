@@ -368,4 +368,56 @@ describe('Resend adapter', () => {
       successful: false,
     })
   })
+
+  test('rejects idempotencyKey containing characters above U+00FF without calling fetch', async () => {
+    let fetchCalled = false
+    const fetchImplementation: ResendFetch = async () => {
+      fetchCalled = true
+      return new Response(JSON.stringify({ id: 'never-reached' }), { status: 200 })
+    }
+
+    const receipt = await ResendAdapter({
+      apiKey: 're_test',
+      fetch: fetchImplementation,
+    }).send({
+      ...createMessage(),
+      idempotencyKey: 'idemp-漢-test',
+    })
+
+    expect(fetchCalled).toBe(false)
+    expect(receipt.successful).toBe(false)
+    expect(receipt).toMatchObject({
+      category: 'validation',
+      errorMessages: ['idempotencyKey must not contain characters above U+00FF.'],
+      permanent: true,
+      rejected: ['first@example.com', 'second@example.com'],
+      successful: false,
+    })
+  })
+
+  test('rejects idempotencyKey exceeding 256 characters without calling fetch', async () => {
+    let fetchCalled = false
+    const fetchImplementation: ResendFetch = async () => {
+      fetchCalled = true
+      return new Response(JSON.stringify({ id: 'never-reached' }), { status: 200 })
+    }
+
+    const receipt = await ResendAdapter({
+      apiKey: 're_test',
+      fetch: fetchImplementation,
+    }).send({
+      ...createMessage(),
+      idempotencyKey: 'a'.repeat(257),
+    })
+
+    expect(fetchCalled).toBe(false)
+    expect(receipt.successful).toBe(false)
+    expect(receipt).toMatchObject({
+      category: 'validation',
+      errorMessages: ['idempotencyKey must not exceed 256 characters.'],
+      permanent: true,
+      rejected: ['first@example.com', 'second@example.com'],
+      successful: false,
+    })
+  })
 })

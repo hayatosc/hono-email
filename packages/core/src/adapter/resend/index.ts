@@ -50,6 +50,16 @@ export type {
 
 const DEFAULT_API_BASE_URL = 'https://api.resend.com'
 const DEFAULT_USER_AGENT = 'hono-email'
+const MAX_IDEMPOTENCY_KEY_LENGTH = 256
+
+const hasNonLatin1 = (value: string): boolean => {
+  for (let index = 0; index < value.length; index++) {
+    if (value.charCodeAt(index) > 0xff) {
+      return true
+    }
+  }
+  return false
+}
 
 const validateApiBaseUrl = (url: string): void => {
   if (!url.startsWith('http://')) {
@@ -175,6 +185,23 @@ export const ResendAdapter = (options: ResendAdapterOptions): EmailAdapter => ({
           permanent: true,
           category: 'validation',
         })
+      }
+      if (hasNonLatin1(message.idempotencyKey)) {
+        return failedReceipt(['idempotencyKey must not contain characters above U+00FF.'], {
+          rejected: recipients,
+          permanent: true,
+          category: 'validation',
+        })
+      }
+      if (message.idempotencyKey.length > MAX_IDEMPOTENCY_KEY_LENGTH) {
+        return failedReceipt(
+          [`idempotencyKey must not exceed ${MAX_IDEMPOTENCY_KEY_LENGTH} characters.`],
+          {
+            rejected: recipients,
+            permanent: true,
+            category: 'validation',
+          },
+        )
       }
     }
 

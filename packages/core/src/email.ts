@@ -186,8 +186,9 @@ export type EmailMessage = {
   messageId?: string
   /**
    * Idempotency key used to prevent duplicate deliveries on retries.
-   * - When `messageId` is omitted, derives a deterministic RFC 5322 `Message-ID`.
-   * - In `ResendAdapter`, forwarded as the `Idempotency-Key` HTTP header.
+   * - In SMTP / raw MIME sends, derives a deterministic RFC 5322 `Message-ID` when `messageId` is omitted.
+   * - In HTTP provider adapters (such as `ResendAdapter`), deduplication is handled via provider-specific
+   *   mechanisms (e.g. the `Idempotency-Key` HTTP header) rather than `Message-ID`.
    */
   idempotencyKey?: string
   date?: Date
