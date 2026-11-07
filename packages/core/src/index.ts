@@ -70,6 +70,26 @@ export type {
   SuccessfulSendReceipt,
 } from './email'
 import {
+  createMailer as createMailerInternal,
+  defineMail,
+  isMailable,
+  setDefaultEmailRenderer,
+  type Mailer,
+  type MailerOptions,
+} from './mailer'
+export { defineMail, isMailable }
+export type {
+  Mailable,
+  MailDefinitionOutput,
+  MailRenderContext,
+  Mailer,
+  MailerOptions,
+  RenderDraftOptions,
+  RenderMailableOptions,
+  SendDraftOptions,
+  SendMailableOptions,
+} from './mailer'
+import {
   MARKDOWN_TAILWIND_PARENT_REQUIRED_ATTRIBUTE_NAME,
   MARKDOWN_TAILWIND_PARENT_REQUIRED_ERROR_MESSAGE,
 } from './markdown'
@@ -305,3 +325,28 @@ export async function render(jsx: Child, options: RenderOptions = {}): Promise<R
  */
 export const sendEmail = async (options: SendEmailOptions): Promise<SendEmailReceipt> =>
   sendEmailWithRender(render, options)
+
+setDefaultEmailRenderer(render)
+
+/**
+ * Creates a Mailer client instance with preconfigured defaults and hono-email's JSX renderer.
+ *
+ * @param options - Default options (adapter, from, replyTo, headers, render, retry).
+ * @returns A Mailer instance with `send()` and `render()` methods.
+ *
+ * @example
+ * ```tsx
+ * const mailer = createMailer({
+ *   adapter: ResendAdapter({ apiKey: 're_123' }),
+ *   from: 'orders@example.com',
+ *   headers: { 'X-App-Env': 'production' },
+ * })
+ *
+ * await mailer.send(OrderConfirmationMail, {
+ *   to: 'customer@example.com',
+ *   data: { orderNumber: 1001, total: '$57.97' },
+ * })
+ * ```
+ */
+export const createMailer = (options: MailerOptions): Mailer =>
+  createMailerInternal(options, render)

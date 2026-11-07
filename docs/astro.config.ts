@@ -83,6 +83,7 @@ export default defineConfig({
           label: 'Core',
           items: [
             { label: 'render()', slug: 'core/render' },
+            { label: 'Mailer & Mailable', slug: 'core/mailer' },
             { label: 'Strict Mode', slug: 'core/strict-mode' },
           ],
         },

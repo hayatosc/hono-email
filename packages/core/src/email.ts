@@ -379,7 +379,7 @@ export type SendEmailOptions = EmailMessageDraft &
     adapter: EmailAdapter
   }
 
-type EmailRenderer = (
+export type EmailRenderer = (
   jsx: Child,
   options?: RenderOptions,
 ) => Promise<{
