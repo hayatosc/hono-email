@@ -298,4 +298,126 @@ describe('Resend adapter', () => {
     expect(receipt.successful).toBe(true)
     expect(attempts).toBe(2)
   })
+
+  test('attaches Idempotency-Key header when idempotencyKey is provided', async () => {
+    const requests: { input: string; init: ResendFetchInit }[] = []
+    const fetchImplementation: ResendFetch = async (input, init) => {
+      requests.push({ input, init })
+      return new Response(JSON.stringify({ id: 'resend-idemp-id' }), { status: 200 })
+    }
+
+    const receipt = await ResendAdapter({
+      apiKey: 're_test',
+      fetch: fetchImplementation,
+    }).send({
+      ...createMessage(),
+      idempotencyKey: 'resend-idemp-123',
+    })
+
+    expect(receipt.successful).toBe(true)
+    expect(requests).toHaveLength(1)
+    expect((requests[0]?.init.headers as Record<string, string>)?.['Idempotency-Key']).toBe(
+      'resend-idemp-123',
+    )
+  })
+
+  test('does not attach Idempotency-Key header when idempotencyKey is empty string', async () => {
+    const requests: { input: string; init: ResendFetchInit }[] = []
+    const fetchImplementation: ResendFetch = async (input, init) => {
+      requests.push({ input, init })
+      return new Response(JSON.stringify({ id: 'resend-no-idemp-id' }), { status: 200 })
+    }
+
+    const receipt = await ResendAdapter({
+      apiKey: 're_test',
+      fetch: fetchImplementation,
+    }).send({
+      ...createMessage(),
+      idempotencyKey: '',
+    })
+
+    expect(receipt.successful).toBe(true)
+    expect(requests).toHaveLength(1)
+    expect(
+      (requests[0]?.init.headers as Record<string, string>)?.['Idempotency-Key'],
+    ).toBeUndefined()
+  })
+
+  test('rejects idempotencyKey containing line breaks without calling fetch', async () => {
+    let fetchCalled = false
+    const fetchImplementation: ResendFetch = async () => {
+      fetchCalled = true
+      return new Response(JSON.stringify({ id: 'never-reached' }), { status: 200 })
+    }
+
+    const receipt = await ResendAdapter({
+      apiKey: 're_test',
+      fetch: fetchImplementation,
+    }).send({
+      ...createMessage(),
+      idempotencyKey: 'injected\r\nX-Bad: evil',
+    })
+
+    expect(fetchCalled).toBe(false)
+    expect(receipt.successful).toBe(false)
+    expect(receipt).toMatchObject({
+      category: 'validation',
+      errorMessages: ['idempotencyKey must not contain line breaks.'],
+      permanent: true,
+      rejected: ['first@example.com', 'second@example.com'],
+      successful: false,
+    })
+  })
+
+  test('rejects idempotencyKey containing characters above U+00FF without calling fetch', async () => {
+    let fetchCalled = false
+    const fetchImplementation: ResendFetch = async () => {
+      fetchCalled = true
+      return new Response(JSON.stringify({ id: 'never-reached' }), { status: 200 })
+    }
+
+    const receipt = await ResendAdapter({
+      apiKey: 're_test',
+      fetch: fetchImplementation,
+    }).send({
+      ...createMessage(),
+      idempotencyKey: 'idemp-漢-test',
+    })
+
+    expect(fetchCalled).toBe(false)
+    expect(receipt.successful).toBe(false)
+    expect(receipt).toMatchObject({
+      category: 'validation',
+      errorMessages: ['idempotencyKey must not contain characters above U+00FF.'],
+      permanent: true,
+      rejected: ['first@example.com', 'second@example.com'],
+      successful: false,
+    })
+  })
+
+  test('rejects idempotencyKey exceeding 256 characters without calling fetch', async () => {
+    let fetchCalled = false
+    const fetchImplementation: ResendFetch = async () => {
+      fetchCalled = true
+      return new Response(JSON.stringify({ id: 'never-reached' }), { status: 200 })
+    }
+
+    const receipt = await ResendAdapter({
+      apiKey: 're_test',
+      fetch: fetchImplementation,
+    }).send({
+      ...createMessage(),
+      idempotencyKey: 'a'.repeat(257),
+    })
+
+    expect(fetchCalled).toBe(false)
+    expect(receipt.successful).toBe(false)
+    expect(receipt).toMatchObject({
+      category: 'validation',
+      errorMessages: ['idempotencyKey must not exceed 256 characters.'],
+      permanent: true,
+      rejected: ['first@example.com', 'second@example.com'],
+      successful: false,
+    })
+  })
 })

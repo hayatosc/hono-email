@@ -45,6 +45,21 @@ For the full list of configuration options, see the [Resend Options API Referenc
 
 Resend requires a `User-Agent` header for direct HTTP requests, so `ResendAdapter` sends one by default. You can override it with the `userAgent` option.
 
+## Idempotency Keys
+
+Pass `idempotencyKey` on the email message or draft to include Resend's `Idempotency-Key` header (up to 256 characters), enabling 24-hour deduplication for retried sends:
+
+```tsx
+await sendEmail({
+  adapter: ResendAdapter({ apiKey: process.env.RESEND_API_KEY! }),
+  from: 'sender@example.com',
+  to: 'recipient@example.com',
+  subject: 'Order Confirmation',
+  idempotencyKey: `order-${order.id}`,
+  jsx: <OrderEmail order={order} />,
+})
+```
+
 ## Shared adapter features
 
 Like all provider adapters, Resend supports `to`, `cc`, `bcc`, `replyTo`, custom `headers`, and `attachments`. Inline attachments use `cid` when the provider supports content IDs.

@@ -72,4 +72,32 @@ describe.each([
     ).rejects.toThrow(message)
     expect(sent).toEqual([])
   })
+
+  test('passes idempotencyKey from draft to the adapter', async () => {
+    const sent: EmailMessage[] = []
+    const adapter: EmailAdapter = {
+      async send(email) {
+        sent.push(email)
+        return {
+          successful: true,
+          messageId: 'local-draft',
+          response: 'Sent locally',
+          accepted: ['recipient@example.com'],
+          rejected: [],
+        }
+      },
+    }
+
+    await send({
+      adapter,
+      from: 'sender@example.com',
+      to: 'recipient@example.com',
+      subject: 'Draft',
+      idempotencyKey: 'idemp-send-test',
+      jsx: <p>Hello</p>,
+    })
+
+    expect(sent).toHaveLength(1)
+    expect(sent[0]?.idempotencyKey).toBe('idemp-send-test')
+  })
 })

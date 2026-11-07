@@ -26,6 +26,7 @@ type EmailMessage = {
   attachments?: EmailAttachment[]
   headers?: Record<string, string>
   messageId?: string
+  idempotencyKey?: string
   date?: Date
   envelope?: EmailEnvelope
   dkim?: EmailDkimOptions
@@ -75,6 +76,13 @@ Custom email headers as a `Record<string, string>`.
 #### `messageId` <Badge text="Optional" variant="note" size="small" />
 
 Custom Message-ID header value.
+
+#### `idempotencyKey` <Badge text="Optional" variant="note" size="small" />
+
+Idempotency key used to prevent duplicate deliveries on retries.
+
+- For SMTP / raw MIME sends, derives a deterministic RFC 5322 `Message-ID` when `messageId` is omitted.
+- For HTTP provider adapters (such as Resend), deduplication is handled via provider-specific mechanisms (e.g. the `Idempotency-Key` HTTP header) rather than `Message-ID`.
 
 #### `date` <Badge text="Optional" variant="note" size="small" />
 

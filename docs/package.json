@@ -6,10 +6,10 @@
   "scripts": {
     "dev": "astro dev",
     "start": "astro dev",
-    "build": "astro build",
+    "build": "bun run --filter 'hono-email' build && astro build",
     "preview": "astro preview",
     "astro": "astro",
-    "check": "astro check",
+    "check": "bun run --filter 'hono-email' build && astro check",
     "sync": "astro sync",
     "deploy": "wrangler deploy"
   },
@@ -36,5 +36,6 @@
   },
   "devDependencies": {
     "wrangler": "^4.116.0"
-  }
+  },
+  "packageManager": "bun@1.3.12"
 }
