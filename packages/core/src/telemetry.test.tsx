@@ -82,11 +82,12 @@ describe('extractMessageRecipients', () => {
     ])
   })
 
-  test('uses envelope.to override when provided', () => {
+  test('uses envelope overrides while preserving non-overridden cc/bcc and deduplicating', () => {
     const message: EmailMessage = {
       from: 'sender@example.com',
       to: 'visible@example.com',
-      cc: 'visible-cc@example.com',
+      cc: ['visible-cc@example.com', 'actual1@example.com'],
+      bcc: 'visible-bcc@example.com',
       envelope: {
         to: ['actual1@example.com', { address: 'actual2@example.com' }],
       },
@@ -97,6 +98,8 @@ describe('extractMessageRecipients', () => {
     expect(extractMessageRecipients(message)).toEqual([
       'actual1@example.com',
       'actual2@example.com',
+      'visible-cc@example.com',
+      'visible-bcc@example.com',
     ])
   })
 })
@@ -163,6 +166,49 @@ describe('mergeTelemetryHooks', () => {
 
     await merged.onEvent?.(sampleSentEvent)
     expect(callOrder).toEqual(['hook1:sent', 'hook2:sent', 'hook1:event'])
+  })
+
+  test('isolates throwing hooks so subsequent hooks still execute', async () => {
+    const callOrder: string[] = []
+    const hook1: MailTelemetryHooks = {
+      onSent: () => {
+        callOrder.push('hook1:throwing')
+        throw new Error('hook1 failed')
+      },
+    }
+    const hook2: MailTelemetryHooks = {
+      onSent: () => {
+        callOrder.push('hook2:ran')
+      },
+    }
+
+    const merged = mergeTelemetryHooks(hook1, hook2)
+    expect(merged).toBeDefined()
+
+    const sampleSentEvent: MailSentEvent = {
+      type: 'sent',
+      messageId: 'id-1',
+      subject: 'Subject',
+      recipients: ['user@example.com'],
+      durationMs: 10,
+      receipt: {
+        successful: true,
+        messageId: 'id-1',
+        accepted: ['user@example.com'],
+        rejected: [],
+        response: '250 OK',
+      },
+      message: {
+        from: 'from@example.com',
+        to: 'user@example.com',
+        subject: 'Subject',
+        html: '<p>Hi</p>',
+        text: 'Hi',
+      },
+    }
+
+    await merged?.onSent?.(sampleSentEvent)
+    expect(callOrder).toEqual(['hook1:throwing', 'hook2:ran'])
   })
 })
 
@@ -286,9 +332,79 @@ describe('telemetry hooks with sendEmail', () => {
     expect(failed.receipt.errorMessages).toContain('Network timeout during transmission')
     expect(typeof failed.durationMs).toBe('number')
   })
+
+  test('swallows errors from throwing onSent and onEvent hooks so sendEmail still succeeds', async () => {
+    const receipt = await sendEmail({
+      adapter: new MockSuccessAdapter(),
+      from: 'sender@example.com',
+      to: 'recipient@example.com',
+      subject: 'Resilient Telemetry',
+      jsx: (
+        <Html>
+          <Body>
+            <Text>Hello</Text>
+          </Body>
+        </Html>
+      ),
+      hooks: {
+        onSent: () => {
+          throw new Error('Telemetry sink down')
+        },
+        onEvent: async () => {
+          throw new Error('Event sink rejected')
+        },
+      },
+    })
+
+    expect(receipt.successful).toBe(true)
+  })
 })
 
 describe('node:diagnostics_channel integration', () => {
+  test('publishes concurrent sends without dropping diagnostics events', async () => {
+    const receivedEvents: MailSentEvent[] = []
+    const subscriber = (message: unknown) => {
+      receivedEvents.push(message as MailSentEvent)
+    }
+
+    dc.subscribe('hono-email:sent', subscriber)
+    try {
+      await Promise.all([
+        sendEmail({
+          adapter: new MockSuccessAdapter(),
+          from: 'sender@example.com',
+          to: 'recipient1@example.com',
+          subject: 'Concurrent 1',
+          jsx: (
+            <Html>
+              <Body>
+                <Text>One</Text>
+              </Body>
+            </Html>
+          ),
+        }),
+        sendEmail({
+          adapter: new MockSuccessAdapter(),
+          from: 'sender@example.com',
+          to: 'recipient2@example.com',
+          subject: 'Concurrent 2',
+          jsx: (
+            <Html>
+              <Body>
+                <Text>Two</Text>
+              </Body>
+            </Html>
+          ),
+        }),
+      ])
+
+      expect(receivedEvents).toHaveLength(2)
+      expect(receivedEvents.map((e) => e.subject).sort()).toEqual(['Concurrent 1', 'Concurrent 2'])
+    } finally {
+      dc.unsubscribe('hono-email:sent', subscriber)
+    }
+  })
+
   test('publishes to hono-email:sent channel when subscribers exist', async () => {
     let receivedChannelEvent: unknown = undefined
     const subscriber = (message: unknown) => {

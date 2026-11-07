@@ -68,7 +68,24 @@ export type DiagnosticsChannelLike = {
   publish(data: unknown): void
 }
 
-let channelsResolved = false
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null
+
+const isDiagnosticsChannelLike = (value: unknown): value is DiagnosticsChannelLike => {
+  if (!isRecord(value)) {
+    return false
+  }
+  return typeof value.publish === 'function' && typeof value.hasSubscribers === 'boolean'
+}
+
+const isDiagnosticsModule = (value: unknown): value is { channel: (name: string) => unknown } => {
+  if (!isRecord(value)) {
+    return false
+  }
+  return typeof value.channel === 'function'
+}
+
+let channelsPromise: Promise<void> | undefined
 let sentChannel: DiagnosticsChannelLike | undefined
 let failedChannel: DiagnosticsChannelLike | undefined
 
@@ -76,18 +93,26 @@ let failedChannel: DiagnosticsChannelLike | undefined
  * Resolves the diagnostics channels if node:diagnostics_channel is available.
  * Safely ignores non-Node/edge runtimes where the module is unavailable.
  */
-export async function resolveDiagnosticsChannels(): Promise<void> {
-  if (channelsResolved) {
-    return
-  }
-  channelsResolved = true
-  try {
-    const dc = await import('node:diagnostics_channel')
-    sentChannel = dc.channel('hono-email:sent')
-    failedChannel = dc.channel('hono-email:failed')
-  } catch {
-    // Gracefully ignore in environments where node:diagnostics_channel is not available
-  }
+export function resolveDiagnosticsChannels(): Promise<void> {
+  channelsPromise ??= (async () => {
+    try {
+      const channelModuleName = 'node:diagnostics_channel'
+      const moduleImport: unknown = await import(channelModuleName)
+      if (isDiagnosticsModule(moduleImport)) {
+        const candidateSent = moduleImport.channel('hono-email:sent')
+        const candidateFailed = moduleImport.channel('hono-email:failed')
+        if (isDiagnosticsChannelLike(candidateSent)) {
+          sentChannel = candidateSent
+        }
+        if (isDiagnosticsChannelLike(candidateFailed)) {
+          failedChannel = candidateFailed
+        }
+      }
+    } catch {
+      // Gracefully ignore in environments where node:diagnostics_channel is not available
+    }
+  })()
+  return channelsPromise
 }
 
 /**
@@ -119,34 +144,46 @@ const toAddressPath = (address: EmailAddress): string => {
   return address.address
 }
 
+const toAddressList = (addresses: EmailAddress | EmailAddress[] | undefined): EmailAddress[] => {
+  if (addresses === undefined) {
+    return []
+  }
+  return Array.isArray(addresses) ? addresses : [addresses]
+}
+
 /**
  * Extracts all unique recipient address strings from an EmailMessage.
  *
  * @param message - The rendered email message.
- * @returns Array of recipient address strings.
+ * @returns Array of unique recipient address strings.
  */
 export function extractMessageRecipients(message: EmailMessage): string[] {
-  const addresses: EmailAddress[] = []
-  if (message.envelope?.to !== undefined) {
-    const envTo = Array.isArray(message.envelope.to) ? message.envelope.to : [message.envelope.to]
-    addresses.push(...envTo)
-  } else {
-    const to = Array.isArray(message.to) ? message.to : [message.to]
-    addresses.push(...to)
-    if (message.cc !== undefined) {
-      const cc = Array.isArray(message.cc) ? message.cc : [message.cc]
-      addresses.push(...cc)
-    }
-    if (message.bcc !== undefined) {
-      const bcc = Array.isArray(message.bcc) ? message.bcc : [message.bcc]
-      addresses.push(...bcc)
-    }
+  const envelope = message.envelope
+  const addresses = [
+    ...toAddressList(envelope?.to ?? message.to),
+    ...toAddressList(envelope?.cc ?? message.cc),
+    ...toAddressList(envelope?.bcc ?? message.bcc),
+  ]
+  return [...new Set(addresses.map(toAddressPath))]
+}
+
+async function runHook<T>(
+  hook: ((event: T) => void | Promise<void>) | undefined,
+  event: T,
+): Promise<void> {
+  if (!hook) {
+    return
   }
-  return addresses.map(toAddressPath)
+  try {
+    await hook(event)
+  } catch {
+    // Telemetry hook errors are swallowed so they never alter the send outcome or block subsequent hooks.
+  }
 }
 
 /**
  * Merges multiple telemetry hook objects into a single hook object.
+ * Errors thrown by individual hooks are caught and swallowed so subsequent hooks continue to run.
  *
  * @param hooksList - Array of optional telemetry hooks.
  * @returns Merged telemetry hooks, or undefined if no hooks were provided.
@@ -165,23 +202,17 @@ export function mergeTelemetryHooks(
   return {
     onSent: async (event: MailSentEvent): Promise<void> => {
       for (const hook of activeHooks) {
-        if (hook.onSent) {
-          await hook.onSent(event)
-        }
+        await runHook(hook.onSent, event)
       }
     },
     onFailed: async (event: MailFailedEvent): Promise<void> => {
       for (const hook of activeHooks) {
-        if (hook.onFailed) {
-          await hook.onFailed(event)
-        }
+        await runHook(hook.onFailed, event)
       }
     },
     onEvent: async (event: MailEvent): Promise<void> => {
       for (const hook of activeHooks) {
-        if (hook.onEvent) {
-          await hook.onEvent(event)
-        }
+        await runHook(hook.onEvent, event)
       }
     },
   }
@@ -189,6 +220,7 @@ export function mergeTelemetryHooks(
 
 /**
  * Dispatches a mail event to both diagnostics_channel and user-supplied telemetry hooks.
+ * Errors thrown or rejected by telemetry hooks are swallowed so they cannot change the send result.
  *
  * @param event - The mail sent or failed event.
  * @param hooks - Optional user telemetry hooks.
@@ -200,13 +232,11 @@ export async function dispatchMailEvent(
   await publishDiagnostics(event).catch(() => {})
 
   if (hooks) {
-    if (event.type === 'sent' && hooks.onSent) {
-      await hooks.onSent(event)
-    } else if (event.type === 'failed' && hooks.onFailed) {
-      await hooks.onFailed(event)
+    if (event.type === 'sent') {
+      await runHook(hooks.onSent, event)
+    } else {
+      await runHook(hooks.onFailed, event)
     }
-    if (hooks.onEvent) {
-      await hooks.onEvent(event)
-    }
+    await runHook(hooks.onEvent, event)
   }
 }
