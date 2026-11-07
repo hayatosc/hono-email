@@ -217,7 +217,10 @@ if (!receipt.successful) {
 type EmailAddress = string | { address: string; name?: string }
 ```
 
-Pass a plain string or an object with `address` and an optional display `name`.
+Pass a plain email address (`'user@example.com'`), a display-name formatted string (`'Ada Lovelace <ada@example.com>'` or `'"Orders, Inc." <orders@example.com>'`), or an object with `address` and an optional display `name`.
+
+> [!NOTE]
+> Each `EmailAddress` must represent a single address. Comma-separated addresses in a single string (e.g. `'a@example.com, b@example.com'`) are rejected to prevent header and recipient injection vulnerabilities. To send to multiple recipients, pass an array: `to: ['a@example.com', 'b@example.com']`.
 
 ---
 
@@ -239,7 +242,7 @@ type EmailAttachment = {
 
 #### `filename` <Badge text="Optional" variant="note" size="small" />
 
-Attachment filename shown to recipients.
+Attachment filename shown to recipients. Non-ASCII filenames (e.g. `'請求書-2026.pdf'`) are automatically encoded using RFC 2231 / RFC 5987 (`filename*` and `name*` parameters) to ensure standards compliance and safe header folding across email clients.
 
 #### `content` <Badge text="Optional" variant="note" size="small" />
 

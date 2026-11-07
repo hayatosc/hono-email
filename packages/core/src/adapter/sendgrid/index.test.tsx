@@ -346,4 +346,58 @@ describe('SendGrid adapter', () => {
       ],
     })
   })
+
+  test('parses display-name string addresses into SendGrid email and name fields', async () => {
+    let requestBody: unknown
+    const receipt = await SendGridAdapter({
+      apiKey: 'SG.test',
+      fetch: async (_input, init) => {
+        requestBody = JSON.parse(String(init.body))
+        return new Response('', { status: 202 })
+      },
+    }).send({
+      from: 'Ada Lovelace <ada@example.com>',
+      html: '<p>Hello</p>',
+      subject: 'Display name test',
+      text: 'Hello',
+      to: '"Orders, Inc." <orders@example.com>',
+    })
+
+    expect(receipt.successful).toBe(true)
+    expect(requestBody).toMatchObject({
+      from: { email: 'ada@example.com', name: 'Ada Lovelace' },
+      personalizations: [
+        {
+          to: [{ email: 'orders@example.com', name: 'Orders, Inc.' }],
+        },
+      ],
+    })
+  })
+
+  test('normalizes internationalized domain names (IDNA) in SendGrid addresses', async () => {
+    let requestBody: unknown
+    const receipt = await SendGridAdapter({
+      apiKey: 'SG.test',
+      fetch: async (_input, init) => {
+        requestBody = JSON.parse(String(init.body))
+        return new Response('', { status: 202 })
+      },
+    }).send({
+      from: 'Ada <ada@日本.jp>',
+      html: '<p>Hello</p>',
+      subject: 'IDNA test',
+      text: 'Hello',
+      to: 'recipient@日本.jp',
+    })
+
+    expect(receipt.successful).toBe(true)
+    expect(requestBody).toMatchObject({
+      from: { email: 'ada@xn--wgv71a.jp', name: 'Ada' },
+      personalizations: [
+        {
+          to: [{ email: 'recipient@xn--wgv71a.jp' }],
+        },
+      ],
+    })
+  })
 })

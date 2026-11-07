@@ -1,9 +1,12 @@
 import { describe, expect, test } from 'bun:test'
 
 import {
+  addressToPath,
   buildRawEmailMessage,
   deriveDeterministicId,
   formatEmailAddress,
+  parseSingleEmailAddress,
+  resolveEmailEnvelope,
   resolveMessageId,
 } from './message'
 
@@ -248,5 +251,236 @@ describe('idempotencyKey and deterministic Message-ID', () => {
     const { messageId } = buildRawEmailMessage(msg)
     expect(messageId).not.toContain('idemp-')
     expect(messageId).toMatch(/^<.+@example\.com>$/)
+  })
+})
+
+describe('parseSingleEmailAddress and address parsing', () => {
+  test('parses plain email address string', () => {
+    expect(parseSingleEmailAddress('ada@example.com')).toEqual({
+      address: 'ada@example.com',
+    })
+  })
+
+  test('parses unquoted display-name string address', () => {
+    expect(parseSingleEmailAddress('Ada Lovelace <ada@example.com>')).toEqual({
+      address: 'ada@example.com',
+      name: 'Ada Lovelace',
+    })
+  })
+
+  test('parses quoted display-name string address with comma and special characters', () => {
+    expect(parseSingleEmailAddress('"Orders, Inc." <orders@example.com>')).toEqual({
+      address: 'orders@example.com',
+      name: 'Orders, Inc.',
+    })
+    expect(parseSingleEmailAddress('"No Reply" <noreply@example.com>')).toEqual({
+      address: 'noreply@example.com',
+      name: 'No Reply',
+    })
+    expect(parseSingleEmailAddress('"Dr. Jane \\"Doc\\" Doe" <jane@example.com>')).toEqual({
+      address: 'jane@example.com',
+      name: 'Dr. Jane "Doc" Doe',
+    })
+  })
+
+  test('parses angle-bracketed address without display name', () => {
+    expect(parseSingleEmailAddress('<ada@example.com>')).toEqual({
+      address: 'ada@example.com',
+    })
+  })
+
+  test('parses EmailAddress object', () => {
+    expect(parseSingleEmailAddress({ address: 'ada@example.com', name: 'Ada Lovelace' })).toEqual({
+      address: 'ada@example.com',
+      name: 'Ada Lovelace',
+    })
+    expect(parseSingleEmailAddress({ address: 'ada@example.com' })).toEqual({
+      address: 'ada@example.com',
+    })
+    expect(parseSingleEmailAddress({ address: 'ada@example.com', name: '' })).toEqual({
+      address: 'ada@example.com',
+    })
+  })
+
+  test('rejects comma-separated multiple addresses in a single string', () => {
+    expect(() => parseSingleEmailAddress('a@example.com, b@example.com')).toThrow(
+      'Invalid email address: a@example.com, b@example.com',
+    )
+    expect(() => parseSingleEmailAddress('victim@example.com, attacker@example.com')).toThrow(
+      'Invalid email address: victim@example.com, attacker@example.com',
+    )
+    expect(() => parseSingleEmailAddress('"victim@example.com", <attacker@example.com>')).toThrow(
+      'Invalid email address',
+    )
+    expect(() => parseSingleEmailAddress('victim@example.com,')).toThrow(
+      'Email address string must hold a single address',
+    )
+    expect(() => parseSingleEmailAddress('"Ada <ada@example.com>')).toThrow('Invalid email address')
+    expect(() =>
+      parseSingleEmailAddress({} as unknown as Parameters<typeof parseSingleEmailAddress>[0]),
+    ).toThrow('Invalid email address')
+  })
+
+  test('rejects unquoted comma in display name', () => {
+    expect(() => parseSingleEmailAddress('Orders, Inc. <orders@example.com>')).toThrow(
+      'Invalid email address: Orders, Inc. <orders@example.com>',
+    )
+  })
+
+  test('rejects comma in EmailAddress object address property', () => {
+    expect(() =>
+      parseSingleEmailAddress({ address: 'victim@example.com, attacker@example.com' }),
+    ).toThrow('Email address must contain a single address, got comma in:')
+  })
+
+  test('rejects line breaks and control characters in email address or display name', () => {
+    expect(() => parseSingleEmailAddress('user@example.com\r\nBcc: evil@example.com')).toThrow(
+      'email address must not contain line breaks.',
+    )
+    expect(() =>
+      parseSingleEmailAddress({ address: 'user@example.com', name: 'User\nbad' }),
+    ).toThrow('display name must not contain line breaks.')
+    expect(() => parseSingleEmailAddress('user\x00@example.com')).toThrow(
+      'email address must not contain control characters.',
+    )
+    expect(() => parseSingleEmailAddress('user\x1f@example.com')).toThrow(
+      'email address must not contain control characters.',
+    )
+  })
+
+  test('addressToPath extracts clean address from display-name string and normalizes IDNA', () => {
+    expect(addressToPath('Ada Lovelace <ada@example.com>')).toBe('ada@example.com')
+    expect(addressToPath('"Orders, Inc." <orders@example.com>')).toBe('orders@example.com')
+    expect(addressToPath({ address: 'ada@example.com', name: 'Ada Lovelace' })).toBe(
+      'ada@example.com',
+    )
+    expect(addressToPath('Ada Lovelace <ada@日本.jp>')).toBe('ada@xn--wgv71a.jp')
+    expect(() => addressToPath('a@example.com, b@example.com')).toThrow('Invalid email address')
+  })
+
+  test('formatEmailAddress formats string addresses with display name', () => {
+    expect(formatEmailAddress('Ada Lovelace <ada@example.com>')).toBe(
+      '"Ada Lovelace" <ada@example.com>',
+    )
+    expect(formatEmailAddress('"Orders, Inc." <orders@example.com>')).toBe(
+      '"Orders, Inc." <orders@example.com>',
+    )
+    expect(formatEmailAddress('山田太郎 <yamada@example.com>')).toMatch(
+      /^=\?UTF-8\?B\?.+\?= <yamada@example\.com>$/,
+    )
+    expect(formatEmailAddress('Ada Lovelace <ada@日本.jp>')).toBe(
+      '"Ada Lovelace" <ada@xn--wgv71a.jp>',
+    )
+    expect(() => formatEmailAddress('a@example.com, b@example.com')).toThrow(
+      'Invalid email address',
+    )
+  })
+
+  test('buildRawEmailMessage integrates display-name string addresses for From, To, and envelope', () => {
+    const msg = createMessage({
+      from: 'Ada Lovelace <ada@example.com>',
+      to: ['"Orders, Inc." <orders@example.com>', 'Charles <charles@example.com>'],
+    })
+    const { raw } = buildRawEmailMessage(msg)
+    const envelope = resolveEmailEnvelope(msg)
+
+    const fromHeader = findHeaderLines(raw, 'From')
+    const toHeader = findHeaderLines(raw, 'To')
+
+    expect(fromHeader).toEqual(['From: "Ada Lovelace" <ada@example.com>'])
+    expect(toHeader).toEqual([
+      'To: "Orders, Inc." <orders@example.com>, "Charles" <charles@example.com>',
+    ])
+    expect(envelope.mailFrom).toBe('ada@example.com')
+    expect(envelope.recipients).toEqual(['orders@example.com', 'charles@example.com'])
+  })
+
+  test('resolveEmailEnvelope extracts clean envelope addresses from display-name strings', () => {
+    const envelope = resolveEmailEnvelope({
+      from: 'Ada Lovelace <ada@example.com>',
+      to: '"Orders, Inc." <orders@example.com>',
+      cc: 'Charles <charles@example.com>',
+      html: '<p>Hi</p>',
+      subject: 'Test',
+      text: 'Hi',
+    })
+
+    expect(envelope.mailFrom).toBe('ada@example.com')
+    expect(envelope.recipients).toEqual(['orders@example.com', 'charles@example.com'])
+  })
+})
+
+describe('attachment filename encoding (RFC 2231 / RFC 5987)', () => {
+  test('encodes non-ASCII attachment filename with RFC 2231/5987 filename* and name*', () => {
+    const { raw } = buildRawEmailMessage(
+      createMessage({
+        attachments: [
+          {
+            content: 'test content',
+            contentType: 'application/pdf',
+            filename: '請求書-2026.pdf',
+          },
+        ],
+      }),
+    )
+
+    expect(raw).toContain("filename*=UTF-8''%E8%AB%8B%E6%B1%82%E6%9B%B8-2026.pdf")
+    expect(raw).toContain("name*=UTF-8''%E8%AB%8B%E6%B1%82%E6%9B%B8-2026.pdf")
+    expect(raw).not.toContain('filename="=?UTF-8')
+    expect(raw).not.toContain('name="=?UTF-8')
+  })
+
+  test('encodes and folds long non-ASCII attachment filename without throwing', () => {
+    const longFilename = '非常に長くて重要な日本語の添付ファイル名-2026年度版決算報告書.pdf'
+    const { raw } = buildRawEmailMessage(
+      createMessage({
+        attachments: [
+          {
+            content: 'report',
+            contentType: 'application/pdf',
+            filename: longFilename,
+          },
+        ],
+      }),
+    )
+
+    expect(raw).toContain("filename*=UTF-8''")
+    expect(raw).toContain("name*=UTF-8''")
+  })
+
+  test('percent-encodes special characters in RFC 5987 filename*', () => {
+    const { raw } = buildRawEmailMessage(
+      createMessage({
+        attachments: [
+          {
+            content: 'data',
+            contentType: 'text/plain',
+            filename: "テスト (2026)*'file.txt",
+          },
+        ],
+      }),
+    )
+
+    // Verify ' ( ) * are percent-encoded per RFC 5987
+    expect(raw).toContain('%282026%29%2A%27')
+    expect(raw).toContain("filename*=UTF-8''")
+  })
+
+  test('preserves plain quoted parameter for ASCII attachment filename', () => {
+    const { raw } = buildRawEmailMessage(
+      createMessage({
+        attachments: [
+          {
+            content: 'hello',
+            contentType: 'text/plain',
+            filename: 'invoice.pdf',
+          },
+        ],
+      }),
+    )
+
+    expect(raw).toContain('Content-Disposition: attachment; filename="invoice.pdf"')
+    expect(raw).toContain('Content-Type: text/plain; name="invoice.pdf"')
+    expect(raw).not.toContain('filename*=')
   })
 })

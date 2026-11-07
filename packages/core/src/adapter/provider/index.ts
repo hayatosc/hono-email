@@ -76,7 +76,29 @@ export const collectProviderRecipients = (message: EmailMessage): string[] => {
     ...toAddressList(message.bcc),
   ]
 
-  return [...new Set(recipients.map(addressToPath))]
+  return [
+    ...new Set(
+      recipients
+        .map((recipient) => {
+          try {
+            return addressToPath(recipient)
+          } catch {
+            if (typeof recipient === 'string') {
+              return recipient
+            }
+            if (
+              typeof recipient === 'object' &&
+              recipient !== null &&
+              typeof recipient.address === 'string'
+            ) {
+              return recipient.address
+            }
+            return ''
+          }
+        })
+        .filter((addr) => addr !== ''),
+    ),
+  ]
 }
 
 /**
