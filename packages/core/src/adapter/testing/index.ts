@@ -105,13 +105,16 @@ const trimPunctuationFromUrl = (url: string): string => {
   return url.slice(0, end)
 }
 
+const ALLOWED_PROTOCOLS = new Set(['http:', 'https:', 'mailto:', 'tel:'])
+
 const parseCandidateUrl = (raw: string, baseUrl = 'http://localhost'): URL | undefined => {
   const trimmed = raw.trim()
-  if (!trimmed || trimmed.startsWith('#') || trimmed.toLowerCase().startsWith('javascript:')) {
+  if (!trimmed) {
     return undefined
   }
   try {
-    return new URL(trimmed)
+    const parsed = new URL(trimmed)
+    return ALLOWED_PROTOCOLS.has(parsed.protocol) ? parsed : undefined
   } catch {
     if (trimmed.startsWith('/')) {
       try {

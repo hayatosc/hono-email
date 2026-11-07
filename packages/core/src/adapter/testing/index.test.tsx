@@ -38,6 +38,8 @@ describe('extractLinks', () => {
         <a href="mailto:support@example.com">Email</a>
         <a href="#section-title">Jump</a>
         <a href="javascript:void(0)">Noop</a>
+        <a href="data:text/html,payload">Data</a>
+        <a href="vbscript:msgbox">VbScript</a>
         <a href="https://example.com/test?a=1&amp;b=2&c=3">Duplicate Link</a>
       </div>
     `
