@@ -48,9 +48,22 @@ const PROTECTED_ATTACHMENT_HEADERS = new Set(
 
 const hasUnsafeHeaderValue = (value: string): boolean => /[\r\n]/.test(value)
 
+function hasControlCharacter(value: string): boolean {
+  for (let index = 0; index < value.length; index += 1) {
+    const code = value.charCodeAt(index)
+    if ((code < 32 && code !== 9 && code !== 10 && code !== 13) || code === 127) {
+      return true
+    }
+  }
+  return false
+}
+
 const ensureSafeHeaderValue = (value: string, fieldName: string): string => {
   if (hasUnsafeHeaderValue(value)) {
     throw new Error(`${fieldName} must not contain line breaks.`)
+  }
+  if (hasControlCharacter(value)) {
+    throw new Error(`${fieldName} must not contain control characters.`)
   }
 
   return value
@@ -167,6 +180,9 @@ export const parseSingleEmailAddress = (
   input: EmailAddress,
 ): { address: string; name?: string } => {
   if (typeof input !== 'string') {
+    if (typeof input !== 'object' || input === null || typeof input.address !== 'string') {
+      throw new Error(`Invalid email address: ${JSON.stringify(input)}`)
+    }
     const safeAddress = ensureSafeHeaderValue(input.address.trim(), 'email address')
     if (safeAddress.includes(',')) {
       throw new Error(`Email address must contain a single address, got comma in: ${safeAddress}`)
@@ -205,8 +221,7 @@ export const parseSingleEmailAddress = (
           let escaped = false
           let rawName = ''
           let validQuotes = true
-          for (let index = 0; index < inner.length; index += 1) {
-            const char = inner[index]!
+          for (const char of inner) {
             if (escaped) {
               rawName += char
               escaped = false
@@ -496,9 +511,8 @@ const formatFilenameDispositionParams = (filename: string): string => {
   if (!requiresEncodedWord(safeFilename)) {
     return `; filename=${quoteHeaderParameter(safeFilename)}`
   }
-  const encodedWord = encodeHeaderValue(safeFilename, 'attachment filename')
   const rfc5987 = encodeRfc5987Value(safeFilename)
-  return `; filename="${encodedWord}"; filename*=UTF-8''${rfc5987}`
+  return `; filename*=UTF-8''${rfc5987}`
 }
 
 const formatContentTypeNameParam = (filename: string): string => {
@@ -506,8 +520,8 @@ const formatContentTypeNameParam = (filename: string): string => {
   if (!requiresEncodedWord(safeFilename)) {
     return `; name=${quoteHeaderParameter(safeFilename)}`
   }
-  const encodedWord = encodeHeaderValue(safeFilename, 'attachment filename')
-  return `; name="${encodedWord}"`
+  const rfc5987 = encodeRfc5987Value(safeFilename)
+  return `; name*=UTF-8''${rfc5987}`
 }
 
 const appendAttachmentHeaders = (lines: string[], attachment: ResolvedEmailAttachment): void => {

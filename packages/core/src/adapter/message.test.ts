@@ -315,6 +315,10 @@ describe('parseSingleEmailAddress and address parsing', () => {
     expect(() => parseSingleEmailAddress('victim@example.com,')).toThrow(
       'Email address string must hold a single address',
     )
+    expect(() => parseSingleEmailAddress('"Ada <ada@example.com>')).toThrow('Invalid email address')
+    expect(() =>
+      parseSingleEmailAddress({} as unknown as Parameters<typeof parseSingleEmailAddress>[0]),
+    ).toThrow('Invalid email address')
   })
 
   test('rejects unquoted comma in display name', () => {
@@ -329,13 +333,19 @@ describe('parseSingleEmailAddress and address parsing', () => {
     ).toThrow('Email address must contain a single address, got comma in:')
   })
 
-  test('rejects line breaks in email address or display name', () => {
+  test('rejects line breaks and control characters in email address or display name', () => {
     expect(() => parseSingleEmailAddress('user@example.com\r\nBcc: evil@example.com')).toThrow(
       'email address must not contain line breaks.',
     )
     expect(() =>
       parseSingleEmailAddress({ address: 'user@example.com', name: 'User\nbad' }),
     ).toThrow('display name must not contain line breaks.')
+    expect(() => parseSingleEmailAddress('user\x00@example.com')).toThrow(
+      'email address must not contain control characters.',
+    )
+    expect(() => parseSingleEmailAddress('user\x1f@example.com')).toThrow(
+      'email address must not contain control characters.',
+    )
   })
 
   test('addressToPath extracts clean address from display-name string and normalizes IDNA', () => {
@@ -400,8 +410,8 @@ describe('parseSingleEmailAddress and address parsing', () => {
   })
 })
 
-describe('attachment filename encoding (RFC 2231 / RFC 5987 / RFC 2047)', () => {
-  test('encodes non-ASCII attachment filename with RFC 2047 encoded-word and RFC 2231/5987 filename*', () => {
+describe('attachment filename encoding (RFC 2231 / RFC 5987)', () => {
+  test('encodes non-ASCII attachment filename with RFC 2231/5987 filename* and name*', () => {
     const { raw } = buildRawEmailMessage(
       createMessage({
         attachments: [
@@ -414,9 +424,28 @@ describe('attachment filename encoding (RFC 2231 / RFC 5987 / RFC 2047)', () => 
       }),
     )
 
-    expect(raw).toContain('filename="=?UTF-8?B?6KuL5rGC5pu4LTIwMjYucGRm?="')
     expect(raw).toContain("filename*=UTF-8''%E8%AB%8B%E6%B1%82%E6%9B%B8-2026.pdf")
-    expect(raw).toContain('name="=?UTF-8?B?6KuL5rGC5pu4LTIwMjYucGRm?="')
+    expect(raw).toContain("name*=UTF-8''%E8%AB%8B%E6%B1%82%E6%9B%B8-2026.pdf")
+    expect(raw).not.toContain('filename="=?UTF-8')
+    expect(raw).not.toContain('name="=?UTF-8')
+  })
+
+  test('encodes and folds long non-ASCII attachment filename without throwing', () => {
+    const longFilename = '非常に長くて重要な日本語の添付ファイル名-2026年度版決算報告書.pdf'
+    const { raw } = buildRawEmailMessage(
+      createMessage({
+        attachments: [
+          {
+            content: 'report',
+            contentType: 'application/pdf',
+            filename: longFilename,
+          },
+        ],
+      }),
+    )
+
+    expect(raw).toContain("filename*=UTF-8''")
+    expect(raw).toContain("name*=UTF-8''")
   })
 
   test('percent-encodes special characters in RFC 5987 filename*', () => {

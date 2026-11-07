@@ -6,7 +6,12 @@ import type {
   EmailSendOptions,
   SendEmailReceipt,
 } from '../index'
-import { parseSingleEmailAddress, toAddressList, validateEmailHeaders } from '../message'
+import {
+  normalizeAddressDomain,
+  parseSingleEmailAddress,
+  toAddressList,
+  validateEmailHeaders,
+} from '../message'
 import {
   collectProviderRecipients as collectRecipients,
   failedReceipt,
@@ -174,7 +179,7 @@ const asErrorMessages = (value: unknown, response: Response, body: string): stri
 const asMailAddress = (address: EmailAddress): SendGridMailAddress => {
   const parsed = parseSingleEmailAddress(address)
   return {
-    email: parsed.address,
+    email: normalizeAddressDomain(parsed.address),
     ...(parsed.name !== undefined && parsed.name !== '' ? { name: parsed.name } : {}),
   }
 }

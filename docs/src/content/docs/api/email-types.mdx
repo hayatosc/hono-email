@@ -242,7 +242,7 @@ type EmailAttachment = {
 
 #### `filename` <Badge text="Optional" variant="note" size="small" />
 
-Attachment filename shown to recipients. Non-ASCII filenames (e.g. `'請求書-2026.pdf'`) are automatically encoded using both RFC 2047 encoded-word and RFC 2231 / RFC 5987 `filename*` parameters for broad email client compatibility.
+Attachment filename shown to recipients. Non-ASCII filenames (e.g. `'請求書-2026.pdf'`) are automatically encoded using RFC 2231 / RFC 5987 (`filename*` and `name*` parameters) to ensure standards compliance and safe header folding across email clients.
 
 #### `content` <Badge text="Optional" variant="note" size="small" />
 

@@ -373,4 +373,31 @@ describe('SendGrid adapter', () => {
       ],
     })
   })
+
+  test('normalizes internationalized domain names (IDNA) in SendGrid addresses', async () => {
+    let requestBody: unknown
+    const receipt = await SendGridAdapter({
+      apiKey: 'SG.test',
+      fetch: async (_input, init) => {
+        requestBody = JSON.parse(String(init.body))
+        return new Response('', { status: 202 })
+      },
+    }).send({
+      from: 'Ada <ada@日本.jp>',
+      html: '<p>Hello</p>',
+      subject: 'IDNA test',
+      text: 'Hello',
+      to: 'recipient@日本.jp',
+    })
+
+    expect(receipt.successful).toBe(true)
+    expect(requestBody).toMatchObject({
+      from: { email: 'ada@xn--wgv71a.jp', name: 'Ada' },
+      personalizations: [
+        {
+          to: [{ email: 'recipient@xn--wgv71a.jp' }],
+        },
+      ],
+    })
+  })
 })

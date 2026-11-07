@@ -78,13 +78,25 @@ export const collectProviderRecipients = (message: EmailMessage): string[] => {
 
   return [
     ...new Set(
-      recipients.map((recipient) => {
-        try {
-          return addressToPath(recipient)
-        } catch {
-          return typeof recipient === 'string' ? recipient : recipient.address
-        }
-      }),
+      recipients
+        .map((recipient) => {
+          try {
+            return addressToPath(recipient)
+          } catch {
+            if (typeof recipient === 'string') {
+              return recipient
+            }
+            if (
+              typeof recipient === 'object' &&
+              recipient !== null &&
+              typeof recipient.address === 'string'
+            ) {
+              return recipient.address
+            }
+            return ''
+          }
+        })
+        .filter((addr) => addr !== ''),
     ),
   ]
 }
