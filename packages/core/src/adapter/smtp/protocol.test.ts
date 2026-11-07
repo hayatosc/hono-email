@@ -410,6 +410,30 @@ describe('openSmtpSession', () => {
     await wait()
   })
 
+  test('AUTH XOAUTH2 handles 334 challenge and reports AUTH XOAUTH2 command on failure', async () => {
+    const { socket, wait } = createMockSocket(async (server) => {
+      await server.writeResponse('220 ready\r\n')
+      expect(await server.readLine()).toBe('EHLO localhost')
+      await server.writeResponse('250 AUTH XOAUTH2\r\n')
+      expect(await server.readLine()).toBe(
+        'AUTH XOAUTH2 dXNlcj11c2VyQGV4YW1wbGUuY29tAWF1dGg9QmVhcmVyIHRva2VuAQE=',
+      )
+      await server.writeResponse('334 eyJzdGF0dXMiOiI0MDEifQ==\r\n')
+      expect(await server.readLine()).toBe('')
+      await server.writeResponse('535 5.7.8 Authentication credentials invalid\r\n')
+    })
+
+    await expect(
+      openSmtpSession(socket, {
+        ...baseOptions,
+        auth: { accessToken: 'token', type: 'xoauth2', username: 'user@example.com' },
+      }),
+    ).rejects.toThrow(
+      'Unexpected SMTP response to AUTH XOAUTH2: 535 5.7.8 Authentication credentials invalid',
+    )
+    await wait()
+  })
+
   test('handles multi-line EHLO response', async () => {
     const { socket, wait } = createMockSocket(async (server) => {
       await server.writeResponse('220 ready\r\n')

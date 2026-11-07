@@ -157,9 +157,17 @@ const importDkimKey = async (
 ): Promise<ResolvedDkimKey> => {
   try {
     const keyData = decodePemPrivateKey(privateKey)
-    const isEd25519 =
-      configuredAlgorithm === 'ed25519-sha256' ||
-      (configuredAlgorithm === undefined && isEd25519Pkcs8(keyData))
+    const isEdKey = isEd25519Pkcs8(keyData)
+
+    if (configuredAlgorithm === 'ed25519-sha256' && !isEdKey) {
+      throw new Error("Configured DKIM algorithm 'ed25519-sha256' does not match RSA private key.")
+    }
+
+    if (configuredAlgorithm === 'rsa-sha256' && isEdKey) {
+      throw new Error("Configured DKIM algorithm 'rsa-sha256' does not match Ed25519 private key.")
+    }
+
+    const isEd25519 = isEdKey
 
     const keyBuffer = new Uint8Array(keyData.byteLength)
     keyBuffer.set(keyData)

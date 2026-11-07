@@ -121,6 +121,30 @@ describe('applyDkimSignature', () => {
     )
   })
 
+  test('throws when ed25519-sha256 is configured with RSA private key', async () => {
+    const privateKey = await createPkcs8Key()
+    await expect(
+      applyDkimSignature(createSampleMessage(), {
+        algorithm: 'ed25519-sha256',
+        domainName: 'example.com',
+        keySelector: 'test',
+        privateKey,
+      }),
+    ).rejects.toThrow("Configured DKIM algorithm 'ed25519-sha256' does not match RSA private key.")
+  })
+
+  test('throws when rsa-sha256 is configured with Ed25519 private key', async () => {
+    const privateKey = await createEd25519Pkcs8Key()
+    await expect(
+      applyDkimSignature(createSampleMessage(), {
+        algorithm: 'rsa-sha256',
+        domainName: 'example.com',
+        keySelector: 'test',
+        privateKey,
+      }),
+    ).rejects.toThrow("Configured DKIM algorithm 'rsa-sha256' does not match Ed25519 private key.")
+  })
+
   test('uses custom headerFieldNames', async () => {
     const privateKey = await createPkcs8Key()
     const result = await applyDkimSignature(createSampleMessage(), {

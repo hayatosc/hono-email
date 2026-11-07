@@ -1664,4 +1664,46 @@ describe('sendEmail over SMTP', () => {
     await smtp.close()
     await mock.wait()
   })
+
+  test('preserves pooled connection slot when pre-send validation fails', async () => {
+    const mock = createMockConnector(async (server) => {
+      await server.writeResponse('220 smtp.example.com ready\r\n')
+      expect(await server.readLine()).toBe('EHLO localhost')
+      await server.writeResponse('250 smtp.example.com\r\n')
+      expect(await server.readLine()).toBe('MAIL FROM:<sender@example.com>')
+      await server.writeResponse('250 OK\r\n')
+      expect(await server.readLine()).toBe('RCPT TO:<valid@example.com>')
+      await server.writeResponse('250 Accepted\r\n')
+      expect(await server.readLine()).toBe('DATA')
+      await server.writeResponse('354 Continue\r\n')
+      await server.readData()
+      await server.writeResponse('250 queued\r\n')
+      expect(await server.readLine()).toBe('QUIT')
+      await server.writeResponse('221 Bye\r\n')
+    })
+
+    const smtp = new SmtpTransport({
+      connector: mock.connector,
+      hostname: 'smtp.example.com',
+      port: 465,
+      secure: true,
+    })
+
+    const failedReceipt = await smtp.send(createEmailMessage('Test', 'ユーザー@example.com'))
+
+    expect(failedReceipt).toMatchObject({
+      successful: false,
+      errorMessages: [
+        'SMTP server does not advertise SMTPUTF8 for internationalized email addresses.',
+      ],
+    })
+
+    const successReceipt = await smtp.send(createEmailMessage('Valid', 'valid@example.com'))
+    expect(successReceipt.successful).toBe(true)
+
+    await smtp.close()
+    await mock.wait()
+
+    expect(mock.connectCount()).toBe(1)
+  })
 })

@@ -4,12 +4,13 @@ import { applyDkimSignature } from './dkim'
 import {
   DEFAULT_CLIENT_NAME,
   parseSmtpUrl,
+  resolveIdleTimeout,
   resolveMaxConnections,
   resolveMaxMessages,
   resolveSecureTransport,
   withTimeout,
 } from './options'
-import { openSmtpSession } from './protocol'
+import { openSmtpSession, SmtpPreSendCommandError } from './protocol'
 import type { SmtpSession } from './protocol'
 import { failedReceipt, isClosedTransportError, SmtpTransportClosedError } from './receipt'
 import type {
@@ -43,8 +44,8 @@ export type {
   SuccessfulSendReceipt,
 } from '../index'
 export { buildRawEmailMessage, buildRawEmailMessageAsync } from '../message'
-export { parseSmtpUrl } from './options'
-export { SmtpCommandError, SmtpResponseBufferLimitError } from './protocol'
+export { parseSmtpUrl, resolveIdleTimeout } from './options'
+export { SmtpCommandError, SmtpPreSendCommandError, SmtpResponseBufferLimitError } from './protocol'
 export { classifySmtpFailure, SmtpTransportClosedError } from './receipt'
 export type {
   SmtpAuth,
@@ -142,7 +143,7 @@ export class SmtpTransport implements EmailAdapter {
     this.#limits = options.limits
     this.#maxConnections = resolveMaxConnections(options.pool?.maxConnections)
     this.#maxMessages = resolveMaxMessages(options.pool?.maxMessages)
-    this.#idleTimeout = options.pool?.idleTimeout
+    this.#idleTimeout = resolveIdleTimeout(options.pool?.idleTimeout)
     this.#tls = options.tls
     this.#recipientRejectionPolicy = options.recipientRejectionPolicy
     this.#socketTimeout = options.socketTimeout
@@ -327,6 +328,11 @@ export class SmtpTransport implements EmailAdapter {
           result = await sendPromise
         }
       } catch (error) {
+        if (error instanceof SmtpPreSendCommandError) {
+          await this.#releaseOrRetireSlot(slot)
+          return failedReceipt(error)
+        }
+
         await this.#discardSlot(slot).catch((discardError) => {
           console.debug('SMTP discard slot failed:', discardError)
         })

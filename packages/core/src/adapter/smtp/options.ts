@@ -30,12 +30,20 @@ export const parseSmtpUrl = (rawUrl: string): ParsedSmtpUrl => {
 
   const isSmtps = parsed.protocol === 'smtps:'
   const port = parsed.port !== '' ? Number.parseInt(parsed.port, 10) : isSmtps ? 465 : 587
+  const decodeField = (value: string, fieldName: string): string => {
+    try {
+      return decodeURIComponent(value)
+    } catch {
+      throw new Error(`Failed to decode SMTP URL ${fieldName}: malformed percent-encoding.`)
+    }
+  }
+
   const auth =
     parsed.username !== ''
       ? {
           type: 'plain' as const,
-          username: decodeURIComponent(parsed.username),
-          password: decodeURIComponent(parsed.password),
+          username: decodeField(parsed.username, 'username'),
+          password: decodeField(parsed.password, 'password'),
         }
       : undefined
 
@@ -92,6 +100,20 @@ export const resolveMaxMessages = (maxMessages: number | undefined): number | un
   }
 
   return maxMessages
+}
+
+const MAX_IDLE_TIMEOUT_MS = 2147483647
+
+export const resolveIdleTimeout = (idleTimeout: number | undefined): number | undefined => {
+  if (idleTimeout === undefined) {
+    return undefined
+  }
+
+  if (!Number.isSafeInteger(idleTimeout) || idleTimeout < 1 || idleTimeout > MAX_IDLE_TIMEOUT_MS) {
+    throw new Error('SMTP pool idleTimeout must be a positive integer no greater than 2147483647.')
+  }
+
+  return idleTimeout
 }
 
 export const withTimeout = async <T>(

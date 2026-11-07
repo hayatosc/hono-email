@@ -137,7 +137,7 @@ export const normalizeAddressDomain = (address: string): string => {
 
   const local = address.slice(0, atIndex)
   const domain = address.slice(atIndex + 1)
-  if (!hasNonAscii(domain)) {
+  if (!hasNonAscii(domain) || /[/\\?#:]/.test(domain)) {
     return address
   }
 

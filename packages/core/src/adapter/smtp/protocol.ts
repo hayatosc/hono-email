@@ -110,6 +110,13 @@ export class SmtpResponseBufferLimitError extends Error {
   }
 }
 
+export class SmtpPreSendCommandError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = 'SmtpPreSendCommandError'
+  }
+}
+
 const encodeAsciiBase64 = (value: string): string => {
   const bytes = new TextEncoder().encode(value)
   const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
@@ -309,7 +316,17 @@ const authenticate = async (client: SmtpProtocolClient, auth: SmtpAuth): Promise
     const token =
       typeof auth.accessToken === 'function' ? await auth.accessToken() : auth.accessToken
     const sasl = `user=${auth.username}\x01auth=Bearer ${token}\x01\x01`
-    await client.command(`AUTH XOAUTH2 ${encodeAsciiBase64(sasl)}`, [235])
+    await client.sendRaw(`AUTH XOAUTH2 ${encodeAsciiBase64(sasl)}${CRLF}`)
+    let response = await client.readResponse()
+
+    if (response.code === 334) {
+      await client.sendRaw(CRLF)
+      response = await client.readResponse()
+    }
+
+    if (response.code !== 235) {
+      throw new SmtpCommandError('AUTH XOAUTH2', response)
+    }
     return
   }
 
@@ -444,12 +461,20 @@ class ReusableSmtpSession implements SmtpSession {
     const requiresSmtpUtf8 = hasNonAsciiSender || hasNonAsciiRecipients
 
     if (requiresSmtpUtf8 && !this.#capabilities?.extensions.has('SMTPUTF8')) {
-      throw new Error(
+      throw new SmtpPreSendCommandError(
         'SMTP server does not advertise SMTPUTF8 for internationalized email addresses.',
       )
     }
 
-    validateSmtpPath(options.mailFrom, 'SMTP envelope sender')
+    try {
+      validateSmtpPath(options.mailFrom, 'SMTP envelope sender')
+    } catch (error) {
+      if (error instanceof Error) {
+        throw new SmtpPreSendCommandError(error.message)
+      }
+      throw error
+    }
+
     const mailFromParam = requiresSmtpUtf8 ? ' SMTPUTF8' : ''
     await this.#client.command(`MAIL FROM:<${options.mailFrom}>${mailFromParam}`, [250])
 
