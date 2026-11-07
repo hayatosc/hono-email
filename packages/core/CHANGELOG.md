@@ -1,5 +1,31 @@
 # hono-email
 
+## 0.10.0
+
+### Minor Changes
+
+- [#170](https://github.com/hayatosc/hono-email/pull/170) [`65514bc`](https://github.com/hayatosc/hono-email/commit/65514bcc1d2fa577990942971ff089b6721d20c8) Thanks [@hayatosc](https://github.com/hayatosc)! - Support `signal?: AbortSignal` and `retry?: RequestRetryOptions | boolean` in `EmailSendOptions` and `SendEmailOptions`, propagating across all built-in delivery adapters (`ResendAdapter`, `SendGridAdapter`, `PostmarkAdapter`, `MailgunAdapter`, `CloudflareEmailAdapter`, `SesAdapter`, `SmtpTransport`, and testing adapters). Includes immediate cancellation during retry sleep (`sleepWithSignal`), full jitter exponential backoff (`jitter: 'full'`), and capping `Retry-After` headers to `maxInterval`.
+
+- [#173](https://github.com/hayatosc/hono-email/pull/173) [`4299688`](https://github.com/hayatosc/hono-email/commit/429968845884a7e878253ba6868e92dc0123a6fc) Thanks [@hayatosc](https://github.com/hayatosc)! - Support display-name formatted string addresses (`'Ada Lovelace <ada@example.com>'`, `'"Orders, Inc." <orders@example.com>'`) across adapters, prevent comma-injection attacks, and encode non-ASCII attachment filenames using RFC 2231 / RFC 5987 (`filename*` and `name*` parameters).
+
+- [#154](https://github.com/hayatosc/hono-email/pull/154) [`77fefcc`](https://github.com/hayatosc/hono-email/commit/77fefcc546972e6c7e984154e3135da8f0ed038e) Thanks [@hayatosc](https://github.com/hayatosc)! - Add `hono-email/aws-ses` with an AWS SDK v3 SES adapter, rendering helpers, per-send configuration sets and tags, attachment support, and SDK error preservation. Keep the SDK optional for non-SES consumers and document a tested SQS-triggered Lambda worker with partial batch failure handling.
+
+- [#174](https://github.com/hayatosc/hono-email/pull/174) [`92f634e`](https://github.com/hayatosc/hono-email/commit/92f634ed6d98aa77b646a82c78da150ba9bb6f66) Thanks [@hayatosc](https://github.com/hayatosc)! - Add `createMailer()` client to configure reusable default sender options (`adapter`, `from`, `replyTo`, `headers`, `render`, `retry`) and type-safe `defineMail()` for defining reusable mailables (`Mailable<TData>`). Includes `mailer.send()` with automatic mailable building or direct drafts, `mailer.render()` for preview and unit testing without delivery, and `isMailable()` runtime type guard.
+
+- [#168](https://github.com/hayatosc/hono-email/pull/168) [`24b2802`](https://github.com/hayatosc/hono-email/commit/24b280292b183ad165c3fb1fe358112c12892c4a) Thanks [@hayatosc](https://github.com/hayatosc)! - Support `idempotencyKey` in `EmailMessage` and `EmailDraft`. For SMTP and raw MIME sends, `idempotencyKey` derives a deterministic RFC 5322 `Message-ID` when `messageId` is omitted. For `ResendAdapter`, `idempotencyKey` is forwarded via the `Idempotency-Key` HTTP header with Latin-1 character and length validation (up to 256 characters) for 24-hour deduplication.
+
+- [#175](https://github.com/hayatosc/hono-email/pull/175) [`34fcd69`](https://github.com/hayatosc/hono-email/commit/34fcd6967154a8197a8acf128c225b1d0209ef88) Thanks [@hayatosc](https://github.com/hayatosc)! - Add observability and telemetry support with lifecycle event hooks (`onSent`, `onFailed`, `onEvent`) and automatic `node:diagnostics_channel` integration (`hono-email:sent`, `hono-email:failed`). Telemetry hooks report `durationMs`, `messageId`, `subject`, `recipients`, `permanent`, `receipt`, and `message` across both `sendEmail()` and `createMailer()`.
+
+- [#172](https://github.com/hayatosc/hono-email/pull/172) [`1c81791`](https://github.com/hayatosc/hono-email/commit/1c817919883ccaf4fe5181ae070a03c4708713ed) Thanks [@hayatosc](https://github.com/hayatosc)! - Support XOAUTH2 authentication, connection pool `idleTimeout`, URL connection strings, custom TLS options (`ca`, `rejectUnauthorized`), Ed25519 DKIM signing (RFC 8463), and IDNA / SMTPUTF8 address handling in `SmtpTransport`.
+
+- [#171](https://github.com/hayatosc/hono-email/pull/171) [`0567784`](https://github.com/hayatosc/hono-email/commit/05677849dd56eb8db782041eb494f016f2c10f01) Thanks [@hayatosc](https://github.com/hayatosc)! - Support `recipientRejectionPolicy?: SmtpRecipientRejectionPolicy` (`'deliver-accepted' | 'reject-all'`) in `SmtpTransportOptions` and `SmtpSendOptions`. When set to `'reject-all'`, the SMTP transport issues an `RSET` command and aborts delivery without sending `DATA` if any recipient is rejected during `RCPT TO`, returning a failed receipt with `category: 'recipients_rejected'` to prevent duplicate delivery upon retry.
+
+- [#169](https://github.com/hayatosc/hono-email/pull/169) [`cf953d0`](https://github.com/hayatosc/hono-email/commit/cf953d04852cc8ef95444f57249295e46369640f) Thanks [@hayatosc](https://github.com/hayatosc)! - Add `hono-email/testing` entrypoint with `InMemoryAdapter`, `FileAdapter`, and `LogAdapter`:
+
+  - `InMemoryAdapter`: Records sent emails in memory with `assertSent` and `assertNotSent` helpers, `mail.link()` (with HTML entity decoding and relative URL support), `mail.attachment()`, `failNext()`, and query filters.
+  - `FileAdapter`: Writes sent emails as RFC 5322 `.eml` files to disk for local email client preview.
+  - `LogAdapter`: Outputs formatted email delivery summaries and optional body contents to the console or a custom logger.
+
 ## 0.9.0
 
 ### Patch Changes
