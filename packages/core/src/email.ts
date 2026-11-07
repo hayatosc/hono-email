@@ -379,6 +379,9 @@ export type SendEmailOptions = EmailMessageDraft &
     adapter: EmailAdapter
   }
 
+/**
+ * Function signature for rendering a JSX email tree into HTML and text.
+ */
 export type EmailRenderer = (
   jsx: Child,
   options?: RenderOptions,

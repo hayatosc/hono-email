@@ -172,15 +172,34 @@ export type RenderDraftOptions = Omit<EmailMessageDraft, 'from'> & {
  * Mailer client with default settings that can send and render Mailables or drafts.
  */
 export type Mailer = {
+  /**
+   * Default configuration options for the mailer.
+   */
   readonly options: MailerOptions
+
+  /**
+   * Sends a Mailable email definition with type-safe parameters.
+   */
   send<TData>(mail: Mailable<TData>, options: SendMailableOptions<TData>): Promise<SendEmailReceipt>
+
+  /**
+   * Sends a direct JSX draft email message.
+   */
   send(draft: SendDraftOptions): Promise<SendEmailReceipt>
+
+  /**
+   * Renders a Mailable email definition to an EmailMessage without sending.
+   */
   render<TData = void>(
     mail: Mailable<TData>,
     ...args: [TData] extends [void | undefined]
       ? [options?: RenderMailableOptions<TData>]
       : [options: RenderMailableOptions<TData>]
   ): Promise<EmailMessage>
+
+  /**
+   * Renders a direct JSX draft email message to an EmailMessage without sending.
+   */
   render(draft: RenderDraftOptions): Promise<EmailMessage>
 }
 
@@ -428,7 +447,10 @@ export function createMailer(defaults: MailerOptions, customRenderer?: EmailRend
       }
 
       const built = await mailOrDraft.build(opts?.data, context)
-      const from = opts?.from ?? built.from ?? defaults.from ?? ''
+      const from = opts?.from ?? built.from ?? defaults.from
+      if (from === undefined) {
+        throw new Error("Email message must include a 'from' address.")
+      }
       const to = opts?.to ?? []
       const replyTo = built.replyTo ?? defaults.replyTo
       const headers = mergeHeaders(defaults.headers, built.headers)
@@ -458,7 +480,10 @@ export function createMailer(defaults: MailerOptions, customRenderer?: EmailRend
 
     // Plain draft
     const draftInput = mailOrDraft
-    const from = draftInput.from ?? defaults.from ?? ''
+    const from = draftInput.from ?? defaults.from
+    if (from === undefined) {
+      throw new Error("Email message must include a 'from' address.")
+    }
     const replyTo = draftInput.replyTo ?? defaults.replyTo
     const headers = mergeHeaders(defaults.headers, draftInput.headers)
     const renderOptions = mergeRenderOptions(defaults.render, draftInput.render)

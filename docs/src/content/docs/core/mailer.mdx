@@ -10,7 +10,7 @@ import { Badge } from '@astrojs/starlight/components'
 ## Overview
 
 ```tsx
-import { ResendAdapter } from 'hono-email/adapter/resend'
+import { ResendAdapter } from 'hono-email/resend'
 import { createMailer, defineMail, Html, Body, Heading, Text } from 'hono-email'
 
 // 1. Create a configured mailer client
@@ -22,23 +22,19 @@ export const mailer = createMailer({
 })
 
 // 2. Define a type-safe mailable
-export const WelcomeEmail = defineMail<{ name: string; verifyUrl: string }>({
-  build(data) {
-    return {
-      subject: `Welcome, ${data.name}!`,
-      jsx: (
-        <Html>
-          <Body>
-            <Heading as="h1">Welcome, {data.name}!</Heading>
-            <Text>
-              Please verify your email: <a href={data.verifyUrl}>Verify</a>
-            </Text>
-          </Body>
-        </Html>
-      ),
-    }
-  },
-})
+export const WelcomeEmail = defineMail<{ name: string; verifyUrl: string }>((data) => ({
+  subject: `Welcome, ${data.name}!`,
+  jsx: (
+    <Html>
+      <Body>
+        <Heading as="h1">Welcome, {data.name}!</Heading>
+        <Text>
+          Please verify your email: <a href={data.verifyUrl}>Verify</a>
+        </Text>
+      </Body>
+    </Html>
+  ),
+}))
 
 // 3. Send using the mailer
 await mailer.send(WelcomeEmail, {
@@ -87,21 +83,19 @@ type MailerOptions = {
 Defines a reusable mailable template with type-safe input parameters.
 
 ```ts
-function defineMail<TData = void>(definition: MailDefinition<TData>): Mailable<TData>
+function defineMail<TData = void>(
+  builder: (
+    data: TData,
+    context: MailRenderContext,
+  ) => MailDefinitionOutput | Promise<MailDefinitionOutput>,
+): Mailable<TData>
 ```
 
 When `TData` is `void` (or omitted), callers can invoke `mailer.send(mail, { to: '...' })` without providing `data`. When `TData` is specified, `data` is required.
 
-### MailDefinition
+### Context & Output Types
 
 ```ts
-type MailDefinition<TData> = {
-  build: (
-    data: TData,
-    context: MailRenderContext,
-  ) => MailDefinitionOutput | Promise<MailDefinitionOutput>
-}
-
 type MailRenderContext = {
   to: EmailAddress[]
   locale?: string

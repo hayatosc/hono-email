@@ -389,4 +389,38 @@ describe('createMailer', () => {
     expect(rendered.subject).toBe('Notification')
     expect(rendered.html).toContain('Important notification')
   })
+
+  test('mailer.render() throws when from is missing for Mailable and draft', async () => {
+    const adapter = new MockAdapter()
+    const mailer = createMailer({ adapter })
+
+    const NoFromMail = defineMail(() => ({
+      subject: 'No from',
+      jsx: (
+        <Html>
+          <Body>
+            <Text>No from</Text>
+          </Body>
+        </Html>
+      ),
+    }))
+
+    await expect(mailer.render(NoFromMail)).rejects.toThrow(
+      "Email message must include a 'from' address.",
+    )
+
+    await expect(
+      mailer.render({
+        to: 'user@example.com',
+        subject: 'Draft no from',
+        jsx: (
+          <Html>
+            <Body>
+              <Text>No from</Text>
+            </Body>
+          </Html>
+        ),
+      }),
+    ).rejects.toThrow("Email message must include a 'from' address.")
+  })
 })
