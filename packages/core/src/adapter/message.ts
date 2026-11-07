@@ -149,9 +149,70 @@ export const normalizeAddressDomain = (address: string): string => {
   }
 }
 
+const DISPLAY_NAME_ADDRESS_PATTERN =
+  /^(?:"((?:[^"\\]|\\.)*)"|([^<,"]*?))\s*<([^<>\s@]+@[^<>\s@]+)>$/
+
+/**
+ * Parses a single email address, extracting the email address and optional display name.
+ * Prevents multiple addresses or comma injections.
+ *
+ * @param input - Email address string or object.
+ * @returns Object with parsed address and optional display name.
+ * @throws If the address is invalid, contains line breaks, or contains unquoted commas.
+ *
+ * @example
+ * ```ts
+ * parseSingleEmailAddress('Ada Lovelace <ada@example.com>')
+ * // { address: 'ada@example.com', name: 'Ada Lovelace' }
+ * ```
+ */
+export const parseSingleEmailAddress = (
+  input: EmailAddress,
+): { address: string; name?: string } => {
+  if (typeof input !== 'string') {
+    const safeAddress = ensureSafeHeaderValue(input.address.trim(), 'email address')
+    if (safeAddress.includes(',')) {
+      throw new Error(`Email address must contain a single address, got comma in: ${safeAddress}`)
+    }
+    if (!EMAIL_ADDRESS_PATTERN.test(safeAddress)) {
+      throw new Error(`Invalid email address: ${safeAddress}`)
+    }
+    return {
+      address: safeAddress,
+      ...(input.name !== undefined && input.name !== ''
+        ? { name: ensureSafeHeaderValue(input.name, 'display name') }
+        : {}),
+    }
+  }
+
+  const trimmed = ensureSafeHeaderValue(input.trim(), 'email address')
+  if (EMAIL_ADDRESS_PATTERN.test(trimmed)) {
+    if (trimmed.includes(',')) {
+      throw new Error(`Email address string must hold a single address: ${trimmed}`)
+    }
+    return { address: trimmed }
+  }
+
+  const match = DISPLAY_NAME_ADDRESS_PATTERN.exec(trimmed)
+  if (!match) {
+    throw new Error(`Invalid email address: ${trimmed}`)
+  }
+
+  const rawName = (match[1] !== undefined ? match[1].replace(/\\(["\\])/g, '$1') : match[2])?.trim()
+  const addr = match[3]!
+  if (addr.includes(',')) {
+    throw new Error(`Email address string must hold a single address: ${trimmed}`)
+  }
+
+  return {
+    address: addr,
+    ...(rawName ? { name: rawName } : {}),
+  }
+}
+
 export const addressToPath = (address: EmailAddress): string => {
-  const raw = typeof address === 'string' ? address : address.address
-  return normalizeAddressDomain(raw)
+  const parsed = parseSingleEmailAddress(address)
+  return normalizeAddressDomain(parsed.address)
 }
 
 export const toAddressList = (
@@ -170,26 +231,14 @@ export type ResolvedEmailEnvelope = {
 }
 
 export const formatEmailAddress = (address: EmailAddress): string => {
-  if (typeof address === 'string') {
-    const safeAddress = normalizeAddressDomain(ensureSafeHeaderValue(address, 'email address'))
-    if (!EMAIL_ADDRESS_PATTERN.test(safeAddress)) {
-      throw new Error(`Invalid email address: ${safeAddress}`)
-    }
+  const parsed = parseSingleEmailAddress(address)
+  const safeAddress = normalizeAddressDomain(parsed.address)
+
+  if (parsed.name === undefined || parsed.name === '') {
     return safeAddress
   }
 
-  const safeAddress = normalizeAddressDomain(
-    ensureSafeHeaderValue(address.address, 'email address'),
-  )
-  if (!EMAIL_ADDRESS_PATTERN.test(safeAddress)) {
-    throw new Error(`Invalid email address: ${safeAddress}`)
-  }
-
-  if (address.name === undefined || address.name === '') {
-    return safeAddress
-  }
-
-  const safeName = ensureSafeHeaderValue(address.name, 'display name')
+  const safeName = ensureSafeHeaderValue(parsed.name, 'display name')
   const displayName = requiresEncodedWord(safeName)
     ? encodeHeaderValue(safeName, 'display name')
     : quoteDisplayName(safeName)
@@ -401,6 +450,31 @@ const appendCustomHeaders = (lines: string[], headers: EmailHeaders | undefined)
   }
 }
 
+const encodeRfc5987Value = (value: string): string =>
+  encodeURIComponent(value).replace(
+    /['()*]/g,
+    (c) => `%${c.charCodeAt(0).toString(16).toUpperCase()}`,
+  )
+
+const formatFilenameDispositionParams = (filename: string): string => {
+  const safeFilename = ensureSafeHeaderValue(filename, 'attachment filename')
+  if (!requiresEncodedWord(safeFilename)) {
+    return `; filename=${quoteHeaderParameter(safeFilename)}`
+  }
+  const encodedWord = encodeHeaderValue(safeFilename, 'attachment filename')
+  const rfc5987 = encodeRfc5987Value(safeFilename)
+  return `; filename="${encodedWord}"; filename*=UTF-8''${rfc5987}`
+}
+
+const formatContentTypeNameParam = (filename: string): string => {
+  const safeFilename = ensureSafeHeaderValue(filename, 'attachment filename')
+  if (!requiresEncodedWord(safeFilename)) {
+    return `; name=${quoteHeaderParameter(safeFilename)}`
+  }
+  const encodedWord = encodeHeaderValue(safeFilename, 'attachment filename')
+  return `; name="${encodedWord}"`
+}
+
 const appendAttachmentHeaders = (lines: string[], attachment: ResolvedEmailAttachment): void => {
   const safeContentType = ensureSafeHeaderValue(attachment.contentType, 'attachment contentType')
   const safeDisposition = ensureSafeHeaderValue(
@@ -408,14 +482,12 @@ const appendAttachmentHeaders = (lines: string[], attachment: ResolvedEmailAttac
     'attachment contentDisposition',
   )
   const contentTypeParameters =
-    attachment.filename === undefined ? '' : `; name=${quoteHeaderParameter(attachment.filename)}`
+    attachment.filename === undefined ? '' : formatContentTypeNameParam(attachment.filename)
   appendHeader(lines, 'Content-Type', `${safeContentType}${contentTypeParameters}`)
   appendHeader(lines, 'Content-Transfer-Encoding', 'base64')
 
   const dispositionParameters =
-    attachment.filename === undefined
-      ? ''
-      : `; filename=${quoteHeaderParameter(attachment.filename)}`
+    attachment.filename === undefined ? '' : formatFilenameDispositionParams(attachment.filename)
   appendHeader(lines, 'Content-Disposition', `${safeDisposition}${dispositionParameters}`)
 
   if (attachment.cid !== undefined) {

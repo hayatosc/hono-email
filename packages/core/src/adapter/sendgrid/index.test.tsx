@@ -346,4 +346,31 @@ describe('SendGrid adapter', () => {
       ],
     })
   })
+
+  test('parses display-name string addresses into SendGrid email and name fields', async () => {
+    let requestBody: unknown
+    const receipt = await SendGridAdapter({
+      apiKey: 'SG.test',
+      fetch: async (_input, init) => {
+        requestBody = JSON.parse(String(init.body))
+        return new Response('', { status: 202 })
+      },
+    }).send({
+      from: 'Ada Lovelace <ada@example.com>',
+      html: '<p>Hello</p>',
+      subject: 'Display name test',
+      text: 'Hello',
+      to: '"Orders, Inc." <orders@example.com>',
+    })
+
+    expect(receipt.successful).toBe(true)
+    expect(requestBody).toMatchObject({
+      from: { email: 'ada@example.com', name: 'Ada Lovelace' },
+      personalizations: [
+        {
+          to: [{ email: 'orders@example.com', name: 'Orders, Inc.' }],
+        },
+      ],
+    })
+  })
 })
