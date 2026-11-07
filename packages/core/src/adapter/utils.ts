@@ -146,6 +146,8 @@ export type RequestRetryOptions = {
   initialInterval?: number
   maxInterval?: number
   backoffFactor?: number
+  /** 'full' (random between 0 and backoff delay) | 'none' (fixed backoff). Defaults to 'none'. */
+  jitter?: 'full' | 'none'
 }
 
 const DEFAULT_TIMEOUT = 30000
@@ -153,6 +155,49 @@ const DEFAULT_MAX_ATTEMPTS = 3
 const DEFAULT_INITIAL_INTERVAL = 1000
 const DEFAULT_MAX_INTERVAL = 10000
 const DEFAULT_BACKOFF_FACTOR = 2
+
+/**
+ * Sleeps for the specified milliseconds, or rejects immediately if the AbortSignal is aborted.
+ */
+export const sleepWithSignal = (ms: number, signal?: AbortSignal): Promise<void> =>
+  new Promise((resolve, reject) => {
+    if (signal?.aborted) {
+      reject(signal.reason ?? new DOMException('The operation was aborted.', 'AbortError'))
+      return
+    }
+    const timer = setTimeout(() => {
+      signal?.removeEventListener('abort', onAbort)
+      resolve()
+    }, ms)
+    const onAbort = () => {
+      clearTimeout(timer)
+      reject(signal?.reason ?? new DOMException('The operation was aborted.', 'AbortError'))
+    }
+    signal?.addEventListener('abort', onAbort, { once: true })
+  })
+
+/**
+ * Computes backoff delay with optional Full Jitter.
+ */
+export const computeBackoffDelay = (
+  attempt: number,
+  options: {
+    initialInterval: number
+    maxInterval: number
+    backoffFactor: number
+    jitter?: 'full' | 'none'
+  },
+): number => {
+  const exponent = Math.max(0, attempt - 1)
+  const exponential = Math.min(
+    options.initialInterval * Math.pow(options.backoffFactor, exponent),
+    options.maxInterval,
+  )
+  if (options.jitter === 'full') {
+    return Math.floor(Math.random() * exponential)
+  }
+  return exponential
+}
 
 export const fetchWithTimeoutAndRetry = async <T extends { signal?: AbortSignal }>(
   fetchFn: (input: string, init: T) => Promise<Response>,
@@ -175,6 +220,7 @@ export const fetchWithTimeoutAndRetry = async <T extends { signal?: AbortSignal 
   const initialInterval = retryOpts.initialInterval ?? DEFAULT_INITIAL_INTERVAL
   const maxInterval = retryOpts.maxInterval ?? DEFAULT_MAX_INTERVAL
   const backoffFactor = retryOpts.backoffFactor ?? DEFAULT_BACKOFF_FACTOR
+  const jitter = retryOpts.jitter ?? 'none'
 
   let attempt = 0
   while (true) {
@@ -214,22 +260,27 @@ export const fetchWithTimeoutAndRetry = async <T extends { signal?: AbortSignal 
           }
         }
 
-        let delay = Math.min(initialInterval * Math.pow(backoffFactor, attempt - 1), maxInterval)
+        let delay = computeBackoffDelay(attempt, {
+          initialInterval,
+          maxInterval,
+          backoffFactor,
+          jitter,
+        })
 
         const retryAfter = response.headers.get('retry-after')
         if (retryAfter) {
           const seconds = parseInt(retryAfter, 10)
           if (!isNaN(seconds)) {
-            delay = seconds * 1000
+            delay = Math.min(seconds * 1000, maxInterval)
           } else {
             const dateMs = Date.parse(retryAfter)
             if (!isNaN(dateMs)) {
-              delay = Math.max(0, dateMs - Date.now())
+              delay = Math.min(Math.max(0, dateMs - Date.now()), maxInterval)
             }
           }
         }
 
-        await new Promise((resolve) => setTimeout(resolve, delay))
+        await sleepWithSignal(delay, init.signal)
         continue
       }
 
@@ -244,8 +295,13 @@ export const fetchWithTimeoutAndRetry = async <T extends { signal?: AbortSignal 
       }
 
       if (attempt < maxAttempts) {
-        const delay = Math.min(initialInterval * Math.pow(backoffFactor, attempt - 1), maxInterval)
-        await new Promise((resolve) => setTimeout(resolve, delay))
+        const delay = computeBackoffDelay(attempt, {
+          initialInterval,
+          maxInterval,
+          backoffFactor,
+          jitter,
+        })
+        await sleepWithSignal(delay, init.signal)
         continue
       }
 

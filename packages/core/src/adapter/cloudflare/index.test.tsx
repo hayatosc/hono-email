@@ -267,6 +267,7 @@ describe('Cloudflare Email Service adapter', () => {
         accountId: 'account-123',
         apiToken: 'token-123',
         fetch: fetchImplementation,
+        retry: false,
       }),
     }).send(createMessage())
 

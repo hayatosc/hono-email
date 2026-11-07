@@ -1,4 +1,5 @@
-import { parseRetryAfterMs } from '../utils'
+import type { EmailSendOptions } from '../index'
+import { fetchWithTimeoutAndRetry, parseRetryAfterMs } from '../utils'
 import type {
   CloudflareEmailConnector,
   CloudflareEmailConnectorRequest,
@@ -133,10 +134,16 @@ export const RESTConnector = (
 
   return {
     kind: 'rest' as const,
-    async send(request: CloudflareEmailConnectorRequest): Promise<CloudflareEmailConnectorResult> {
+    async send(
+      request: CloudflareEmailConnectorRequest,
+      sendOptions?: EmailSendOptions,
+    ): Promise<CloudflareEmailConnectorResult> {
       const apiBaseUrl = options.apiBaseUrl ?? DEFAULT_API_BASE_URL
       validateApiBaseUrl(apiBaseUrl)
-      const response = await fetchImplementation(
+      const retry = sendOptions?.retry !== undefined ? sendOptions.retry : options.retry
+      const signal = sendOptions?.signal
+      const response = await fetchWithTimeoutAndRetry(
+        fetchImplementation,
         `${apiBaseUrl}/accounts/${encodeURIComponent(options.accountId)}/email/sending/send`,
         {
           body: JSON.stringify(request.restPayload),
@@ -144,7 +151,12 @@ export const RESTConnector = (
             Authorization: `Bearer ${options.apiToken}`,
             'Content-Type': 'application/json',
           },
-          method: 'POST',
+          method: 'POST' as const,
+          ...(signal !== undefined ? { signal } : {}),
+        },
+        {
+          ...(options.timeout !== undefined ? { timeout: options.timeout } : {}),
+          ...(retry !== undefined ? { retry } : {}),
         },
       )
       const retryAfterMs = parseRetryAfterMs(response.headers.get('retry-after'))

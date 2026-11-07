@@ -1,6 +1,6 @@
 import type { SendEmailCommand, SendEmailCommandOutput } from '@aws-sdk/client-sesv2'
 
-import type { EmailAttachmentLimits, EmailMessage, SendEmailReceipt } from '../index'
+import type { EmailAdapter, EmailAttachmentLimits, EmailSendOptions } from '../index'
 
 /** The subset of an AWS SDK v3 SESv2Client used by the adapter. */
 export type SesClient = {
@@ -10,12 +10,12 @@ export type SesClient = {
   ): Promise<SendEmailCommandOutput>
 }
 
-export type SesSendOptions = {
+export type SesSendOptions = EmailSendOptions & {
   /** Overrides the adapter's default configuration set for this send. */
   configurationSetName?: string
   /** Merged with default tags; per-send values win for matching keys. */
   tags?: Readonly<Record<string, string>>
-  /** Passed to the SDK to cancel the send request. */
+  /** Passed to the SDK to cancel the send request. @deprecated Use `signal` instead. */
   abortSignal?: AbortSignal
 }
 
@@ -28,6 +28,4 @@ export type SesAdapterOptions = {
 }
 
 /** Compatible with EmailAdapter, with optional SES settings for each send. */
-export type SesEmailAdapter = {
-  send(message: EmailMessage, options?: SesSendOptions): Promise<SendEmailReceipt>
-}
+export type SesEmailAdapter = EmailAdapter<SesSendOptions>

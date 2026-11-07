@@ -32,6 +32,7 @@ export type {
   EmailAttachmentLimits,
   EmailMessage,
   EmailMessageDraft,
+  EmailSendOptions,
   EmailTransport,
   FailedSendReceipt,
   SendEmailReceipt,
@@ -213,6 +214,17 @@ export class SmtpTransport implements EmailAdapter {
         errorMessages: ['Email message must include at least one recipient.'],
         category: 'validation',
         permanent: true,
+      }
+    }
+
+    if (options?.signal?.aborted) {
+      return {
+        successful: false,
+        accepted: [],
+        rejected: envelope.recipients,
+        errorMessages: [options.signal.reason?.message ?? 'The operation was aborted.'],
+        category: 'timeout',
+        permanent: false,
       }
     }
 

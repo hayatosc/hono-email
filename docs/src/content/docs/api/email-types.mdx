@@ -119,19 +119,49 @@ Render options applied before delivery. See [RenderOptions](/core/render/).
 
 ---
 
-## SendEmailOptions
+## EmailSendOptions
 
-Options for `sendEmail()`: all `EmailMessageDraft` fields plus an adapter.
+Common options accepted across delivery adapters and `sendEmail()`.
 
 ```ts
-type SendEmailOptions = EmailMessageDraft & {
-  adapter: EmailAdapter
+type EmailSendOptions = {
+  signal?: AbortSignal
+  retry?: RequestRetryOptions | boolean
 }
+```
+
+#### `signal` <Badge text="Optional" variant="note" size="small" />
+
+An `AbortSignal` used to cancel the send operation, HTTP requests, and retry backoff sleeps immediately.
+
+#### `retry` <Badge text="Optional" variant="note" size="small" />
+
+Per-send retry configuration. Set to `false` to disable retries (e.g. when called inside a job queue or transactional outbox worker), or pass `RequestRetryOptions` with custom intervals, jitter (`'full' | 'none'`), and attempts.
+
+---
+
+## SendEmailOptions
+
+Options for `sendEmail()`: all `EmailMessageDraft` fields, `EmailSendOptions`, plus an adapter.
+
+```ts
+type SendEmailOptions = EmailMessageDraft &
+  EmailSendOptions & {
+    adapter: EmailAdapter
+  }
 ```
 
 #### `adapter` <Badge text="Required" variant="caution" size="small" />
 
 Delivery adapter (e.g. `ResendAdapter(...)`, `SmtpTransport`, `CloudflareEmailAdapter(...)`).
+
+#### `signal` <Badge text="Optional" variant="note" size="small" />
+
+AbortSignal to cancel sending and retry sleep. See [EmailSendOptions](#emailsendoptions).
+
+#### `retry` <Badge text="Optional" variant="note" size="small" />
+
+Override retry settings for this send (`false` to disable retries). See [EmailSendOptions](#emailsendoptions).
 
 ---
 
