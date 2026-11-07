@@ -132,11 +132,21 @@ type EmailSendOptions = {
 
 #### `signal` <Badge text="Optional" variant="note" size="small" />
 
-An `AbortSignal` used to cancel the send operation, HTTP requests, and retry backoff sleeps immediately.
+An `AbortSignal` used to cancel the send operation.
+
+- **HTTP-based adapters** (Resend, SendGrid, Postmark, Mailgun, Cloudflare REST): Cancels in-flight HTTP requests and retry backoff sleeps immediately.
+- **SES adapter**: Forwards the signal to the AWS SDK `SesClient.send()` method.
+- **SMTP adapter (`SmtpTransport`)**: Cancels pre-send, queued connection waiters, connection opening, and in-flight session exchanges, closing the underlying socket and returning a non-permanent timeout failure receipt.
+- **Cloudflare Workers binding**: Supports pre-send cancellation checks prior to invoking the binding.
 
 #### `retry` <Badge text="Optional" variant="note" size="small" />
 
 Per-send retry configuration. Set to `false` to disable retries (e.g. when called inside a job queue or transactional outbox worker), or pass `RequestRetryOptions` with custom intervals, jitter (`'full' | 'none'`), and attempts.
+
+- **Supported adapters**: HTTP-based adapters (Resend, SendGrid, Postmark, Mailgun, and Cloudflare REST connector).
+- **SES adapter**: Ignores per-send `retry`; configure retry behavior on the AWS SDK `SesClient` instance passed to `SesAdapter({ client })`.
+- **Cloudflare Workers binding**: Ignores per-send `retry`.
+- **SMTP adapter**: Does not retry failed sends.
 
 ---
 

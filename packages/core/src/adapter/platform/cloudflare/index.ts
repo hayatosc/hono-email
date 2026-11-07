@@ -1,5 +1,6 @@
 import { env } from 'cloudflare:workers'
 
+import type { EmailSendOptions } from '../../../index'
 import type {
   CloudflareEmailBinding,
   CloudflareEmailConnector,
@@ -42,11 +43,21 @@ const resolveEmailBinding = (bindingName: string): CloudflareEmailBinding => {
 
 const buildConnector = (bindingName: string): CloudflareEmailConnector => ({
   kind: 'workers' as const,
-  async send(request: CloudflareEmailConnectorRequest): Promise<CloudflareEmailConnectorResult> {
+  async send(
+    request: CloudflareEmailConnectorRequest,
+    options?: EmailSendOptions,
+  ): Promise<CloudflareEmailConnectorResult> {
+    if (options?.signal?.aborted) {
+      throw options.signal.reason ?? new DOMException('The operation was aborted.', 'AbortError')
+    }
+
     const binding = resolveEmailBinding(bindingName)
     if (request.workersPayload === undefined) {
       throw new Error('Cloudflare Email workers connector requires a workers payload.')
     }
+
+    // Note: Cloudflare Email Workers binding does not support native mid-flight cancellation or retries;
+    // signal is checked prior to calling send(), and retry options are ignored.
     const result = await binding.send(request.workersPayload)
 
     return {

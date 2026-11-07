@@ -448,7 +448,7 @@ describe('sleepWithSignal', () => {
     const controller = new AbortController()
     controller.abort(new DOMException('Custom abort reason', 'AbortError'))
 
-    expect(sleepWithSignal(1000, controller.signal)).rejects.toThrow('Custom abort reason')
+    await expect(sleepWithSignal(1000, controller.signal)).rejects.toThrow('Custom abort reason')
   })
 
   test('rejects immediately when signal aborts during sleep', async () => {
@@ -519,20 +519,53 @@ describe('fetchWithTimeoutAndRetry signal and retry options', () => {
     expect(attempts).toBe(1)
   })
 
-  test('caps Retry-After delay to maxInterval', async () => {
+  test('honors server Retry-After header delay without capping to maxInterval', async () => {
+    const controller = new AbortController()
+    let attempts = 0
+    const fetchFn = async () => {
+      attempts++
+      return new Response('too many requests', {
+        status: 429,
+        headers: { 'retry-after': '60' }, // 60 seconds
+      })
+    }
+
+    const start = Date.now()
+    const promise = fetchWithTimeoutAndRetry(
+      fetchFn,
+      'http://example.com',
+      { signal: controller.signal },
+      {
+        retry: {
+          maxAttempts: 2,
+          maxInterval: 50, // server header of 60s is preserved, not truncated to 50ms
+        },
+      },
+    )
+
+    setTimeout(() => {
+      controller.abort()
+    }, 30)
+
+    await expect(promise).rejects.toThrow()
+    const elapsed = Date.now() - start
+    expect(elapsed).toBeLessThan(500)
+    expect(attempts).toBe(1)
+  })
+
+  test('honors Retry-After header with 0 second delay', async () => {
     let attempts = 0
     const fetchFn = async () => {
       attempts++
       if (attempts === 1) {
         return new Response('too many requests', {
           status: 429,
-          headers: { 'retry-after': '60' }, // 60 seconds
+          headers: { 'retry-after': '0' },
         })
       }
       return new Response('ok', { status: 200 })
     }
 
-    const start = Date.now()
     const response = await fetchWithTimeoutAndRetry(
       fetchFn,
       'http://example.com',
@@ -540,15 +573,11 @@ describe('fetchWithTimeoutAndRetry signal and retry options', () => {
       {
         retry: {
           maxAttempts: 2,
-          initialInterval: 10,
-          maxInterval: 50, // capped at 50ms instead of 60000ms
         },
       },
     )
 
-    const elapsed = Date.now() - start
     expect(response.status).toBe(200)
     expect(attempts).toBe(2)
-    expect(elapsed).toBeLessThan(500)
   })
 })

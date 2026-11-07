@@ -161,19 +161,27 @@ const DEFAULT_BACKOFF_FACTOR = 2
  */
 export const sleepWithSignal = (ms: number, signal?: AbortSignal): Promise<void> =>
   new Promise((resolve, reject) => {
-    if (signal?.aborted) {
-      reject(signal.reason ?? new DOMException('The operation was aborted.', 'AbortError'))
-      return
+    let timer: ReturnType<typeof setTimeout> | undefined
+    const onAbort = () => {
+      if (timer !== undefined) {
+        clearTimeout(timer)
+      }
+      reject(signal?.reason ?? new DOMException('The operation was aborted.', 'AbortError'))
     }
-    const timer = setTimeout(() => {
+
+    if (signal) {
+      signal.addEventListener('abort', onAbort, { once: true })
+      if (signal.aborted) {
+        signal.removeEventListener('abort', onAbort)
+        onAbort()
+        return
+      }
+    }
+
+    timer = setTimeout(() => {
       signal?.removeEventListener('abort', onAbort)
       resolve()
     }, ms)
-    const onAbort = () => {
-      clearTimeout(timer)
-      reject(signal?.reason ?? new DOMException('The operation was aborted.', 'AbortError'))
-    }
-    signal?.addEventListener('abort', onAbort, { once: true })
   })
 
 /**
@@ -271,11 +279,11 @@ export const fetchWithTimeoutAndRetry = async <T extends { signal?: AbortSignal 
         if (retryAfter) {
           const seconds = parseInt(retryAfter, 10)
           if (!isNaN(seconds)) {
-            delay = Math.min(seconds * 1000, maxInterval)
+            delay = seconds * 1000
           } else {
             const dateMs = Date.parse(retryAfter)
             if (!isNaN(dateMs)) {
-              delay = Math.min(Math.max(0, dateMs - Date.now()), maxInterval)
+              delay = Math.max(0, dateMs - Date.now())
             }
           }
         }

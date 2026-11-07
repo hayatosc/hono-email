@@ -415,9 +415,14 @@ export const sendEmail = async (
   options: SendEmailOptions,
 ): Promise<SendEmailReceipt> => {
   const message = await renderEmailMessage(renderEmail, options)
-  const sendOptions: EmailSendOptions = {
-    ...(options.signal !== undefined ? { signal: options.signal } : {}),
-    ...(options.retry !== undefined ? { retry: options.retry } : {}),
-  }
-  return options.adapter.send(message, sendOptions)
+  const sendOptions: EmailSendOptions | undefined =
+    options.signal !== undefined || options.retry !== undefined
+      ? {
+          ...(options.signal !== undefined ? { signal: options.signal } : {}),
+          ...(options.retry !== undefined ? { retry: options.retry } : {}),
+        }
+      : undefined
+  return sendOptions !== undefined
+    ? options.adapter.send(message, sendOptions)
+    : options.adapter.send(message)
 }

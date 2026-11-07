@@ -217,15 +217,35 @@ export class SmtpTransport implements EmailAdapter {
       }
     }
 
-    if (options?.signal?.aborted) {
-      return {
-        successful: false,
-        accepted: [],
-        rejected: envelope.recipients,
-        errorMessages: [options.signal.reason?.message ?? 'The operation was aborted.'],
-        category: 'timeout',
-        permanent: false,
+    const resolveErrorMessage = (reason: unknown): string => {
+      if (reason instanceof Error) {
+        return reason.message
       }
+      if (typeof reason === 'string') {
+        return reason
+      }
+      if (
+        typeof reason === 'object' &&
+        reason !== null &&
+        'message' in reason &&
+        typeof reason.message === 'string'
+      ) {
+        return reason.message
+      }
+      return 'The operation was aborted.'
+    }
+
+    const abortReceipt = (reason?: unknown): SendEmailReceipt => ({
+      successful: false,
+      accepted: [],
+      rejected: envelope.recipients,
+      errorMessages: [resolveErrorMessage(reason)],
+      category: 'timeout',
+      permanent: false,
+    })
+
+    if (options?.signal?.aborted) {
+      return abortReceipt(options.signal.reason)
     }
 
     try {
@@ -233,19 +253,54 @@ export class SmtpTransport implements EmailAdapter {
       const dkim = options?.dkim ?? message.dkim ?? this.#dkim
       const rawMessage =
         dkim === undefined ? builtMessage.raw : await applyDkimSignature(builtMessage.raw, dkim)
-      const slot = await this.#acquireSlot()
+      const slot = await this.#acquireSlot(options?.signal)
       let result: Awaited<ReturnType<SmtpSession['send']>>
 
       try {
-        result = await slot.session.send({
+        if (options?.signal?.aborted) {
+          throw (
+            options.signal.reason ?? new DOMException('The operation was aborted.', 'AbortError')
+          )
+        }
+
+        const sendPromise = slot.session.send({
           mailFrom: envelope.mailFrom,
           rawMessage,
           recipients: envelope.recipients,
         })
+
+        if (options?.signal) {
+          const signal = options.signal
+          let onAbort: (() => void) | undefined
+          const abortPromise = new Promise<never>((_, reject) => {
+            onAbort = () => {
+              void slot.session.destroy().catch(() => {})
+              reject(signal.reason ?? new DOMException('The operation was aborted.', 'AbortError'))
+            }
+            signal.addEventListener('abort', onAbort, { once: true })
+            if (signal.aborted) {
+              signal.removeEventListener('abort', onAbort)
+              onAbort()
+            }
+          })
+
+          try {
+            result = await Promise.race([sendPromise, abortPromise])
+          } finally {
+            if (onAbort) {
+              signal.removeEventListener('abort', onAbort)
+            }
+          }
+        } else {
+          result = await sendPromise
+        }
       } catch (error) {
         await this.#discardSlot(slot).catch((discardError) => {
           console.debug('SMTP discard slot failed:', discardError)
         })
+        if (options?.signal?.aborted || (error instanceof Error && error.name === 'AbortError')) {
+          return abortReceipt(options?.signal?.reason ?? error)
+        }
         return failedReceipt(error)
       }
 
@@ -278,13 +333,21 @@ export class SmtpTransport implements EmailAdapter {
         throw error
       }
 
+      if (options?.signal?.aborted || (error instanceof Error && error.name === 'AbortError')) {
+        return abortReceipt(options?.signal?.reason ?? error)
+      }
+
       return failedReceipt(error)
     }
   }
 
-  async #acquireSlot(): Promise<SmtpConnectionSlot> {
+  async #acquireSlot(signal?: AbortSignal): Promise<SmtpConnectionSlot> {
     if (this.#closed) {
       throw new SmtpTransportClosedError()
+    }
+
+    if (signal?.aborted) {
+      throw signal.reason ?? new DOMException('The operation was aborted.', 'AbortError')
     }
 
     const availableSlot = this.#slots.find((slot) => !slot.busy)
@@ -294,17 +357,69 @@ export class SmtpTransport implements EmailAdapter {
     }
 
     if (this.#totalSlots < this.#maxConnections) {
-      return this.#openSlot()
+      return this.#openSlot(signal)
     }
 
     return new Promise<SmtpConnectionSlot>((resolve, reject) => {
-      this.#waiters.push({ reject, resolve })
+      let onAbort: (() => void) | undefined
+      const waiter = {
+        reject: (error: unknown) => {
+          if (onAbort && signal) {
+            signal.removeEventListener('abort', onAbort)
+          }
+          reject(error)
+        },
+        resolve: (slot: SmtpConnectionSlot) => {
+          if (onAbort && signal) {
+            signal.removeEventListener('abort', onAbort)
+          }
+          resolve(slot)
+        },
+      }
+
+      if (signal) {
+        onAbort = () => {
+          const index = this.#waiters.indexOf(waiter)
+          if (index >= 0) {
+            this.#waiters.splice(index, 1)
+          }
+          reject(signal.reason ?? new DOMException('The operation was aborted.', 'AbortError'))
+        }
+        signal.addEventListener('abort', onAbort, { once: true })
+        if (signal.aborted) {
+          signal.removeEventListener('abort', onAbort)
+          onAbort()
+          return
+        }
+      }
+
+      this.#waiters.push(waiter)
     })
   }
 
-  async #openSlot(): Promise<SmtpConnectionSlot> {
+  async #openSlot(signal?: AbortSignal): Promise<SmtpConnectionSlot> {
+    if (signal?.aborted) {
+      throw signal.reason ?? new DOMException('The operation was aborted.', 'AbortError')
+    }
+
     this.#totalSlots += 1
     let socket: SmtpSocket | undefined
+    let session: SmtpSession | undefined
+    let onAbort: (() => void) | undefined
+
+    if (signal) {
+      onAbort = () => {
+        void Promise.resolve(socket?.close?.()).catch(() => {})
+        void session?.destroy?.().catch(() => {})
+      }
+      signal.addEventListener('abort', onAbort, { once: true })
+      if (signal.aborted) {
+        signal.removeEventListener('abort', onAbort)
+        this.#totalSlots -= 1
+        this.#serveWaiters()
+        throw signal.reason ?? new DOMException('The operation was aborted.', 'AbortError')
+      }
+    }
 
     try {
       socket = await withTimeout(
@@ -317,9 +432,18 @@ export class SmtpTransport implements EmailAdapter {
         this.#connectionTimeout,
         'SMTP connection',
       )
+
+      if (signal?.aborted) {
+        throw signal.reason ?? new DOMException('The operation was aborted.', 'AbortError')
+      }
+
       await withTimeout(Promise.resolve(socket.opened), this.#connectionTimeout, 'SMTP connection')
 
-      const session = await openSmtpSession(socket, {
+      if (signal?.aborted) {
+        throw signal.reason ?? new DOMException('The operation was aborted.', 'AbortError')
+      }
+
+      session = await openSmtpSession(socket, {
         clientName: this.#clientName,
         ...(this.#greetingTimeout !== undefined ? { greetingTimeout: this.#greetingTimeout } : {}),
         ...(this.#socketTimeout !== undefined ? { responseTimeout: this.#socketTimeout } : {}),
@@ -327,9 +451,12 @@ export class SmtpTransport implements EmailAdapter {
         ...(this.#auth !== undefined ? { auth: this.#auth } : {}),
       })
 
-      if (this.#closed) {
+      if (this.#closed || signal?.aborted) {
         await session.destroy()
-        throw new SmtpTransportClosedError()
+        if (this.#closed) {
+          throw new SmtpTransportClosedError()
+        }
+        throw signal?.reason ?? new DOMException('The operation was aborted.', 'AbortError')
       }
 
       const slot: SmtpConnectionSlot = { busy: true, sentMessages: 0, session }
@@ -337,11 +464,16 @@ export class SmtpTransport implements EmailAdapter {
       return slot
     } catch (error) {
       this.#totalSlots -= 1
+      await session?.destroy?.().catch(() => {})
       await Promise.resolve(socket?.close?.()).catch((closeError) => {
         console.debug('SMTP socket close failed:', closeError)
       })
       this.#serveWaiters()
       throw error
+    } finally {
+      if (onAbort && signal) {
+        signal.removeEventListener('abort', onAbort)
+      }
     }
   }
 

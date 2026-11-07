@@ -140,7 +140,13 @@ export const RESTConnector = (
     ): Promise<CloudflareEmailConnectorResult> {
       const apiBaseUrl = options.apiBaseUrl ?? DEFAULT_API_BASE_URL
       validateApiBaseUrl(apiBaseUrl)
-      const retry = sendOptions?.retry !== undefined ? sendOptions.retry : options.retry
+      const retry =
+        sendOptions?.retry !== undefined
+          ? sendOptions.retry
+          : options.retry !== undefined
+            ? options.retry
+            : false
+      const timeout = options.timeout ?? 0
       const signal = sendOptions?.signal
       const response = await fetchWithTimeoutAndRetry(
         fetchImplementation,
@@ -155,8 +161,8 @@ export const RESTConnector = (
           ...(signal !== undefined ? { signal } : {}),
         },
         {
-          ...(options.timeout !== undefined ? { timeout: options.timeout } : {}),
-          ...(retry !== undefined ? { retry } : {}),
+          timeout,
+          retry,
         },
       )
       const retryAfterMs = parseRetryAfterMs(response.headers.get('retry-after'))

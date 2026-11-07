@@ -17,6 +17,11 @@ export type SesSendOptions = EmailSendOptions & {
   tags?: Readonly<Record<string, string>>
   /** Passed to the SDK to cancel the send request. @deprecated Use `signal` instead. */
   abortSignal?: AbortSignal
+  /**
+   * Note: The SES adapter ignores per-send `retry`. Retries are handled by the AWS SDK client;
+   * configure retry behavior on the `SesClient` instance passed to `SesAdapter({ client })`.
+   */
+  retry?: EmailSendOptions['retry']
 }
 
 export type SesAdapterOptions = {
