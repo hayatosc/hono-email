@@ -130,6 +130,7 @@ export type EmailEnvelope = {
  * @property domainName - Signing domain.
  * @property keySelector - DKIM selector.
  * @property privateKey - PEM private key.
+ * @property algorithm - Signing algorithm. Defaults to `'rsa-sha256'` or auto-detected from key format.
  * @property headerFieldNames - Header names to include in the signature.
  * @property skipFields - Header names to exclude from signing.
  *
@@ -146,6 +147,7 @@ export type EmailDkimOptions = {
   domainName: string
   keySelector: string
   privateKey: string
+  algorithm?: 'rsa-sha256' | 'ed25519-sha256'
   headerFieldNames?: string[]
   skipFields?: string[]
 }

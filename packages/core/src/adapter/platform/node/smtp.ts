@@ -1,3 +1,4 @@
+import { Buffer } from 'node:buffer'
 import type { Socket } from 'node:net'
 
 import type {
@@ -6,6 +7,16 @@ import type {
   SmtpSocket,
   SmtpSocketAddress,
 } from '../../smtp/types'
+
+const formatNodeCa = (ca: string | Uint8Array | Array<string | Uint8Array> | undefined) => {
+  if (ca === undefined) {
+    return undefined
+  }
+  if (Array.isArray(ca)) {
+    return ca.map((entry) => (typeof entry === 'string' ? entry : Buffer.from(entry)))
+  }
+  return typeof ca === 'string' ? ca : Buffer.from(ca)
+}
 
 const waitForSocketEvent = (
   socket: Socket,
@@ -106,7 +117,12 @@ const socketToWritableStream = (socket: Socket): WritableStream<Uint8Array> =>
     },
   })
 
-const toSmtpSocket = (socket: Socket, opened: Promise<unknown>, hostname: string): SmtpSocket => {
+const toSmtpSocket = (
+  socket: Socket,
+  opened: Promise<unknown>,
+  hostname: string,
+  options?: SmtpConnectorOptions,
+): SmtpSocket => {
   return {
     readable: socketToReadableStream(socket),
     writable: socketToWritableStream(socket),
@@ -118,8 +134,21 @@ const toSmtpSocket = (socket: Socket, opened: Promise<unknown>, hostname: string
     },
     startTls: async () => {
       const { connect } = await import('node:tls')
-      const tlsSocket = connect({ servername: hostname, socket })
-      return toSmtpSocket(tlsSocket, waitForSocketEvent(tlsSocket, 'secureConnect'), hostname)
+      const ca = formatNodeCa(options?.tls?.ca)
+      const tlsSocket = connect({
+        servername: hostname,
+        socket,
+        ...(ca !== undefined ? { ca } : {}),
+        ...(options?.tls?.rejectUnauthorized !== undefined
+          ? { rejectUnauthorized: options.tls.rejectUnauthorized }
+          : {}),
+      })
+      return toSmtpSocket(
+        tlsSocket,
+        waitForSocketEvent(tlsSocket, 'secureConnect'),
+        hostname,
+        options,
+      )
     },
   }
 }
@@ -140,17 +169,27 @@ export const nodeSmtpConnector: SmtpConnector = {
     ])
 
     if (options.secureTransport === 'on') {
+      const ca = formatNodeCa(options.tls?.ca)
       const socket = connectTls({
         host: address.hostname,
         port: address.port,
         servername: address.hostname,
+        ...(ca !== undefined ? { ca } : {}),
+        ...(options.tls?.rejectUnauthorized !== undefined
+          ? { rejectUnauthorized: options.tls.rejectUnauthorized }
+          : {}),
       })
 
-      return toSmtpSocket(socket, waitForSocketEvent(socket, 'secureConnect'), address.hostname)
+      return toSmtpSocket(
+        socket,
+        waitForSocketEvent(socket, 'secureConnect'),
+        address.hostname,
+        options,
+      )
     }
 
     const socket = createConnection({ host: address.hostname, port: address.port })
-    return toSmtpSocket(socket, waitForSocketEvent(socket, 'connect'), address.hostname)
+    return toSmtpSocket(socket, waitForSocketEvent(socket, 'connect'), address.hostname, options)
   },
 }
 

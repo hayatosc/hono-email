@@ -131,18 +131,66 @@ const getSubtleCrypto = (): SubtleCrypto => {
   return subtle
 }
 
-const importPrivateKey = async (privateKey: string): Promise<CryptoKey> => {
+const isEd25519Pkcs8 = (keyData: Uint8Array): boolean => {
+  for (let i = 0; i <= keyData.length - 5; i++) {
+    if (
+      keyData[i] === 0x06 &&
+      keyData[i + 1] === 0x03 &&
+      keyData[i + 2] === 0x2b &&
+      keyData[i + 3] === 0x65 &&
+      keyData[i + 4] === 0x70
+    ) {
+      return true
+    }
+  }
+  return false
+}
+
+type ResolvedDkimKey = {
+  key: CryptoKey
+  algorithm: 'rsa-sha256' | 'ed25519-sha256'
+}
+
+const importDkimKey = async (
+  privateKey: string,
+  configuredAlgorithm?: 'rsa-sha256' | 'ed25519-sha256',
+): Promise<ResolvedDkimKey> => {
   try {
     const keyData = decodePemPrivateKey(privateKey)
+    const isEdKey = isEd25519Pkcs8(keyData)
+
+    if (configuredAlgorithm === 'ed25519-sha256' && !isEdKey) {
+      throw new Error("Configured DKIM algorithm 'ed25519-sha256' does not match RSA private key.")
+    }
+
+    if (configuredAlgorithm === 'rsa-sha256' && isEdKey) {
+      throw new Error("Configured DKIM algorithm 'rsa-sha256' does not match Ed25519 private key.")
+    }
+
+    const isEd25519 = isEdKey
+
     const keyBuffer = new Uint8Array(keyData.byteLength)
     keyBuffer.set(keyData)
-    return await getSubtleCrypto().importKey(
+
+    if (isEd25519) {
+      const key = await getSubtleCrypto().importKey(
+        'pkcs8',
+        keyBuffer.buffer,
+        { name: 'Ed25519' },
+        false,
+        ['sign'],
+      )
+      return { key, algorithm: 'ed25519-sha256' }
+    }
+
+    const key = await getSubtleCrypto().importKey(
       'pkcs8',
       keyBuffer.buffer,
       { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' },
       false,
       ['sign'],
     )
+    return { key, algorithm: 'rsa-sha256' }
   } catch (error) {
     if (error instanceof Error) {
       throw error
@@ -259,6 +307,19 @@ const validateDkimOptions = (options: EmailDkimOptions): void => {
     )
   }
 
+  const rawAlgorithm: unknown = options.algorithm
+  if (
+    rawAlgorithm !== undefined &&
+    rawAlgorithm !== 'rsa-sha256' &&
+    rawAlgorithm !== 'ed25519-sha256'
+  ) {
+    const displayAlgorithm =
+      typeof rawAlgorithm === 'string' ? rawAlgorithm : JSON.stringify(rawAlgorithm)
+    throw new Error(
+      `Invalid DKIM algorithm: ${displayAlgorithm}. Expected 'rsa-sha256' or 'ed25519-sha256'.`,
+    )
+  }
+
   for (const fieldName of [...(options.headerFieldNames ?? []), ...(options.skipFields ?? [])]) {
     if (!HEADER_FIELD_NAME_PATTERN.test(fieldName)) {
       throw new Error(`Invalid DKIM header field name: ${fieldName}`)
@@ -312,12 +373,13 @@ export const applyDkimSignature = async (
     throw new Error('DKIM signing requires at least one signed header field.')
   }
 
+  const { key, algorithm } = await importDkimKey(options.privateKey, options.algorithm)
   const selectedHeaders = pickHeadersForSigning(headers, headerFieldNames)
   const bodyHash = await digestSha256(canonicalizeBodyRelaxed(body))
   const timestamp = Math.floor(Date.now() / 1000)
   const dkimHeader = [
     'DKIM-Signature: v=1',
-    'a=rsa-sha256',
+    `a=${algorithm}`,
     'c=relaxed/relaxed',
     `d=${options.domainName}`,
     `s=${options.keySelector}`,
@@ -330,9 +392,10 @@ export const applyDkimSignature = async (
   const signingData = `${selectedHeaders
     .map((header) => `${canonicalizeHeaderRelaxed(header.raw)}${CRLF}`)
     .join('')}${canonicalizeHeaderRelaxed(dkimHeader)}`
+  const signatureParams = algorithm === 'ed25519-sha256' ? { name: 'Ed25519' } : 'RSASSA-PKCS1-v1_5'
   const signature = await getSubtleCrypto().sign(
-    'RSASSA-PKCS1-v1_5',
-    await importPrivateKey(options.privateKey),
+    signatureParams,
+    key,
     new TextEncoder().encode(signingData),
   )
 

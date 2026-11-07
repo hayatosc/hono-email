@@ -1561,4 +1561,149 @@ describe('sendEmail over SMTP', () => {
     await sendPromise1
     await smtp.close()
   })
+
+  test('closes idle SMTP session after idleTimeout expires', async () => {
+    let quitReceived = false
+    const mock = createMockConnector(async (server) => {
+      await server.writeResponse('220 smtp.example.com ready\r\n')
+      expect(await server.readLine()).toBe('EHLO localhost')
+      await server.writeResponse('250 smtp.example.com\r\n')
+      expect(await server.readLine()).toBe('MAIL FROM:<sender@example.com>')
+      await server.writeResponse('250 OK\r\n')
+      expect(await server.readLine()).toBe('RCPT TO:<recipient@example.com>')
+      await server.writeResponse('250 Accepted\r\n')
+      expect(await server.readLine()).toBe('DATA')
+      await server.writeResponse('354 Continue\r\n')
+      await server.readData()
+      await server.writeResponse('250 queued\r\n')
+      expect(await server.readLine()).toBe('QUIT')
+      quitReceived = true
+      await server.writeResponse('221 Bye\r\n')
+    })
+
+    const smtp = new SmtpTransport({
+      connector: mock.connector,
+      hostname: 'smtp.example.com',
+      port: 465,
+      pool: { maxConnections: 1, idleTimeout: 50 },
+      secure: true,
+    })
+
+    const receipt = await smtp.send(createEmailMessage('Test', 'recipient@example.com'))
+    expect(receipt.successful).toBe(true)
+    expect(quitReceived).toBe(false)
+
+    // Wait past idleTimeout
+    await new Promise((resolve) => setTimeout(resolve, 80))
+    expect(quitReceived).toBe(true)
+    await smtp.close()
+    await mock.wait()
+  })
+
+  test('initializes and sends through URL connection string', async () => {
+    let authenticated = false
+    const mock = createMockConnector(async (server) => {
+      await server.writeResponse('220 smtp.example.com ready\r\n')
+      expect(await server.readLine()).toBe('EHLO localhost')
+      await server.writeResponse('250-smtp.example.com\r\n250 AUTH PLAIN\r\n')
+      expect(await server.readLine()).toBe('AUTH PLAIN AHVzZXIAcGFzcw==')
+      authenticated = true
+      await server.writeResponse('235 2.7.0 Authentication successful\r\n')
+      expect(await server.readLine()).toBe('MAIL FROM:<sender@example.com>')
+      await server.writeResponse('250 OK\r\n')
+      expect(await server.readLine()).toBe('RCPT TO:<recipient@example.com>')
+      await server.writeResponse('250 Accepted\r\n')
+      expect(await server.readLine()).toBe('DATA')
+      await server.writeResponse('354 Continue\r\n')
+      await server.readData()
+      await server.writeResponse('250 queued\r\n')
+      expect(await server.readLine()).toBe('QUIT')
+      await server.writeResponse('221 Bye\r\n')
+    })
+
+    const smtp = new SmtpTransport({
+      connector: mock.connector,
+      url: 'smtps://user:pass@smtp.example.com:465',
+    })
+
+    const receipt = await smtp.send(createEmailMessage('URL send', 'recipient@example.com'))
+    expect(receipt.successful).toBe(true)
+    expect(authenticated).toBe(true)
+    await smtp.close()
+    await mock.wait()
+  })
+
+  test('normalizes internationalized domain names (IDNA / Punycode) in recipient addresses', async () => {
+    let rcptCommand = ''
+    const mock = createMockConnector(async (server) => {
+      await server.writeResponse('220 smtp.example.com ready\r\n')
+      expect(await server.readLine()).toBe('EHLO localhost')
+      await server.writeResponse('250 smtp.example.com\r\n')
+      expect(await server.readLine()).toBe('MAIL FROM:<sender@example.com>')
+      await server.writeResponse('250 OK\r\n')
+      rcptCommand = await server.readLine()
+      await server.writeResponse('250 Accepted\r\n')
+      expect(await server.readLine()).toBe('DATA')
+      await server.writeResponse('354 Continue\r\n')
+      await server.readData()
+      await server.writeResponse('250 queued\r\n')
+      expect(await server.readLine()).toBe('QUIT')
+      await server.writeResponse('221 Bye\r\n')
+    })
+
+    const smtp = new SmtpTransport({
+      connector: mock.connector,
+      hostname: 'smtp.example.com',
+      port: 465,
+      secure: true,
+    })
+
+    const receipt = await smtp.send(createEmailMessage('IDNA', 'user@日本.jp'))
+    expect(receipt.successful).toBe(true)
+    expect(rcptCommand).toBe('RCPT TO:<user@xn--wgv71a.jp>')
+    await smtp.close()
+    await mock.wait()
+  })
+
+  test('preserves pooled connection slot when pre-send validation fails', async () => {
+    const mock = createMockConnector(async (server) => {
+      await server.writeResponse('220 smtp.example.com ready\r\n')
+      expect(await server.readLine()).toBe('EHLO localhost')
+      await server.writeResponse('250 smtp.example.com\r\n')
+      expect(await server.readLine()).toBe('MAIL FROM:<sender@example.com>')
+      await server.writeResponse('250 OK\r\n')
+      expect(await server.readLine()).toBe('RCPT TO:<valid@example.com>')
+      await server.writeResponse('250 Accepted\r\n')
+      expect(await server.readLine()).toBe('DATA')
+      await server.writeResponse('354 Continue\r\n')
+      await server.readData()
+      await server.writeResponse('250 queued\r\n')
+      expect(await server.readLine()).toBe('QUIT')
+      await server.writeResponse('221 Bye\r\n')
+    })
+
+    const smtp = new SmtpTransport({
+      connector: mock.connector,
+      hostname: 'smtp.example.com',
+      port: 465,
+      secure: true,
+    })
+
+    const failedReceipt = await smtp.send(createEmailMessage('Test', 'ユーザー@example.com'))
+
+    expect(failedReceipt).toMatchObject({
+      successful: false,
+      errorMessages: [
+        'SMTP server does not advertise SMTPUTF8 for internationalized email addresses.',
+      ],
+    })
+
+    const successReceipt = await smtp.send(createEmailMessage('Valid', 'valid@example.com'))
+    expect(successReceipt.successful).toBe(true)
+
+    await smtp.close()
+    await mock.wait()
+
+    expect(mock.connectCount()).toBe(1)
+  })
 })

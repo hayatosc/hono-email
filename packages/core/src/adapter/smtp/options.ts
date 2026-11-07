@@ -1,7 +1,59 @@
-import type { SmtpSecureTransport, SmtpTransportOptions } from './types'
+import type { SmtpAuth, SmtpSecureTransport, SmtpTransportOptions } from './types'
 
 export const DEFAULT_CLIENT_NAME = 'localhost'
 const DEFAULT_MAX_CONNECTIONS = 1
+
+export type ParsedSmtpUrl = {
+  hostname: string
+  port: number
+  secure: boolean | 'starttls'
+  auth?: SmtpAuth
+}
+
+/**
+ * Parses an `smtp://` or `smtps://` connection URL.
+ *
+ * @param rawUrl - URL string to parse.
+ * @returns Resolved hostname, port, secure mode, and authentication credentials.
+ * @throws If the URL protocol is not `smtp:` or `smtps:`.
+ *
+ * @example
+ * ```ts
+ * const config = parseSmtpUrl('smtp://user:pass@smtp.example.com:587')
+ * ```
+ */
+export const parseSmtpUrl = (rawUrl: string): ParsedSmtpUrl => {
+  const parsed = new URL(rawUrl)
+  if (parsed.protocol !== 'smtp:' && parsed.protocol !== 'smtps:') {
+    throw new Error(`Unsupported SMTP URL protocol: ${parsed.protocol}`)
+  }
+
+  const isSmtps = parsed.protocol === 'smtps:'
+  const port = parsed.port !== '' ? Number.parseInt(parsed.port, 10) : isSmtps ? 465 : 587
+  const decodeField = (value: string, fieldName: string): string => {
+    try {
+      return decodeURIComponent(value)
+    } catch {
+      throw new Error(`Failed to decode SMTP URL ${fieldName}: malformed percent-encoding.`)
+    }
+  }
+
+  const auth =
+    parsed.username !== ''
+      ? {
+          type: 'plain' as const,
+          username: decodeField(parsed.username, 'username'),
+          password: decodeField(parsed.password, 'password'),
+        }
+      : undefined
+
+  return {
+    hostname: parsed.hostname,
+    port,
+    secure: isSmtps ? true : 'starttls',
+    ...(auth !== undefined ? { auth } : {}),
+  }
+}
 
 export const resolveSecureTransport = (
   secure: SmtpTransportOptions['secure'],
@@ -48,6 +100,20 @@ export const resolveMaxMessages = (maxMessages: number | undefined): number | un
   }
 
   return maxMessages
+}
+
+const MAX_IDLE_TIMEOUT_MS = 2147483647
+
+export const resolveIdleTimeout = (idleTimeout: number | undefined): number | undefined => {
+  if (idleTimeout === undefined) {
+    return undefined
+  }
+
+  if (!Number.isSafeInteger(idleTimeout) || idleTimeout < 1 || idleTimeout > MAX_IDLE_TIMEOUT_MS) {
+    throw new Error('SMTP pool idleTimeout must be a positive integer no greater than 2147483647.')
+  }
+
+  return idleTimeout
 }
 
 export const withTimeout = async <T>(

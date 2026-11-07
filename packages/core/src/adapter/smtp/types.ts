@@ -33,9 +33,26 @@ export type SmtpSocketAddress = {
 }
 
 /**
+ * TLS security options passed to socket connectors.
+ *
+ * @property ca - Custom Certificate Authority (CA) certificate(s).
+ * @property rejectUnauthorized - Whether to reject unauthorized server certificates.
+ *
+ * @example
+ * ```ts
+ * const tls: SmtpTlsOptions = { rejectUnauthorized: true }
+ * ```
+ */
+export type SmtpTlsOptions = {
+  ca?: string | Uint8Array | Array<string | Uint8Array>
+  rejectUnauthorized?: boolean
+}
+
+/**
  * Connection options passed from `SmtpTransport` to a runtime connector.
  *
  * @property secureTransport - Resolved SMTP TLS mode.
+ * @property tls - Optional TLS security options.
  *
  * @example
  * ```ts
@@ -44,6 +61,7 @@ export type SmtpSocketAddress = {
  */
 export type SmtpConnectorOptions = {
   secureTransport: SmtpSecureTransport
+  tls?: SmtpTlsOptions
 }
 
 /**
@@ -98,15 +116,17 @@ export type SmtpConnector = {
 /**
  * SMTP authentication configuration.
  *
- * @property type - Authentication mechanism. Defaults to `plain`.
+ * @property type - Authentication mechanism (`'plain'`, `'login'`, or `'xoauth2'`). Defaults to `plain`.
  * @property username - SMTP username.
- * @property password - SMTP password.
+ * @property password - SMTP password (used with `plain` or `login`).
+ * @property accessToken - OAuth2 access token or token provider function (used with `xoauth2`).
  *
  * @example
  * ```ts
  * const auth: SmtpAuth = {
- *   username: 'smtp-user',
- *   password: 'smtp-password',
+ *   type: 'xoauth2',
+ *   username: 'user@example.com',
+ *   accessToken: async () => fetchToken(),
  * }
  * ```
  */
@@ -120,6 +140,11 @@ export type SmtpAuth =
       type: 'login'
       username: string
       password: string
+    }
+  | {
+      type: 'xoauth2'
+      username: string
+      accessToken: string | (() => string | Promise<string>)
     }
 
 /**
@@ -139,8 +164,9 @@ export type SmtpRecipientRejectionPolicy = 'deliver-accepted' | 'reject-all'
  * Options for creating an `SmtpTransport`.
  *
  * @property connector - Runtime-specific socket connector.
- * @property hostname - SMTP server host name.
- * @property port - SMTP server port.
+ * @property hostname - SMTP server host name. Optional if `url` is provided.
+ * @property port - SMTP server port. Optional if `url` is provided.
+ * @property url - `smtp://` or `smtps://` connection URL to configure hostname, port, secure mode, and auth credentials.
  * @property secure - TLS mode. `true` uses implicit TLS, `'starttls'` upgrades after EHLO.
  * @property auth - Optional SMTP authentication.
  * @property dkim - Default DKIM signing options, overridden by per-send or legacy per-message settings.
@@ -150,23 +176,23 @@ export type SmtpRecipientRejectionPolicy = 'deliver-accepted' | 'reject-all'
  * @property socketTimeout - SMTP response timeout in milliseconds.
  * @property limits - Attachment limits.
  * @property pool - SMTP connection pool settings.
+ * @property tls - Custom TLS security options.
  * @property recipientRejectionPolicy - Policy when one or more recipients are rejected during `RCPT TO`. Defaults to `'deliver-accepted'`.
  *
  * @example
  * ```ts
  * const transport = new SmtpTransport({
  *   connector,
- *   hostname: 'smtp.example.com',
- *   port: 587,
- *   secure: 'starttls',
- *   recipientRejectionPolicy: 'reject-all',
+ *   url: 'smtp://user:pass@smtp.example.com:587',
+ *   pool: { maxConnections: 5, idleTimeout: 30_000 },
  * })
  * ```
  */
 export type SmtpTransportOptions = {
   connector: SmtpConnector
-  hostname: string
-  port: number
+  hostname?: string
+  port?: number
+  url?: string
   secure?: boolean | 'starttls'
   auth?: SmtpAuth
   dkim?: EmailDkimOptions
@@ -178,7 +204,9 @@ export type SmtpTransportOptions = {
   pool?: {
     maxConnections?: number
     maxMessages?: number
+    idleTimeout?: number
   }
+  tls?: SmtpTlsOptions
   recipientRejectionPolicy?: SmtpRecipientRejectionPolicy
 }
 

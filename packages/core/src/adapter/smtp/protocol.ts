@@ -56,6 +56,15 @@ export type SmtpSession = {
 
 const MAX_SMTP_RESPONSE_BUFFER_OCTETS = 4096
 
+const hasNonAscii = (value: string): boolean => {
+  for (let index = 0; index < value.length; index += 1) {
+    if (value.charCodeAt(index) > 127) {
+      return true
+    }
+  }
+  return false
+}
+
 const responseText = (response: SmtpCommandResponse): string =>
   response.lines.length > 0 ? response.lines.join('\n') : `${response.code}`
 
@@ -98,6 +107,13 @@ export class SmtpResponseBufferLimitError extends Error {
       `SMTP response buffer exceeded ${MAX_SMTP_RESPONSE_BUFFER_OCTETS} octets before a complete line was received.`,
     )
     this.name = 'SmtpResponseBufferLimitError'
+  }
+}
+
+export class SmtpPreSendCommandError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = 'SmtpPreSendCommandError'
   }
 }
 
@@ -296,6 +312,24 @@ class SmtpProtocolClient {
 }
 
 const authenticate = async (client: SmtpProtocolClient, auth: SmtpAuth): Promise<void> => {
+  if (auth.type === 'xoauth2') {
+    const token =
+      typeof auth.accessToken === 'function' ? await auth.accessToken() : auth.accessToken
+    const sasl = `user=${auth.username}\x01auth=Bearer ${token}\x01\x01`
+    await client.sendRaw(`AUTH XOAUTH2 ${encodeAsciiBase64(sasl)}${CRLF}`)
+    let response = await client.readResponse()
+
+    if (response.code === 334) {
+      await client.sendRaw(CRLF)
+      response = await client.readResponse()
+    }
+
+    if (response.code !== 235) {
+      throw new SmtpCommandError('AUTH XOAUTH2', response)
+    }
+    return
+  }
+
   if (auth.type === 'login') {
     await client.command('AUTH LOGIN', [334])
     await client.command(encodeAsciiBase64(auth.username), [334])
@@ -345,7 +379,7 @@ const parseEhloCapabilities = (response: SmtpCommandResponse): SmtpCapabilities 
 }
 
 const assertAuthCapability = (capabilities: SmtpCapabilities, auth: SmtpAuth): void => {
-  const mechanism = auth.type === 'login' ? 'LOGIN' : 'PLAIN'
+  const mechanism = auth.type === 'xoauth2' ? 'XOAUTH2' : auth.type === 'login' ? 'LOGIN' : 'PLAIN'
   if (!capabilities.authMechanisms.has(mechanism)) {
     throw new Error(`SMTP server does not advertise AUTH ${mechanism}.`)
   }
@@ -384,10 +418,12 @@ const sendRecipients = async (
 
 class ReusableSmtpSession implements SmtpSession {
   #client: SmtpProtocolClient
+  #capabilities: SmtpCapabilities | undefined
   #closed = false
 
-  constructor(client: SmtpProtocolClient) {
+  constructor(client: SmtpProtocolClient, capabilities?: SmtpCapabilities) {
     this.#client = client
+    this.#capabilities = capabilities
   }
 
   async close(): Promise<void> {
@@ -420,8 +456,27 @@ class ReusableSmtpSession implements SmtpSession {
       throw new Error('SMTP session is closed.')
     }
 
-    validateSmtpPath(options.mailFrom, 'SMTP envelope sender')
-    await this.#client.command(`MAIL FROM:<${options.mailFrom}>`, [250])
+    const hasNonAsciiSender = hasNonAscii(options.mailFrom)
+    const hasNonAsciiRecipients = options.recipients.some(hasNonAscii)
+    const requiresSmtpUtf8 = hasNonAsciiSender || hasNonAsciiRecipients
+
+    if (requiresSmtpUtf8 && !this.#capabilities?.extensions.has('SMTPUTF8')) {
+      throw new SmtpPreSendCommandError(
+        'SMTP server does not advertise SMTPUTF8 for internationalized email addresses.',
+      )
+    }
+
+    try {
+      validateSmtpPath(options.mailFrom, 'SMTP envelope sender')
+    } catch (error) {
+      if (error instanceof Error) {
+        throw new SmtpPreSendCommandError(error.message)
+      }
+      throw error
+    }
+
+    const mailFromParam = requiresSmtpUtf8 ? ' SMTPUTF8' : ''
+    await this.#client.command(`MAIL FROM:<${options.mailFrom}>${mailFromParam}`, [250])
 
     const recipients = await sendRecipients(this.#client, options.recipients)
     const shouldReset =
@@ -506,7 +561,7 @@ export const openSmtpSession = async (
       await authenticate(client, options.auth)
     }
 
-    return new ReusableSmtpSession(client)
+    return new ReusableSmtpSession(client, capabilities)
   } catch (error) {
     await client.close().catch(() => {})
     throw error

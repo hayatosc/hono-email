@@ -1,11 +1,80 @@
 import { describe, expect, test } from 'bun:test'
 
 import {
+  parseSmtpUrl,
+  resolveIdleTimeout,
   resolveMaxConnections,
   resolveMaxMessages,
   resolveSecureTransport,
   withTimeout,
 } from './options'
+
+describe('parseSmtpUrl', () => {
+  test('parses standard smtp:// URL with credentials and port', () => {
+    expect(parseSmtpUrl('smtp://user:pass@smtp.example.com:587')).toEqual({
+      hostname: 'smtp.example.com',
+      port: 587,
+      secure: 'starttls',
+      auth: {
+        type: 'plain',
+        username: 'user',
+        password: 'pass',
+      },
+    })
+  })
+
+  test('parses smtps:// URL with default port 465 and secure true', () => {
+    expect(parseSmtpUrl('smtps://user:secret@smtp.example.com')).toEqual({
+      hostname: 'smtp.example.com',
+      port: 465,
+      secure: true,
+      auth: {
+        type: 'plain',
+        username: 'user',
+        password: 'secret',
+      },
+    })
+  })
+
+  test('parses smtp:// URL without credentials and default port 587', () => {
+    expect(parseSmtpUrl('smtp://mail.example.com')).toEqual({
+      hostname: 'mail.example.com',
+      port: 587,
+      secure: 'starttls',
+    })
+  })
+
+  test('decodes URL-encoded credentials', () => {
+    expect(parseSmtpUrl('smtp://user%40example.com:pass%23word@smtp.example.com:2525')).toEqual({
+      hostname: 'smtp.example.com',
+      port: 2525,
+      secure: 'starttls',
+      auth: {
+        type: 'plain',
+        username: 'user@example.com',
+        password: 'pass#word',
+      },
+    })
+  })
+
+  test('throws for unsupported protocol', () => {
+    expect(() => parseSmtpUrl('http://smtp.example.com')).toThrow(
+      'Unsupported SMTP URL protocol: http:',
+    )
+  })
+
+  test('throws for malformed percent-encoding in username', () => {
+    expect(() => parseSmtpUrl('smtp://%E0%A4%A:pass@smtp.example.com:587')).toThrow(
+      'Failed to decode SMTP URL username: malformed percent-encoding.',
+    )
+  })
+
+  test('throws for malformed percent-encoding in password', () => {
+    expect(() => parseSmtpUrl('smtp://user:%E0%A4%A@smtp.example.com:587')).toThrow(
+      'Failed to decode SMTP URL password: malformed percent-encoding.',
+    )
+  })
+})
 
 describe('resolveSecureTransport', () => {
   test('returns starttls when secure is starttls', () => {
@@ -87,6 +156,40 @@ describe('resolveMaxMessages', () => {
   test('throws for non-integer values', () => {
     expect(() => resolveMaxMessages(1.5)).toThrow(
       'SMTP pool maxMessages must be a positive integer.',
+    )
+  })
+})
+
+describe('resolveIdleTimeout', () => {
+  test('returns undefined when undefined', () => {
+    expect(resolveIdleTimeout(undefined)).toBeUndefined()
+  })
+
+  test('returns the value when valid', () => {
+    expect(resolveIdleTimeout(30_000)).toBe(30_000)
+  })
+
+  test('throws for 0', () => {
+    expect(() => resolveIdleTimeout(0)).toThrow(
+      'SMTP pool idleTimeout must be a positive integer no greater than 2147483647.',
+    )
+  })
+
+  test('throws for negative values', () => {
+    expect(() => resolveIdleTimeout(-1)).toThrow(
+      'SMTP pool idleTimeout must be a positive integer no greater than 2147483647.',
+    )
+  })
+
+  test('throws for non-integer values', () => {
+    expect(() => resolveIdleTimeout(100.5)).toThrow(
+      'SMTP pool idleTimeout must be a positive integer no greater than 2147483647.',
+    )
+  })
+
+  test('throws for values greater than 2147483647', () => {
+    expect(() => resolveIdleTimeout(2147483648)).toThrow(
+      'SMTP pool idleTimeout must be a positive integer no greater than 2147483647.',
     )
   })
 })

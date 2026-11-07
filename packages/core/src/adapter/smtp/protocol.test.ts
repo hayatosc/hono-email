@@ -227,6 +227,22 @@ describe('openSmtpSession', () => {
     await wait()
   })
 
+  test('throws when AUTH XOAUTH2 is required but not advertised', async () => {
+    const { socket, wait } = createMockSocket(async (server) => {
+      await server.writeResponse('220 ready\r\n')
+      await server.readLine()
+      await server.writeResponse('250 ok\r\n')
+    })
+
+    await expect(
+      openSmtpSession(socket, {
+        ...baseOptions,
+        auth: { accessToken: 'token', type: 'xoauth2', username: 'user@example.com' },
+      }),
+    ).rejects.toThrow('SMTP server does not advertise AUTH XOAUTH2')
+    await wait()
+  })
+
   test('throws when mailFrom contains CR', async () => {
     const { socket, wait } = createMockSocket(async (server) => {
       await server.writeResponse('220 ready\r\n')
@@ -348,6 +364,76 @@ describe('openSmtpSession', () => {
     await wait()
   })
 
+  test('AUTH XOAUTH2 flow works correctly with static token', async () => {
+    const { socket, wait } = createMockSocket(async (server) => {
+      await server.writeResponse('220 ready\r\n')
+      expect(await server.readLine()).toBe('EHLO localhost')
+      await server.writeResponse('250 AUTH XOAUTH2 PLAIN\r\n')
+      expect(await server.readLine()).toBe(
+        'AUTH XOAUTH2 dXNlcj11c2VyQGV4YW1wbGUuY29tAWF1dGg9QmVhcmVyIHRva2VuMTIzAQE=',
+      )
+      await server.writeResponse('235 authenticated\r\n')
+      await server.readLine()
+      await server.writeResponse('221 bye\r\n')
+    })
+
+    const session = await openSmtpSession(socket, {
+      ...baseOptions,
+      auth: { accessToken: 'token123', type: 'xoauth2', username: 'user@example.com' },
+    })
+    await session.close()
+    await wait()
+  })
+
+  test('AUTH XOAUTH2 flow works correctly with async token function', async () => {
+    const { socket, wait } = createMockSocket(async (server) => {
+      await server.writeResponse('220 ready\r\n')
+      expect(await server.readLine()).toBe('EHLO localhost')
+      await server.writeResponse('250 AUTH XOAUTH2 PLAIN\r\n')
+      expect(await server.readLine()).toBe(
+        'AUTH XOAUTH2 dXNlcj11c2VyQGV4YW1wbGUuY29tAWF1dGg9QmVhcmVyIHRva2VuMTIzAQE=',
+      )
+      await server.writeResponse('235 authenticated\r\n')
+      await server.readLine()
+      await server.writeResponse('221 bye\r\n')
+    })
+
+    const session = await openSmtpSession(socket, {
+      ...baseOptions,
+      auth: {
+        accessToken: async () => 'token123',
+        type: 'xoauth2',
+        username: 'user@example.com',
+      },
+    })
+    await session.close()
+    await wait()
+  })
+
+  test('AUTH XOAUTH2 handles 334 challenge and reports AUTH XOAUTH2 command on failure', async () => {
+    const { socket, wait } = createMockSocket(async (server) => {
+      await server.writeResponse('220 ready\r\n')
+      expect(await server.readLine()).toBe('EHLO localhost')
+      await server.writeResponse('250 AUTH XOAUTH2\r\n')
+      expect(await server.readLine()).toBe(
+        'AUTH XOAUTH2 dXNlcj11c2VyQGV4YW1wbGUuY29tAWF1dGg9QmVhcmVyIHRva2VuAQE=',
+      )
+      await server.writeResponse('334 eyJzdGF0dXMiOiI0MDEifQ==\r\n')
+      expect(await server.readLine()).toBe('')
+      await server.writeResponse('535 5.7.8 Authentication credentials invalid\r\n')
+    })
+
+    await expect(
+      openSmtpSession(socket, {
+        ...baseOptions,
+        auth: { accessToken: 'token', type: 'xoauth2', username: 'user@example.com' },
+      }),
+    ).rejects.toThrow(
+      'Unexpected SMTP response to AUTH XOAUTH2: 535 5.7.8 Authentication credentials invalid',
+    )
+    await wait()
+  })
+
   test('handles multi-line EHLO response', async () => {
     const { socket, wait } = createMockSocket(async (server) => {
       await server.writeResponse('220 ready\r\n')
@@ -446,6 +532,55 @@ describe('openSmtpSession', () => {
     expect(result.response).toBe('SMTP rejected 1 recipient(s): bad@example.com')
     expect(result.permanent).toBe(true)
     expect(result.code).toBe(550)
+    await session.close()
+    await wait()
+  })
+
+  test('sends MAIL FROM with SMTPUTF8 when server advertises SMTPUTF8 and address has non-ASCII characters', async () => {
+    const { socket, wait } = createMockSocket(async (server) => {
+      await server.writeResponse('220 ready\r\n')
+      expect(await server.readLine()).toBe('EHLO localhost')
+      await server.writeResponse('250-localhost\r\n250 SMTPUTF8\r\n')
+      expect(await server.readLine()).toBe('MAIL FROM:<送信者@example.com> SMTPUTF8')
+      await server.writeResponse('250 ok\r\n')
+      expect(await server.readLine()).toBe('RCPT TO:<recipient@example.com>')
+      await server.writeResponse('250 ok\r\n')
+      expect(await server.readLine()).toBe('DATA')
+      await server.writeResponse('354 continue\r\n')
+      await server.readData()
+      await server.writeResponse('250 ok\r\n')
+      expect(await server.readLine()).toBe('QUIT')
+      await server.writeResponse('221 bye\r\n')
+    })
+
+    const session = await openSmtpSession(socket, baseOptions)
+    const result = await session.send({
+      ...sendOptions,
+      mailFrom: '送信者@example.com',
+    })
+    expect(result.accepted).toEqual(['recipient@example.com'])
+    await session.close()
+    await wait()
+  })
+
+  test('throws when address has non-ASCII characters and server does not advertise SMTPUTF8', async () => {
+    const { socket, wait } = createMockSocket(async (server) => {
+      await server.writeResponse('220 ready\r\n')
+      expect(await server.readLine()).toBe('EHLO localhost')
+      await server.writeResponse('250 localhost\r\n')
+      expect(await server.readLine()).toBe('QUIT')
+      await server.writeResponse('221 bye\r\n')
+    })
+
+    const session = await openSmtpSession(socket, baseOptions)
+    await expect(
+      session.send({
+        ...sendOptions,
+        mailFrom: '送信者@example.com',
+      }),
+    ).rejects.toThrow(
+      'SMTP server does not advertise SMTPUTF8 for internationalized email addresses.',
+    )
     await session.close()
     await wait()
   })

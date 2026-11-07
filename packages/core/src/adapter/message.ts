@@ -108,8 +108,51 @@ const quoteDisplayName = (value: string): string => `"${value.replace(/["\\]/g, 
 const quoteHeaderParameter = (value: string): string =>
   `"${ensureSafeHeaderValue(value, 'header parameter').replace(/["\\]/g, '\\$&')}"`
 
-export const addressToPath = (address: EmailAddress): string =>
-  typeof address === 'string' ? address : address.address
+/**
+ * Normalizes an email address domain using IDNA Punycode conversion.
+ * If the domain contains non-ASCII characters, it is converted to ASCII (`xn--...`).
+ *
+ * @param address - Raw email address string.
+ * @returns Email address with normalized ASCII domain part.
+ *
+ * @example
+ * ```ts
+ * normalizeAddressDomain('user@日本.jp') // 'user@xn--wgv71a.jp'
+ * ```
+ */
+function hasNonAscii(value: string): boolean {
+  for (let index = 0; index < value.length; index += 1) {
+    if (value.charCodeAt(index) > 127) {
+      return true
+    }
+  }
+  return false
+}
+
+export const normalizeAddressDomain = (address: string): string => {
+  const atIndex = address.lastIndexOf('@')
+  if (atIndex <= 0) {
+    return address
+  }
+
+  const local = address.slice(0, atIndex)
+  const domain = address.slice(atIndex + 1)
+  if (!hasNonAscii(domain) || /[/\\?#:]/.test(domain)) {
+    return address
+  }
+
+  try {
+    const asciiDomain = new URL(`http://${domain}`).hostname
+    return `${local}@${asciiDomain}`
+  } catch {
+    return address
+  }
+}
+
+export const addressToPath = (address: EmailAddress): string => {
+  const raw = typeof address === 'string' ? address : address.address
+  return normalizeAddressDomain(raw)
+}
 
 export const toAddressList = (
   addresses: EmailAddress | EmailAddress[] | undefined,
@@ -128,14 +171,16 @@ export type ResolvedEmailEnvelope = {
 
 export const formatEmailAddress = (address: EmailAddress): string => {
   if (typeof address === 'string') {
-    const safeAddress = ensureSafeHeaderValue(address, 'email address')
+    const safeAddress = normalizeAddressDomain(ensureSafeHeaderValue(address, 'email address'))
     if (!EMAIL_ADDRESS_PATTERN.test(safeAddress)) {
       throw new Error(`Invalid email address: ${safeAddress}`)
     }
     return safeAddress
   }
 
-  const safeAddress = ensureSafeHeaderValue(address.address, 'email address')
+  const safeAddress = normalizeAddressDomain(
+    ensureSafeHeaderValue(address.address, 'email address'),
+  )
   if (!EMAIL_ADDRESS_PATTERN.test(safeAddress)) {
     throw new Error(`Invalid email address: ${safeAddress}`)
   }

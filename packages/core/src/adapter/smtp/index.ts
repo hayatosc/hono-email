@@ -3,12 +3,14 @@ import { buildRawEmailMessageAsync, resolveEmailEnvelope } from '../message'
 import { applyDkimSignature } from './dkim'
 import {
   DEFAULT_CLIENT_NAME,
+  parseSmtpUrl,
+  resolveIdleTimeout,
   resolveMaxConnections,
   resolveMaxMessages,
   resolveSecureTransport,
   withTimeout,
 } from './options'
-import { openSmtpSession } from './protocol'
+import { openSmtpSession, SmtpPreSendCommandError } from './protocol'
 import type { SmtpSession } from './protocol'
 import { failedReceipt, isClosedTransportError, SmtpTransportClosedError } from './receipt'
 import type {
@@ -17,6 +19,7 @@ import type {
   SmtpSecureTransport,
   SmtpSendOptions,
   SmtpSocket,
+  SmtpTlsOptions,
   SmtpTransportOptions,
 } from './types'
 
@@ -41,7 +44,8 @@ export type {
   SuccessfulSendReceipt,
 } from '../index'
 export { buildRawEmailMessage, buildRawEmailMessageAsync } from '../message'
-export { SmtpCommandError, SmtpResponseBufferLimitError } from './protocol'
+export { parseSmtpUrl, resolveIdleTimeout } from './options'
+export { SmtpCommandError, SmtpPreSendCommandError, SmtpResponseBufferLimitError } from './protocol'
 export { classifySmtpFailure, SmtpTransportClosedError } from './receipt'
 export type {
   SmtpAuth,
@@ -53,6 +57,7 @@ export type {
   SmtpSendResult,
   SmtpSocket,
   SmtpSocketAddress,
+  SmtpTlsOptions,
   SmtpTransportLike,
   SmtpTransportOptions,
 } from './types'
@@ -61,6 +66,7 @@ type SmtpConnectionSlot = {
   busy: boolean
   sentMessages: number
   session: SmtpSession
+  idleTimer?: ReturnType<typeof setTimeout> | undefined
 }
 
 type SmtpConnectionWaiter = {
@@ -105,8 +111,10 @@ export class SmtpTransport implements EmailAdapter {
   readonly #limits: SmtpTransportOptions['limits']
   readonly #maxConnections: number
   readonly #maxMessages: number | undefined
+  readonly #idleTimeout: number | undefined
   readonly #recipientRejectionPolicy: SmtpRecipientRejectionPolicy | undefined
   readonly #socketTimeout: number | undefined
+  readonly #tls: SmtpTlsOptions | undefined
   #activeSends = new Set<Promise<SendEmailReceipt>>()
   #closed = false
   #slots: SmtpConnectionSlot[] = []
@@ -114,11 +122,20 @@ export class SmtpTransport implements EmailAdapter {
   #waiters: SmtpConnectionWaiter[] = []
 
   constructor(options: SmtpTransportOptions) {
+    const fromUrl = options.url !== undefined ? parseSmtpUrl(options.url) : undefined
+    const hostname = options.hostname ?? fromUrl?.hostname
+    if (hostname === undefined || hostname === '') {
+      throw new Error('SMTP hostname is required.')
+    }
+    const port = options.port ?? fromUrl?.port ?? 587
+    const secure = options.secure ?? fromUrl?.secure
+    const auth = options.auth ?? fromUrl?.auth
+
     this.#connector = options.connector
-    this.#hostname = options.hostname
-    this.#port = options.port
-    this.#secureTransport = resolveSecureTransport(options.secure, options.port)
-    this.#auth = options.auth
+    this.#hostname = hostname
+    this.#port = port
+    this.#secureTransport = resolveSecureTransport(secure, port)
+    this.#auth = auth
     this.#dkim = options.dkim
     this.#clientName = options.clientName ?? DEFAULT_CLIENT_NAME
     this.#connectionTimeout = options.connectionTimeout
@@ -126,6 +143,8 @@ export class SmtpTransport implements EmailAdapter {
     this.#limits = options.limits
     this.#maxConnections = resolveMaxConnections(options.pool?.maxConnections)
     this.#maxMessages = resolveMaxMessages(options.pool?.maxMessages)
+    this.#idleTimeout = resolveIdleTimeout(options.pool?.idleTimeout)
+    this.#tls = options.tls
     this.#recipientRejectionPolicy = options.recipientRejectionPolicy
     this.#socketTimeout = options.socketTimeout
   }
@@ -166,6 +185,9 @@ export class SmtpTransport implements EmailAdapter {
 
     const slots = this.#slots.splice(0)
     this.#totalSlots = 0
+    for (const slot of slots) {
+      this.#clearSlotIdleTimer(slot)
+    }
     await Promise.allSettled(slots.map((slot) => slot.session.close()))
   }
 
@@ -182,7 +204,10 @@ export class SmtpTransport implements EmailAdapter {
         Promise.resolve(
           this.#connector.connect(
             { hostname: this.#hostname, port: this.#port },
-            { secureTransport: this.#secureTransport },
+            {
+              secureTransport: this.#secureTransport,
+              ...(this.#tls !== undefined ? { tls: this.#tls } : {}),
+            },
           ),
         ),
         this.#connectionTimeout,
@@ -303,6 +328,11 @@ export class SmtpTransport implements EmailAdapter {
           result = await sendPromise
         }
       } catch (error) {
+        if (error instanceof SmtpPreSendCommandError) {
+          await this.#releaseOrRetireSlot(slot)
+          return failedReceipt(error)
+        }
+
         await this.#discardSlot(slot).catch((discardError) => {
           console.debug('SMTP discard slot failed:', discardError)
         })
@@ -349,6 +379,13 @@ export class SmtpTransport implements EmailAdapter {
     }
   }
 
+  #clearSlotIdleTimer(slot: SmtpConnectionSlot): void {
+    if (slot.idleTimer !== undefined) {
+      clearTimeout(slot.idleTimer)
+      slot.idleTimer = undefined
+    }
+  }
+
   async #acquireSlot(signal?: AbortSignal): Promise<SmtpConnectionSlot> {
     if (this.#closed) {
       throw new SmtpTransportClosedError()
@@ -360,6 +397,7 @@ export class SmtpTransport implements EmailAdapter {
 
     const availableSlot = this.#slots.find((slot) => !slot.busy)
     if (availableSlot !== undefined) {
+      this.#clearSlotIdleTimer(availableSlot)
       availableSlot.busy = true
       return availableSlot
     }
@@ -434,7 +472,10 @@ export class SmtpTransport implements EmailAdapter {
         Promise.resolve(
           this.#connector.connect(
             { hostname: this.#hostname, port: this.#port },
-            { secureTransport: this.#secureTransport },
+            {
+              secureTransport: this.#secureTransport,
+              ...(this.#tls !== undefined ? { tls: this.#tls } : {}),
+            },
           ),
         ),
         this.#connectionTimeout,
@@ -486,6 +527,8 @@ export class SmtpTransport implements EmailAdapter {
   }
 
   #releaseSlot(slot: SmtpConnectionSlot): void {
+    this.#clearSlotIdleTimer(slot)
+
     if (!this.#slots.includes(slot)) {
       return
     }
@@ -503,6 +546,17 @@ export class SmtpTransport implements EmailAdapter {
     }
 
     slot.busy = false
+
+    if (this.#idleTimeout !== undefined && this.#idleTimeout > 0) {
+      slot.idleTimer = setTimeout(() => {
+        if (!slot.busy && this.#slots.includes(slot)) {
+          void this.#retireSlot(slot).catch((error) => {
+            console.debug('SMTP idle timeout retire failed:', error)
+          })
+        }
+      }, this.#idleTimeout)
+      slot.idleTimer.unref?.()
+    }
   }
 
   async #releaseOrRetireSlot(slot: SmtpConnectionSlot): Promise<void> {
@@ -515,6 +569,7 @@ export class SmtpTransport implements EmailAdapter {
   }
 
   async #retireSlot(slot: SmtpConnectionSlot): Promise<void> {
+    this.#clearSlotIdleTimer(slot)
     const index = this.#slots.indexOf(slot)
     if (index >= 0) {
       this.#slots.splice(index, 1)
@@ -529,6 +584,7 @@ export class SmtpTransport implements EmailAdapter {
   }
 
   async #discardSlot(slot: SmtpConnectionSlot): Promise<void> {
+    this.#clearSlotIdleTimer(slot)
     const index = this.#slots.indexOf(slot)
     if (index >= 0) {
       this.#slots.splice(index, 1)
@@ -555,6 +611,7 @@ export class SmtpTransport implements EmailAdapter {
       }
 
       if (availableSlot !== undefined) {
+        this.#clearSlotIdleTimer(availableSlot)
         availableSlot.busy = true
         waiter.resolve(availableSlot)
         continue
