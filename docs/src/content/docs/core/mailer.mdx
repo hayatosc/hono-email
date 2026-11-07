@@ -1,0 +1,170 @@
+---
+title: createMailer & defineMail
+description: Client configuration with reusable defaults and type-safe mailable definitions.
+---
+
+import { Badge } from '@astrojs/starlight/components'
+
+`hono-email` provides `createMailer()` to manage shared delivery defaults (`adapter`, sender addresses, headers, render options, retry policies) and `defineMail()` to author reusable, type-safe email definitions (mailables).
+
+## Overview
+
+```tsx
+import { ResendAdapter } from 'hono-email/resend'
+import { createMailer, defineMail, Html, Body, Heading, Text } from 'hono-email'
+
+// 1. Create a configured mailer client
+export const mailer = createMailer({
+  adapter: ResendAdapter({ apiKey: process.env.RESEND_API_KEY! }),
+  from: 'notifications@example.com',
+  replyTo: 'support@example.com',
+  retry: { maxAttempts: 3 },
+})
+
+// 2. Define a type-safe mailable
+export const WelcomeEmail = defineMail<{ name: string; verifyUrl: string }>((data) => ({
+  subject: `Welcome, ${data.name}!`,
+  jsx: (
+    <Html>
+      <Body>
+        <Heading as="h1">Welcome, {data.name}!</Heading>
+        <Text>
+          Please verify your email: <a href={data.verifyUrl}>Verify</a>
+        </Text>
+      </Body>
+    </Html>
+  ),
+}))
+
+// 3. Send using the mailer
+await mailer.send(WelcomeEmail, {
+  to: 'user@example.com',
+  data: {
+    name: 'Alice',
+    verifyUrl: 'https://example.com/verify?token=xyz',
+  },
+})
+```
+
+---
+
+## `createMailer()`
+
+Creates a `Mailer` instance configured with default options.
+
+```ts
+function createMailer(options: MailerOptions): Mailer
+```
+
+### Options
+
+```ts
+type MailerOptions = {
+  adapter: EmailAdapter
+  from?: EmailAddress
+  replyTo?: EmailAddress | EmailAddress[]
+  headers?: EmailHeaders
+  render?: RenderOptions
+  retry?: RequestRetryOptions | boolean
+}
+```
+
+- `adapter` <Badge text="Required" variant="caution" size="small" />: Delivery adapter (e.g., `ResendAdapter`, `SesAdapter`, `SmtpTransport`, or testing adapters).
+- `from` <Badge text="Optional" variant="note" size="small" />: Default sender address applied when not specified per email.
+- `replyTo` <Badge text="Optional" variant="note" size="small" />: Default reply-to address.
+- `headers` <Badge text="Optional" variant="note" size="small" />: Default custom headers merged into every outgoing email.
+- `render` <Badge text="Optional" variant="note" size="small" />: Default render options (e.g., `minify`, `strict`, `widows`).
+- `retry` <Badge text="Optional" variant="note" size="small" />: Default retry options for supported HTTP adapters.
+
+---
+
+## `defineMail()`
+
+Defines a reusable mailable template with type-safe input parameters.
+
+```ts
+function defineMail<TData = void>(
+  builder: (
+    data: TData,
+    context: MailRenderContext,
+  ) => MailDefinitionOutput | Promise<MailDefinitionOutput>,
+): Mailable<TData>
+```
+
+When `TData` is `void` (or omitted), callers can invoke `mailer.send(mail, { to: '...' })` without providing `data`. When `TData` is specified, `data` is required.
+
+### Context & Output Types
+
+```ts
+type MailRenderContext = {
+  to: EmailAddress[]
+  locale?: string
+}
+
+type MailDefinitionOutput = {
+  subject: string
+  jsx: Child
+  from?: EmailAddress
+  replyTo?: EmailAddress | EmailAddress[]
+  cc?: EmailAddress | EmailAddress[]
+  bcc?: EmailAddress | EmailAddress[]
+  headers?: EmailHeaders
+  attachments?: EmailAttachment[]
+  envelope?: EmailEnvelope
+  idempotencyKey?: string
+  render?: RenderOptions
+}
+```
+
+---
+
+## `mailer.send()`
+
+Sends an email via the configured adapter. Supports both `Mailable` definitions and direct JSX drafts.
+
+```ts
+// With Mailable
+await mailer.send(WelcomeEmail, {
+  to: 'user@example.com',
+  data: { name: 'Alice', verifyUrl: 'https://example.com/verify' },
+})
+
+// With raw JSX draft
+await mailer.send({
+  to: 'user@example.com',
+  subject: 'Quick Alert',
+  jsx: <Text>System alert</Text>,
+})
+```
+
+---
+
+## `mailer.render()`
+
+Renders a `Mailable` or direct draft into a complete `EmailMessage` (`html`, `text`, `subject`, etc.) without sending it to an adapter.
+
+```ts
+const message = await mailer.render(WelcomeEmail, {
+  to: 'preview@example.com',
+  data: { name: 'Bob', verifyUrl: 'https://example.com/verify' },
+})
+
+console.log(message.html)
+console.log(message.text)
+```
+
+Useful for automated testing and preview generation.
+
+---
+
+## `isMailable()`
+
+Type guard function to inspect whether an unknown value is a `Mailable` instance.
+
+```ts
+import { isMailable } from 'hono-email'
+
+if (isMailable(maybeMail)) {
+  // TypeScript narrows maybeMail to Mailable<unknown>
+}
+```
