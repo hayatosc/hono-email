@@ -66,6 +66,7 @@ type MailerOptions = {
   headers?: EmailHeaders
   render?: RenderOptions
   retry?: RequestRetryOptions | boolean
+  hooks?: MailTelemetryHooks
 }
 ```
 
@@ -75,6 +76,43 @@ type MailerOptions = {
 - `headers` <Badge text="Optional" variant="note" size="small" />: Default custom headers merged into every outgoing email.
 - `render` <Badge text="Optional" variant="note" size="small" />: Default render options (e.g., `minify`, `strict`, `widows`).
 - `retry` <Badge text="Optional" variant="note" size="small" />: Default retry options for supported HTTP adapters.
+- `hooks` <Badge text="Optional" variant="note" size="small" />: Default telemetry lifecycle hooks (`onSent`, `onFailed`, `onEvent`).
+
+### Telemetry & Observability
+
+Configure lifecycle hooks on `createMailer()` or individual `send()` calls:
+
+```tsx
+export const mailer = createMailer({
+  adapter: ResendAdapter({ apiKey: process.env.RESEND_API_KEY! }),
+  from: 'notifications@example.com',
+  hooks: {
+    onSent({ messageId, recipients, durationMs }) {
+      console.log(`Delivered ${messageId} to ${recipients.join(', ')} in ${durationMs}ms`)
+    },
+    onFailed({ subject, recipients, permanent, receipt, durationMs }) {
+      console.error(
+        `Delivery failed for "${subject}" to ${recipients.join(', ')} in ${durationMs}ms:`,
+        receipt.errorMessages,
+      )
+    },
+  },
+})
+```
+
+`hono-email` also publishes automatically to `node:diagnostics_channel` (`hono-email:sent` and `hono-email:failed`) in Node.js and Bun environments for zero-instrumentation APM integration:
+
+```ts
+import dc from 'node:diagnostics_channel'
+
+dc.subscribe('hono-email:sent', (event) => {
+  // event is MailSentEvent
+})
+
+dc.subscribe('hono-email:failed', (event) => {
+  // event is MailFailedEvent
+})
+```
 
 ---
 

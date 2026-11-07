@@ -12,8 +12,9 @@ import type {
   EmailSendOptions,
   SendEmailReceipt,
 } from './email'
-import { renderEmailMessage } from './email'
+import { renderEmailMessage, sendEmail } from './email'
 import type { RenderOptions } from './index'
+import { mergeTelemetryHooks, type MailTelemetryHooks } from './telemetry'
 
 /**
  * Context passed to a Mailable builder.
@@ -111,6 +112,7 @@ export function isMailable<TData = unknown>(value: unknown): value is Mailable<T
  * @property headers - Default custom email headers.
  * @property render - Default render options.
  * @property retry - Default retry options.
+ * @property hooks - Default telemetry lifecycle hooks.
  */
 export type MailerOptions = {
   adapter: EmailAdapter
@@ -119,6 +121,7 @@ export type MailerOptions = {
   headers?: EmailHeaders
   render?: RenderOptions
   retry?: EmailSendOptions['retry']
+  hooks?: MailTelemetryHooks
 }
 
 /**
@@ -134,6 +137,7 @@ export type SendMailableOptions<TData = void> = EmailSendOptions & {
   render?: RenderOptions
   idempotencyKey?: string
   locale?: string
+  hooks?: MailTelemetryHooks
 } & ([TData] extends [void]
     ? { data?: undefined }
     : [TData] extends [undefined]
@@ -145,6 +149,7 @@ export type SendMailableOptions<TData = void> = EmailSendOptions & {
  */
 export type SendDraftOptions = Omit<EmailMessageDraft, 'from'> & {
   from?: EmailAddress
+  hooks?: MailTelemetryHooks
 } & EmailSendOptions
 
 /**
@@ -301,6 +306,7 @@ export function createMailer(defaults: MailerOptions, customRenderer?: EmailRend
     idempotencyKey?: string
     locale?: string
     data?: unknown
+    hooks?: MailTelemetryHooks
   }
 
   type AnyRenderMailableOptions = {
@@ -358,6 +364,7 @@ export function createMailer(defaults: MailerOptions, customRenderer?: EmailRend
       const renderOptions = mergeRenderOptions(defaults.render, built.render, opts.render)
       const retry = opts.retry ?? defaults.retry
       const signal = opts.signal
+      const mergedHooks = mergeTelemetryHooks(defaults.hooks, opts.hooks)
 
       const draft: EmailMessageDraft = {
         from,
@@ -378,18 +385,13 @@ export function createMailer(defaults: MailerOptions, customRenderer?: EmailRend
         ...(renderOptions !== undefined ? { render: renderOptions } : {}),
       }
 
-      const message = await renderEmailMessage(renderer, draft)
-      const sendOpts: EmailSendOptions | undefined =
-        signal !== undefined || retry !== undefined
-          ? {
-              ...(signal !== undefined ? { signal } : {}),
-              ...(retry !== undefined ? { retry } : {}),
-            }
-          : undefined
-
-      return sendOpts !== undefined
-        ? defaults.adapter.send(message, sendOpts)
-        : defaults.adapter.send(message)
+      return sendEmail(renderer, {
+        ...draft,
+        adapter: defaults.adapter,
+        ...(signal !== undefined ? { signal } : {}),
+        ...(retry !== undefined ? { retry } : {}),
+        ...(mergedHooks !== undefined ? { hooks: mergedHooks } : {}),
+      })
     }
 
     if (!isSendDraftOptions(mailOrDraft)) {
@@ -408,6 +410,7 @@ export function createMailer(defaults: MailerOptions, customRenderer?: EmailRend
     const renderOptions = mergeRenderOptions(defaults.render, draftInput.render)
     const retry = draftInput.retry ?? defaults.retry
     const signal = draftInput.signal
+    const mergedHooks = mergeTelemetryHooks(defaults.hooks, draftInput.hooks)
 
     const draft: EmailMessageDraft = {
       ...draftInput,
@@ -417,18 +420,13 @@ export function createMailer(defaults: MailerOptions, customRenderer?: EmailRend
       ...(renderOptions !== undefined ? { render: renderOptions } : {}),
     }
 
-    const message = await renderEmailMessage(renderer, draft)
-    const sendOpts: EmailSendOptions | undefined =
-      signal !== undefined || retry !== undefined
-        ? {
-            ...(signal !== undefined ? { signal } : {}),
-            ...(retry !== undefined ? { retry } : {}),
-          }
-        : undefined
-
-    return sendOpts !== undefined
-      ? defaults.adapter.send(message, sendOpts)
-      : defaults.adapter.send(message)
+    return sendEmail(renderer, {
+      ...draft,
+      adapter: defaults.adapter,
+      ...(signal !== undefined ? { signal } : {}),
+      ...(retry !== undefined ? { retry } : {}),
+      ...(mergedHooks !== undefined ? { hooks: mergedHooks } : {}),
+    })
   }
 
   async function render<TData = void>(

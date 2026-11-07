@@ -89,6 +89,19 @@ export type {
   SendDraftOptions,
   SendMailableOptions,
 } from './mailer'
+export type {
+  DiagnosticsChannelLike,
+  MailEvent,
+  MailFailedEvent,
+  MailSentEvent,
+  MailTelemetryHooks,
+} from './telemetry'
+export {
+  dispatchMailEvent,
+  extractMessageRecipients,
+  mergeTelemetryHooks,
+  publishDiagnostics,
+} from './telemetry'
 import {
   MARKDOWN_TAILWIND_PARENT_REQUIRED_ATTRIBUTE_NAME,
   MARKDOWN_TAILWIND_PARENT_REQUIRED_ERROR_MESSAGE,
