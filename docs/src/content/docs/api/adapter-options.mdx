@@ -30,6 +30,7 @@ type SmtpTransportOptions = {
     maxConnections?: number
     maxMessages?: number
   }
+  recipientRejectionPolicy?: SmtpRecipientRejectionPolicy
 }
 ```
 
@@ -104,6 +105,15 @@ Attachment size limits.
 - `maxConnections`: Maximum number of concurrent connections in the pool (Default: `1`).
 - `maxMessages`: Maximum number of messages to send over a single connection before retiring it.
 
+#### `recipientRejectionPolicy` <Badge text="Optional" variant="note" size="small" />
+
+**Type:** `SmtpRecipientRejectionPolicy` (`'deliver-accepted' | 'reject-all'`) · **Default:** `'deliver-accepted'`
+
+Behavior when one or more recipients are rejected during the SMTP `RCPT TO` command:
+
+- `'deliver-accepted'` (default): Sends `DATA` for any accepted recipients, returning rejected recipients in `SendEmailReceipt.rejected`.
+- `'reject-all'`: Aborts the transaction with `RSET` if any recipient is rejected. No email is sent to any recipient, returning a failed receipt with `category: 'recipients_rejected'`. Useful in job queues or outbox workflows to prevent duplicate sends upon retry.
+
 ---
 
 ### SmtpSendOptions
@@ -113,6 +123,7 @@ Options passed to `smtp.send(message, options)`.
 ```ts
 type SmtpSendOptions = {
   dkim?: EmailDkimOptions
+  recipientRejectionPolicy?: SmtpRecipientRejectionPolicy
 }
 ```
 
@@ -121,6 +132,12 @@ type SmtpSendOptions = {
 **Type:** `EmailDkimOptions`
 
 Signing settings for this send. Takes precedence over legacy `message.dkim`, then the transport's `dkim` default, without merging configurations. Omit to inherit those settings. See [DKIM signing](/adapters/smtp/#dkim-signing) for migration from `message.dkim`.
+
+#### `recipientRejectionPolicy` <Badge text="Optional" variant="note" size="small" />
+
+**Type:** `SmtpRecipientRejectionPolicy` (`'deliver-accepted' | 'reject-all'`)
+
+Overrides the transport-level `recipientRejectionPolicy` for this send.
 
 ---
 

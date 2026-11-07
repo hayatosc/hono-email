@@ -783,6 +783,193 @@ describe('sendEmail over SMTP', () => {
     })
   })
 
+  test('resets transaction and returns failed receipt when recipientRejectionPolicy is reject-all and a recipient is rejected', async () => {
+    const mock = createMockConnector(async (server) => {
+      await server.writeResponse('220 smtp.example.com ready\r\n')
+      expect(await server.readLine()).toBe('EHLO localhost')
+      await server.writeResponse('250 smtp.example.com\r\n')
+      expect(await server.readLine()).toBe('MAIL FROM:<sender@example.com>')
+      await server.writeResponse('250 OK\r\n')
+      expect(await server.readLine()).toBe('RCPT TO:<ok@example.com>')
+      await server.writeResponse('250 Accepted\r\n')
+      expect(await server.readLine()).toBe('RCPT TO:<bad@example.com>')
+      await server.writeResponse('550 User unknown\r\n')
+      expect(await server.readLine()).toBe('RSET')
+      await server.writeResponse('250 OK\r\n')
+      expect(await server.readLine()).toBe('QUIT')
+      await server.writeResponse('221 bye\r\n')
+    })
+
+    const smtp = new SmtpTransport({
+      connector: mock.connector,
+      hostname: 'smtp.example.com',
+      port: 465,
+      recipientRejectionPolicy: 'reject-all',
+      secure: true,
+    })
+
+    const receipt = await smtp.send({
+      from: 'sender@example.com',
+      html: '<p>Hello</p>',
+      subject: 'Hello',
+      text: 'Hello',
+      to: ['ok@example.com', 'bad@example.com'],
+    })
+    await smtp.close()
+    await mock.wait()
+
+    expect(receipt).toMatchObject({
+      accepted: [],
+      errorMessages: ['SMTP rejected 1 recipient(s): bad@example.com'],
+      rejected: ['bad@example.com'],
+      successful: false,
+      category: 'recipients_rejected',
+      code: 550,
+      permanent: true,
+    })
+  })
+
+  test('marks failure as transient when reject-all policy encounters 4xx rejection', async () => {
+    const mock = createMockConnector(async (server) => {
+      await server.writeResponse('220 smtp.example.com ready\r\n')
+      expect(await server.readLine()).toBe('EHLO localhost')
+      await server.writeResponse('250 smtp.example.com\r\n')
+      expect(await server.readLine()).toBe('MAIL FROM:<sender@example.com>')
+      await server.writeResponse('250 OK\r\n')
+      expect(await server.readLine()).toBe('RCPT TO:<ok@example.com>')
+      await server.writeResponse('250 Accepted\r\n')
+      expect(await server.readLine()).toBe('RCPT TO:<busy@example.com>')
+      await server.writeResponse('451 Mailbox busy\r\n')
+      expect(await server.readLine()).toBe('RSET')
+      await server.writeResponse('250 OK\r\n')
+      expect(await server.readLine()).toBe('QUIT')
+      await server.writeResponse('221 bye\r\n')
+    })
+
+    const smtp = new SmtpTransport({
+      connector: mock.connector,
+      hostname: 'smtp.example.com',
+      port: 465,
+      recipientRejectionPolicy: 'reject-all',
+      secure: true,
+    })
+
+    const receipt = await smtp.send({
+      from: 'sender@example.com',
+      html: '<p>Hello</p>',
+      subject: 'Hello',
+      text: 'Hello',
+      to: ['ok@example.com', 'busy@example.com'],
+    })
+    await smtp.close()
+    await mock.wait()
+
+    expect(receipt).toMatchObject({
+      accepted: [],
+      errorMessages: ['SMTP rejected 1 recipient(s): busy@example.com'],
+      rejected: ['busy@example.com'],
+      successful: false,
+      category: 'recipients_rejected',
+      code: 451,
+      permanent: false,
+    })
+  })
+
+  test('allows per-send override of recipientRejectionPolicy', async () => {
+    // 1. Transport is deliver-accepted (default), overridden by per-send reject-all
+    const mock1 = createMockConnector(async (server) => {
+      await server.writeResponse('220 smtp.example.com ready\r\n')
+      expect(await server.readLine()).toBe('EHLO localhost')
+      await server.writeResponse('250 smtp.example.com\r\n')
+      expect(await server.readLine()).toBe('MAIL FROM:<sender@example.com>')
+      await server.writeResponse('250 OK\r\n')
+      expect(await server.readLine()).toBe('RCPT TO:<ok@example.com>')
+      await server.writeResponse('250 Accepted\r\n')
+      expect(await server.readLine()).toBe('RCPT TO:<bad@example.com>')
+      await server.writeResponse('550 User unknown\r\n')
+      expect(await server.readLine()).toBe('RSET')
+      await server.writeResponse('250 OK\r\n')
+      expect(await server.readLine()).toBe('QUIT')
+      await server.writeResponse('221 bye\r\n')
+    })
+
+    const smtp1 = new SmtpTransport({
+      connector: mock1.connector,
+      hostname: 'smtp.example.com',
+      port: 465,
+      secure: true,
+    })
+
+    const receipt1 = await smtp1.send(
+      {
+        from: 'sender@example.com',
+        html: '<p>Hello</p>',
+        subject: 'Hello',
+        text: 'Hello',
+        to: ['ok@example.com', 'bad@example.com'],
+      },
+      { recipientRejectionPolicy: 'reject-all' },
+    )
+    await smtp1.close()
+    await mock1.wait()
+
+    expect(receipt1).toMatchObject({
+      accepted: [],
+      errorMessages: ['SMTP rejected 1 recipient(s): bad@example.com'],
+      rejected: ['bad@example.com'],
+      successful: false,
+      category: 'recipients_rejected',
+      code: 550,
+      permanent: true,
+    })
+
+    // 2. Transport is reject-all, overridden by per-send deliver-accepted
+    const mock2 = createMockConnector(async (server) => {
+      await server.writeResponse('220 smtp.example.com ready\r\n')
+      expect(await server.readLine()).toBe('EHLO localhost')
+      await server.writeResponse('250 smtp.example.com\r\n')
+      expect(await server.readLine()).toBe('MAIL FROM:<sender@example.com>')
+      await server.writeResponse('250 OK\r\n')
+      expect(await server.readLine()).toBe('RCPT TO:<ok@example.com>')
+      await server.writeResponse('250 Accepted\r\n')
+      expect(await server.readLine()).toBe('RCPT TO:<bad@example.com>')
+      await server.writeResponse('550 User unknown\r\n')
+      expect(await server.readLine()).toBe('DATA')
+      await server.writeResponse('354 Continue\r\n')
+      await server.readData()
+      await server.writeResponse('250 queued\r\n')
+      expect(await server.readLine()).toBe('QUIT')
+      await server.writeResponse('221 bye\r\n')
+    })
+
+    const smtp2 = new SmtpTransport({
+      connector: mock2.connector,
+      hostname: 'smtp.example.com',
+      port: 465,
+      recipientRejectionPolicy: 'reject-all',
+      secure: true,
+    })
+
+    const receipt2 = await smtp2.send(
+      {
+        from: 'sender@example.com',
+        html: '<p>Hello</p>',
+        subject: 'Hello',
+        text: 'Hello',
+        to: ['ok@example.com', 'bad@example.com'],
+      },
+      { recipientRejectionPolicy: 'deliver-accepted' },
+    )
+    await smtp2.close()
+    await mock2.wait()
+
+    expect(receipt2.successful).toBe(true)
+    if (receipt2.successful) {
+      expect(receipt2.accepted).toEqual(['ok@example.com'])
+      expect(receipt2.rejected).toEqual(['bad@example.com'])
+    }
+  })
+
   test('signs outgoing messages with transport-level DKIM settings', async () => {
     const privateKey = await createDkimPrivateKey()
     let data = ''
