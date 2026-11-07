@@ -81,6 +81,10 @@
     "./mailgun": {
       "types": "./dist/adapter/mailgun/index.d.ts",
       "import": "./dist/adapter/mailgun/index.js"
+    },
+    "./testing": {
+      "types": "./dist/adapter/testing/index.d.ts",
+      "import": "./dist/adapter/testing/index.js"
     }
   },
   "publishConfig": {

@@ -1,0 +1,162 @@
+---
+title: Testing & Development Adapters
+description: In-memory, file, and log adapters for automated testing and local development with hono-email.
+---
+
+`hono-email/testing` provides adapters and assertion helpers designed for automated testing and local development without making real network requests.
+
+```tsx
+import { InMemoryAdapter, FileAdapter, LogAdapter } from 'hono-email/testing'
+```
+
+---
+
+## InMemoryAdapter
+
+`InMemoryAdapter` records sent emails in memory and provides assertions and extraction helpers for unit and integration testing.
+
+### Basic Example
+
+```tsx
+import { expect, test } from 'vitest'
+import { Body, Html, Text, sendEmail } from 'hono-email'
+import { InMemoryAdapter } from 'hono-email/testing'
+
+test('sends welcome email to the user', async () => {
+  const mailbox = new InMemoryAdapter()
+
+  await sendEmail({
+    adapter: mailbox,
+    from: 'support@example.com',
+    to: 'ada@example.com',
+    subject: 'Welcome to Acme',
+    jsx: (
+      <Html>
+        <Body>
+          <Text>
+            Welcome! <a href="/verify?token=secret123&amp;type=email">Verify your email</a>
+          </Text>
+        </Body>
+      </Html>
+    ),
+  })
+
+  // Assert an email was sent matching the criteria
+  const mail = mailbox.assertSent({ to: 'ada@example.com', subject: 'Welcome to Acme' })
+
+  // Extract links as decoded URL instances
+  const verifyLink = mail.link('/verify')
+  expect(verifyLink.pathname).toBe('/verify')
+  expect(verifyLink.searchParams.get('token')).toBe('secret123')
+  expect(verifyLink.searchParams.get('type')).toBe('email')
+})
+```
+
+### Assertions
+
+`InMemoryAdapter` provides assertion methods that throw informative errors listing all recorded emails if no match is found:
+
+```tsx
+// Assert matching email was sent (returns the matched RecordedEmail)
+const mail = mailbox.assertSent({
+  to: 'user@example.com',
+  from: 'support@example.com',
+  subject: /Welcome/,
+  textIncludes: 'Welcome',
+  htmlIncludes: 'Verify your email',
+})
+
+// Or pass a custom predicate function
+mailbox.assertSent((mail) => mail.recipients.length === 1)
+
+// Assert no matching email was sent
+mailbox.assertNotSent({ to: 'spammer@example.com' })
+```
+
+### Link & Attachment Helpers
+
+`RecordedEmail` instances returned from `mailbox.assertSent()` or found via `mailbox.find()` provide convenience accessors:
+
+- **`mail.link(pattern?)`**: Finds the first matching link (`<a href="...">` in HTML or URL in text) as a parsed `URL` instance with HTML entities (such as `&amp;`) fully decoded. Relative URLs (e.g. `/reset-password?token=...`) are automatically resolved against `http://localhost`.
+- **`mail.attachment(filenameOrCid)`**: Finds a resolved attachment by file name or `cid`.
+
+```tsx
+const mail = mailbox.assertSent({ to: 'ada@example.com' })
+
+// Verify magic link or reset token
+const token = mail.link('/reset-password').searchParams.get('token')
+
+// Verify attachment content
+const invoice = mail.attachment('invoice.pdf')
+expect(invoice.contentType).toBe('application/pdf')
+```
+
+### Simulating Failures
+
+Use `failNext()` to verify error handling paths:
+
+```tsx
+// Force the next send() to fail with an error
+mailbox.failNext(new Error('Connection timeout'))
+
+const receipt = await sendWelcomeEmail(mailbox, 'user@example.com')
+expect(receipt.successful).toBe(false)
+expect(receipt.errorMessages).toContain('Connection timeout')
+
+// Subsequent sends will succeed normally
+```
+
+### Inspecting & Resetting
+
+- **`mailbox.mails`**: Read-only array of all `RecordedEmail` objects.
+- **`mailbox.find(matcher?)`**: Returns the most recent matching `RecordedEmail`, or `undefined`.
+- **`mailbox.filter(matcher?)`**: Returns all matching `RecordedEmail` objects.
+- **`mailbox.clear()`**: Clears recorded emails and any pending simulated failure.
+
+---
+
+## FileAdapter
+
+`FileAdapter` writes sent emails to disk in RFC 5322 MIME (`.eml`) format, allowing you to open and preview messages and attachments in desktop email clients such as Apple Mail or Thunderbird.
+
+```tsx
+import { FileAdapter } from 'hono-email/testing'
+
+const adapter = FileAdapter({
+  directory: './tmp/mails',
+})
+
+await sendEmail({
+  adapter,
+  from: 'support@example.com',
+  to: 'user@example.com',
+  subject: 'Order Confirmation',
+  jsx: <OrderEmail />,
+})
+// Saves to ./tmp/mails/2026-11-07T01-00-00-000Z-_message-id_.eml
+```
+
+### Options
+
+- **`directory`**: Directory path where `.eml` files will be saved.
+- **`writeFile`** _(optional)_: Custom file writer function `(path: string, content: string) => Promise<void>`. When omitted, uses `node:fs/promises` (`mkdir` and `writeFile`).
+
+---
+
+## LogAdapter
+
+`LogAdapter` logs email metadata and optionally full content to the console or a custom logger.
+
+```tsx
+import { LogAdapter } from 'hono-email/testing'
+
+const adapter = LogAdapter({
+  includeBody: true, // Output plain text and HTML in the log
+  logger: (msg) => console.log(msg),
+})
+```
+
+### Options
+
+- **`logger`** _(optional)_: Logging function `(message: string) => void` (default: `console.log`).
+- **`includeBody`** _(optional)_: Whether to include plain text and HTML body in log output (default: `false`).

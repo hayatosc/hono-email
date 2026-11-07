@@ -1,0 +1,387 @@
+import { resolveEmailAttachments, type ResolvedEmailAttachment } from '../attachment'
+import type { EmailAdapter, EmailMessage, FailedSendReceipt, SendEmailReceipt } from '../index'
+import { addressToPath, buildRawEmailMessage, toAddressList } from '../message'
+
+export type {
+  EmailAddress,
+  EmailAdapter,
+  EmailAttachment,
+  EmailAttachmentContent,
+  EmailAttachmentDisposition,
+  EmailAttachmentEncoding,
+  EmailAttachmentLimits,
+  EmailErrorCategory,
+  EmailHeaders,
+  EmailMessage,
+  EmailMessageDraft,
+  EmailTransport,
+  FailedSendReceipt,
+  SendEmailOptions,
+  SendEmailReceipt,
+  SuccessfulSendReceipt,
+} from '../index'
+
+export type RecordedEmail = {
+  messageId: string
+  message: EmailMessage
+  raw: string
+  sentAt: Date
+  recipients: string[]
+  attachments: ResolvedEmailAttachment[]
+  /**
+   * HTML およびテキスト内のリンク一覧（出現順・重複排除済み）
+   */
+  links: URL[]
+  /**
+   * 部分文字列または正規表現に一致する最初のリンクを URL として返します。見つからない場合は Error を投げます。
+   */
+  link(matcher?: string | RegExp): URL
+  /**
+   * ファイル名または CID に一致する添付ファイルを返します。見つからない場合は Error を投げます。
+   */
+  attachment(filenameOrCid: string): ResolvedEmailAttachment
+}
+
+export type EmailMatcher =
+  | ((mail: RecordedEmail) => boolean)
+  | {
+      to?: string | RegExp
+      from?: string | RegExp
+      subject?: string | RegExp
+      textIncludes?: string
+      htmlIncludes?: string
+    }
+
+const HREF_PATTERN = /<a\b[^>]*?\bhref=(?:"([^"]*)"|'([^']*)'|([^\s>]+))[^>]*>/gi
+const TEXT_URL_PATTERN = /\bhttps?:\/\/[^\s<>"'()]+/gi
+
+const decodeHtmlEntitiesForUrl = (raw: string): string =>
+  raw
+    .replace(/&amp;/gi, '&')
+    .replace(/&#38;/g, '&')
+    .replace(/&#x26;/gi, '&')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+
+const parseCandidateUrl = (raw: string, baseUrl = 'http://localhost'): URL | undefined => {
+  const trimmed = raw.trim()
+  if (!trimmed) {
+    return undefined
+  }
+  try {
+    return new URL(trimmed)
+  } catch {
+    try {
+      return new URL(trimmed, baseUrl)
+    } catch {
+      return undefined
+    }
+  }
+}
+
+export const extractLinks = (html?: string, text?: string): URL[] => {
+  const urls: URL[] = []
+  const seen = new Set<string>()
+
+  const addUrl = (raw: string | undefined): void => {
+    if (!raw) {
+      return
+    }
+    const decoded = decodeHtmlEntitiesForUrl(raw)
+    const parsed = parseCandidateUrl(decoded)
+    if (parsed && !seen.has(parsed.href)) {
+      seen.add(parsed.href)
+      urls.push(parsed)
+    }
+  }
+
+  if (html) {
+    for (const match of html.matchAll(HREF_PATTERN)) {
+      addUrl(match[1] ?? match[2] ?? match[3])
+    }
+  }
+
+  if (text) {
+    for (const match of text.matchAll(TEXT_URL_PATTERN)) {
+      const cleaned = match[0].replace(/[.,:;!?]+$/, '')
+      addUrl(cleaned)
+    }
+  }
+
+  return urls
+}
+
+export class InMemoryAdapter implements EmailAdapter {
+  #mails: RecordedEmail[] = []
+  #nextFailure: Partial<FailedSendReceipt> | Error | undefined
+
+  get mails(): readonly RecordedEmail[] {
+    return this.#mails
+  }
+
+  /**
+   * 次回の send() 呼び出しを失敗させます
+   */
+  failNext(
+    failure: Partial<FailedSendReceipt> | Error = new Error('Simulated mail failure'),
+  ): void {
+    this.#nextFailure = failure
+  }
+
+  clear(): void {
+    this.#mails = []
+    this.#nextFailure = undefined
+  }
+
+  find(matcher?: EmailMatcher): RecordedEmail | undefined {
+    return [...this.#mails].reverse().find((mail) => this.#matches(mail, matcher))
+  }
+
+  filter(matcher?: EmailMatcher): RecordedEmail[] {
+    return this.#mails.filter((mail) => this.#matches(mail, matcher))
+  }
+
+  assertSent(matcher?: EmailMatcher): RecordedEmail {
+    const found = this.find(matcher)
+    if (found) {
+      return found
+    }
+    const summary =
+      this.#mails.length === 0
+        ? 'No emails were sent.'
+        : `Sent emails:\n${this.#mails
+            .map((m) => `- to: ${m.recipients.join(', ')} | subject: "${m.message.subject}"`)
+            .join('\n')}`
+    throw new Error(`Expected matching email to be sent, but none matched. ${summary}`)
+  }
+
+  assertNotSent(matcher?: EmailMatcher): void {
+    const found = this.find(matcher)
+    if (found) {
+      throw new Error(
+        `Expected no matching email to be sent, but found mail to ${found.recipients.join(', ')} with subject "${found.message.subject}".`,
+      )
+    }
+  }
+
+  async send(message: EmailMessage): Promise<SendEmailReceipt> {
+    const recipients = [
+      ...toAddressList(message.to),
+      ...toAddressList(message.cc),
+      ...toAddressList(message.bcc),
+    ].map(addressToPath)
+
+    if (this.#nextFailure !== undefined) {
+      const failure = this.#nextFailure
+      this.#nextFailure = undefined
+      if (failure instanceof Error) {
+        return {
+          successful: false,
+          accepted: [],
+          rejected: recipients,
+          errorMessages: [failure.message],
+          cause: failure,
+        }
+      }
+      return {
+        successful: false,
+        accepted: failure.accepted ?? [],
+        rejected: failure.rejected ?? recipients,
+        errorMessages: failure.errorMessages ?? ['Simulated mail failure'],
+        ...failure,
+      }
+    }
+
+    const attachments = await resolveEmailAttachments(message.attachments)
+    const { messageId, raw } = buildRawEmailMessage(message, {
+      resolvedAttachments: attachments,
+    })
+    const links = extractLinks(message.html, message.text)
+
+    const recorded: RecordedEmail = {
+      messageId,
+      message,
+      raw,
+      sentAt: new Date(),
+      recipients,
+      attachments,
+      links,
+      link(linkMatcher) {
+        const matched = links.find((u) => {
+          if (linkMatcher === undefined) {
+            return true
+          }
+          if (typeof linkMatcher === 'string') {
+            return u.href.includes(linkMatcher) || u.pathname.includes(linkMatcher)
+          }
+          return linkMatcher.test(u.href) || linkMatcher.test(u.pathname)
+        })
+        if (!matched) {
+          throw new Error(
+            `No link matching ${String(linkMatcher)} found. Available links: ${links.map((l) => l.href).join(', ') || '(none)'}`,
+          )
+        }
+        return matched
+      },
+      attachment(filenameOrCid) {
+        const matched = attachments.find(
+          (a) => a.filename === filenameOrCid || a.cid === filenameOrCid,
+        )
+        if (!matched) {
+          const list = attachments
+            .map((a) => a.filename ?? a.cid)
+            .filter(Boolean)
+            .join(', ')
+          throw new Error(
+            `No attachment "${filenameOrCid}" found. Available attachments: ${list || '(none)'}`,
+          )
+        }
+        return matched
+      },
+    }
+
+    this.#mails.push(recorded)
+
+    return {
+      successful: true,
+      messageId,
+      accepted: recipients,
+      rejected: [],
+      response: '250 2.0.0 OK (InMemoryAdapter)',
+    }
+  }
+
+  #matches(mail: RecordedEmail, matcher?: EmailMatcher): boolean {
+    if (!matcher) {
+      return true
+    }
+    if (typeof matcher === 'function') {
+      return matcher(mail)
+    }
+    if (matcher.to !== undefined) {
+      const toMatch =
+        typeof matcher.to === 'string'
+          ? mail.recipients.includes(matcher.to)
+          : mail.recipients.some((r) => (matcher.to as RegExp).test(r))
+      if (!toMatch) {
+        return false
+      }
+    }
+    if (matcher.from !== undefined) {
+      const fromAddress = addressToPath(mail.message.from)
+      const fromMatch =
+        typeof matcher.from === 'string'
+          ? fromAddress === matcher.from ||
+            (typeof mail.message.from !== 'string' &&
+              Boolean(mail.message.from.name?.includes(matcher.from)))
+          : matcher.from.test(fromAddress) ||
+            (typeof mail.message.from !== 'string' &&
+              Boolean(mail.message.from.name && matcher.from.test(mail.message.from.name)))
+      if (!fromMatch) {
+        return false
+      }
+    }
+    if (matcher.subject !== undefined) {
+      const subjectMatch =
+        typeof matcher.subject === 'string'
+          ? mail.message.subject.includes(matcher.subject)
+          : matcher.subject.test(mail.message.subject)
+      if (!subjectMatch) {
+        return false
+      }
+    }
+    if (matcher.textIncludes !== undefined && !mail.message.text?.includes(matcher.textIncludes)) {
+      return false
+    }
+    if (matcher.htmlIncludes !== undefined && !mail.message.html?.includes(matcher.htmlIncludes)) {
+      return false
+    }
+    return true
+  }
+}
+
+export type FileAdapterOptions = {
+  directory: string
+  /**
+   * カスタムファイル書き込み関数（Node/Bun/Deno 抽象化用、省略時は node:fs/promises を動的 import）
+   */
+  writeFile?: (path: string, content: string) => Promise<void>
+}
+
+export const FileAdapter = (options: FileAdapterOptions): EmailAdapter => ({
+  async send(message: EmailMessage): Promise<SendEmailReceipt> {
+    const recipients = [
+      ...toAddressList(message.to),
+      ...toAddressList(message.cc),
+      ...toAddressList(message.bcc),
+    ].map(addressToPath)
+
+    const attachments = await resolveEmailAttachments(message.attachments)
+    const { messageId, raw } = buildRawEmailMessage(message, {
+      resolvedAttachments: attachments,
+    })
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
+    const safeId = messageId.replace(/[<>@/:*?"|\\]/g, '_')
+    const directory = options.directory.replace(/[/\\]$/, '')
+    const filePath = `${directory}/${timestamp}-${safeId}.eml`
+
+    if (options.writeFile) {
+      await options.writeFile(filePath, raw)
+    } else {
+      const { mkdir, writeFile } = await import('node:fs/promises')
+      await mkdir(options.directory, { recursive: true })
+      await writeFile(filePath, raw, 'utf8')
+    }
+
+    return {
+      successful: true,
+      messageId,
+      accepted: recipients,
+      rejected: [],
+      response: `Written to ${filePath}`,
+    }
+  },
+})
+
+export type LogAdapterOptions = {
+  /**
+   * カスタムロガー関数（省略時は console.log）
+   */
+  logger?: (message: string) => void
+  /**
+   * 本文（text / html）をログ出力に含めるかどうか（デフォルト: false）
+   */
+  includeBody?: boolean
+}
+
+export const LogAdapter = (options: LogAdapterOptions = {}): EmailAdapter => ({
+  async send(message: EmailMessage): Promise<SendEmailReceipt> {
+    const recipients = [
+      ...toAddressList(message.to),
+      ...toAddressList(message.cc),
+      ...toAddressList(message.bcc),
+    ].map(addressToPath)
+    const from = addressToPath(message.from)
+    const attachments = await resolveEmailAttachments(message.attachments)
+    const { messageId } = buildRawEmailMessage(message, {
+      resolvedAttachments: attachments,
+    })
+    const logger = options.logger ?? console.log
+
+    let logText = `[LogAdapter] Mail sent: ID=${messageId} From=${from} To=${recipients.join(', ')} Subject="${message.subject}"`
+    if (options.includeBody) {
+      logText += `\nText:\n${message.text ?? '(none)'}\nHTML:\n${message.html ?? '(none)'}`
+    }
+    logger(logText)
+
+    return {
+      successful: true,
+      messageId,
+      accepted: recipients,
+      rejected: [],
+      response: '250 2.0.0 OK (LogAdapter)',
+    }
+  },
+})
