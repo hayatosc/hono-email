@@ -261,10 +261,11 @@ export class InMemoryAdapter implements EmailAdapter {
       return matcher(mail)
     }
     if (matcher.to !== undefined) {
+      const to = matcher.to
       const toMatch =
-        typeof matcher.to === 'string'
-          ? mail.recipients.includes(matcher.to)
-          : mail.recipients.some((r) => (matcher.to as RegExp).test(r))
+        typeof to === 'string'
+          ? mail.recipients.includes(to)
+          : mail.recipients.some((r) => to.test(r))
       if (!toMatch) {
         return false
       }

@@ -69,7 +69,11 @@ describe('InMemoryAdapter', () => {
     expect(receipt.rejected).toEqual([])
     expect(adapter.mails).toHaveLength(1)
 
-    const recorded = adapter.mails[0]!
+    const recorded = adapter.mails[0]
+    expect(recorded).toBeDefined()
+    if (!recorded || !receipt.successful) {
+      throw new Error('Expected recorded email and successful receipt')
+    }
     expect(recorded.messageId).toBe(receipt.messageId)
     expect(recorded.recipients).toEqual(['alice@example.com'])
     expect(recorded.message.subject).toBe('Welcome to Acme!')
@@ -105,7 +109,7 @@ describe('InMemoryAdapter', () => {
     const mail = adapter.assertSent()
     const invoice = mail.attachment('invoice.txt')
     expect(invoice.contentType).toBe('text/plain')
-    expect(new TextDecoder().decode(invoice.content as Uint8Array)).toBe('Invoice Content')
+    expect(new TextDecoder().decode(invoice.content)).toBe('Invoice Content')
 
     const logo = mail.attachment('logo-cid')
     expect(logo.filename).toBe('logo.png')
@@ -182,8 +186,10 @@ describe('InMemoryAdapter', () => {
     adapter.failNext(new Error('SMTP connection timeout'))
     const failedReceipt1 = await adapter.send(createSampleMessage())
     expect(failedReceipt1.successful).toBe(false)
-    expect(failedReceipt1.errorMessages).toEqual(['SMTP connection timeout'])
-    expect(failedReceipt1.rejected).toEqual(['alice@example.com'])
+    if (!failedReceipt1.successful) {
+      expect(failedReceipt1.errorMessages).toEqual(['SMTP connection timeout'])
+      expect(failedReceipt1.rejected).toEqual(['alice@example.com'])
+    }
 
     // Next call succeeds because failNext is consumed
     const successReceipt = await adapter.send(createSampleMessage())
@@ -196,7 +202,9 @@ describe('InMemoryAdapter', () => {
     })
     const failedReceipt2 = await adapter.send(createSampleMessage())
     expect(failedReceipt2.successful).toBe(false)
-    expect(failedReceipt2.errorMessages).toEqual(['Rate limit exceeded'])
+    if (!failedReceipt2.successful) {
+      expect(failedReceipt2.errorMessages).toEqual(['Rate limit exceeded'])
+    }
 
     // Next call succeeds again
     const successReceipt2 = await adapter.send(createSampleMessage())
@@ -232,7 +240,11 @@ describe('FileAdapter', () => {
     expect(receipt.response).toMatch(/^Written to \/tmp\/mails\/.*\.eml$/)
     expect(writtenFiles).toHaveLength(1)
 
-    const file = writtenFiles[0]!
+    const file = writtenFiles[0]
+    expect(file).toBeDefined()
+    if (!file) {
+      throw new Error('Expected written file')
+    }
     expect(file.path).toMatch(/^\/tmp\/mails\/[\d-TZ]+-.*\.eml$/)
     expect(file.content).toContain('Subject: Welcome to Acme!')
     expect(file.content).toContain('From: "Acme Support" <support@example.com>')
