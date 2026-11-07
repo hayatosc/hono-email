@@ -13,6 +13,7 @@ import type { SmtpSession } from './protocol'
 import { failedReceipt, isClosedTransportError, SmtpTransportClosedError } from './receipt'
 import type {
   SmtpConnector,
+  SmtpRecipientRejectionPolicy,
   SmtpSecureTransport,
   SmtpSendOptions,
   SmtpSocket,
@@ -46,6 +47,7 @@ export type {
   SmtpAuth,
   SmtpConnector,
   SmtpConnectorOptions,
+  SmtpRecipientRejectionPolicy,
   SmtpSecureTransport,
   SmtpSendOptions,
   SmtpSendResult,
@@ -103,6 +105,7 @@ export class SmtpTransport implements EmailAdapter {
   readonly #limits: SmtpTransportOptions['limits']
   readonly #maxConnections: number
   readonly #maxMessages: number | undefined
+  readonly #recipientRejectionPolicy: SmtpRecipientRejectionPolicy | undefined
   readonly #socketTimeout: number | undefined
   #activeSends = new Set<Promise<SendEmailReceipt>>()
   #closed = false
@@ -123,6 +126,7 @@ export class SmtpTransport implements EmailAdapter {
     this.#limits = options.limits
     this.#maxConnections = resolveMaxConnections(options.pool?.maxConnections)
     this.#maxMessages = resolveMaxMessages(options.pool?.maxMessages)
+    this.#recipientRejectionPolicy = options.recipientRejectionPolicy
     this.#socketTimeout = options.socketTimeout
   }
 
@@ -263,10 +267,14 @@ export class SmtpTransport implements EmailAdapter {
           )
         }
 
+        const recipientRejectionPolicy =
+          options?.recipientRejectionPolicy ?? this.#recipientRejectionPolicy ?? 'deliver-accepted'
+
         const sendPromise = slot.session.send({
           mailFrom: envelope.mailFrom,
           rawMessage,
           recipients: envelope.recipients,
+          recipientRejectionPolicy,
         })
 
         if (options?.signal) {

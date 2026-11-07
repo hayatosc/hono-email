@@ -114,6 +114,7 @@ For the full list of configuration options, see the [SMTP Options API Reference]
 - `dkim` can be configured on `SmtpTransport` or overridden per message to add a `DKIM-Signature` header before SMTP delivery.
 - `envelope` lets you override the SMTP envelope sender and recipients without changing the visible `From` / `To` headers.
 - `to`, `cc`, `bcc`, and `envelope.to` accept single addresses or arrays. SMTP sends one `RCPT TO` command per resolved recipient and reports partial recipient rejection in `receipt.rejected`.
+- `recipientRejectionPolicy` controls transaction behavior when one or more recipients are rejected during `RCPT TO`. By default (`'deliver-accepted'`), accepted recipients receive the email. Set to `'reject-all'` to abort the transaction with `RSET` if any recipient is rejected, returning `successful: false` with `category: 'recipients_rejected'` to prevent duplicate deliveries upon retry.
 
 ## DKIM signing
 
@@ -235,3 +236,12 @@ Connection pool settings.
 **Type:** `number`
 
 Maximum attachment size in bytes.
+
+### `recipientRejectionPolicy` <Badge text="Optional" variant="note" size="small" />
+
+**Type:** `'deliver-accepted' | 'reject-all'` · **Default:** `'deliver-accepted'`
+
+Policy applied when one or more recipients are rejected by the SMTP server during `RCPT TO`:
+
+- `'deliver-accepted'` (default): Deliver message to all accepted recipients and report rejected recipients in `SendEmailReceipt.rejected`.
+- `'reject-all'`: Abort the transaction with `RSET` without sending `DATA` if any recipient is rejected, returning `successful: false` with `category: 'recipients_rejected'`.

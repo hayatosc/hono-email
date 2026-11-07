@@ -123,6 +123,19 @@ export type SmtpAuth =
     }
 
 /**
+ * Behavior when one or more recipients are rejected during the SMTP `RCPT TO` phase.
+ *
+ * - `'deliver-accepted'` (default): Proceed with `DATA` for accepted recipients. Rejected recipients are returned in `rejected`.
+ * - `'reject-all'`: Send `RSET` and abort the transaction if any recipient is rejected. No email is sent to any recipient, returning a failed receipt.
+ *
+ * @example
+ * ```ts
+ * const policy: SmtpRecipientRejectionPolicy = 'reject-all'
+ * ```
+ */
+export type SmtpRecipientRejectionPolicy = 'deliver-accepted' | 'reject-all'
+
+/**
  * Options for creating an `SmtpTransport`.
  *
  * @property connector - Runtime-specific socket connector.
@@ -137,6 +150,7 @@ export type SmtpAuth =
  * @property socketTimeout - SMTP response timeout in milliseconds.
  * @property limits - Attachment limits.
  * @property pool - SMTP connection pool settings.
+ * @property recipientRejectionPolicy - Policy when one or more recipients are rejected during `RCPT TO`. Defaults to `'deliver-accepted'`.
  *
  * @example
  * ```ts
@@ -145,6 +159,7 @@ export type SmtpAuth =
  *   hostname: 'smtp.example.com',
  *   port: 587,
  *   secure: 'starttls',
+ *   recipientRejectionPolicy: 'reject-all',
  * })
  * ```
  */
@@ -164,6 +179,7 @@ export type SmtpTransportOptions = {
     maxConnections?: number
     maxMessages?: number
   }
+  recipientRejectionPolicy?: SmtpRecipientRejectionPolicy
 }
 
 /**
@@ -171,17 +187,20 @@ export type SmtpTransportOptions = {
  *
  * @property dkim - DKIM signing options for this send. Takes precedence over legacy
  * `message.dkim` and transport defaults. Omit to inherit those settings.
+ * @property recipientRejectionPolicy - Policy when one or more recipients are rejected during `RCPT TO`. Overrides transport defaults.
  *
  * @example
  * ```ts
  * const options: SmtpSendOptions = {
  *   dkim: { domainName: 'example.com', keySelector: 'mail', privateKey },
+ *   recipientRejectionPolicy: 'reject-all',
  * }
  * await smtp.send(message, options)
  * ```
  */
 export type SmtpSendOptions = EmailSendOptions & {
   dkim?: EmailDkimOptions
+  recipientRejectionPolicy?: SmtpRecipientRejectionPolicy
 }
 
 export type SmtpSendResult = SendEmailReceipt

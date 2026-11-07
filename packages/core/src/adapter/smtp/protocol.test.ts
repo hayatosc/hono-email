@@ -418,6 +418,38 @@ describe('openSmtpSession', () => {
     await wait()
   })
 
+  test('sends RSET and skips DATA when recipientRejectionPolicy is reject-all and at least one recipient is rejected', async () => {
+    const { socket, wait } = createMockSocket(async (server) => {
+      await server.writeResponse('220 ready\r\n')
+      await server.readLine()
+      await server.writeResponse('250 ok\r\n')
+      await server.readLine()
+      await server.writeResponse('250 ok\r\n')
+      expect(await server.readLine()).toBe('RCPT TO:<ok@example.com>')
+      await server.writeResponse('250 accepted\r\n')
+      expect(await server.readLine()).toBe('RCPT TO:<bad@example.com>')
+      await server.writeResponse('550 rejected\r\n')
+      expect(await server.readLine()).toBe('RSET')
+      await server.writeResponse('250 reset\r\n')
+      await server.readLine()
+      await server.writeResponse('221 bye\r\n')
+    })
+
+    const session = await openSmtpSession(socket, baseOptions)
+    const result = await session.send({
+      ...sendOptions,
+      recipients: ['ok@example.com', 'bad@example.com'],
+      recipientRejectionPolicy: 'reject-all',
+    })
+    expect(result.accepted).toEqual([])
+    expect(result.rejected).toEqual(['bad@example.com'])
+    expect(result.response).toBe('SMTP rejected 1 recipient(s): bad@example.com')
+    expect(result.permanent).toBe(true)
+    expect(result.code).toBe(550)
+    await session.close()
+    await wait()
+  })
+
   test('STARTTLS upgrade re-issues EHLO', async () => {
     const { socket, wait } = createMockSocket(async (server) => {
       await server.writeResponse('220 ready\r\n')

@@ -1,5 +1,10 @@
 import { CRLF } from '../utils'
-import type { SmtpAuth, SmtpSecureTransport, SmtpSocket } from './types'
+import type {
+  SmtpAuth,
+  SmtpRecipientRejectionPolicy,
+  SmtpSecureTransport,
+  SmtpSocket,
+} from './types'
 
 export type SmtpCommandResponse = {
   code: number
@@ -31,6 +36,7 @@ export type SmtpSendOptions = {
   mailFrom: string
   recipients: string[]
   rawMessage: string
+  recipientRejectionPolicy?: SmtpRecipientRejectionPolicy
 }
 
 export type SmtpSendResult = {
@@ -418,7 +424,11 @@ class ReusableSmtpSession implements SmtpSession {
     await this.#client.command(`MAIL FROM:<${options.mailFrom}>`, [250])
 
     const recipients = await sendRecipients(this.#client, options.recipients)
-    if (recipients.accepted.length === 0) {
+    const shouldReset =
+      recipients.accepted.length === 0 ||
+      (options.recipientRejectionPolicy === 'reject-all' && recipients.rejected.length > 0)
+
+    if (shouldReset) {
       await this.#client.command('RSET', [250])
       const rejections = recipients.rejections ?? []
       const allPermanent =
@@ -427,9 +437,12 @@ class ReusableSmtpSession implements SmtpSession {
         ? (rejections.find((r) => r.code >= 500 && r.code < 600) ?? rejections[0])
         : (rejections.find((r) => r.code >= 400 && r.code < 500) ?? rejections[0])
       return {
-        accepted: recipients.accepted,
+        accepted: [],
         rejected: recipients.rejected,
-        response: 'No SMTP recipients were accepted.',
+        response:
+          recipients.accepted.length === 0
+            ? 'No SMTP recipients were accepted.'
+            : `SMTP rejected ${recipients.rejected.length} recipient(s): ${recipients.rejected.join(', ')}`,
         permanent: allPermanent,
         ...(primaryRejection?.code !== undefined ? { code: primaryRejection.code } : {}),
         ...(primaryRejection?.enhancedCode !== undefined
