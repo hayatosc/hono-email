@@ -16,10 +16,12 @@ SMTP settings used with `SmtpTransport`.
 ```ts
 type SmtpTransportOptions = {
   connector: SmtpConnector
-  hostname: string
-  port: number
+  hostname?: string
+  port?: number
+  url?: string
   secure?: boolean | 'starttls'
   auth?: SmtpAuth
+  tls?: SmtpTlsOptions
   dkim?: EmailDkimOptions
   clientName?: string
   connectionTimeout?: number
@@ -29,6 +31,7 @@ type SmtpTransportOptions = {
   pool?: {
     maxConnections?: number
     maxMessages?: number
+    idleTimeout?: number
   }
   recipientRejectionPolicy?: SmtpRecipientRejectionPolicy
 }
@@ -40,17 +43,23 @@ type SmtpTransportOptions = {
 
 Runtime-specific socket connector. Built-in connectors are available for different runtimes (e.g. `nodeSmtpConnector` for Node.js, `cloudflareSmtpConnector` for Cloudflare Workers).
 
-#### `hostname` <Badge text="Required" variant="caution" size="small" />
+#### `url` <Badge text="Optional" variant="note" size="small" />
 
 **Type:** `string`
 
-SMTP server host name (e.g., `'smtp.gmail.com'`).
+SMTP connection URL (e.g. `'smtp://user:pass@smtp.example.com:587'` or `'smtps://user:pass@smtp.example.com:465'`). If provided, `hostname`, `port`, `auth`, and `secure` default to parsed values unless explicitly overridden.
 
-#### `port` <Badge text="Required" variant="caution" size="small" />
+#### `hostname` <Badge text="Required*" variant="caution" size="small" />
+
+**Type:** `string`
+
+SMTP server host name (e.g., `'smtp.gmail.com'`). Required unless `url` is specified.
+
+#### `port` <Badge text="Required*" variant="caution" size="small" />
 
 **Type:** `number`
 
-SMTP server port (e.g., `587` or `465`).
+SMTP server port (e.g., `587` or `465`). Required unless `url` is specified.
 
 #### `secure` <Badge text="Optional" variant="note" size="small" />
 
@@ -63,6 +72,12 @@ TLS mode. `true` uses implicit TLS (usually on port 465), `'starttls'` upgrades 
 **Type:** `SmtpAuth`
 
 Authentication configuration. See [SmtpAuth](#smtpauth).
+
+#### `tls` <Badge text="Optional" variant="note" size="small" />
+
+**Type:** `SmtpTlsOptions`
+
+Custom TLS options passed to supported runtime connectors (such as Node.js). See [SmtpTlsOptions](#smtptlsoptions).
 
 #### `dkim` <Badge text="Optional" variant="note" size="small" />
 
@@ -104,6 +119,7 @@ Attachment size limits.
 
 - `maxConnections`: Maximum number of concurrent connections in the pool (Default: `1`).
 - `maxMessages`: Maximum number of messages to send over a single connection before retiring it.
+- `idleTimeout`: Milliseconds before idle pooled connections are closed and retired.
 
 #### `recipientRejectionPolicy` <Badge text="Optional" variant="note" size="small" />
 
@@ -155,11 +171,31 @@ type SmtpAuth =
       username: string
       password: string
     }
+  | {
+      type: 'xoauth2'
+      username: string
+      accessToken: string | (() => string | Promise<string>)
+    }
 ```
 
-- `type`: Mechanism used for SMTP authentication (`'plain'` or `'login'`).
-- `username`: Username credential.
-- `password`: Password credential.
+- `type`: Mechanism used for SMTP authentication (`'plain'`, `'login'`, or `'xoauth2'`).
+- `username`: Username credential (e.g. email address).
+- `password`: Password credential (for `'plain'` and `'login'`).
+- `accessToken`: Static token string or dynamic factory returning an OAuth 2.0 Bearer token (for `'xoauth2'`).
+
+---
+
+### SmtpTlsOptions
+
+```ts
+type SmtpTlsOptions = {
+  ca?: string | Uint8Array | Array<string | Uint8Array>
+  rejectUnauthorized?: boolean
+}
+```
+
+- `ca`: Custom certificate authorities (PEM string or bytes) used for TLS verification.
+- `rejectUnauthorized`: Whether to reject server certificates that fail TLS validation. Defaults to `true`.
 
 ---
 

@@ -48,6 +48,12 @@ const createPkcs8Key = async (): Promise<string> => {
   return toPem('PRIVATE KEY', new Uint8Array(pkcs8))
 }
 
+const createEd25519Pkcs8Key = async (): Promise<string> => {
+  const keyPair = await crypto.subtle.generateKey({ name: 'Ed25519' }, true, ['sign', 'verify'])
+  const pkcs8 = await crypto.subtle.exportKey('pkcs8', keyPair.privateKey)
+  return toPem('PRIVATE KEY', new Uint8Array(pkcs8))
+}
+
 const createSampleMessage = (): string =>
   `From: sender@example.com\r\nTo: recipient@example.com\r\nSubject: Test\r\n\r\nHello world`
 
@@ -69,6 +75,50 @@ describe('applyDkimSignature', () => {
     expect(result).toContain('bh=')
     expect(result).toContain('b=')
     expect(result).toContain(CRLF + createSampleMessage())
+  })
+
+  test('signs a message with an Ed25519 private key (RFC 8463)', async () => {
+    const privateKey = await createEd25519Pkcs8Key()
+    const result = await applyDkimSignature(createSampleMessage(), {
+      domainName: 'example.com',
+      keySelector: 'ed25519-key',
+      privateKey,
+    })
+
+    expect(result).toStartWith('DKIM-Signature: ')
+    expect(result).toContain('d=example.com')
+    expect(result).toContain('s=ed25519-key')
+    expect(result).toContain('a=ed25519-sha256')
+    expect(result).toContain('c=relaxed/relaxed')
+    expect(result).toContain('h=From:To:Subject')
+    expect(result).toContain('bh=')
+    expect(result).toContain('b=')
+  })
+
+  test('signs with explicit algorithm: ed25519-sha256', async () => {
+    const privateKey = await createEd25519Pkcs8Key()
+    const result = await applyDkimSignature(createSampleMessage(), {
+      algorithm: 'ed25519-sha256',
+      domainName: 'example.com',
+      keySelector: 'ed25519-key',
+      privateKey,
+    })
+
+    expect(result).toContain('a=ed25519-sha256')
+  })
+
+  test('throws for unsupported algorithm', async () => {
+    const privateKey = await createPkcs8Key()
+    await expect(
+      applyDkimSignature(createSampleMessage(), {
+        algorithm: 'unknown-alg' as 'rsa-sha256',
+        domainName: 'example.com',
+        keySelector: 'test',
+        privateKey,
+      }),
+    ).rejects.toThrow(
+      "Invalid DKIM algorithm: unknown-alg. Expected 'rsa-sha256' or 'ed25519-sha256'.",
+    )
   })
 
   test('uses custom headerFieldNames', async () => {

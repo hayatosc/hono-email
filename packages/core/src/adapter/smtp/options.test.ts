@@ -1,11 +1,67 @@
 import { describe, expect, test } from 'bun:test'
 
 import {
+  parseSmtpUrl,
   resolveMaxConnections,
   resolveMaxMessages,
   resolveSecureTransport,
   withTimeout,
 } from './options'
+
+describe('parseSmtpUrl', () => {
+  test('parses standard smtp:// URL with credentials and port', () => {
+    expect(parseSmtpUrl('smtp://user:pass@smtp.example.com:587')).toEqual({
+      hostname: 'smtp.example.com',
+      port: 587,
+      secure: 'starttls',
+      auth: {
+        type: 'plain',
+        username: 'user',
+        password: 'pass',
+      },
+    })
+  })
+
+  test('parses smtps:// URL with default port 465 and secure true', () => {
+    expect(parseSmtpUrl('smtps://user:secret@smtp.example.com')).toEqual({
+      hostname: 'smtp.example.com',
+      port: 465,
+      secure: true,
+      auth: {
+        type: 'plain',
+        username: 'user',
+        password: 'secret',
+      },
+    })
+  })
+
+  test('parses smtp:// URL without credentials and default port 587', () => {
+    expect(parseSmtpUrl('smtp://mail.example.com')).toEqual({
+      hostname: 'mail.example.com',
+      port: 587,
+      secure: 'starttls',
+    })
+  })
+
+  test('decodes URL-encoded credentials', () => {
+    expect(parseSmtpUrl('smtp://user%40example.com:pass%23word@smtp.example.com:2525')).toEqual({
+      hostname: 'smtp.example.com',
+      port: 2525,
+      secure: 'starttls',
+      auth: {
+        type: 'plain',
+        username: 'user@example.com',
+        password: 'pass#word',
+      },
+    })
+  })
+
+  test('throws for unsupported protocol', () => {
+    expect(() => parseSmtpUrl('http://smtp.example.com')).toThrow(
+      'Unsupported SMTP URL protocol: http:',
+    )
+  })
+})
 
 describe('resolveSecureTransport', () => {
   test('returns starttls when secure is starttls', () => {

@@ -295,6 +295,7 @@ type EmailDkimOptions = {
   domainName: string
   keySelector: string
   privateKey: string
+  algorithm?: 'rsa-sha256' | 'ed25519-sha256'
   headerFieldNames?: string[]
   skipFields?: string[]
 }
@@ -310,7 +311,13 @@ DKIM selector (e.g. `'mail'`).
 
 #### `privateKey` <Badge text="Required" variant="caution" size="small" />
 
-PEM private key string.
+PEM private key string. Supports RSA PKCS#1/PKCS#8 and Ed25519 PKCS#8 private keys.
+
+#### `algorithm` <Badge text="Optional" variant="note" size="small" />
+
+**Type:** `'rsa-sha256' | 'ed25519-sha256'` · **Default:** auto-detected from key format (`'ed25519-sha256'` for Ed25519 keys, `'rsa-sha256'` for RSA keys)
+
+DKIM signing algorithm (RFC 6376 / RFC 8463). Ed25519 signatures are generated using the Web Crypto API without external dependencies.
 
 #### `headerFieldNames` <Badge text="Optional" variant="note" size="small" />
 

@@ -106,14 +106,16 @@ For the full list of configuration options, see the [SMTP Options API Reference]
 
 - Set `pool.maxConnections` to allow multiple concurrent SMTP sessions.
 - Set `pool.maxMessages` to retire a session after a fixed number of messages.
+- Set `pool.idleTimeout` to close idle connections after a specified duration of inactivity in milliseconds.
 - If a session fails during send, that session is discarded. The message is not retried automatically.
 
 ## Delivery controls
 
 - `await smtp.verify()` checks connection setup, TLS negotiation, and authentication without sending a message.
-- `dkim` can be configured on `SmtpTransport` or overridden per message to add a `DKIM-Signature` header before SMTP delivery.
+- `dkim` can be configured on `SmtpTransport` or overridden per message to add a `DKIM-Signature` header before SMTP delivery. Supports both `rsa-sha256` and `ed25519-sha256` (RFC 8463).
 - `envelope` lets you override the SMTP envelope sender and recipients without changing the visible `From` / `To` headers.
 - `to`, `cc`, `bcc`, and `envelope.to` accept single addresses or arrays. SMTP sends one `RCPT TO` command per resolved recipient and reports partial recipient rejection in `receipt.rejected`.
+- Internationalized domain names (IDNA) in email addresses are automatically normalized to Punycode ASCII (e.g. `user@日本.jp` becomes `user@xn--wgv71a.jp`). Non-ASCII local parts automatically request the `SMTPUTF8` extension if supported by the server.
 - `recipientRejectionPolicy` controls transaction behavior when one or more recipients are rejected during `RCPT TO`. By default (`'deliver-accepted'`), accepted recipients receive the email. Set to `'reject-all'` to abort the transaction with `RSET` if any recipient is rejected, returning `successful: false` with `category: 'recipients_rejected'` to prevent duplicate deliveries upon retry.
 
 ## DKIM signing
@@ -124,7 +126,13 @@ Configure `SmtpTransportOptions.dkim` for default signing settings. For per-send
 import type { SmtpSendOptions } from 'hono-email/smtp'
 
 const options: SmtpSendOptions = {
-  dkim: { domainName: 'example.com', keySelector: 'mail', privateKey },
+  dkim: {
+    domainName: 'example.com',
+    keySelector: 'mail',
+    privateKey,
+    // Optional: 'rsa-sha256' | 'ed25519-sha256' (RFC 8463). Auto-detected if omitted.
+    algorithm: 'ed25519-sha256',
+  },
 }
 const receipt = await smtp.send(message, options)
 ```
@@ -158,17 +166,23 @@ Runtime-specific TCP socket connector. Import one for your runtime:
 | `hono-email/smtp/deno`       | Deno               |
 | `hono-email/smtp/cloudflare` | Cloudflare Workers |
 
-### `hostname` <Badge text="Required" variant="caution" size="small" />
+### `url` <Badge text="Optional" variant="note" size="small" />
 
 **Type:** `string`
 
-SMTP server hostname.
+SMTP connection URL (e.g. `'smtp://user:pass@smtp.example.com:587'` or `'smtps://user:pass@smtp.example.com:465'`). If provided, `hostname`, `port`, `auth`, and `secure` default to the parsed URL values unless explicitly overridden.
 
-### `port` <Badge text="Required" variant="caution" size="small" />
+### `hostname` <Badge text="Required*" variant="caution" size="small" />
+
+**Type:** `string`
+
+SMTP server hostname. Required unless `url` is provided.
+
+### `port` <Badge text="Required*" variant="caution" size="small" />
 
 **Type:** `number`
 
-SMTP server port. Use `587` for STARTTLS submission, `465` for implicit TLS.
+SMTP server port. Use `587` for STARTTLS submission, `465` for implicit TLS. Required unless `url` is provided.
 
 ### `secure` <Badge text="Optional" variant="note" size="small" />
 
@@ -188,15 +202,27 @@ Bun's TCP connector does not support STARTTLS. Use `secure: true` with port `465
 
 ### `auth` <Badge text="Optional" variant="note" size="small" />
 
-**Type:** `{ type?: 'plain' | 'login'; username: string; password: string }`
+**Type:** `SmtpAuth`
 
-SMTP authentication credentials. `type` defaults to `'plain'`.
+SMTP authentication credentials:
+
+- `{ type?: 'plain', username: string, password: string }` (default)
+- `{ type: 'login', username: string, password: string }`
+- `{ type: 'xoauth2', username: string, accessToken: string | (() => string | Promise<string>) }`
+
+For XOAUTH2, `accessToken` can be a static string or a dynamic synchronous/asynchronous token factory returning a valid OAuth 2.0 Bearer token.
+
+### `tls` <Badge text="Optional" variant="note" size="small" />
+
+**Type:** `{ ca?: string | Uint8Array | Array<string | Uint8Array>; rejectUnauthorized?: boolean }`
+
+Custom TLS options passed to supported runtime connectors (such as Node.js). Use `ca` to provide trusted custom CA certificates.
 
 ### `dkim` <Badge text="Optional" variant="note" size="small" />
 
 **Type:** `EmailDkimOptions`
 
-DKIM signing options. See [Email Types](/api/email-types/#emaildkimoptions).
+DKIM signing options. Supports RSA and Ed25519 (RFC 8463) algorithms. See [Email Types](/api/email-types/#emaildkimoptions).
 
 ### `clientName` <Badge text="Optional" variant="note" size="small" />
 
@@ -224,12 +250,13 @@ Milliseconds of inactivity before the socket is considered timed out.
 
 ### `pool` <Badge text="Optional" variant="note" size="small" />
 
-**Type:** `{ maxConnections?: number; maxMessages?: number }`
+**Type:** `{ maxConnections?: number; maxMessages?: number; idleTimeout?: number }`
 
 Connection pool settings.
 
 - `maxConnections` — maximum concurrent SMTP sessions. Default: `1`.
 - `maxMessages` — retire a session after this many messages. Default: unlimited.
+- `idleTimeout` — close idle pooled connections after this many milliseconds of inactivity. Default: unlimited.
 
 ### `limits.maxAttachmentSize` <Badge text="Optional" variant="note" size="small" />
 
