@@ -1,3 +1,5 @@
+import { readAttribute } from '../../html-attribute'
+import { tokenizeHtml } from '../../html-tokenizer'
 import { resolveEmailAttachments, type ResolvedEmailAttachment } from '../attachment'
 import type { EmailAdapter, EmailMessage, FailedSendReceipt, SendEmailReceipt } from '../index'
 import { addressToPath, buildRawEmailMessage, toAddressList } from '../message'
@@ -52,18 +54,51 @@ export type EmailMatcher =
       htmlIncludes?: string
     }
 
-const HREF_PATTERN = /<a\b[^>]*?\bhref=(?:"([^"]*)"|'([^']*)'|([^\s>]+))[^>]*>/gi
 const TEXT_URL_PATTERN = /\bhttps?:\/\/[^\s<>"'()]+/gi
+const HTML_ENTITY_PATTERN = /&(?:amp|quot|apos|lt|gt|#(?:x[0-9a-fA-F]+|\d+));/g
 
 const decodeHtmlEntitiesForUrl = (raw: string): string =>
-  raw
-    .replace(/&amp;/gi, '&')
-    .replace(/&#38;/g, '&')
-    .replace(/&#x26;/gi, '&')
-    .replace(/&quot;/gi, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/&lt;/gi, '<')
-    .replace(/&gt;/gi, '>')
+  raw.replace(HTML_ENTITY_PATTERN, (match) => {
+    const lower = match.toLowerCase()
+    if (lower === '&amp;') return '&'
+    if (lower === '&quot;') return '"'
+    if (lower === '&apos;') return "'"
+    if (lower === '&lt;') return '<'
+    if (lower === '&gt;') return '>'
+    if (lower.startsWith('&#x')) {
+      const code = Number.parseInt(lower.slice(3, -1), 16)
+      return Number.isFinite(code) && code >= 1 && code <= 0x10ffff
+        ? String.fromCodePoint(code)
+        : match
+    }
+    if (lower.startsWith('&#')) {
+      const code = Number.parseInt(lower.slice(2, -1), 10)
+      return Number.isFinite(code) && code >= 1 && code <= 0x10ffff
+        ? String.fromCodePoint(code)
+        : match
+    }
+    return match
+  })
+
+const trimPunctuationFromUrl = (url: string): string => {
+  let end = url.length
+  while (end > 0) {
+    const char = url[end - 1]
+    if (
+      char === '.' ||
+      char === ',' ||
+      char === ':' ||
+      char === ';' ||
+      char === '!' ||
+      char === '?'
+    ) {
+      end -= 1
+    } else {
+      break
+    }
+  }
+  return url.slice(0, end)
+}
 
 const parseCandidateUrl = (raw: string, baseUrl = 'http://localhost'): URL | undefined => {
   const trimmed = raw.trim()
@@ -98,14 +133,17 @@ export const extractLinks = (html?: string, text?: string): URL[] => {
   }
 
   if (html) {
-    for (const match of html.matchAll(HREF_PATTERN)) {
-      addUrl(match[1] ?? match[2] ?? match[3])
+    for (const token of tokenizeHtml(html)) {
+      if (token.type === 'tag' && token.name === 'a' && !token.closing) {
+        const attributes = html.slice(token.nameEnd, token.end - 1)
+        addUrl(readAttribute(attributes, 'href'))
+      }
     }
   }
 
   if (text) {
     for (const match of text.matchAll(TEXT_URL_PATTERN)) {
-      const cleaned = match[0].replace(/[.,:;!?]+$/, '')
+      const cleaned = trimPunctuationFromUrl(match[0])
       addUrl(cleaned)
     }
   }
