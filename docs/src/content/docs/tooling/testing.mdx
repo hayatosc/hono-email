@@ -43,3 +43,7 @@ await render(<WelcomeEmail />, {
   onWarning: (warning) => collected.push(warning),
 })
 ```
+
+## Testing Delivery Adapters
+
+To test email sending workflows without making network calls, use `InMemoryAdapter`, `FileAdapter`, or `LogAdapter` from `hono-email/testing`. See the [Testing & Development Adapters documentation](/adapters/testing/) for details and examples.

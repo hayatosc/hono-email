@@ -27,6 +27,7 @@ export default defineConfig({
     './src/adapter/sendgrid/index.ts',
     './src/adapter/postmark/index.ts',
     './src/adapter/mailgun/index.ts',
+    './src/adapter/testing/index.ts',
     './src/adapter/platform/cloudflare/index.ts',
     './src/adapter/platform/cloudflare/smtp.ts',
     './src/adapter/platform/deno/smtp.ts',

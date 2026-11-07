@@ -410,7 +410,7 @@ export const resolveEmailEnvelope = (message: EmailMessage): ResolvedEmailEnvelo
   }
 }
 
-type BuildRawEmailMessageOptions = EmailAttachmentLimits & {
+export type BuildRawEmailMessageOptions = EmailAttachmentLimits & {
   resolvedAttachments?: ResolvedEmailAttachment[]
 }
 
@@ -532,7 +532,7 @@ const buildRawEmailMessageWithAttachments = (
 
 export const buildRawEmailMessage = (
   message: EmailMessage,
-  options: EmailAttachmentLimits = {},
+  options: BuildRawEmailMessageOptions = {},
 ): { messageId: string; raw: string } => buildRawEmailMessageWithAttachments(message, options)
 
 export const buildRawEmailMessageAsync = async (
