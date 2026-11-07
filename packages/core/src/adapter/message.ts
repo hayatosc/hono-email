@@ -149,9 +149,6 @@ export const normalizeAddressDomain = (address: string): string => {
   }
 }
 
-const DISPLAY_NAME_ADDRESS_PATTERN =
-  /^(?:"((?:[^"\\]|\\.)*)"|([^<,"]*?))\s*<([^<>\s@]+@[^<>\s@]+)>$/
-
 /**
  * Parses a single email address, extracting the email address and optional display name.
  * Prevents multiple addresses or comma injections.
@@ -193,21 +190,59 @@ export const parseSingleEmailAddress = (
     return { address: trimmed }
   }
 
-  const match = DISPLAY_NAME_ADDRESS_PATTERN.exec(trimmed)
-  if (!match) {
-    throw new Error(`Invalid email address: ${trimmed}`)
+  if (trimmed.endsWith('>')) {
+    const lastAngle = trimmed.lastIndexOf('<')
+    if (lastAngle >= 0) {
+      const addr = trimmed.slice(lastAngle + 1, -1).trim()
+      if (addr !== '' && !addr.includes(',') && EMAIL_ADDRESS_PATTERN.test(addr)) {
+        const namePart = trimmed.slice(0, lastAngle).trim()
+        if (namePart === '') {
+          return { address: addr }
+        }
+
+        if (namePart.startsWith('"') && namePart.endsWith('"') && namePart.length >= 2) {
+          const inner = namePart.slice(1, -1)
+          let escaped = false
+          let rawName = ''
+          let validQuotes = true
+          for (let index = 0; index < inner.length; index += 1) {
+            const char = inner[index]!
+            if (escaped) {
+              rawName += char
+              escaped = false
+            } else if (char === '\\') {
+              escaped = true
+            } else if (char === '"') {
+              validQuotes = false
+              break
+            } else {
+              rawName += char
+            }
+          }
+
+          if (validQuotes && !escaped) {
+            const trimmedName = rawName.trim()
+            return {
+              address: addr,
+              ...(trimmedName !== '' ? { name: trimmedName } : {}),
+            }
+          }
+        } else if (
+          !namePart.includes('"') &&
+          !namePart.includes(',') &&
+          !namePart.includes('<') &&
+          !namePart.includes('>')
+        ) {
+          return {
+            address: addr,
+            name: namePart,
+          }
+        }
+      }
+    }
   }
 
-  const rawName = (match[1] !== undefined ? match[1].replace(/\\(["\\])/g, '$1') : match[2])?.trim()
-  const addr = match[3]!
-  if (addr.includes(',')) {
-    throw new Error(`Email address string must hold a single address: ${trimmed}`)
-  }
-
-  return {
-    address: addr,
-    ...(rawName ? { name: rawName } : {}),
-  }
+  throw new Error(`Invalid email address: ${trimmed}`)
 }
 
 export const addressToPath = (address: EmailAddress): string => {
