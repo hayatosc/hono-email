@@ -4,6 +4,7 @@ import type {
   EmailAddress,
   EmailAttachmentLimits,
   EmailMessage,
+  EmailSendOptions,
   SendEmailReceipt,
 } from '../index'
 import { formatEmailAddress, toAddressList, validateEmailHeaders } from '../message'
@@ -33,6 +34,7 @@ export type {
   EmailHeaders,
   EmailMessage,
   EmailMessageDraft,
+  EmailSendOptions,
   EmailTransport,
   FailedSendReceipt,
   SendEmailOptions,
@@ -252,13 +254,21 @@ const buildPayload = async (
  * ```
  */
 export const PostmarkAdapter = (options: PostmarkAdapterOptions): EmailAdapter => ({
-  async send(message: EmailMessage): Promise<SendEmailReceipt> {
+  async send(message: EmailMessage, sendOptions?: EmailSendOptions): Promise<SendEmailReceipt> {
     const recipients = collectRecipients(message)
     const recipientError = getProviderRecipientError(message, recipients)
     if (recipientError !== undefined) {
       return failedReceipt([recipientError], {
         category: 'validation',
         permanent: true,
+      })
+    }
+
+    if (sendOptions?.signal?.aborted) {
+      return failedReceipt([sendOptions.signal.reason?.message ?? 'The operation was aborted.'], {
+        category: 'timeout',
+        permanent: false,
+        rejected: recipients,
       })
     }
 
@@ -277,6 +287,8 @@ export const PostmarkAdapter = (options: PostmarkAdapterOptions): EmailAdapter =
       const fetchImplementation = getFetch(options.fetch)
       const apiBaseUrl = options.apiBaseUrl ?? DEFAULT_API_BASE_URL
       validateApiBaseUrl(apiBaseUrl)
+      const retry = sendOptions?.retry !== undefined ? sendOptions.retry : options.retry
+      const signal = sendOptions?.signal
       const response = await fetchWithTimeoutAndRetry(
         fetchImplementation,
         `${apiBaseUrl.replace(/\/$/u, '')}/email`,
@@ -289,10 +301,11 @@ export const PostmarkAdapter = (options: PostmarkAdapterOptions): EmailAdapter =
             'X-Postmark-Server-Token': options.serverToken,
           },
           method: 'POST',
+          ...(signal !== undefined ? { signal } : {}),
         },
         {
           ...(options.timeout !== undefined ? { timeout: options.timeout } : {}),
-          ...(options.retry !== undefined ? { retry: options.retry } : {}),
+          ...(retry !== undefined ? { retry } : {}),
         },
       )
       const body = await readResponseBody(response)

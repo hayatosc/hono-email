@@ -1,5 +1,6 @@
-import type { EmailAddress, EmailAttachmentLimits } from '../index'
+import type { EmailAddress, EmailAttachmentLimits, EmailSendOptions } from '../index'
 import { assertValidEmailAddress } from '../message'
+import type { RequestRetryOptions } from '../utils'
 
 /**
  * Name/address object shape used by the Cloudflare Email REST API payload.
@@ -47,6 +48,7 @@ export type CloudflareEmailFetchInit = {
   body: string
   headers: Record<string, string>
   method: 'POST'
+  signal?: AbortSignal
 }
 
 export type CloudflareEmailFetch = (
@@ -131,6 +133,7 @@ export type CloudflareEmailConnector = {
   kind?: CloudflareEmailConnectorKind
   send(
     request: CloudflareEmailConnectorRequest,
+    options?: EmailSendOptions,
   ): CloudflareEmailConnectorResult | Promise<CloudflareEmailConnectorResult>
 }
 
@@ -141,6 +144,8 @@ export type CloudflareEmailConnector = {
  * @property apiBaseUrl - Optional API base URL override.
  * @property apiToken - Cloudflare API token.
  * @property fetch - Optional fetch implementation.
+ * @property timeout - Request timeout in milliseconds.
+ * @property retry - Request retry options.
  *
  * @example
  * ```ts
@@ -155,6 +160,8 @@ export type CloudflareEmailRestConnectorOptions = {
   apiBaseUrl?: string
   apiToken: string
   fetch?: CloudflareEmailFetch
+  timeout?: number
+  retry?: RequestRetryOptions | boolean
 }
 
 /**

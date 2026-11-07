@@ -5,6 +5,7 @@ import type {
   EmailAttachmentLimits,
   EmailHeaders,
   EmailMessage,
+  EmailSendOptions,
   SendEmailReceipt,
 } from '../index'
 import { formatEmailAddress, toAddressList, validateEmailHeaders } from '../message'
@@ -35,6 +36,7 @@ export type {
   EmailHeaders,
   EmailMessage,
   EmailMessageDraft,
+  EmailSendOptions,
   EmailTransport,
   FailedSendReceipt,
   SendEmailOptions,
@@ -229,13 +231,21 @@ const buildAuthorizationHeader = (apiKey: string): string =>
  * ```
  */
 export const MailgunAdapter = (options: MailgunAdapterOptions): EmailAdapter => ({
-  async send(message: EmailMessage): Promise<SendEmailReceipt> {
+  async send(message: EmailMessage, sendOptions?: EmailSendOptions): Promise<SendEmailReceipt> {
     const recipients = collectRecipients(message)
     const recipientError = getProviderRecipientError(message, recipients)
     if (recipientError !== undefined) {
       return failedReceipt([recipientError], {
         category: 'validation',
         permanent: true,
+      })
+    }
+
+    if (sendOptions?.signal?.aborted) {
+      return failedReceipt([sendOptions.signal.reason?.message ?? 'The operation was aborted.'], {
+        category: 'timeout',
+        permanent: false,
+        rejected: recipients,
       })
     }
 
@@ -255,6 +265,8 @@ export const MailgunAdapter = (options: MailgunAdapterOptions): EmailAdapter => 
       const apiBaseUrl = options.apiBaseUrl ?? DEFAULT_API_BASE_URL
       validateApiBaseUrl(apiBaseUrl)
       const domain = encodeURIComponent(options.domain)
+      const retry = sendOptions?.retry !== undefined ? sendOptions.retry : options.retry
+      const signal = sendOptions?.signal
       const response = await fetchWithTimeoutAndRetry(
         fetchImplementation,
         `${apiBaseUrl.replace(/\/$/u, '')}/v3/${domain}/messages`,
@@ -265,10 +277,11 @@ export const MailgunAdapter = (options: MailgunAdapterOptions): EmailAdapter => 
             'User-Agent': options.userAgent ?? DEFAULT_USER_AGENT,
           },
           method: 'POST',
+          ...(signal !== undefined ? { signal } : {}),
         },
         {
           ...(options.timeout !== undefined ? { timeout: options.timeout } : {}),
-          ...(options.retry !== undefined ? { retry: options.retry } : {}),
+          ...(retry !== undefined ? { retry } : {}),
         },
       )
       const body = await readResponseBody(response)

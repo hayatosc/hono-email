@@ -1,5 +1,6 @@
 import type { Child } from 'hono/jsx'
 
+import type { RequestRetryOptions } from './adapter/utils'
 import type { RenderOptions } from './index'
 
 /**
@@ -312,6 +313,20 @@ export type FailedSendReceipt = {
 export type SendEmailReceipt = SuccessfulSendReceipt | FailedSendReceipt
 
 /**
+ * Common per-send options accepted across delivery adapters.
+ */
+export type EmailSendOptions = {
+  /**
+   * AbortSignal to cancel sending and retry sleep.
+   */
+  signal?: AbortSignal
+  /**
+   * Override retry settings for this send (false to disable retries).
+   */
+  retry?: RequestRetryOptions | boolean
+}
+
+/**
  * Transport interface implemented by SMTP, Cloudflare Email Service, or custom adapters.
  *
  * @property send - Sends a fully rendered message and returns a receipt.
@@ -329,8 +344,8 @@ export type SendEmailReceipt = SuccessfulSendReceipt | FailedSendReceipt
  * }
  * ```
  */
-export type EmailAdapter = {
-  send(message: EmailMessage): Promise<SendEmailReceipt>
+export type EmailAdapter<TSendOptions extends EmailSendOptions = EmailSendOptions> = {
+  send(message: EmailMessage, options?: TSendOptions): Promise<SendEmailReceipt>
 }
 
 /**
@@ -338,7 +353,8 @@ export type EmailAdapter = {
  *
  * @deprecated Use `EmailAdapter` instead.
  */
-export type EmailTransport = EmailAdapter
+export type EmailTransport<TSendOptions extends EmailSendOptions = EmailSendOptions> =
+  EmailAdapter<TSendOptions>
 
 /**
  * Options for `sendEmail()`, combining a JSX draft with a delivery adapter.
@@ -356,9 +372,10 @@ export type EmailTransport = EmailAdapter
  * })
  * ```
  */
-export type SendEmailOptions = EmailMessageDraft & {
-  adapter: EmailAdapter
-}
+export type SendEmailOptions = EmailMessageDraft &
+  EmailSendOptions & {
+    adapter: EmailAdapter
+  }
 
 type EmailRenderer = (
   jsx: Child,
@@ -398,5 +415,14 @@ export const sendEmail = async (
   options: SendEmailOptions,
 ): Promise<SendEmailReceipt> => {
   const message = await renderEmailMessage(renderEmail, options)
-  return options.adapter.send(message)
+  const sendOptions: EmailSendOptions | undefined =
+    options.signal !== undefined || options.retry !== undefined
+      ? {
+          ...(options.signal !== undefined ? { signal: options.signal } : {}),
+          ...(options.retry !== undefined ? { retry: options.retry } : {}),
+        }
+      : undefined
+  return sendOptions !== undefined
+    ? options.adapter.send(message, sendOptions)
+    : options.adapter.send(message)
 }

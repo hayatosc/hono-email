@@ -304,4 +304,24 @@ describe('LogAdapter', () => {
     expect(logs[0]).toContain('Text:\nWelcome! Verify here:')
     expect(logs[0]).toContain('HTML:\n<p>Welcome!')
   })
+
+  test('aborts when signal is aborted across testing adapters', async () => {
+    const controller = new AbortController()
+    controller.abort()
+
+    const memReceipt = await new InMemoryAdapter().send(createSampleMessage(), {
+      signal: controller.signal,
+    })
+    expect(memReceipt).toMatchObject({ successful: false, category: 'timeout' })
+
+    const fileReceipt = await FileAdapter({ directory: '/tmp' }).send(createSampleMessage(), {
+      signal: controller.signal,
+    })
+    expect(fileReceipt).toMatchObject({ successful: false, category: 'timeout' })
+
+    const logReceipt = await LogAdapter().send(createSampleMessage(), {
+      signal: controller.signal,
+    })
+    expect(logReceipt).toMatchObject({ successful: false, category: 'timeout' })
+  })
 })

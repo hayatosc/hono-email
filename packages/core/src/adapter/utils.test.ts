@@ -2,10 +2,12 @@ import { describe, expect, test } from 'bun:test'
 
 import {
   classifyFetchError,
+  computeBackoffDelay,
   fetchWithTimeoutAndRetry,
   isPermanentHttpStatus,
   isValidationError,
   parseRetryAfterMs,
+  sleepWithSignal,
 } from './utils'
 
 describe('fetchWithTimeoutAndRetry', () => {
@@ -399,5 +401,183 @@ describe('classifyFetchError', () => {
   test('classifies generic network/connection errors', () => {
     const connError = new TypeError('Failed to fetch')
     expect(classifyFetchError(connError)).toEqual({ category: 'connection', permanent: false })
+  })
+})
+
+describe('computeBackoffDelay', () => {
+  test('computes deterministic exponential backoff when jitter is none', () => {
+    const options = {
+      initialInterval: 1000,
+      maxInterval: 5000,
+      backoffFactor: 2,
+      jitter: 'none' as const,
+    }
+
+    expect(computeBackoffDelay(1, options)).toBe(1000)
+    expect(computeBackoffDelay(2, options)).toBe(2000)
+    expect(computeBackoffDelay(3, options)).toBe(4000)
+    expect(computeBackoffDelay(4, options)).toBe(5000) // capped at maxInterval
+  })
+
+  test('computes full jitter within [0, exponentialDelay] range', () => {
+    const options = {
+      initialInterval: 1000,
+      maxInterval: 5000,
+      backoffFactor: 2,
+      jitter: 'full' as const,
+    }
+
+    for (let i = 0; i < 50; i++) {
+      const delay = computeBackoffDelay(2, options)
+      expect(delay).toBeGreaterThanOrEqual(0)
+      expect(delay).toBeLessThan(2000)
+      expect(Number.isInteger(delay)).toBe(true)
+    }
+  })
+})
+
+describe('sleepWithSignal', () => {
+  test('resolves after specified milliseconds', async () => {
+    const start = Date.now()
+    await sleepWithSignal(20)
+    const elapsed = Date.now() - start
+    expect(elapsed).toBeGreaterThanOrEqual(15)
+  })
+
+  test('rejects immediately if signal is already aborted', async () => {
+    const controller = new AbortController()
+    controller.abort(new DOMException('Custom abort reason', 'AbortError'))
+
+    await expect(sleepWithSignal(1000, controller.signal)).rejects.toThrow('Custom abort reason')
+  })
+
+  test('rejects immediately when signal aborts during sleep', async () => {
+    const controller = new AbortController()
+    const start = Date.now()
+    const sleepPromise = sleepWithSignal(2000, controller.signal)
+
+    setTimeout(() => {
+      controller.abort()
+    }, 20)
+
+    await expect(sleepPromise).rejects.toThrow()
+    const elapsed = Date.now() - start
+    expect(elapsed).toBeLessThan(500)
+  })
+})
+
+describe('fetchWithTimeoutAndRetry signal and retry options', () => {
+  test('aborts immediately during retry sleep if signal is aborted', async () => {
+    const controller = new AbortController()
+    let attempts = 0
+    const fetchFn = async (_input: string, _init?: { signal?: AbortSignal }) => {
+      attempts++
+      return new Response('rate limited', { status: 429 })
+    }
+
+    const start = Date.now()
+    const promise = fetchWithTimeoutAndRetry(
+      fetchFn,
+      'http://example.com',
+      { signal: controller.signal },
+      {
+        retry: {
+          maxAttempts: 3,
+          initialInterval: 5000,
+          maxInterval: 10000,
+        },
+      },
+    )
+
+    setTimeout(() => {
+      controller.abort()
+    }, 30)
+
+    await expect(promise).rejects.toThrow()
+    const elapsed = Date.now() - start
+    expect(elapsed).toBeLessThan(500)
+    expect(attempts).toBe(1)
+  })
+
+  test('disables retries when retry is false', async () => {
+    let attempts = 0
+    const fetchFn = async () => {
+      attempts++
+      return new Response('server error', { status: 500 })
+    }
+
+    const response = await fetchWithTimeoutAndRetry(
+      fetchFn,
+      'http://example.com',
+      {},
+      {
+        retry: false,
+      },
+    )
+
+    expect(response.status).toBe(500)
+    expect(attempts).toBe(1)
+  })
+
+  test('honors server Retry-After header delay without capping to maxInterval', async () => {
+    const controller = new AbortController()
+    let attempts = 0
+    const fetchFn = async () => {
+      attempts++
+      return new Response('too many requests', {
+        status: 429,
+        headers: { 'retry-after': '60' }, // 60 seconds
+      })
+    }
+
+    const start = Date.now()
+    const promise = fetchWithTimeoutAndRetry(
+      fetchFn,
+      'http://example.com',
+      { signal: controller.signal },
+      {
+        retry: {
+          maxAttempts: 2,
+          maxInterval: 50, // server header of 60s is preserved, not truncated to 50ms
+        },
+      },
+    )
+
+    setTimeout(() => {
+      controller.abort()
+    }, 30)
+
+    await expect(promise).rejects.toThrow()
+    const elapsed = Date.now() - start
+    expect(elapsed).toBeLessThan(500)
+    expect(attempts).toBe(1)
+  })
+
+  test('honors Retry-After header with 0 second delay', async () => {
+    let attempts = 0
+    const fetchFn = async () => {
+      attempts++
+      if (attempts === 1) {
+        return new Response('too many requests', {
+          status: 429,
+          headers: { 'retry-after': '0' },
+        })
+      }
+      return new Response('ok', { status: 200 })
+    }
+
+    const response = await fetchWithTimeoutAndRetry(
+      fetchFn,
+      'http://example.com',
+      {},
+      {
+        retry: {
+          maxAttempts: 2,
+        },
+      },
+    )
+
+    expect(response.status).toBe(200)
+    expect(attempts).toBe(2)
   })
 })

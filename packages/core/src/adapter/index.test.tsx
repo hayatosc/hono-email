@@ -100,4 +100,38 @@ describe.each([
     expect(sent).toHaveLength(1)
     expect(sent[0]?.idempotencyKey).toBe('idemp-send-test')
   })
+
+  test('propagates signal and retry options to adapter.send', async () => {
+    let capturedOptions: unknown
+    const controller = new AbortController()
+    const retryConfig = { maxAttempts: 1 }
+
+    const adapter: EmailAdapter = {
+      async send(_email, options) {
+        capturedOptions = options
+        return {
+          successful: true,
+          messageId: 'signal-test',
+          response: 'OK',
+          accepted: ['recipient@example.com'],
+          rejected: [],
+        }
+      },
+    }
+
+    await send({
+      adapter,
+      from: 'sender@example.com',
+      to: 'recipient@example.com',
+      subject: 'Signal and Retry Test',
+      signal: controller.signal,
+      retry: retryConfig,
+      jsx: <p>Hello</p>,
+    })
+
+    expect(capturedOptions).toEqual({
+      signal: controller.signal,
+      retry: retryConfig,
+    })
+  })
 })

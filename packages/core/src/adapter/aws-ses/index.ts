@@ -110,11 +110,20 @@ export const SesAdapter = (defaults: SesAdapterOptions): SesEmailAdapter => ({
       })
     }
 
+    const signal = options.signal ?? options.abortSignal
+    if (signal?.aborted) {
+      return failedReceipt([signal.reason?.message ?? 'The operation was aborted.'], {
+        category: 'timeout',
+        permanent: false,
+        rejected: recipients,
+      })
+    }
+
     try {
       const input = await buildInput(message, defaults, options)
       const result = await defaults.client.send(
         new SendEmailCommand(input),
-        options.abortSignal === undefined ? undefined : { abortSignal: options.abortSignal },
+        signal === undefined ? undefined : { abortSignal: signal },
       )
       if (!result.MessageId) {
         return failedReceipt(['SES returned no message ID.'], {

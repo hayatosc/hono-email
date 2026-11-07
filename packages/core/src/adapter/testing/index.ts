@@ -1,7 +1,13 @@
 import { readAttribute } from '../../html-attribute'
 import { tokenizeHtml } from '../../html-tokenizer'
 import { resolveEmailAttachments, type ResolvedEmailAttachment } from '../attachment'
-import type { EmailAdapter, EmailMessage, FailedSendReceipt, SendEmailReceipt } from '../index'
+import type {
+  EmailAdapter,
+  EmailMessage,
+  EmailSendOptions,
+  FailedSendReceipt,
+  SendEmailReceipt,
+} from '../index'
 import {
   addressToPath,
   buildRawEmailMessage,
@@ -21,6 +27,7 @@ export type {
   EmailHeaders,
   EmailMessage,
   EmailMessageDraft,
+  EmailSendOptions,
   EmailTransport,
   FailedSendReceipt,
   SendEmailOptions,
@@ -215,9 +222,20 @@ export class InMemoryAdapter implements EmailAdapter {
     }
   }
 
-  async send(message: EmailMessage): Promise<SendEmailReceipt> {
+  async send(message: EmailMessage, options?: EmailSendOptions): Promise<SendEmailReceipt> {
     const envelope = resolveEmailEnvelope(message)
     const recipients = envelope.recipients
+
+    if (options?.signal?.aborted) {
+      return {
+        successful: false,
+        accepted: [],
+        rejected: recipients,
+        errorMessages: [options.signal.reason?.message ?? 'The operation was aborted.'],
+        category: 'timeout',
+        permanent: false,
+      }
+    }
 
     if (this.#nextFailure !== undefined) {
       const failure = this.#nextFailure
@@ -358,9 +376,20 @@ export type FileAdapterOptions = {
 }
 
 export const FileAdapter = (options: FileAdapterOptions): EmailAdapter => ({
-  async send(message: EmailMessage): Promise<SendEmailReceipt> {
+  async send(message: EmailMessage, sendOptions?: EmailSendOptions): Promise<SendEmailReceipt> {
     const envelope = resolveEmailEnvelope(message)
     const recipients = envelope.recipients
+
+    if (sendOptions?.signal?.aborted) {
+      return {
+        successful: false,
+        accepted: [],
+        rejected: recipients,
+        errorMessages: [sendOptions.signal.reason?.message ?? 'The operation was aborted.'],
+        category: 'timeout',
+        permanent: false,
+      }
+    }
 
     const attachments = await resolveEmailAttachments(message.attachments)
     const { messageId, raw } = buildRawEmailMessage(message, {
@@ -401,9 +430,21 @@ export type LogAdapterOptions = {
 }
 
 export const LogAdapter = (options: LogAdapterOptions = {}): EmailAdapter => ({
-  async send(message: EmailMessage): Promise<SendEmailReceipt> {
+  async send(message: EmailMessage, sendOptions?: EmailSendOptions): Promise<SendEmailReceipt> {
     const envelope = resolveEmailEnvelope(message)
     const recipients = envelope.recipients
+
+    if (sendOptions?.signal?.aborted) {
+      return {
+        successful: false,
+        accepted: [],
+        rejected: recipients,
+        errorMessages: [sendOptions.signal.reason?.message ?? 'The operation was aborted.'],
+        category: 'timeout',
+        permanent: false,
+      }
+    }
+
     const from = envelope.mailFrom
     const messageId = resolveMessageId(message)
     const logger = options.logger ?? console.log

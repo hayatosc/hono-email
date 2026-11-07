@@ -2,6 +2,7 @@ import type {
   EmailAdapter,
   EmailAttachmentLimits,
   EmailDkimOptions,
+  EmailSendOptions,
   SendEmailReceipt,
 } from '../index'
 
@@ -179,10 +180,10 @@ export type SmtpTransportOptions = {
  * await smtp.send(message, options)
  * ```
  */
-export type SmtpSendOptions = {
+export type SmtpSendOptions = EmailSendOptions & {
   dkim?: EmailDkimOptions
 }
 
 export type SmtpSendResult = SendEmailReceipt
 
-export type SmtpTransportLike = EmailAdapter
+export type SmtpTransportLike = EmailAdapter<SmtpSendOptions>

@@ -420,4 +420,51 @@ describe('Resend adapter', () => {
       successful: false,
     })
   })
+
+  test('immediately fails when signal is already aborted', async () => {
+    let fetchCalled = false
+    const fetchImplementation: ResendFetch = async () => {
+      fetchCalled = true
+      return new Response(JSON.stringify({ id: 'ok' }), { status: 200 })
+    }
+
+    const controller = new AbortController()
+    controller.abort()
+
+    const receipt = await ResendAdapter({
+      apiKey: 're_test',
+      fetch: fetchImplementation,
+    }).send(createMessage(), { signal: controller.signal })
+
+    expect(fetchCalled).toBe(false)
+    expect(receipt.successful).toBe(false)
+    expect(receipt).toMatchObject({
+      category: 'timeout',
+      permanent: false,
+      successful: false,
+    })
+  })
+
+  test('disables retries when retry: false is passed in sendOptions', async () => {
+    let attempts = 0
+    const fetchImplementation: ResendFetch = async () => {
+      attempts++
+      return new Response('Rate limited', { status: 429 })
+    }
+
+    const receipt = await ResendAdapter({
+      apiKey: 're_test',
+      fetch: fetchImplementation,
+      retry: { maxAttempts: 3 }, // adapter default has retries
+    }).send(createMessage(), { retry: false }) // sendOptions disables retries
+
+    expect(attempts).toBe(1)
+    expect(receipt.successful).toBe(false)
+    expect(receipt).toMatchObject({
+      category: 'provider',
+      code: 429,
+      permanent: false,
+      successful: false,
+    })
+  })
 })

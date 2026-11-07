@@ -3,7 +3,13 @@ import {
   type ResolvedEmailAttachment,
   resolveEmailAttachments,
 } from '../attachment'
-import type { EmailAdapter, EmailAddress, EmailMessage, SendEmailReceipt } from '../index'
+import type {
+  EmailAdapter,
+  EmailAddress,
+  EmailMessage,
+  EmailSendOptions,
+  SendEmailReceipt,
+} from '../index'
 import {
   addressToPath,
   assertValidEmailAddress,
@@ -216,7 +222,7 @@ const buildRestMessageId = (message: EmailMessage): string => {
  * ```
  */
 export const CloudflareEmailAdapter = (options: CloudflareEmailAdapterOptions): EmailAdapter => ({
-  async send(message: EmailMessage): Promise<SendEmailReceipt> {
+  async send(message: EmailMessage, sendOptions?: EmailSendOptions): Promise<SendEmailReceipt> {
     const connector = options.connector
     const recipients = collectRecipients(message)
     const recipientError = getProviderRecipientError(message, recipients)
@@ -224,6 +230,14 @@ export const CloudflareEmailAdapter = (options: CloudflareEmailAdapterOptions): 
       return failedReceipt([recipientError], {
         category: 'validation',
         permanent: true,
+      })
+    }
+
+    if (sendOptions?.signal?.aborted) {
+      return failedReceipt([sendOptions.signal.reason?.message ?? 'The operation was aborted.'], {
+        category: 'timeout',
+        permanent: false,
+        rejected: recipients,
       })
     }
 
@@ -249,7 +263,7 @@ export const CloudflareEmailAdapter = (options: CloudflareEmailAdapterOptions): 
         }
       }
 
-      const result = await connector.send(request)
+      const result = await connector.send(request, sendOptions)
       const accepted = [...result.delivered, ...result.queued]
       const queuedRecipients = result.queued.length > 0 ? result.queued : undefined
 

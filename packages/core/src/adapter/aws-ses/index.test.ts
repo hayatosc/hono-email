@@ -127,4 +127,42 @@ describe('SesAdapter error classification', () => {
       permanent: false,
     })
   })
+
+  test('immediately fails when signal is already aborted', async () => {
+    let sendCalled = false
+    const client: SesClient = {
+      send: async () => {
+        sendCalled = true
+        return { $metadata: {}, MessageId: 'msg-1' }
+      },
+    }
+    const adapter = SesAdapter({ client })
+    const controller = new AbortController()
+    controller.abort()
+
+    const receipt = await adapter.send(createMessage(), { signal: controller.signal })
+
+    expect(sendCalled).toBe(false)
+    expect(receipt).toMatchObject({
+      successful: false,
+      category: 'timeout',
+      permanent: false,
+    })
+  })
+
+  test('passes signal as abortSignal to SesClient', async () => {
+    let capturedOptions: unknown
+    const controller = new AbortController()
+    const client: SesClient = {
+      send: async (_cmd, options) => {
+        capturedOptions = options
+        return { $metadata: {}, MessageId: 'msg-1' }
+      },
+    }
+    const adapter = SesAdapter({ client })
+    const receipt = await adapter.send(createMessage(), { signal: controller.signal })
+
+    expect(receipt.successful).toBe(true)
+    expect(capturedOptions).toEqual({ abortSignal: controller.signal })
+  })
 })

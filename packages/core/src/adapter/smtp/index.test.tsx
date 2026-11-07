@@ -1245,4 +1245,133 @@ describe('sendEmail over SMTP', () => {
 
     await expect(smtp.verify()).rejects.toThrow('SMTP response timed out after 1ms.')
   })
+
+  test('aborts in-flight send when signal is aborted during session send', async () => {
+    const mock = createMockConnector(async (server) => {
+      try {
+        await server.writeResponse('220 smtp.example.com ready\r\n')
+        expect(await server.readLine()).toBe('EHLO localhost')
+        await server.writeResponse('250-smtp.example.com\r\n250 HELP\r\n')
+        expect(await server.readLine()).toBe('MAIL FROM:<sender@example.com>')
+        await server.writeResponse('250 Sender ok\r\n')
+        expect(await server.readLine()).toBe('RCPT TO:<recipient@example.com>')
+        await server.writeResponse('250 Recipient ok\r\n')
+        expect(await server.readLine()).toBe('DATA')
+        // Hold the response to DATA so client can abort while waiting
+        await new Promise((resolve) => setTimeout(resolve, 150))
+        await server.writeResponse('354 Start mail input\r\n')
+      } catch {
+        // Expected when client aborts and closes socket
+      }
+    })
+
+    const smtp = new SmtpTransport({
+      connector: mock.connector,
+      hostname: 'smtp.example.com',
+      port: 25,
+      secure: false,
+    })
+
+    const controller = new AbortController()
+    const sendPromise = smtp.send(
+      {
+        from: 'sender@example.com',
+        to: 'recipient@example.com',
+        subject: 'Test in-flight abort',
+        html: '<p>Hello world</p>',
+        text: 'Hello world',
+      },
+      { signal: controller.signal },
+    )
+
+    setTimeout(() => {
+      controller.abort(new DOMException('Operation aborted in-flight', 'AbortError'))
+    }, 30)
+
+    const receipt = await sendPromise
+    expect(receipt).toMatchObject({
+      successful: false,
+      category: 'timeout',
+      permanent: false,
+      rejected: ['recipient@example.com'],
+      errorMessages: ['Operation aborted in-flight'],
+    })
+
+    await smtp.close()
+  })
+
+  test('aborts queued send while waiting for connection pool slot', async () => {
+    const mock = createMockConnector(async (server, index) => {
+      try {
+        if (index === 1) {
+          await server.writeResponse('220 smtp.example.com ready\r\n')
+          expect(await server.readLine()).toBe('EHLO localhost')
+          await server.writeResponse('250-smtp.example.com\r\n250 HELP\r\n')
+          expect(await server.readLine()).toBe('MAIL FROM:<sender@example.com>')
+          await server.writeResponse('250 Sender ok\r\n')
+          expect(await server.readLine()).toBe('RCPT TO:<recipient1@example.com>')
+          await server.writeResponse('250 Recipient ok\r\n')
+          expect(await server.readLine()).toBe('DATA')
+          await server.writeResponse('354 Start mail input\r\n')
+          await server.readData()
+          await server.writeResponse('250 Message accepted\r\n')
+          if ((await server.readLine()) === 'QUIT') {
+            await server.writeResponse('221 Bye\r\n')
+          }
+        }
+      } catch {
+        // Expected on close
+      }
+    })
+
+    const smtp = new SmtpTransport({
+      connector: mock.connector,
+      hostname: 'smtp.example.com',
+      port: 25,
+      pool: { maxConnections: 1 },
+      secure: false,
+    })
+
+    // First send occupies the only slot
+    const sendPromise1 = smtp.send({
+      from: 'sender@example.com',
+      to: 'recipient1@example.com',
+      subject: 'First',
+      html: '<p>First</p>',
+      text: 'First',
+    })
+
+    // Wait until connection 1 is initiated
+    await new Promise((resolve) => setTimeout(resolve, 30))
+
+    // Second send waits in pool queue
+    const controller = new AbortController()
+    const sendPromise2 = smtp.send(
+      {
+        from: 'sender@example.com',
+        to: 'recipient2@example.com',
+        subject: 'Second',
+        html: '<p>Second</p>',
+        text: 'Second',
+      },
+      { signal: controller.signal },
+    )
+
+    // Abort the second send while queued
+    setTimeout(() => {
+      controller.abort(new DOMException('Queued send aborted', 'AbortError'))
+    }, 30)
+
+    const receipt2 = await sendPromise2
+    expect(receipt2).toMatchObject({
+      successful: false,
+      category: 'timeout',
+      permanent: false,
+      rejected: ['recipient2@example.com'],
+      errorMessages: ['Queued send aborted'],
+    })
+
+    await sendPromise1
+    await smtp.close()
+  })
 })

@@ -23,6 +23,7 @@ export type {
   FailedSendReceipt,
   SendEmailOptions,
   SendEmailReceipt,
+  EmailSendOptions,
   SuccessfulSendReceipt,
 } from '../email'
 

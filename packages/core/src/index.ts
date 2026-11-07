@@ -62,6 +62,7 @@ export type {
   EmailHeaders,
   EmailMessage,
   EmailMessageDraft,
+  EmailSendOptions,
   EmailTransport,
   FailedSendReceipt,
   SendEmailOptions,
