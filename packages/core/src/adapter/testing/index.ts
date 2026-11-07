@@ -2,7 +2,12 @@ import { readAttribute } from '../../html-attribute'
 import { tokenizeHtml } from '../../html-tokenizer'
 import { resolveEmailAttachments, type ResolvedEmailAttachment } from '../attachment'
 import type { EmailAdapter, EmailMessage, FailedSendReceipt, SendEmailReceipt } from '../index'
-import { addressToPath, buildRawEmailMessage, toAddressList } from '../message'
+import {
+  addressToPath,
+  buildRawEmailMessage,
+  resolveEmailEnvelope,
+  resolveMessageId,
+} from '../message'
 
 export type {
   EmailAddress,
@@ -31,15 +36,15 @@ export type RecordedEmail = {
   recipients: string[]
   attachments: ResolvedEmailAttachment[]
   /**
-   * HTML およびテキスト内のリンク一覧（出現順・重複排除済み）
+   * List of links extracted from HTML and text (in order of appearance, deduplicated).
    */
   links: URL[]
   /**
-   * 部分文字列または正規表現に一致する最初のリンクを URL として返します。見つからない場合は Error を投げます。
+   * Returns the first link matching a substring or regular expression as a URL instance. Throws an Error if no matching link is found.
    */
   link(matcher?: string | RegExp): URL
   /**
-   * ファイル名または CID に一致する添付ファイルを返します。見つからない場合は Error を投げます。
+   * Returns the attachment matching a filename or CID. Throws an Error if not found.
    */
   attachment(filenameOrCid: string): ResolvedEmailAttachment
 }
@@ -55,7 +60,7 @@ export type EmailMatcher =
     }
 
 const TEXT_URL_PATTERN = /\bhttps?:\/\/[^\s<>"'()]+/gi
-const HTML_ENTITY_PATTERN = /&(?:amp|quot|apos|lt|gt|#(?:x[0-9a-fA-F]+|\d+));/g
+const HTML_ENTITY_PATTERN = /&(?:amp|quot|apos|lt|gt|#(?:x[0-9a-fA-F]+|\d+));/gi
 
 const decodeHtmlEntitiesForUrl = (raw: string): string =>
   raw.replace(HTML_ENTITY_PATTERN, (match) => {
@@ -102,17 +107,20 @@ const trimPunctuationFromUrl = (url: string): string => {
 
 const parseCandidateUrl = (raw: string, baseUrl = 'http://localhost'): URL | undefined => {
   const trimmed = raw.trim()
-  if (!trimmed) {
+  if (!trimmed || trimmed.startsWith('#') || trimmed.toLowerCase().startsWith('javascript:')) {
     return undefined
   }
   try {
     return new URL(trimmed)
   } catch {
-    try {
-      return new URL(trimmed, baseUrl)
-    } catch {
-      return undefined
+    if (trimmed.startsWith('/')) {
+      try {
+        return new URL(trimmed, baseUrl)
+      } catch {
+        return undefined
+      }
     }
+    return undefined
   }
 }
 
@@ -160,7 +168,7 @@ export class InMemoryAdapter implements EmailAdapter {
   }
 
   /**
-   * 次回の send() 呼び出しを失敗させます
+   * Causes the next send() call to fail with the provided receipt or error.
    */
   failNext(
     failure: Partial<FailedSendReceipt> | Error = new Error('Simulated mail failure'),
@@ -205,11 +213,8 @@ export class InMemoryAdapter implements EmailAdapter {
   }
 
   async send(message: EmailMessage): Promise<SendEmailReceipt> {
-    const recipients = [
-      ...toAddressList(message.to),
-      ...toAddressList(message.cc),
-      ...toAddressList(message.bcc),
-    ].map(addressToPath)
+    const envelope = resolveEmailEnvelope(message)
+    const recipients = envelope.recipients
 
     if (this.#nextFailure !== undefined) {
       const failure = this.#nextFailure
@@ -302,7 +307,7 @@ export class InMemoryAdapter implements EmailAdapter {
       const to = matcher.to
       const toMatch =
         typeof to === 'string'
-          ? mail.recipients.includes(to)
+          ? mail.recipients.some((r) => r.includes(to))
           : mail.recipients.some((r) => to.test(r))
       if (!toMatch) {
         return false
@@ -312,7 +317,7 @@ export class InMemoryAdapter implements EmailAdapter {
       const fromAddress = addressToPath(mail.message.from)
       const fromMatch =
         typeof matcher.from === 'string'
-          ? fromAddress === matcher.from ||
+          ? fromAddress.includes(matcher.from) ||
             (typeof mail.message.from !== 'string' &&
               Boolean(mail.message.from.name?.includes(matcher.from)))
           : matcher.from.test(fromAddress) ||
@@ -344,18 +349,15 @@ export class InMemoryAdapter implements EmailAdapter {
 export type FileAdapterOptions = {
   directory: string
   /**
-   * カスタムファイル書き込み関数（Node/Bun/Deno 抽象化用、省略時は node:fs/promises を動的 import）
+   * Custom file writer function for platform abstraction. When omitted, dynamically imports node:fs/promises.
    */
   writeFile?: (path: string, content: string) => Promise<void>
 }
 
 export const FileAdapter = (options: FileAdapterOptions): EmailAdapter => ({
   async send(message: EmailMessage): Promise<SendEmailReceipt> {
-    const recipients = [
-      ...toAddressList(message.to),
-      ...toAddressList(message.cc),
-      ...toAddressList(message.bcc),
-    ].map(addressToPath)
+    const envelope = resolveEmailEnvelope(message)
+    const recipients = envelope.recipients
 
     const attachments = await resolveEmailAttachments(message.attachments)
     const { messageId, raw } = buildRawEmailMessage(message, {
@@ -386,27 +388,21 @@ export const FileAdapter = (options: FileAdapterOptions): EmailAdapter => ({
 
 export type LogAdapterOptions = {
   /**
-   * カスタムロガー関数（省略時は console.log）
+   * Custom logging function. Defaults to console.log.
    */
   logger?: (message: string) => void
   /**
-   * 本文（text / html）をログ出力に含めるかどうか（デフォルト: false）
+   * Whether to include plain text and HTML body in log output. Defaults to false.
    */
   includeBody?: boolean
 }
 
 export const LogAdapter = (options: LogAdapterOptions = {}): EmailAdapter => ({
   async send(message: EmailMessage): Promise<SendEmailReceipt> {
-    const recipients = [
-      ...toAddressList(message.to),
-      ...toAddressList(message.cc),
-      ...toAddressList(message.bcc),
-    ].map(addressToPath)
-    const from = addressToPath(message.from)
-    const attachments = await resolveEmailAttachments(message.attachments)
-    const { messageId } = buildRawEmailMessage(message, {
-      resolvedAttachments: attachments,
-    })
+    const envelope = resolveEmailEnvelope(message)
+    const recipients = envelope.recipients
+    const from = envelope.mailFrom
+    const messageId = resolveMessageId(message)
     const logger = options.logger ?? console.log
 
     let logText = `[LogAdapter] Mail sent: ID=${messageId} From=${from} To=${recipients.join(', ')} Subject="${message.subject}"`

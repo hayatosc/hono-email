@@ -30,22 +30,24 @@ const createSampleMessage = (overrides: Partial<EmailMessage> = {}): EmailMessag
 })
 
 describe('extractLinks', () => {
-  test('extracts links from HTML and text, decodes entities, and handles relative URLs', () => {
+  test('extracts links from HTML and text, decodes entities case-insensitively, and handles relative URLs while skipping fragments', () => {
     const html = `
       <div>
-        <a href="https://example.com/test?a=1&amp;b=2">Link 1</a>
+        <a href="https://example.com/test?a=1&AMP;b=2&#X26;c=3">Link 1</a>
         <a href='/relative/path?token=xyz&#38;user=1'>Link 2</a>
         <a href="mailto:support@example.com">Email</a>
-        <a href="https://example.com/test?a=1&amp;b=2">Duplicate Link</a>
+        <a href="#section-title">Jump</a>
+        <a href="javascript:void(0)">Noop</a>
+        <a href="https://example.com/test?a=1&amp;b=2&c=3">Duplicate Link</a>
       </div>
     `
     const text =
-      'Also see https://example.com/extra-text-link! and https://example.com/test?a=1&b=2.'
+      'Also see https://example.com/extra-text-link! and https://example.com/test?a=1&b=2&c=3.'
 
     const links = extractLinks(html, text)
 
     expect(links.map((l) => l.href)).toEqual([
-      'https://example.com/test?a=1&b=2',
+      'https://example.com/test?a=1&b=2&c=3',
       'http://localhost/relative/path?token=xyz&user=1',
       'mailto:support@example.com',
       'https://example.com/extra-text-link',
@@ -162,6 +164,22 @@ describe('InMemoryAdapter', () => {
     expect(() => adapter.assertSent({ to: 'carol@example.com' })).toThrow(
       'Expected matching email to be sent, but none matched.',
     )
+  })
+
+  test('respects custom envelope overrides for recipients', async () => {
+    const adapter = new InMemoryAdapter()
+    await adapter.send(
+      createSampleMessage({
+        envelope: {
+          to: ['intercepted@staging.example.com'],
+        },
+        to: ['real-user@production.example.com'],
+      }),
+    )
+
+    const mail = adapter.assertSent({ to: 'intercepted@staging.example.com' })
+    expect(mail.recipients).toEqual(['intercepted@staging.example.com'])
+    adapter.assertNotSent({ to: 'real-user@production.example.com' })
   })
 
   test('find() and filter() work as expected', async () => {

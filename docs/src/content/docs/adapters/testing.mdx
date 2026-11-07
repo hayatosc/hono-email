@@ -58,6 +58,7 @@ test('sends welcome email to the user', async () => {
 
 ```tsx
 // Assert matching email was sent (returns the matched RecordedEmail)
+// String values perform substring matching; RegExp values test pattern matches.
 const mail = mailbox.assertSent({
   to: 'user@example.com',
   from: 'support@example.com',
@@ -73,11 +74,18 @@ mailbox.assertSent((mail) => mail.recipients.length === 1)
 mailbox.assertNotSent({ to: 'spammer@example.com' })
 ```
 
+> **Matcher Matching Rules:**
+>
+> - `to`: Matches if any recipient contains the string or matches the RegExp.
+> - `from`: Matches if the sender address or display name contains the string or matches the RegExp.
+> - `subject`: Matches if the subject line contains the string or matches the RegExp.
+> - `textIncludes` / `htmlIncludes`: Matches if the message body contains the substring.
+
 ### Link & Attachment Helpers
 
 `RecordedEmail` instances returned from `mailbox.assertSent()` or found via `mailbox.find()` provide convenience accessors:
 
-- **`mail.link(pattern?)`**: Finds the first matching link (`<a href="...">` in HTML or URL in text) as a parsed `URL` instance with HTML entities (such as `&amp;`) fully decoded. Relative URLs (e.g. `/reset-password?token=...`) are automatically resolved against `http://localhost`.
+- **`mail.link(pattern?)`**: Finds the first matching link (`<a href="...">` in HTML or URL in text) as a parsed `URL` instance with HTML entities (such as `&amp;` or `&#X26;`, case-insensitive) fully decoded. Path-absolute relative URLs (e.g. `/reset-password?token=...`) are automatically resolved against `http://localhost`. Non-URL targets like `#fragments` or `javascript:` links are ignored.
 - **`mail.attachment(filenameOrCid)`**: Finds a resolved attachment by file name or `cid`.
 
 ```tsx
