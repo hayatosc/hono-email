@@ -152,12 +152,13 @@ Per-send retry configuration. Set to `false` to disable retries (e.g. when calle
 
 ## SendEmailOptions
 
-Options for `sendEmail()`: all `EmailMessageDraft` fields, `EmailSendOptions`, plus an adapter.
+Options for `sendEmail()`: all `EmailMessageDraft` fields, `EmailSendOptions`, delivery adapter, and telemetry hooks.
 
 ```ts
 type SendEmailOptions = EmailMessageDraft &
   EmailSendOptions & {
     adapter: EmailAdapter
+    hooks?: MailTelemetryHooks
   }
 ```
 
@@ -172,6 +173,10 @@ AbortSignal to cancel sending and retry sleep. See [EmailSendOptions](#emailsend
 #### `retry` <Badge text="Optional" variant="note" size="small" />
 
 Override retry settings for this send (`false` to disable retries). See [EmailSendOptions](#emailsendoptions).
+
+#### `hooks` <Badge text="Optional" variant="note" size="small" />
+
+Telemetry lifecycle hooks (`onSent`, `onFailed`, `onEvent`) invoked with latency and recipient metrics. See [Mailer & Mailable](/core/mailer/#telemetry--observability).
 
 ---
 

@@ -2,6 +2,13 @@ import type { Child } from 'hono/jsx'
 
 import type { RequestRetryOptions } from './adapter/utils'
 import type { RenderOptions } from './index'
+import {
+  dispatchMailEvent,
+  extractMessageRecipients,
+  type MailFailedEvent,
+  type MailSentEvent,
+  type MailTelemetryHooks,
+} from './telemetry'
 
 /**
  * Email address accepted by transport adapters.
@@ -359,24 +366,29 @@ export type EmailTransport<TSendOptions extends EmailSendOptions = EmailSendOpti
   EmailAdapter<TSendOptions>
 
 /**
- * Options for `sendEmail()`, combining a JSX draft with a delivery adapter.
- *
- * @property adapter - Delivery adapter used after rendering.
+ * Options accepted by {@link sendEmail}. Combines message draft options, delivery
+ * transport adapter, send options (signal/retry), and telemetry hooks.
  *
  * @example
  * ```tsx
- * await sendEmail({
- *   adapter,
+ * const receipt = await sendEmail({
+ *   adapter: new ResendAdapter({ apiKey: 're_123' }),
  *   from: 'sender@example.com',
  *   to: 'recipient@example.com',
  *   subject: 'Welcome',
  *   jsx: <Html><Body><Text>Hello</Text></Body></Html>,
+ *   hooks: {
+ *     onSent(event) {
+ *       console.log(`Sent in ${event.durationMs}ms with ID: ${event.messageId}`)
+ *     },
+ *   },
  * })
  * ```
  */
 export type SendEmailOptions = EmailMessageDraft &
   EmailSendOptions & {
     adapter: EmailAdapter
+    hooks?: MailTelemetryHooks
   }
 
 /**
@@ -390,6 +402,13 @@ export type EmailRenderer = (
   text: string
 }>
 
+/**
+ * Renders an email message draft with a JSX renderer into a full EmailMessage with HTML and text.
+ *
+ * @param renderEmail - Renderer function to produce HTML/text from JSX.
+ * @param draft - Draft containing JSX, headers, recipients, attachments, and metadata.
+ * @returns Fully rendered EmailMessage ready for delivery.
+ */
 export const renderEmailMessage = async (
   renderEmail: EmailRenderer,
   draft: EmailMessageDraft,
@@ -415,10 +434,18 @@ export const renderEmailMessage = async (
   }
 }
 
+/**
+ * Renders a draft email and transmits it through the configured adapter with telemetry.
+ *
+ * @param renderEmail - Renderer function to produce HTML/text from JSX.
+ * @param options - Send options including draft, adapter, signal/retry, and telemetry hooks.
+ * @returns Receipt with delivery status, messageId, or error classification.
+ */
 export const sendEmail = async (
   renderEmail: EmailRenderer,
   options: SendEmailOptions,
 ): Promise<SendEmailReceipt> => {
+  const startTime = performance.now()
   const message = await renderEmailMessage(renderEmail, options)
   const sendOptions: EmailSendOptions | undefined =
     options.signal !== undefined || options.retry !== undefined
@@ -427,7 +454,55 @@ export const sendEmail = async (
           ...(options.retry !== undefined ? { retry: options.retry } : {}),
         }
       : undefined
-  return sendOptions !== undefined
-    ? options.adapter.send(message, sendOptions)
-    : options.adapter.send(message)
+
+  let receipt: SendEmailReceipt
+  let caughtError: unknown
+  try {
+    receipt = await (sendOptions !== undefined
+      ? options.adapter.send(message, sendOptions)
+      : options.adapter.send(message))
+  } catch (error) {
+    caughtError = error
+    receipt = {
+      successful: false,
+      accepted: [],
+      rejected: extractMessageRecipients(message),
+      errorMessages: [error instanceof Error ? error.message : String(error)],
+      permanent: false,
+      cause: error,
+    }
+  }
+
+  const durationMs = Math.round(performance.now() - startTime)
+  const recipients = extractMessageRecipients(message)
+
+  if (receipt.successful) {
+    const event: MailSentEvent = {
+      type: 'sent',
+      messageId: receipt.messageId,
+      subject: message.subject,
+      recipients,
+      durationMs,
+      receipt,
+      message,
+    }
+    await dispatchMailEvent(event, options.hooks)
+  } else {
+    const event: MailFailedEvent = {
+      type: 'failed',
+      subject: message.subject,
+      recipients,
+      durationMs,
+      permanent: receipt.permanent ?? false,
+      receipt,
+      message,
+    }
+    await dispatchMailEvent(event, options.hooks)
+  }
+
+  if (caughtError !== undefined) {
+    throw caughtError
+  }
+
+  return receipt
 }
