@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it } from 'bun:test'
 
 import { createTranslator, LocaleProvider, useLocale } from './i18n'
 import { Body, Html, render, Text } from './index'

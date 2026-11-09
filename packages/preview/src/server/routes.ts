@@ -59,9 +59,7 @@ export function createApiRoutes(loadModule: LoadModule, templateDir: string): Ho
       const locale =
         isObject(body) && typeof body.locale === 'string'
           ? body.locale
-          : typeof props.locale === 'string'
-            ? props.locale
-            : undefined
+          : undefined
       const schema = extractPropsSchema(c.var.mod)
       const mergedProps = mergePropsWithDefaults(schema, props)
       const attachments = (

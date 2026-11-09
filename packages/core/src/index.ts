@@ -1,4 +1,5 @@
 import type { Child } from 'hono/jsx'
+import { wrapWithLocaleProvider } from './i18n'
 
 export {
   Body,
@@ -105,7 +106,6 @@ export {
 export { LocaleContext, LocaleProvider, useLocale, createTranslator } from './i18n'
 export type { LocaleProviderProps } from './i18n'
 export { inlineCidImagesAsDataUrls } from './adapter/attachment'
-import { wrapWithLocaleProvider } from './i18n'
 import {
   MARKDOWN_TAILWIND_PARENT_REQUIRED_ATTRIBUTE_NAME,
   MARKDOWN_TAILWIND_PARENT_REQUIRED_ERROR_MESSAGE,

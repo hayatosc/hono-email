@@ -201,7 +201,7 @@ describe('createApiRoutes error paths', () => {
     const res = await app.request('/api/templates/Test/render', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ props: { locale: 'ja' }, locale: 'ja' }),
+      body: JSON.stringify({ props: {}, locale: 'ja' }),
     })
 
     expect(res.status).toBe(200)
