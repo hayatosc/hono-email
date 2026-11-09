@@ -30,6 +30,7 @@ type EmailMessage = {
   date?: Date
   envelope?: EmailEnvelope
   dkim?: EmailDkimOptions
+  unsubscribe?: EmailUnsubscribeOptions
 }
 ```
 
@@ -95,6 +96,17 @@ SMTP envelope override. See [EmailEnvelope](#emailenvelope).
 #### `dkim` <Badge text="Optional" variant="note" size="small" />
 
 DKIM signing options. See [EmailDkimOptions](#emaildkimoptions).
+
+#### `unsubscribe` <Badge text="Optional" variant="note" size="small" />
+
+RFC 8058 One-Click Unsubscribe options. Automatically adds `List-Unsubscribe` and `List-Unsubscribe-Post: List-Unsubscribe=One-Click` headers.
+
+```ts
+type EmailUnsubscribeOptions = {
+  url: string
+  email?: string
+}
+```
 
 ---
 

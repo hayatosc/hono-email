@@ -10,6 +10,7 @@ import type {
   EmailMessageDraft,
   EmailRenderer,
   EmailSendOptions,
+  EmailUnsubscribeOptions,
   SendEmailReceipt,
 } from './email'
 import { renderEmailMessage, sendEmail } from './email'
@@ -42,6 +43,7 @@ export type MailDefinitionOutput = {
   envelope?: EmailEnvelope
   render?: RenderOptions
   idempotencyKey?: string
+  unsubscribe?: EmailUnsubscribeOptions
 }
 
 /**
@@ -137,6 +139,7 @@ export type SendMailableOptions<TData = void> = EmailSendOptions & {
   render?: RenderOptions
   idempotencyKey?: string
   locale?: string
+  unsubscribe?: EmailUnsubscribeOptions
   hooks?: MailTelemetryHooks
 } & ([TData] extends [void]
     ? { data?: undefined }
@@ -160,6 +163,7 @@ export type RenderMailableOptions<TData = void> = {
   from?: EmailAddress
   locale?: string
   render?: RenderOptions
+  unsubscribe?: EmailUnsubscribeOptions
 } & ([TData] extends [void]
   ? { data?: undefined }
   : [TData] extends [undefined]
@@ -305,6 +309,7 @@ export function createMailer(defaults: MailerOptions, customRenderer?: EmailRend
     render?: RenderOptions
     idempotencyKey?: string
     locale?: string
+    unsubscribe?: EmailUnsubscribeOptions
     data?: unknown
     hooks?: MailTelemetryHooks
   }
@@ -314,6 +319,7 @@ export function createMailer(defaults: MailerOptions, customRenderer?: EmailRend
     from?: EmailAddress
     locale?: string
     render?: RenderOptions
+    unsubscribe?: EmailUnsubscribeOptions
     data?: unknown
   }
 
@@ -361,7 +367,12 @@ export function createMailer(defaults: MailerOptions, customRenderer?: EmailRend
 
       const replyTo = opts.replyTo ?? built.replyTo ?? defaults.replyTo
       const headers = mergeHeaders(defaults.headers, built.headers, opts.headers)
-      const renderOptions = mergeRenderOptions(defaults.render, built.render, opts.render)
+      const renderOptions = mergeRenderOptions(
+        defaults.render,
+        built.render,
+        opts.render,
+        opts.locale !== undefined ? { locale: opts.locale } : undefined,
+      )
       const retry = opts.retry ?? defaults.retry
       const signal = opts.signal
       const mergedHooks = mergeTelemetryHooks(defaults.hooks, opts.hooks)
@@ -381,6 +392,9 @@ export function createMailer(defaults: MailerOptions, customRenderer?: EmailRend
         ...(built.envelope !== undefined ? { envelope: built.envelope } : {}),
         ...(opts.idempotencyKey !== undefined || built.idempotencyKey !== undefined
           ? { idempotencyKey: opts.idempotencyKey ?? built.idempotencyKey }
+          : {}),
+        ...(opts.unsubscribe !== undefined || built.unsubscribe !== undefined
+          ? { unsubscribe: opts.unsubscribe ?? built.unsubscribe }
           : {}),
         ...(renderOptions !== undefined ? { render: renderOptions } : {}),
       }
@@ -452,7 +466,12 @@ export function createMailer(defaults: MailerOptions, customRenderer?: EmailRend
       const to = opts?.to ?? []
       const replyTo = built.replyTo ?? defaults.replyTo
       const headers = mergeHeaders(defaults.headers, built.headers)
-      const renderOptions = mergeRenderOptions(defaults.render, built.render, opts?.render)
+      const renderOptions = mergeRenderOptions(
+        defaults.render,
+        built.render,
+        opts?.render,
+        opts?.locale !== undefined ? { locale: opts.locale } : undefined,
+      )
 
       const draft: EmailMessageDraft = {
         from,
@@ -466,6 +485,9 @@ export function createMailer(defaults: MailerOptions, customRenderer?: EmailRend
         ...(built.attachments !== undefined ? { attachments: built.attachments } : {}),
         ...(built.envelope !== undefined ? { envelope: built.envelope } : {}),
         ...(built.idempotencyKey !== undefined ? { idempotencyKey: built.idempotencyKey } : {}),
+        ...(opts?.unsubscribe !== undefined || built.unsubscribe !== undefined
+          ? { unsubscribe: opts?.unsubscribe ?? built.unsubscribe }
+          : {}),
         ...(renderOptions !== undefined ? { render: renderOptions } : {}),
       }
 

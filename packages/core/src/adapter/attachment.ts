@@ -361,3 +361,34 @@ export const resolveEmailAttachmentsSync = (
     buildResolvedAttachment(attachment, resolveAttachmentContentSync(attachment), limits),
   )
 }
+
+/**
+ * Resolves attachments and replaces `cid:...` references in HTML with `data:<contentType>;base64,...` data URLs.
+ * Useful for browser previews where the browser cannot resolve the `cid:` URI scheme.
+ *
+ * @param html - Rendered HTML string containing possible `cid:...` image sources.
+ * @param attachments - Array of attachments that may contain inline `cid` entries.
+ * @returns HTML string with `cid:...` replaced by `data:` URLs.
+ */
+export const inlineCidImagesAsDataUrls = async (
+  html: string,
+  attachments: EmailAttachment[] | undefined,
+): Promise<string> => {
+  if (!attachments || attachments.length === 0 || !html.includes('cid:')) {
+    return html
+  }
+  const resolved = await resolveEmailAttachments(attachments)
+  const cidAttachments = resolved
+    .filter((a): a is typeof a & { cid: string } => typeof a.cid === 'string' && a.cid.length > 0)
+    .sort((a, b) => b.cid.length - a.cid.length)
+
+  let output = html
+  for (const attachment of cidAttachments) {
+    const base64 = encodeAttachmentContentBase64(attachment.content)
+    const dataUrl = `data:${attachment.contentType};base64,${base64}`
+    output = output
+      .replaceAll(`src="cid:${attachment.cid}"`, `src="${dataUrl}"`)
+      .replaceAll(`src='cid:${attachment.cid}'`, `src='${dataUrl}'`)
+  }
+  return output
+}

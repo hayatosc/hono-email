@@ -3,6 +3,9 @@ import { mkdtempSync, writeFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
+import { useLocale } from 'hono-email'
+import { jsx } from 'hono/jsx'
+
 import { createApiRoutes } from './routes'
 
 describe('createApiRoutes', () => {
@@ -173,5 +176,85 @@ describe('createApiRoutes error paths', () => {
     expect(res.status).toBe(500)
     const body = await res.json()
     expect(body.error).toBe('Module load failed')
+  })
+
+  test('POST /api/templates/:name/render passes locale and resolves CID attachments', async () => {
+    const loadModule = async () => ({
+      default: () => {
+        const locale = useLocale()
+        return jsx('html', {}, [
+          jsx('body', {}, [`Context locale: ${locale}`, jsx('img', { src: 'cid:icon@test' })]),
+        ])
+      },
+      attachments: [
+        {
+          content: 'img-content',
+          cid: 'icon@test',
+          contentType: 'image/png',
+        },
+      ],
+      previewProps: {},
+    })
+
+    const app = createApiRoutes(loadModule, tempDir)
+    const res = await app.request('/api/templates/Test/render', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ props: {}, locale: 'ja' }),
+    })
+
+    expect(res.status).toBe(200)
+    const body = await res.json()
+    expect(body.html).toContain('Context locale: ja')
+    expect(body.html).toContain('data:image/png;base64,')
+  })
+
+  test('POST /api/templates/:name/render falls back to previewProps locale', async () => {
+    const loadModule = async () => ({
+      default: () => {
+        const locale = useLocale()
+        return jsx('html', {}, [jsx('body', {}, [`Context locale: ${locale}`])])
+      },
+      previewProps: {
+        locale: { type: 'string', default: 'de' },
+      },
+    })
+
+    const app = createApiRoutes(loadModule, tempDir)
+    const res = await app.request('/api/templates/Test/render', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ props: {} }),
+    })
+
+    expect(res.status).toBe(200)
+    const body = await res.json()
+    expect(body.html).toContain('Context locale: de')
+  })
+
+  test('POST /api/templates/:name/render sanitizes invalid attachments and blocks remote URLs', async () => {
+    const loadModule = async () => ({
+      default: () => jsx('html', {}, [jsx('body', {}, [jsx('img', { src: 'cid:remote' })])]),
+      previewProps: {},
+    })
+
+    const app = createApiRoutes(loadModule, tempDir)
+    const res = await app.request('/api/templates/Test/render', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        props: {},
+        attachments: [
+          null,
+          'not-an-object',
+          { href: 'http://internal.service/secret', cid: 'remote' },
+        ],
+      }),
+    })
+
+    expect(res.status).toBe(200)
+    const body = await res.json()
+    // Should NOT inline the SSRF attachment and should not throw 500
+    expect(body.html).toContain('src="cid:remote"')
   })
 })

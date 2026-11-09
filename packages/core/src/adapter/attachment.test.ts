@@ -2,6 +2,7 @@ import { describe, test, expect } from 'bun:test'
 
 import {
   encodeAttachmentContentBase64,
+  inlineCidImagesAsDataUrls,
   resolveEmailAttachments,
   resolveEmailAttachmentsSync,
 } from './attachment'
@@ -640,5 +641,67 @@ describe('resolveEmailAttachments - multiple attachments', () => {
     expect(new TextDecoder().decode(first(result).content)).toBe('first')
     expect(new TextDecoder().decode(at(result, 1).content)).toBe('second')
     expect(new TextDecoder().decode(at(result, 2).content)).toBe('third')
+  })
+})
+
+describe('inlineCidImagesAsDataUrls', () => {
+  test('returns html unchanged if attachments is undefined or empty', async () => {
+    const html = '<img src="cid:logo@example.com" />'
+    expect(await inlineCidImagesAsDataUrls(html, undefined)).toBe(html)
+    expect(await inlineCidImagesAsDataUrls(html, [])).toBe(html)
+  })
+
+  test('returns html unchanged if html does not contain cid:', async () => {
+    const html = '<img src="https://example.com/logo.png" />'
+    const attachments = [{ content: 'image-data', cid: 'logo@example.com', filename: 'logo.png' }]
+    expect(await inlineCidImagesAsDataUrls(html, attachments)).toBe(html)
+  })
+
+  test('replaces cid:... with data URL', async () => {
+    const html = '<img src="cid:logo@example.com" alt="Logo" />'
+    const rawData = 'image-bytes'
+    const base64Data = encodeAttachmentContentBase64(new TextEncoder().encode(rawData))
+    const attachments = [
+      {
+        content: rawData,
+        cid: 'logo@example.com',
+        filename: 'logo.png',
+        contentType: 'image/png',
+      },
+    ]
+
+    const result = await inlineCidImagesAsDataUrls(html, attachments)
+    expect(result).toBe(`<img src="data:image/png;base64,${base64Data}" alt="Logo" />`)
+  })
+
+  test('replaces multiple occurrences and multiple attachments', async () => {
+    const html = '<img src="cid:a@test" /><img src="cid:b@test" /><img src="cid:a@test" />'
+    const aBase64 = encodeAttachmentContentBase64(new TextEncoder().encode('alpha'))
+    const bBase64 = encodeAttachmentContentBase64(new TextEncoder().encode('beta'))
+    const attachments = [
+      { content: 'alpha', cid: 'a@test', contentType: 'image/png' },
+      { content: 'beta', cid: 'b@test', contentType: 'image/jpeg' },
+      { content: 'gamma', filename: 'file.pdf' }, // no cid
+    ]
+
+    const result = await inlineCidImagesAsDataUrls(html, attachments)
+    expect(result).toBe(
+      `<img src="data:image/png;base64,${aBase64}" /><img src="data:image/jpeg;base64,${bBase64}" /><img src="data:image/png;base64,${aBase64}" />`,
+    )
+  })
+
+  test('resolves longest cid first to avoid prefix collisions and preserves non-src text', async () => {
+    const html = `<img src="cid:icon" /><img src='cid:icon-large' /><p>Reference cid:icon in text</p>`
+    const iconData = encodeAttachmentContentBase64(new TextEncoder().encode('small'))
+    const largeData = encodeAttachmentContentBase64(new TextEncoder().encode('large'))
+    const attachments = [
+      { content: 'small', cid: 'icon', contentType: 'image/png' },
+      { content: 'large', cid: 'icon-large', contentType: 'image/png' },
+    ]
+
+    const result = await inlineCidImagesAsDataUrls(html, attachments)
+    expect(result).toBe(
+      `<img src="data:image/png;base64,${iconData}" /><img src='data:image/png;base64,${largeData}' /><p>Reference cid:icon in text</p>`,
+    )
   })
 })

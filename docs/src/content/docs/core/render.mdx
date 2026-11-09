@@ -100,6 +100,28 @@ Join the last two words of each text block with `&nbsp;` to prevent single-word 
 
 Doctype prepended to the output. Pass `false` to omit the doctype entirely.
 
+### `locale` <Badge text="Optional" variant="note" size="small" />
+
+**Type:** `string` · **Default:** `'en'`
+
+Email locale string (e.g. `'ja'`, `'en-US'`) passed into `LocaleContext`. Descendant components can read this with `useLocale()` or resolve translations via `createTranslator()`.
+
+```tsx
+import { render, useLocale, createTranslator } from 'hono-email'
+
+const t = createTranslator({
+  en: { welcome: 'Welcome' },
+  ja: { welcome: 'ようこそ' },
+})
+
+const Greeting = () => {
+  const { welcome } = t()
+  return <Text>{welcome}</Text>
+}
+
+const { html } = await render(<Greeting />, { locale: 'ja' })
+```
+
 ### `text` <Badge text="Optional" variant="note" size="small" />
 
 **Type:** `PlainTextRenderOptions`

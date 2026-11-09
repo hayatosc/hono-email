@@ -119,3 +119,11 @@ export const previewProps = {
   },
 } satisfies PreviewPropsConfig
 ```
+
+### Inline CID images (`cid:`)
+
+When templates reference inline attachments with `<Img src="cid:logo@example.com" />`, the preview server automatically transforms `cid:...` references into base64 `data:` URLs so the browser can display inline attachments correctly without broken images.
+
+### Multi-language preview (`locale`)
+
+Templates using `useLocale()` or `createTranslator()` automatically reflect the `locale` prop configured in `previewProps` or requested during rendering, allowing you to preview templates in different languages.
