@@ -66,11 +66,13 @@ export type {
   EmailMessageDraft,
   EmailSendOptions,
   EmailTransport,
+  EmailUnsubscribeOptions,
   FailedSendReceipt,
   SendEmailOptions,
   SendEmailReceipt,
   SuccessfulSendReceipt,
 } from './email'
+export { formatUnsubscribeHeaders } from './email'
 import {
   createMailer as createMailerInternal,
   defineMail,
@@ -107,6 +109,16 @@ export {
 export { LocaleContext, LocaleProvider, useLocale, createTranslator } from './i18n'
 export type { LocaleProviderProps } from './i18n'
 export { inlineCidImagesAsDataUrls } from './adapter/attachment'
+export {
+  FallbackAdapter,
+  type FallbackAdapterOptions,
+  type FallbackEvent,
+} from './adapter/fallback'
+export {
+  withDeliveryRules,
+  type DeliveryRulesOptions,
+  type InterceptOptions,
+} from './adapter/rules'
 import {
   MARKDOWN_TAILWIND_PARENT_REQUIRED_ATTRIBUTE_NAME,
   MARKDOWN_TAILWIND_PARENT_REQUIRED_ERROR_MESSAGE,

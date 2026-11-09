@@ -518,3 +518,53 @@ type CloudflareEmailWorkersConnectorOptions = {
   bindingName?: string
 }
 ```
+
+---
+
+## FallbackAdapter
+
+Combines multiple email adapters into a fallback sequence that automatically recovers from transient errors (such as 429 rate limits or network connection drops).
+
+```tsx
+import { FallbackAdapter } from 'hono-email'
+import ResendAdapter from 'hono-email/resend'
+import SendGridAdapter from 'hono-email/sendgrid'
+
+const adapter = FallbackAdapter({
+  adapters: [
+    ResendAdapter({ apiKey: process.env.RESEND_API_KEY! }),
+    SendGridAdapter({ apiKey: process.env.SENDGRID_API_KEY! }),
+  ],
+  onFallback({ fromAdapter, toAdapter, receipt, error }) {
+    console.warn('Primary adapter failed; falling back to secondary.', receipt ?? error)
+  },
+})
+```
+
+- If an adapter returns a permanent failure (`receipt.permanent === true` or a permanent error), delivery stops immediately without fallback.
+- If all adapters fail, the final receipt or error is returned/thrown.
+
+---
+
+## withDeliveryRules
+
+Wraps an existing `EmailAdapter` with delivery interception (staging redirect) and address suppression (opt-out / bounce filtering).
+
+```tsx
+import { withDeliveryRules } from 'hono-email'
+import ResendAdapter from 'hono-email/resend'
+
+const baseAdapter = ResendAdapter({ apiKey: process.env.RESEND_API_KEY! })
+
+const adapter = withDeliveryRules(baseAdapter, {
+  intercept: {
+    to: 'qa-catchall@example.com',
+    allowList: [/@mycompany\.com$/],
+    subjectPrefix: '[STAGING] ',
+  },
+  suppress: ['optout@example.com', 'bounced@example.com'],
+})
+```
+
+- **`intercept`**: Redirects all recipients outside `allowList` to `intercept.to`, preserves original recipients in the `X-Original-To` header, and prepends `subjectPrefix` to the subject.
+- **`suppress`**: Filters out suppressed addresses. If all recipients are suppressed, returns a skipped receipt without invoking the underlying adapter.

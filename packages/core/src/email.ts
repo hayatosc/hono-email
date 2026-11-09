@@ -210,6 +210,52 @@ export type EmailMessage = {
    * @deprecated Use `SmtpTransport.send(message, { dkim })` or transport-level DKIM instead.
    */
   dkim?: EmailDkimOptions
+  /**
+   * RFC 8058 One-Click Unsubscribe options.
+   * Automatically adds `List-Unsubscribe` and `List-Unsubscribe-Post` headers.
+   */
+  unsubscribe?: EmailUnsubscribeOptions | undefined
+}
+
+/**
+ * RFC 8058 One-Click Unsubscribe options.
+ *
+ * Automatically generates `List-Unsubscribe` and `List-Unsubscribe-Post: List-Unsubscribe=One-Click`
+ * headers for compliant email delivery (required by Google and Yahoo for bulk senders).
+ *
+ * @property url - Web unsubscribe HTTPS URL triggered via POST.
+ * @property email - Optional mailto unsubscribe email address.
+ *
+ * @example
+ * ```ts
+ * const unsubscribe: EmailUnsubscribeOptions = {
+ *   url: 'https://example.com/unsub?id=123',
+ *   email: 'unsub@example.com',
+ * }
+ * ```
+ */
+export type EmailUnsubscribeOptions = {
+  url: string
+  email?: string | undefined
+}
+
+/**
+ * Formats RFC 8058 and RFC 2369 compliant List-Unsubscribe headers.
+ *
+ * @param unsubscribe - Unsubscribe URL and optional mailto address.
+ * @returns Headers containing `List-Unsubscribe` and `List-Unsubscribe-Post`.
+ */
+export const formatUnsubscribeHeaders = (
+  unsubscribe: EmailUnsubscribeOptions,
+): Record<string, string> => {
+  const listUnsubscribe = unsubscribe.email
+    ? `<mailto:${unsubscribe.email}>, <${unsubscribe.url}>`
+    : `<${unsubscribe.url}>`
+
+  return {
+    'List-Unsubscribe': listUnsubscribe,
+    'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+  }
 }
 
 /**
@@ -414,6 +460,12 @@ export const renderEmailMessage = async (
   draft: EmailMessageDraft,
 ): Promise<EmailMessage> => {
   const rendered = await renderEmail(draft.jsx, draft.render)
+  const unsubscribeHeaders =
+    draft.unsubscribe !== undefined ? formatUnsubscribeHeaders(draft.unsubscribe) : undefined
+  const mergedHeaders =
+    unsubscribeHeaders !== undefined || draft.headers !== undefined
+      ? { ...unsubscribeHeaders, ...draft.headers }
+      : undefined
 
   return {
     from: draft.from,
@@ -427,10 +479,11 @@ export const renderEmailMessage = async (
     ...(draft.date !== undefined ? { date: draft.date } : {}),
     ...(draft.dkim !== undefined ? { dkim: draft.dkim } : {}),
     ...(draft.envelope !== undefined ? { envelope: draft.envelope } : {}),
-    ...(draft.headers !== undefined ? { headers: draft.headers } : {}),
+    ...(mergedHeaders !== undefined ? { headers: mergedHeaders } : {}),
     ...(draft.idempotencyKey !== undefined ? { idempotencyKey: draft.idempotencyKey } : {}),
     ...(draft.messageId !== undefined ? { messageId: draft.messageId } : {}),
     ...(draft.replyTo !== undefined ? { replyTo: draft.replyTo } : {}),
+    ...(draft.unsubscribe !== undefined ? { unsubscribe: draft.unsubscribe } : {}),
   }
 }
 

@@ -65,3 +65,6 @@ export const renderEmailMessage = async (draft: EmailMessageDraft): Promise<Emai
  */
 export const sendEmail = async (options: SendEmailOptions): Promise<SendEmailReceipt> =>
   sendEmailWithRender(render, options)
+
+export { FallbackAdapter, type FallbackAdapterOptions, type FallbackEvent } from './fallback'
+export { withDeliveryRules, type DeliveryRulesOptions, type InterceptOptions } from './rules'
