@@ -3,6 +3,7 @@ import { mkdtempSync, writeFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
+import { useLocale } from 'hono-email'
 import { jsx } from 'hono/jsx'
 
 import { createApiRoutes } from './routes'
@@ -179,12 +180,10 @@ describe('createApiRoutes error paths', () => {
 
   test('POST /api/templates/:name/render passes locale and resolves CID attachments', async () => {
     const loadModule = async () => ({
-      default: (props: { locale?: string }) => {
+      default: () => {
+        const locale = useLocale()
         return jsx('html', {}, [
-          jsx('body', {}, [
-            `Current locale: ${props.locale ?? 'none'}`,
-            jsx('img', { src: 'cid:icon@test' }),
-          ]),
+          jsx('body', {}, [`Context locale: ${locale}`, jsx('img', { src: 'cid:icon@test' })]),
         ])
       },
       attachments: [
@@ -206,13 +205,15 @@ describe('createApiRoutes error paths', () => {
 
     expect(res.status).toBe(200)
     const body = await res.json()
+    expect(body.html).toContain('Context locale: ja')
     expect(body.html).toContain('data:image/png;base64,')
   })
 
   test('POST /api/templates/:name/render falls back to previewProps locale', async () => {
     const loadModule = async () => ({
-      default: (props: { locale?: string }) => {
-        return jsx('html', {}, [jsx('body', {}, [`Rendered locale: ${props.locale ?? 'none'}`])])
+      default: () => {
+        const locale = useLocale()
+        return jsx('html', {}, [jsx('body', {}, [`Context locale: ${locale}`])])
       },
       previewProps: {
         locale: { type: 'string', default: 'de' },
@@ -228,7 +229,7 @@ describe('createApiRoutes error paths', () => {
 
     expect(res.status).toBe(200)
     const body = await res.json()
-    expect(body.html).toContain('Rendered locale: de')
+    expect(body.html).toContain('Context locale: de')
   })
 
   test('POST /api/templates/:name/render sanitizes invalid attachments and blocks remote URLs', async () => {

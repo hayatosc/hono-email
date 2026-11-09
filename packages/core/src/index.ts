@@ -1,4 +1,5 @@
 import type { Child } from 'hono/jsx'
+
 import { wrapWithLocaleProvider } from './i18n'
 
 export {

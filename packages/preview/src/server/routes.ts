@@ -28,8 +28,14 @@ function isObject(value: unknown): value is Record<string, unknown> {
 function isValidAttachment(item: unknown): item is EmailAttachment {
   if (!isObject(item)) return false
   if ('cid' in item && item.cid !== undefined && typeof item.cid !== 'string') return false
-  if ('filename' in item && item.filename !== undefined && typeof item.filename !== 'string') return false
-  if ('contentType' in item && item.contentType !== undefined && typeof item.contentType !== 'string') return false
+  if ('filename' in item && item.filename !== undefined && typeof item.filename !== 'string')
+    return false
+  if (
+    'contentType' in item &&
+    item.contentType !== undefined &&
+    typeof item.contentType !== 'string'
+  )
+    return false
   return true
 }
 
@@ -37,7 +43,8 @@ function sanitizeClientAttachment(item: unknown): EmailAttachment | null {
   if (!isValidAttachment(item)) return null
   // Prevent SSRF: disallow remote URLs from request-supplied attachments
   if ('href' in item && typeof item.href === 'string') return null
-  if ('path' in item && typeof item.path === 'string' && /^https?:\/\//i.test(item.path)) return null
+  if ('path' in item && typeof item.path === 'string' && /^https?:\/\//i.test(item.path))
+    return null
   return item
 }
 

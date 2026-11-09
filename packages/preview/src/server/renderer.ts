@@ -1,5 +1,5 @@
 import { inlineCidImagesAsDataUrls, render, type EmailAttachment } from 'hono-email'
-import type { Child } from 'hono/jsx'
+import { jsx, type Child } from 'hono/jsx'
 
 export type RenderTemplateOptions = {
   locale?: string | undefined
@@ -11,7 +11,7 @@ export async function renderTemplate(
   props: Record<string, unknown>,
   options: RenderTemplateOptions = {},
 ): Promise<{ html: string; text: string; warnings: string[] }> {
-  const element = component(props)
+  const element = jsx(component, props)
   const result = await render(element, {
     strict: true,
     onWarning: 'silent',
