@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it } from 'bun:test'
 
 import type { EmailAdapter, EmailMessage, SendEmailReceipt, SuccessfulSendReceipt } from './index'
 import { withDeliveryRules } from './rules'
@@ -75,7 +75,7 @@ describe('withDeliveryRules', () => {
 
     it('supports async suppression function', async () => {
       const mock = new TestRulesAdapter()
-      const isSuppressed = vi.fn(async (email: string) => email.startsWith('blocked'))
+      const isSuppressed = async (email: string) => email.startsWith('blocked')
       const adapter = withDeliveryRules(mock, {
         suppress: isSuppressed,
       })
@@ -183,6 +183,53 @@ describe('withDeliveryRules', () => {
       expect(sentMessage.to).toEqual(['employee@mycompany.com', 'qa-team@partner.com'])
       expect(sentMessage.subject).toBe('Internal Update')
       expect(sentMessage.headers?.['X-Original-To']).toBeUndefined()
+    })
+
+    it('matches bare domain without leading @ and handles stateful global-flag regexes across multiple calls', async () => {
+      const mock = new TestRulesAdapter()
+      const globalRegex = /@partner\.com$/gi
+      const adapter = withDeliveryRules(mock, {
+        intercept: {
+          to: 'staging@example.com',
+          allowList: ['mycompany.com', globalRegex],
+          subjectPrefix: '[STAGING] ',
+        },
+      })
+
+      const message1: EmailMessage = {
+        from: 'sender@example.com',
+        to: 'qa@partner.com',
+        subject: 'Call 1',
+        html: '<p>1</p>',
+        text: '1',
+      }
+      const message2: EmailMessage = {
+        from: 'sender@example.com',
+        to: 'qa@partner.com',
+        subject: 'Call 2',
+        html: '<p>2</p>',
+        text: '2',
+      }
+      const message3: EmailMessage = {
+        from: 'sender@example.com',
+        to: 'staff@mycompany.com',
+        subject: 'Call 3',
+        html: '<p>3</p>',
+        text: '3',
+      }
+
+      await adapter.send(message1)
+      await adapter.send(message2)
+      await adapter.send(message3)
+
+      expect(mock.sentMessages).toHaveLength(3)
+      // All 3 should pass through without being intercepted
+      expect(mock.sentMessages[0]?.to).toBe('qa@partner.com')
+      expect(mock.sentMessages[0]?.subject).toBe('Call 1')
+      expect(mock.sentMessages[1]?.to).toBe('qa@partner.com')
+      expect(mock.sentMessages[1]?.subject).toBe('Call 2')
+      expect(mock.sentMessages[2]?.to).toBe('staff@mycompany.com')
+      expect(mock.sentMessages[2]?.subject).toBe('Call 3')
     })
   })
 })

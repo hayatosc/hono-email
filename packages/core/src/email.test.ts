@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it } from 'bun:test'
 
 import {
   formatUnsubscribeHeaders,
@@ -38,6 +38,32 @@ describe('RFC 8058 One-Click Unsubscribe (formatUnsubscribeHeaders & renderEmail
       'List-Unsubscribe': '<mailto:optout@example.com>, <https://example.com/unsubscribe?id=xyz>',
       'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
     })
+  })
+
+  it('rejects invalid or unsafe url', () => {
+    expect(() => formatUnsubscribeHeaders({ url: '' })).toThrow('non-empty string')
+    expect(() =>
+      formatUnsubscribeHeaders({ url: 'https://example.com/unsub\r\nX-Injected: evil' }),
+    ).toThrow('control characters')
+    expect(() => formatUnsubscribeHeaders({ url: 'https://example.com/<test>' })).toThrow(
+      'angle brackets',
+    )
+    expect(() => formatUnsubscribeHeaders({ url: 'javascript:alert(1)' })).toThrow('protocol')
+  })
+
+  it('rejects invalid or unsafe email', () => {
+    expect(() =>
+      formatUnsubscribeHeaders({
+        url: 'https://example.com/unsub',
+        email: 'unsub\r\nX-Injected: evil',
+      }),
+    ).toThrow('control characters')
+    expect(() =>
+      formatUnsubscribeHeaders({
+        url: 'https://example.com/unsub',
+        email: 'not-an-email',
+      }),
+    ).toThrow('valid email')
   })
 
   it('renderEmailMessage automatically attaches List-Unsubscribe headers when unsubscribe is set', async () => {
@@ -87,7 +113,7 @@ describe('RFC 8058 One-Click Unsubscribe (formatUnsubscribeHeaders & renderEmail
   it('sendEmail transmits message with unsubscribe headers to adapter', async () => {
     let sentMessage: EmailMessage | undefined
     const mockAdapter: EmailAdapter = {
-      send: vi.fn(async (msg: EmailMessage): Promise<SendEmailReceipt> => {
+      send: async (msg: EmailMessage): Promise<SendEmailReceipt> => {
         sentMessage = msg
         return {
           successful: true,
@@ -96,7 +122,7 @@ describe('RFC 8058 One-Click Unsubscribe (formatUnsubscribeHeaders & renderEmail
           rejected: [],
           response: '250 OK',
         }
-      }),
+      },
     }
 
     const receipt = await sendEmail(dummyRenderer, {

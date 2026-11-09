@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it } from 'bun:test'
 
 import type {
   EmailAdapter,
@@ -7,7 +7,7 @@ import type {
   SendEmailReceipt,
   SuccessfulSendReceipt,
 } from '../index'
-import { FallbackAdapter } from './index'
+import { FallbackAdapter, type FallbackEvent } from './index'
 
 const mockMessage: EmailMessage = {
   from: 'sender@example.com',
@@ -77,7 +77,10 @@ describe('FallbackAdapter', () => {
   it('falls back to secondary adapter when primary returns transient failure', async () => {
     const primary = createFailedAdapter(false, 'Rate limit 429')
     const secondary = createSuccessAdapter('secondary-456')
-    const onFallback = vi.fn()
+    const fallbackEvents: FallbackEvent[] = []
+    const onFallback = (event: FallbackEvent) => {
+      fallbackEvents.push(event)
+    }
 
     const fallback = FallbackAdapter({
       adapters: [primary, secondary],
@@ -90,18 +93,19 @@ describe('FallbackAdapter', () => {
     expect((receipt as SuccessfulSendReceipt).messageId).toBe('secondary-456')
     expect(primary.sendCount).toBe(1)
     expect(secondary.sendCount).toBe(1)
-    expect(onFallback).toHaveBeenCalledTimes(1)
-    expect(onFallback).toHaveBeenCalledWith({
-      fromAdapter: primary,
-      toAdapter: secondary,
-      receipt: expect.objectContaining({ errorMessages: ['Rate limit 429'] }),
-    })
+    expect(fallbackEvents).toHaveLength(1)
+    expect(fallbackEvents[0]?.fromAdapter).toBe(primary)
+    expect(fallbackEvents[0]?.toAdapter).toBe(secondary)
+    expect(fallbackEvents[0]?.receipt?.errorMessages).toEqual(['Rate limit 429'])
   })
 
   it('does NOT fall back when primary returns permanent failure', async () => {
     const primary = createFailedAdapter(true, 'Invalid recipient domain 550')
     const secondary = createSuccessAdapter('secondary-456')
-    const onFallback = vi.fn()
+    const fallbackEvents: FallbackEvent[] = []
+    const onFallback = (event: FallbackEvent) => {
+      fallbackEvents.push(event)
+    }
 
     const fallback = FallbackAdapter({
       adapters: [primary, secondary],
@@ -114,7 +118,7 @@ describe('FallbackAdapter', () => {
     expect((receipt as FailedSendReceipt).permanent).toBe(true)
     expect(primary.sendCount).toBe(1)
     expect(secondary.sendCount).toBe(0)
-    expect(onFallback).not.toHaveBeenCalled()
+    expect(fallbackEvents).toHaveLength(0)
   })
 
   it('falls back when primary throws transient error', async () => {
@@ -122,7 +126,10 @@ describe('FallbackAdapter', () => {
       throw new Error('Connection reset')
     })
     const secondary = createSuccessAdapter('secondary-789')
-    const onFallback = vi.fn()
+    const fallbackEvents: FallbackEvent[] = []
+    const onFallback = (event: FallbackEvent) => {
+      fallbackEvents.push(event)
+    }
 
     const fallback = FallbackAdapter({
       adapters: [primary, secondary],
@@ -135,14 +142,10 @@ describe('FallbackAdapter', () => {
     expect((receipt as SuccessfulSendReceipt).messageId).toBe('secondary-789')
     expect(primary.sendCount).toBe(1)
     expect(secondary.sendCount).toBe(1)
-    expect(onFallback).toHaveBeenCalledTimes(1)
-    expect(onFallback).toHaveBeenCalledWith(
-      expect.objectContaining({
-        fromAdapter: primary,
-        toAdapter: secondary,
-        error: expect.any(Error),
-      }),
-    )
+    expect(fallbackEvents).toHaveLength(1)
+    expect(fallbackEvents[0]?.fromAdapter).toBe(primary)
+    expect(fallbackEvents[0]?.toAdapter).toBe(secondary)
+    expect(fallbackEvents[0]?.error).toBeInstanceOf(Error)
   })
 
   it('does NOT fall back when primary throws permanent error', async () => {

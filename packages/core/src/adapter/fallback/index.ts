@@ -28,7 +28,7 @@ export type FallbackAdapterOptions = {
   /**
    * Callback invoked when an adapter fails with a transient error and execution falls back to the next adapter.
    */
-  onFallback?: (event: FallbackEvent) => void
+  onFallback?: ((event: FallbackEvent) => void | Promise<void>) | undefined
 }
 
 /**
@@ -95,7 +95,7 @@ export function FallbackAdapter(options: FallbackAdapterOptions | EmailAdapter[]
           }
 
           if (nextAdapter !== undefined) {
-            onFallback?.({
+            await onFallback?.({
               fromAdapter: currentAdapter,
               toAdapter: nextAdapter,
               receipt,
@@ -119,7 +119,7 @@ export function FallbackAdapter(options: FallbackAdapterOptions | EmailAdapter[]
           }
 
           if (nextAdapter !== undefined) {
-            onFallback?.({
+            await onFallback?.({
               fromAdapter: currentAdapter,
               toAdapter: nextAdapter,
               error,

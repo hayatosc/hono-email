@@ -568,3 +568,6 @@ const adapter = withDeliveryRules(baseAdapter, {
 
 - **`intercept`**: Redirects all recipients outside `allowList` to `intercept.to`, preserves original recipients in the `X-Original-To` header, and prepends `subjectPrefix` to the subject.
 - **`suppress`**: Filters out suppressed addresses. If all recipients are suppressed, returns a skipped receipt without invoking the underlying adapter.
+
+> [!NOTE]
+> When all recipients are suppressed, `withDeliveryRules` synthesizes a receipt with `successful: true`, `messageId: 'skipped'`, `accepted: []`, `rejected: []`, and `response: '250 Message skipped (all recipients suppressed)'`. Because `messageId: 'skipped'` is synthetic rather than provider-issued, downstream auditing, deduplication, or idempotency layers should branch on `accepted.length === 0` or receipt metadata rather than keying solely on `messageId`.

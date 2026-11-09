@@ -18,7 +18,7 @@ export type InterceptOptions = {
 
   /**
    * Addresses or domain patterns that are allowed to pass through without being intercepted.
-   * Can be strings (e.g. `'@mycompany.com'` or exact email `'alice@example.com'`) or RegExp.
+   * Can be strings (e.g. `'@mycompany.com'`, `'mycompany.com'`, or exact email `'alice@example.com'`) or RegExp.
    */
   allowList?: (string | RegExp)[] | undefined
 
@@ -49,16 +49,25 @@ function isAddressAllowed(address: string, allowList: (string | RegExp)[]): bool
   const normalized = address.toLowerCase()
   for (const rule of allowList) {
     if (typeof rule === 'string') {
-      const lowerRule = rule.toLowerCase()
+      const lowerRule = rule.toLowerCase().trim()
       if (lowerRule.startsWith('@')) {
         if (normalized.endsWith(lowerRule)) {
+          return true
+        }
+      } else if (!lowerRule.includes('@')) {
+        // Domain suffix pattern without leading '@' (e.g. 'mycompany.com')
+        if (normalized.endsWith(`@${lowerRule}`)) {
           return true
         }
       } else if (normalized === lowerRule) {
         return true
       }
     } else if (rule instanceof RegExp) {
-      if (rule.test(normalized)) {
+      // Normalize lastIndex to prevent state leakage on regex with global / sticky flags
+      rule.lastIndex = 0
+      const matched = rule.test(normalized)
+      rule.lastIndex = 0
+      if (matched) {
         return true
       }
     }
@@ -70,7 +79,10 @@ function isAddressAllowed(address: string, allowList: (string | RegExp)[]): bool
  * Wraps an EmailAdapter with destination interception and address suppression rules.
  *
  * 1. Filters suppressed addresses from `to`, `cc`, and `bcc`.
- * 2. If all recipients are suppressed, returns a skipped receipt without invoking the adapter.
+ * 2. If all recipients are suppressed, returns a skipped receipt (`messageId: 'skipped'`, `accepted: []`,
+ *    `response: '250 Message skipped (all recipients suppressed)'`) without invoking the adapter.
+ *    Note: Downstream deduplication or idempotency systems keying on `messageId` should inspect
+ *    `accepted.length === 0` or receipt metadata rather than treating `messageId: 'skipped'` as a provider ID.
  * 3. If `intercept` is configured and any recipient is outside the `allowList`, rewrites
  *    recipients to `intercept.to`, adds an `X-Original-To` header, and applies `subjectPrefix`.
  *

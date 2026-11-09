@@ -239,8 +239,21 @@ export type EmailUnsubscribeOptions = {
   email?: string | undefined
 }
 
+function containsControlOrNewline(value: string): boolean {
+  for (let i = 0; i < value.length; i += 1) {
+    const code = value.charCodeAt(i)
+    if (code < 32 || code === 127) {
+      return true
+    }
+  }
+  return false
+}
+
 /**
  * Formats RFC 8058 and RFC 2369 compliant List-Unsubscribe headers.
+ *
+ * Validates `url` and optional `email` to reject control characters, newlines (CRLF header injection),
+ * and invalid formats.
  *
  * @param unsubscribe - Unsubscribe URL and optional mailto address.
  * @returns Headers containing `List-Unsubscribe` and `List-Unsubscribe-Post`.
@@ -248,9 +261,47 @@ export type EmailUnsubscribeOptions = {
 export const formatUnsubscribeHeaders = (
   unsubscribe: EmailUnsubscribeOptions,
 ): Record<string, string> => {
+  if (typeof unsubscribe.url !== 'string' || unsubscribe.url.trim() === '') {
+    throw new Error('[hono-email] unsubscribe.url must be a non-empty string.')
+  }
+  if (
+    containsControlOrNewline(unsubscribe.url) ||
+    unsubscribe.url.includes('<') ||
+    unsubscribe.url.includes('>')
+  ) {
+    throw new Error(
+      '[hono-email] unsubscribe.url must not contain control characters, newlines, or angle brackets (<, >).',
+    )
+  }
+  if (!/^https?:\/\//i.test(unsubscribe.url)) {
+    throw new Error(
+      `[hono-email] unsubscribe.url must use http:// or https:// protocol: "${unsubscribe.url}"`,
+    )
+  }
+
+  if (unsubscribe.email !== undefined) {
+    if (typeof unsubscribe.email !== 'string' || unsubscribe.email.trim() === '') {
+      throw new Error('[hono-email] unsubscribe.email must be a non-empty string when provided.')
+    }
+    if (
+      containsControlOrNewline(unsubscribe.email) ||
+      unsubscribe.email.includes('<') ||
+      unsubscribe.email.includes('>')
+    ) {
+      throw new Error(
+        '[hono-email] unsubscribe.email must not contain control characters, newlines, or angle brackets (<, >).',
+      )
+    }
+    if (!unsubscribe.email.includes('@')) {
+      throw new Error(
+        `[hono-email] unsubscribe.email must be a valid email address: "${unsubscribe.email}"`,
+      )
+    }
+  }
+
   const listUnsubscribe = unsubscribe.email
-    ? `<mailto:${unsubscribe.email}>, <${unsubscribe.url}>`
-    : `<${unsubscribe.url}>`
+    ? `<mailto:${unsubscribe.email.trim()}>, <${unsubscribe.url.trim()}>`
+    : `<${unsubscribe.url.trim()}>`
 
   return {
     'List-Unsubscribe': listUnsubscribe,
