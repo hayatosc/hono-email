@@ -135,4 +135,12 @@ describe('i18n (LocaleContext, useLocale, createTranslator)', () => {
     const jaResult = await render(<GreetingComponent />, { locale: 'ja' })
     expect(jaResult.html).toContain('こんにちは')
   })
+
+  it('createTranslator throws when defaultLocale is not in catalogs', () => {
+    const t = createTranslator({
+      ja: { title: 'ようこそ' },
+    })
+
+    expect(() => t('fr')).toThrow('Translation catalog for defaultLocale "en" not found')
+  })
 })

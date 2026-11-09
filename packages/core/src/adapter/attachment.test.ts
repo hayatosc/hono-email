@@ -689,4 +689,19 @@ describe('inlineCidImagesAsDataUrls', () => {
       `<img src="data:image/png;base64,${aBase64}" /><img src="data:image/jpeg;base64,${bBase64}" /><img src="data:image/png;base64,${aBase64}" />`,
     )
   })
+
+  test('resolves longest cid first to avoid prefix collisions and preserves non-src text', async () => {
+    const html = `<img src="cid:icon" /><img src='cid:icon-large' /><p>Reference cid:icon in text</p>`
+    const iconData = encodeAttachmentContentBase64(new TextEncoder().encode('small'))
+    const largeData = encodeAttachmentContentBase64(new TextEncoder().encode('large'))
+    const attachments = [
+      { content: 'small', cid: 'icon', contentType: 'image/png' },
+      { content: 'large', cid: 'icon-large', contentType: 'image/png' },
+    ]
+
+    const result = await inlineCidImagesAsDataUrls(html, attachments)
+    expect(result).toBe(
+      `<img src="data:image/png;base64,${iconData}" /><img src='data:image/png;base64,${largeData}' /><p>Reference cid:icon in text</p>`,
+    )
+  })
 })

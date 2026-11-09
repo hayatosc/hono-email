@@ -378,12 +378,17 @@ export const inlineCidImagesAsDataUrls = async (
     return html
   }
   const resolved = await resolveEmailAttachments(attachments)
+  const cidAttachments = resolved
+    .filter((a): a is typeof a & { cid: string } => typeof a.cid === 'string' && a.cid.length > 0)
+    .sort((a, b) => b.cid.length - a.cid.length)
+
   let output = html
-  for (const attachment of resolved) {
-    if (!attachment.cid) continue
+  for (const attachment of cidAttachments) {
     const base64 = encodeAttachmentContentBase64(attachment.content)
     const dataUrl = `data:${attachment.contentType};base64,${base64}`
-    output = output.replaceAll(`cid:${attachment.cid}`, dataUrl)
+    output = output
+      .replaceAll(`src="cid:${attachment.cid}"`, `src="${dataUrl}"`)
+      .replaceAll(`src='cid:${attachment.cid}'`, `src='${dataUrl}'`)
   }
   return output
 }

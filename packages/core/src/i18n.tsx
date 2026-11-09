@@ -92,10 +92,6 @@ export function createTranslator<TDict extends Record<string, unknown>>(
     if (defaultMatch !== undefined) {
       return defaultMatch
     }
-    const firstMatch = Object.values(catalogs)[0]
-    if (firstMatch !== undefined) {
-      return firstMatch
-    }
     throw new Error(
       `[hono-email] Translation catalog for defaultLocale "${defaultLocale}" not found in catalogs: [${Object.keys(catalogs).join(', ')}]`,
     )

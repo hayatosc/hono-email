@@ -25,6 +25,22 @@ function isObject(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object' && !Array.isArray(value)
 }
 
+function isValidAttachment(item: unknown): item is EmailAttachment {
+  if (!isObject(item)) return false
+  if ('cid' in item && item.cid !== undefined && typeof item.cid !== 'string') return false
+  if ('filename' in item && item.filename !== undefined && typeof item.filename !== 'string') return false
+  if ('contentType' in item && item.contentType !== undefined && typeof item.contentType !== 'string') return false
+  return true
+}
+
+function sanitizeClientAttachment(item: unknown): EmailAttachment | null {
+  if (!isValidAttachment(item)) return null
+  // Prevent SSRF: disallow remote URLs from request-supplied attachments
+  if ('href' in item && typeof item.href === 'string') return null
+  if ('path' in item && typeof item.path === 'string' && /^https?:\/\//i.test(item.path)) return null
+  return item
+}
+
 export function createApiRoutes(loadModule: LoadModule, templateDir: string): Hono<ApiEnv> {
   return new Hono<ApiEnv>()
     .basePath('/api')
@@ -56,19 +72,24 @@ export function createApiRoutes(loadModule: LoadModule, templateDir: string): Ho
     .post('/templates/:name/render', async (c) => {
       const body = await c.req.json().catch(() => ({}))
       const props = isObject(body) && isObject(body.props) ? body.props : {}
+      const schema = extractPropsSchema(c.var.mod)
+      const mergedProps = mergePropsWithDefaults(schema, props)
       const locale =
         isObject(body) && typeof body.locale === 'string'
           ? body.locale
-          : undefined
-      const schema = extractPropsSchema(c.var.mod)
-      const mergedProps = mergePropsWithDefaults(schema, props)
-      const attachments = (
-        isObject(body) && Array.isArray(body.attachments)
-          ? body.attachments
-          : Array.isArray(c.var.mod.attachments)
-            ? c.var.mod.attachments
+          : typeof mergedProps.locale === 'string'
+            ? mergedProps.locale
             : undefined
-      ) as EmailAttachment[] | undefined
+
+      let attachments: EmailAttachment[] | undefined
+      if (isObject(body) && Array.isArray(body.attachments)) {
+        attachments = body.attachments
+          .map(sanitizeClientAttachment)
+          .filter((a): a is EmailAttachment => a !== null)
+      } else if (Array.isArray(c.var.mod.attachments)) {
+        attachments = c.var.mod.attachments.filter(isValidAttachment)
+      }
+
       const result = await renderTemplate(c.var.component, mergedProps, {
         ...(locale !== undefined ? { locale } : {}),
         ...(attachments !== undefined ? { attachments } : {}),

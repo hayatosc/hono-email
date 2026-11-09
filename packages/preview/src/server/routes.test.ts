@@ -208,4 +208,52 @@ describe('createApiRoutes error paths', () => {
     const body = await res.json()
     expect(body.html).toContain('data:image/png;base64,')
   })
+
+  test('POST /api/templates/:name/render falls back to previewProps locale', async () => {
+    const loadModule = async () => ({
+      default: (props: { locale?: string }) => {
+        return jsx('html', {}, [jsx('body', {}, [`Rendered locale: ${props.locale ?? 'none'}`])])
+      },
+      previewProps: {
+        locale: { type: 'string', default: 'de' },
+      },
+    })
+
+    const app = createApiRoutes(loadModule, tempDir)
+    const res = await app.request('/api/templates/Test/render', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ props: {} }),
+    })
+
+    expect(res.status).toBe(200)
+    const body = await res.json()
+    expect(body.html).toContain('Rendered locale: de')
+  })
+
+  test('POST /api/templates/:name/render sanitizes invalid attachments and blocks remote URLs', async () => {
+    const loadModule = async () => ({
+      default: () => jsx('html', {}, [jsx('body', {}, [jsx('img', { src: 'cid:remote' })])]),
+      previewProps: {},
+    })
+
+    const app = createApiRoutes(loadModule, tempDir)
+    const res = await app.request('/api/templates/Test/render', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        props: {},
+        attachments: [
+          null,
+          'not-an-object',
+          { href: 'http://internal.service/secret', cid: 'remote' },
+        ],
+      }),
+    })
+
+    expect(res.status).toBe(200)
+    const body = await res.json()
+    // Should NOT inline the SSRF attachment and should not throw 500
+    expect(body.html).toContain('src="cid:remote"')
+  })
 })
