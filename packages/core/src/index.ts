@@ -102,6 +102,10 @@ export {
   mergeTelemetryHooks,
   publishDiagnostics,
 } from './telemetry'
+export { LocaleContext, LocaleProvider, useLocale, createTranslator } from './i18n'
+export type { LocaleProviderProps } from './i18n'
+export { inlineCidImagesAsDataUrls } from './adapter/attachment'
+import { wrapWithLocaleProvider } from './i18n'
 import {
   MARKDOWN_TAILWIND_PARENT_REQUIRED_ATTRIBUTE_NAME,
   MARKDOWN_TAILWIND_PARENT_REQUIRED_ERROR_MESSAGE,
@@ -131,6 +135,7 @@ import { validateHtml } from './validate/html'
  * @property minify - Minify the rendered HTML. Defaults to `true`. Ignored when `pretty` is `true`.
  * @property widows - Join the last two words of each text node with `&nbsp;` when `true`.
  * @property strict - Run strict email validation when `true`. Defaults to `true`.
+ * @property locale - Email locale string (e.g. 'ja', 'en-US') passed to LocaleContext.
  * @property onWarning - How compatibility warnings are handled. `'warn'` (default) logs to `console.warn`,
  *   `'error'` throws when any warning is collected, `'silent'` suppresses logging, or pass a callback to
  *   receive each warning. Warnings are always available on `RenderResult.warnings`.
@@ -149,6 +154,7 @@ type BaseRenderOptions = {
   minify?: boolean
   widows?: boolean
   strict?: boolean
+  locale?: string | undefined
   onWarning?: WarningHandler
   warningClients?: EmailClient[]
 }
@@ -248,7 +254,8 @@ const renderHtml = async (
   options: BaseRenderOptions = {},
 ): Promise<{ html: string; warnings: string[] }> => {
   const strict = options.strict ?? true
-  let html = removeTailwindProcessedBoundaries(await renderFragmentToHtml(jsx))
+  const rootElement = wrapWithLocaleProvider(jsx, options.locale)
+  let html = removeTailwindProcessedBoundaries(await renderFragmentToHtml(rootElement))
   html = relocateHeadStyles(relocatePreview(normalizeHtml(html)))
   html = relocateHeadStyles(await transformHonoCssOutput(html))
 

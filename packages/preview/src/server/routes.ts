@@ -1,4 +1,5 @@
 import { Hono } from 'hono'
+import type { EmailAttachment } from 'hono-email'
 import { HTTPException } from 'hono/http-exception'
 import type { Child } from 'hono/jsx'
 
@@ -55,9 +56,25 @@ export function createApiRoutes(loadModule: LoadModule, templateDir: string): Ho
     .post('/templates/:name/render', async (c) => {
       const body = await c.req.json().catch(() => ({}))
       const props = isObject(body) && isObject(body.props) ? body.props : {}
+      const locale =
+        isObject(body) && typeof body.locale === 'string'
+          ? body.locale
+          : typeof props.locale === 'string'
+            ? props.locale
+            : undefined
       const schema = extractPropsSchema(c.var.mod)
       const mergedProps = mergePropsWithDefaults(schema, props)
-      const result = await renderTemplate(c.var.component, mergedProps)
+      const attachments = (
+        isObject(body) && Array.isArray(body.attachments)
+          ? body.attachments
+          : Array.isArray(c.var.mod.attachments)
+            ? c.var.mod.attachments
+            : undefined
+      ) as EmailAttachment[] | undefined
+      const result = await renderTemplate(c.var.component, mergedProps, {
+        ...(locale !== undefined ? { locale } : {}),
+        ...(attachments !== undefined ? { attachments } : {}),
+      })
       return c.json(result)
     })
     .onError((err, c) => {

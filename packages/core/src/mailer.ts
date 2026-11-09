@@ -361,7 +361,12 @@ export function createMailer(defaults: MailerOptions, customRenderer?: EmailRend
 
       const replyTo = opts.replyTo ?? built.replyTo ?? defaults.replyTo
       const headers = mergeHeaders(defaults.headers, built.headers, opts.headers)
-      const renderOptions = mergeRenderOptions(defaults.render, built.render, opts.render)
+      const renderOptions = mergeRenderOptions(
+        defaults.render,
+        built.render,
+        opts.render,
+        opts.locale !== undefined ? { locale: opts.locale } : undefined,
+      )
       const retry = opts.retry ?? defaults.retry
       const signal = opts.signal
       const mergedHooks = mergeTelemetryHooks(defaults.hooks, opts.hooks)
@@ -452,7 +457,12 @@ export function createMailer(defaults: MailerOptions, customRenderer?: EmailRend
       const to = opts?.to ?? []
       const replyTo = built.replyTo ?? defaults.replyTo
       const headers = mergeHeaders(defaults.headers, built.headers)
-      const renderOptions = mergeRenderOptions(defaults.render, built.render, opts?.render)
+      const renderOptions = mergeRenderOptions(
+        defaults.render,
+        built.render,
+        opts?.render,
+        opts?.locale !== undefined ? { locale: opts.locale } : undefined,
+      )
 
       const draft: EmailMessageDraft = {
         from,

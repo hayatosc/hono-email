@@ -3,6 +3,8 @@ import { mkdtempSync, writeFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
+import { jsx } from 'hono/jsx'
+
 import { createApiRoutes } from './routes'
 
 describe('createApiRoutes', () => {
@@ -173,5 +175,37 @@ describe('createApiRoutes error paths', () => {
     expect(res.status).toBe(500)
     const body = await res.json()
     expect(body.error).toBe('Module load failed')
+  })
+
+  test('POST /api/templates/:name/render passes locale and resolves CID attachments', async () => {
+    const loadModule = async () => ({
+      default: (props: { locale?: string }) => {
+        return jsx('html', {}, [
+          jsx('body', {}, [
+            `Current locale: ${props.locale ?? 'none'}`,
+            jsx('img', { src: 'cid:icon@test' }),
+          ]),
+        ])
+      },
+      attachments: [
+        {
+          content: 'img-content',
+          cid: 'icon@test',
+          contentType: 'image/png',
+        },
+      ],
+      previewProps: {},
+    })
+
+    const app = createApiRoutes(loadModule, tempDir)
+    const res = await app.request('/api/templates/Test/render', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ props: { locale: 'ja' }, locale: 'ja' }),
+    })
+
+    expect(res.status).toBe(200)
+    const body = await res.json()
+    expect(body.html).toContain('data:image/png;base64,')
   })
 })
