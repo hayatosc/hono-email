@@ -105,6 +105,7 @@ export const isValidationError = (error: unknown): boolean => {
     /^Invalid SMTP (recipient|envelope sender|client name)/i.test(message) ||
     /invalid (base64|hex) data/i.test(message) ||
     /must not contain/i.test(message) ||
+    /^Email address (string )?must (contain|hold) a single address/i.test(message) ||
     /must not exceed/i.test(message) ||
     /ByteString/i.test(message) ||
     /is managed by hono-email/i.test(message) ||

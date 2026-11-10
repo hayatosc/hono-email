@@ -27,6 +27,7 @@ export type FallbackAdapterOptions = {
 
   /**
    * Callback invoked when an adapter fails with a transient error and execution falls back to the next adapter.
+   * Errors thrown by the callback are ignored so they never stop the fallback.
    */
   onFallback?: ((event: FallbackEvent) => void | Promise<void>) | undefined
 }
@@ -37,6 +38,7 @@ export type FallbackAdapterOptions = {
  * - If an adapter fails with a permanent error (`receipt.permanent === true` or permanent error instance),
  *   it does NOT fall back and returns/throws immediately.
  * - Transient errors trigger `onFallback` (if provided) and proceed to the next configured adapter.
+ * - Once the per-send `signal` is aborted, the current failure is returned/thrown without falling back.
  * - If all adapters fail, the final receipt or error is returned/thrown.
  *
  * @param options - Configuration options or an array of adapters.
@@ -45,7 +47,7 @@ export type FallbackAdapterOptions = {
  * @example
  * ```ts
  * const adapter = FallbackAdapter({
- *   adapters: [ResendAdapter({ apiKey }), SmtpAdapter(smtpOptions)],
+ *   adapters: [ResendAdapter({ apiKey }), new SmtpTransport(smtpOptions)],
  *   onFallback({ fromAdapter, toAdapter, receipt }) {
  *     console.warn('Primary email adapter failed, falling back to secondary.', receipt)
  *   },
@@ -66,8 +68,19 @@ export function FallbackAdapter(options: FallbackAdapterOptions | EmailAdapter[]
     }
   }
 
+  const notifyFallback = async (event: FallbackEvent): Promise<void> => {
+    try {
+      await onFallback?.(event)
+    } catch (error) {
+      // A failing callback must not change which adapter delivers the message.
+      console.debug('FallbackAdapter onFallback callback failed:', error)
+    }
+  }
+
   return {
     async send(message: EmailMessage, sendOptions?: EmailSendOptions): Promise<SendEmailReceipt> {
+      // A function call keeps TypeScript from narrowing `aborted` across awaits.
+      const isAborted = (): boolean => sendOptions?.signal?.aborted === true
       let lastReceipt: SendEmailReceipt | undefined
       let lastError: unknown
 
@@ -89,17 +102,21 @@ export function FallbackAdapter(options: FallbackAdapterOptions | EmailAdapter[]
 
           lastReceipt = receipt
 
-          // If the failure is marked as permanent, do not fall back.
-          if (receipt.permanent === true) {
+          // If the failure is marked as permanent or the send was aborted, do not fall back.
+          if (receipt.permanent === true || isAborted()) {
             return receipt
           }
 
           if (nextAdapter !== undefined) {
-            await onFallback?.({
+            await notifyFallback({
               fromAdapter: currentAdapter,
               toAdapter: nextAdapter,
               receipt,
             })
+            // The callback itself may abort the send.
+            if (isAborted()) {
+              return receipt
+            }
             continue
           }
 
@@ -114,16 +131,19 @@ export function FallbackAdapter(options: FallbackAdapterOptions | EmailAdapter[]
             'permanent' in error &&
             error.permanent === true
 
-          if (isPermanent) {
+          if (isPermanent || isAborted()) {
             throw error
           }
 
           if (nextAdapter !== undefined) {
-            await onFallback?.({
+            await notifyFallback({
               fromAdapter: currentAdapter,
               toAdapter: nextAdapter,
               error,
             })
+            if (isAborted()) {
+              throw error
+            }
             continue
           }
 

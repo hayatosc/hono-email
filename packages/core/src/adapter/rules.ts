@@ -139,18 +139,50 @@ export function withDeliveryRules(
     return kept
   }
 
+  const filterOptionalList = async (
+    value: EmailAddress | EmailAddress[] | undefined,
+  ): Promise<EmailAddress[] | undefined> =>
+    value === undefined ? undefined : filterList(toAddressList(value))
+
+  const collapse = (list: EmailAddress[]): EmailAddress | EmailAddress[] => {
+    const first = list[0]
+    return list.length === 1 && first !== undefined ? first : list
+  }
+
+  const collapseOptional = (list: EmailAddress[]): EmailAddress | EmailAddress[] | undefined =>
+    list.length === 0 ? undefined : collapse(list)
+
   return {
     async send(message: EmailMessage, options?: EmailSendOptions): Promise<SendEmailReceipt> {
       let toList = toAddressList(message.to)
       let ccList = toAddressList(message.cc)
       let bccList = toAddressList(message.bcc)
+      let envelope = message.envelope
 
       if (rules.suppress !== undefined) {
         toList = await filterList(toList)
         ccList = await filterList(ccList)
         bccList = await filterList(bccList)
 
-        if (toList.length === 0 && ccList.length === 0 && bccList.length === 0) {
+        // SMTP delivers to envelope recipients, so they must be filtered too.
+        if (envelope !== undefined) {
+          const envelopeTo = await filterOptionalList(envelope.to)
+          const envelopeCc = await filterOptionalList(envelope.cc)
+          const envelopeBcc = await filterOptionalList(envelope.bcc)
+          envelope = {
+            ...(envelope.from !== undefined ? { from: envelope.from } : {}),
+            ...(envelopeTo !== undefined ? { to: envelopeTo } : {}),
+            ...(envelopeCc !== undefined ? { cc: envelopeCc } : {}),
+            ...(envelopeBcc !== undefined ? { bcc: envelopeBcc } : {}),
+          }
+        }
+
+        const deliveryCount =
+          (envelope?.to !== undefined ? toAddressList(envelope.to) : toList).length +
+          (envelope?.cc !== undefined ? toAddressList(envelope.cc) : ccList).length +
+          (envelope?.bcc !== undefined ? toAddressList(envelope.bcc) : bccList).length
+
+        if (deliveryCount === 0) {
           return {
             successful: true,
             messageId: 'skipped',
@@ -161,40 +193,27 @@ export function withDeliveryRules(
         }
       }
 
-      const firstTo = toList[0]
-      let toRecipients: EmailAddress | EmailAddress[] =
-        toList.length === 1 && firstTo !== undefined ? firstTo : toList
-      const firstCc = ccList[0]
-      let ccRecipients: EmailAddress | EmailAddress[] | undefined =
-        ccList.length === 1 && firstCc !== undefined
-          ? firstCc
-          : ccList.length > 1
-            ? ccList
-            : undefined
-      const firstBcc = bccList[0]
-      let bccRecipients: EmailAddress | EmailAddress[] | undefined =
-        bccList.length === 1 && firstBcc !== undefined
-          ? firstBcc
-          : bccList.length > 1
-            ? bccList
-            : undefined
+      let toRecipients: EmailAddress | EmailAddress[] = collapse(toList)
+      let ccRecipients = collapseOptional(ccList)
+      let bccRecipients = collapseOptional(bccList)
       let subject = message.subject
       let headers = message.headers
-      let envelope = message.envelope
 
       if (rules.intercept !== undefined) {
         const allowList = rules.intercept.allowList ?? []
-        const originalRecipients = [
-          ...toList.map((a) => formatEmailAddress(a)),
-          ...ccList.map((a) => formatEmailAddress(a)),
-          ...bccList.map((a) => formatEmailAddress(a)),
+        const candidates = [
+          ...toList,
+          ...ccList,
+          ...bccList,
+          ...toAddressList(envelope?.to),
+          ...toAddressList(envelope?.cc),
+          ...toAddressList(envelope?.bcc),
         ]
+        const originalRecipients = [...new Set(candidates.map((a) => formatEmailAddress(a)))]
 
         const areAllAllowed =
           allowList.length > 0 &&
-          toList.every((a) => isAddressAllowed(addressToPath(a), allowList)) &&
-          ccList.every((a) => isAddressAllowed(addressToPath(a), allowList)) &&
-          bccList.every((a) => isAddressAllowed(addressToPath(a), allowList))
+          candidates.every((a) => isAddressAllowed(addressToPath(a), allowList))
 
         if (!areAllAllowed) {
           toRecipients = rules.intercept.to

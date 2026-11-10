@@ -41,9 +41,17 @@ function isValidAttachment(item: unknown): item is EmailAttachment {
 
 function sanitizeClientAttachment(item: unknown): EmailAttachment | null {
   if (!isValidAttachment(item)) return null
-  // Prevent SSRF: disallow remote URLs from request-supplied attachments
-  if ('href' in item && typeof item.href === 'string') return null
-  if ('path' in item && typeof item.path === 'string' && /^https?:\/\//i.test(item.path))
+  // Prevent SSRF: request-supplied attachments may only carry inline content or data URIs.
+  // Any non-string href/path is rejected too, because fetch() would stringify it into a URL.
+  if ('href' in item && item.href !== undefined) return null
+  if ('httpHeaders' in item && item.httpHeaders !== undefined) return null
+  if (
+    'path' in item &&
+    item.path !== undefined &&
+    (typeof item.path !== 'string' || !/^data:/i.test(item.path))
+  )
+    return null
+  if ('content' in item && item.content !== undefined && typeof item.content !== 'string')
     return null
   return item
 }

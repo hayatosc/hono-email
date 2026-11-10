@@ -250,6 +250,35 @@ function containsControlOrNewline(value: string): boolean {
 }
 
 /**
+ * Merges header maps left to right. Header names are case-insensitive, so a later map replaces
+ * an earlier entry even when the casing differs (the later spelling wins).
+ *
+ * @param headerMaps - Header maps in increasing order of precedence.
+ * @returns Merged headers, or `undefined` when no map was provided.
+ */
+export const mergeEmailHeaders = (
+  ...headerMaps: (EmailHeaders | undefined)[]
+): EmailHeaders | undefined => {
+  let merged: EmailHeaders | undefined
+  for (const map of headerMaps) {
+    if (map === undefined) {
+      continue
+    }
+    merged ??= {}
+    for (const [name, value] of Object.entries(map)) {
+      const lowerName = name.toLowerCase()
+      for (const existing of Object.keys(merged)) {
+        if (existing.toLowerCase() === lowerName) {
+          delete merged[existing]
+        }
+      }
+      merged[name] = value
+    }
+  }
+  return merged
+}
+
+/**
  * Formats RFC 8058 and RFC 2369 compliant List-Unsubscribe headers.
  *
  * Validates `url` and optional `email` to reject control characters, newlines (CRLF header injection),
@@ -469,7 +498,7 @@ export type EmailTransport<TSendOptions extends EmailSendOptions = EmailSendOpti
  * @example
  * ```tsx
  * const receipt = await sendEmail({
- *   adapter: new ResendAdapter({ apiKey: 're_123' }),
+ *   adapter: ResendAdapter({ apiKey: 're_123' }),
  *   from: 'sender@example.com',
  *   to: 'recipient@example.com',
  *   subject: 'Welcome',
@@ -513,10 +542,7 @@ export const renderEmailMessage = async (
   const rendered = await renderEmail(draft.jsx, draft.render)
   const unsubscribeHeaders =
     draft.unsubscribe !== undefined ? formatUnsubscribeHeaders(draft.unsubscribe) : undefined
-  const mergedHeaders =
-    unsubscribeHeaders !== undefined || draft.headers !== undefined
-      ? { ...unsubscribeHeaders, ...draft.headers }
-      : undefined
+  const mergedHeaders = mergeEmailHeaders(unsubscribeHeaders, draft.headers)
 
   return {
     from: draft.from,

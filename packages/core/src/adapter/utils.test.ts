@@ -305,6 +305,17 @@ describe('isValidationError', () => {
     expect(isValidationError(new Error('Invalid SMTP envelope sender'))).toBe(true)
     expect(
       isValidationError(
+        new Error('Email address must contain a single address, got comma in: a@x.com,b@x.com'),
+      ),
+    ).toBe(true)
+    expect(
+      isValidationError(new Error('Email address string must hold a single address: a@x.com,b')),
+    ).toBe(true)
+    expect(
+      isValidationError(new Error('Provider says recipient must contain a single address')),
+    ).toBe(false)
+    expect(
+      isValidationError(
         new Error('Header "Bcc" is managed by hono-email and cannot be set directly.'),
       ),
     ).toBe(true)

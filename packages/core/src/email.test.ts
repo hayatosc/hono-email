@@ -110,6 +110,22 @@ describe('RFC 8058 One-Click Unsubscribe (formatUnsubscribeHeaders & renderEmail
     expect(message.headers?.['List-Unsubscribe-Post']).toBe('List-Unsubscribe=One-Click')
   })
 
+  it('overrides generated headers case-insensitively without duplicating them', async () => {
+    const message = await renderEmailMessage(dummyRenderer, {
+      from: 'sender@example.com',
+      to: 'recipient@example.com',
+      subject: 'Newsletter',
+      jsx: null,
+      headers: { 'list-unsubscribe': '<https://custom.com/unsub>' },
+      unsubscribe: { url: 'https://example.com/unsub?id=123' },
+    })
+
+    expect(message.headers).toEqual({
+      'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+      'list-unsubscribe': '<https://custom.com/unsub>',
+    })
+  })
+
   it('sendEmail transmits message with unsubscribe headers to adapter', async () => {
     let sentMessage: EmailMessage | undefined
     const mockAdapter: EmailAdapter = {

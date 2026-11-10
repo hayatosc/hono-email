@@ -150,6 +150,23 @@ describe('buildRawEmailMessage header folding', () => {
   })
 })
 
+describe('buildRawEmailMessage empty To', () => {
+  test('writes an empty group when only Cc or envelope recipients remain', () => {
+    expect(buildRawEmailMessage(createMessage({ to: [], cc: 'cc@example.com' })).raw).toContain(
+      '\r\nTo: undisclosed-recipients:;\r\n',
+    )
+    expect(
+      buildRawEmailMessage(createMessage({ to: [], envelope: { to: 'alice@example.com' } })).raw,
+    ).toContain('\r\nTo: undisclosed-recipients:;\r\n')
+  })
+
+  test('still rejects a message without any recipient', () => {
+    expect(() => buildRawEmailMessage(createMessage({ to: [] }))).toThrow(
+      'to must include at least one address.',
+    )
+  })
+})
+
 describe('idempotencyKey and deterministic Message-ID', () => {
   test('deriveDeterministicId returns 32 hex chars and is deterministic', () => {
     const id1 = deriveDeterministicId('order-12345')

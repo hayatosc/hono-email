@@ -174,4 +174,83 @@ describe('FallbackAdapter', () => {
     expect(primary.sendCount).toBe(1)
     expect(secondary.sendCount).toBe(1)
   })
+
+  it('keeps falling back when onFallback throws', async () => {
+    const primary = createFailedAdapter(false, 'Primary timeout')
+    const secondary = createFailedAdapter(false, 'Secondary timeout')
+    const tertiary = createSuccessAdapter('tertiary-789')
+    let calls = 0
+    const fallback = FallbackAdapter({
+      adapters: [primary, secondary, tertiary],
+      onFallback() {
+        calls++
+        throw new Error('callback failed')
+      },
+    })
+
+    const receipt = await fallback.send(mockMessage)
+
+    expect(receipt).toMatchObject({ successful: true, messageId: 'tertiary-789' })
+    expect(calls).toBe(2)
+    expect(secondary.sendCount).toBe(1)
+    expect(tertiary.sendCount).toBe(1)
+  })
+
+  it('does not fall back after the send signal is aborted', async () => {
+    const controller = new AbortController()
+    const primary = new MockSendAdapter(async () => {
+      controller.abort()
+      return {
+        successful: false,
+        accepted: [],
+        rejected: ['recipient@example.com'],
+        errorMessages: ['The operation was aborted.'],
+        category: 'timeout',
+        permanent: false,
+      }
+    })
+    const secondary = createSuccessAdapter('secondary-456')
+    const fallback = FallbackAdapter([primary, secondary])
+
+    const receipt = await fallback.send(mockMessage, { signal: controller.signal })
+
+    expect(receipt.successful).toBe(false)
+    expect(secondary.sendCount).toBe(0)
+  })
+
+  it('stops falling back when onFallback aborts the signal', async () => {
+    const controller = new AbortController()
+    const primary = createFailedAdapter(false, 'Primary timeout')
+    const secondary = createSuccessAdapter('secondary-456')
+    const fallback = FallbackAdapter({
+      adapters: [primary, secondary],
+      async onFallback() {
+        controller.abort()
+      },
+    })
+
+    const receipt = await fallback.send(mockMessage, { signal: controller.signal })
+
+    expect(receipt).toMatchObject({ successful: false, errorMessages: ['Primary timeout'] })
+    expect(secondary.sendCount).toBe(0)
+  })
+
+  it('rethrows the original error when onFallback aborts the signal', async () => {
+    const controller = new AbortController()
+    const primary = new MockSendAdapter(async () => {
+      throw new Error('Primary connection reset')
+    })
+    const secondary = createSuccessAdapter('secondary-456')
+    const fallback = FallbackAdapter({
+      adapters: [primary, secondary],
+      onFallback() {
+        controller.abort()
+      },
+    })
+
+    await expect(fallback.send(mockMessage, { signal: controller.signal })).rejects.toThrow(
+      'Primary connection reset',
+    )
+    expect(secondary.sendCount).toBe(0)
+  })
 })

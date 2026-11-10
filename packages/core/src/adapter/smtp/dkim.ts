@@ -392,12 +392,16 @@ export const applyDkimSignature = async (
   const signingData = `${selectedHeaders
     .map((header) => `${canonicalizeHeaderRelaxed(header.raw)}${CRLF}`)
     .join('')}${canonicalizeHeaderRelaxed(dkimHeader)}`
-  const signatureParams = algorithm === 'ed25519-sha256' ? { name: 'Ed25519' } : 'RSASSA-PKCS1-v1_5'
-  const signature = await getSubtleCrypto().sign(
-    signatureParams,
-    key,
-    new TextEncoder().encode(signingData),
-  )
+  const signingBytes = new TextEncoder().encode(signingData)
+  // RFC 8463 signs the SHA-256 hash of the header data with PureEdDSA; RSA hashes internally.
+  const signature =
+    algorithm === 'ed25519-sha256'
+      ? await getSubtleCrypto().sign(
+          { name: 'Ed25519' },
+          key,
+          await getSubtleCrypto().digest('SHA-256', signingBytes),
+        )
+      : await getSubtleCrypto().sign('RSASSA-PKCS1-v1_5', key, signingBytes)
 
   return `DKIM-Signature: ${dkimHeader.slice('DKIM-Signature: '.length)}${bytesToBase64(new Uint8Array(signature))}${CRLF}${normalizeLineEndings(rawMessage)}`
 }

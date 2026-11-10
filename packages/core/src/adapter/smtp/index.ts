@@ -234,7 +234,12 @@ export class SmtpTransport implements EmailAdapter {
   }
 
   async #send(message: EmailMessage, options?: SmtpSendOptions): Promise<SendEmailReceipt> {
-    const envelope = resolveEmailEnvelope(message)
+    let envelope: ReturnType<typeof resolveEmailEnvelope>
+    try {
+      envelope = resolveEmailEnvelope(message)
+    } catch (error) {
+      return failedReceipt(error)
+    }
     if (envelope.recipients.length === 0) {
       return {
         successful: false,
@@ -408,17 +413,25 @@ export class SmtpTransport implements EmailAdapter {
 
     return new Promise<SmtpConnectionSlot>((resolve, reject) => {
       let onAbort: (() => void) | undefined
+      let settled = false
       const waiter = {
         reject: (error: unknown) => {
           if (onAbort && signal) {
             signal.removeEventListener('abort', onAbort)
           }
+          settled = true
           reject(error)
         },
         resolve: (slot: SmtpConnectionSlot) => {
+          if (settled) {
+            // The waiter was aborted while a slot was being opened for it; hand the slot on.
+            this.#releaseSlot(slot)
+            return
+          }
           if (onAbort && signal) {
             signal.removeEventListener('abort', onAbort)
           }
+          settled = true
           resolve(slot)
         },
       }
@@ -429,6 +442,7 @@ export class SmtpTransport implements EmailAdapter {
           if (index >= 0) {
             this.#waiters.splice(index, 1)
           }
+          settled = true
           reject(signal.reason ?? new DOMException('The operation was aborted.', 'AbortError'))
         }
         signal.addEventListener('abort', onAbort, { once: true })

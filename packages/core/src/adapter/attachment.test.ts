@@ -704,4 +704,20 @@ describe('inlineCidImagesAsDataUrls', () => {
       `<img src="data:image/png;base64,${iconData}" /><img src='data:image/png;base64,${largeData}' /><p>Reference cid:icon in text</p>`,
     )
   })
+
+  test('falls back to a safe media type when contentType could break the attribute', async () => {
+    const html = '<img src="cid:logo" />'
+    const base64Data = encodeAttachmentContentBase64(new TextEncoder().encode('x'))
+    const attachments = [
+      { content: 'x', cid: 'logo', contentType: 'image/png" onerror="alert(1)' },
+      { content: 'x', cid: 'other', contentType: 'image/png; name=logo.png' },
+    ]
+
+    expect(await inlineCidImagesAsDataUrls(html, attachments)).toBe(
+      `<img src="data:application/octet-stream;base64,${base64Data}" />`,
+    )
+    expect(await inlineCidImagesAsDataUrls('<img src="cid:other" />', attachments)).toBe(
+      `<img src="data:image/png;base64,${base64Data}" />`,
+    )
+  })
 })

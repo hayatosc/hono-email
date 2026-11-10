@@ -257,4 +257,42 @@ describe('createApiRoutes error paths', () => {
     // Should NOT inline the SSRF attachment and should not throw 500
     expect(body.html).toContain('src="cid:remote"')
   })
+
+  test('POST /api/templates/:name/render rejects non-string remote attachment sources', async () => {
+    const loadModule = async () => ({
+      default: () => jsx('html', {}, [jsx('body', {}, [jsx('img', { src: 'cid:remote' })])]),
+      previewProps: {},
+    })
+    const fetched: string[] = []
+    const originalFetch = globalThis.fetch
+    globalThis.fetch = Object.assign(
+      async (input: Parameters<typeof fetch>[0]) => {
+        fetched.push(input instanceof Request ? input.url : input.toString())
+        return new Response('secret')
+      },
+      { preconnect: originalFetch.preconnect },
+    )
+
+    try {
+      const app = createApiRoutes(loadModule, tempDir)
+      const res = await app.request('/api/templates/Test/render', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          props: {},
+          attachments: [
+            { href: ['http://internal.service/href'], cid: 'remote' },
+            { path: ['https://internal.service/path'], cid: 'remote' },
+            { path: 'file:///etc/passwd', cid: 'remote' },
+          ],
+        }),
+      })
+
+      expect(res.status).toBe(200)
+      expect(fetched).toEqual([])
+      expect((await res.json()).html).toContain('src="cid:remote"')
+    } finally {
+      globalThis.fetch = originalFetch
+    }
+  })
 })

@@ -13,7 +13,7 @@ import type {
   EmailUnsubscribeOptions,
   SendEmailReceipt,
 } from './email'
-import { renderEmailMessage, sendEmail } from './email'
+import { mergeEmailHeaders, renderEmailMessage, sendEmail } from './email'
 import type { RenderOptions } from './index'
 import { mergeTelemetryHooks, type MailTelemetryHooks } from './telemetry'
 
@@ -229,20 +229,6 @@ const toAddressList = (addresses: EmailAddress | EmailAddress[] | undefined): Em
   return Array.isArray(addresses) ? addresses : [addresses]
 }
 
-const mergeHeaders = (...headerMaps: (EmailHeaders | undefined)[]): EmailHeaders | undefined => {
-  const merged: EmailHeaders = {}
-  let hasAny = false
-  for (const map of headerMaps) {
-    if (map !== undefined) {
-      for (const [key, value] of Object.entries(map)) {
-        merged[key] = value
-        hasAny = true
-      }
-    }
-  }
-  return hasAny ? merged : undefined
-}
-
 const mergeRenderOptions = (
   ...renderOptsList: (RenderOptions | undefined)[]
 ): RenderOptions | undefined => {
@@ -366,7 +352,7 @@ export function createMailer(defaults: MailerOptions, customRenderer?: EmailRend
       }
 
       const replyTo = opts.replyTo ?? built.replyTo ?? defaults.replyTo
-      const headers = mergeHeaders(defaults.headers, built.headers, opts.headers)
+      const headers = mergeEmailHeaders(defaults.headers, built.headers, opts.headers)
       const renderOptions = mergeRenderOptions(
         defaults.render,
         built.render,
@@ -420,7 +406,7 @@ export function createMailer(defaults: MailerOptions, customRenderer?: EmailRend
     }
 
     const replyTo = draftInput.replyTo ?? defaults.replyTo
-    const headers = mergeHeaders(defaults.headers, draftInput.headers)
+    const headers = mergeEmailHeaders(defaults.headers, draftInput.headers)
     const renderOptions = mergeRenderOptions(defaults.render, draftInput.render)
     const retry = draftInput.retry ?? defaults.retry
     const signal = draftInput.signal
@@ -465,7 +451,7 @@ export function createMailer(defaults: MailerOptions, customRenderer?: EmailRend
       }
       const to = opts?.to ?? []
       const replyTo = built.replyTo ?? defaults.replyTo
-      const headers = mergeHeaders(defaults.headers, built.headers)
+      const headers = mergeEmailHeaders(defaults.headers, built.headers)
       const renderOptions = mergeRenderOptions(
         defaults.render,
         built.render,
@@ -505,7 +491,7 @@ export function createMailer(defaults: MailerOptions, customRenderer?: EmailRend
       throw new Error("Email message must include a 'from' address.")
     }
     const replyTo = draftInput.replyTo ?? defaults.replyTo
-    const headers = mergeHeaders(defaults.headers, draftInput.headers)
+    const headers = mergeEmailHeaders(defaults.headers, draftInput.headers)
     const renderOptions = mergeRenderOptions(defaults.render, draftInput.render)
 
     const draft: EmailMessageDraft = {
