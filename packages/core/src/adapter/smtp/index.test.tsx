@@ -1562,6 +1562,100 @@ describe('sendEmail over SMTP', () => {
     await smtp.close()
   })
 
+  test('returns a slot opened for an aborted waiter to the pool', async () => {
+    const releaseFirst = createDeferred<void>()
+    const secondConnectionStarted = createDeferred<void>()
+    const releaseSecondGreeting = createDeferred<void>()
+    const mock = createMockConnector(async (server, index) => {
+      try {
+        if (index === 1) {
+          await server.writeResponse('220 smtp.example.com ready\r\n')
+          expect(await server.readLine()).toBe('EHLO localhost')
+          await server.writeResponse('250 smtp.example.com\r\n')
+          expect(await server.readLine()).toBe('MAIL FROM:<sender@example.com>')
+          await releaseFirst.promise
+          await server.writeResponse('451 Try again later\r\n')
+          return
+        }
+
+        secondConnectionStarted.resolve()
+        await releaseSecondGreeting.promise
+        await server.writeResponse('220 smtp.example.com ready\r\n')
+        expect(await server.readLine()).toBe('EHLO localhost')
+        await server.writeResponse('250 smtp.example.com\r\n')
+        expect(await server.readLine()).toBe('MAIL FROM:<sender@example.com>')
+        await server.writeResponse('250 Sender ok\r\n')
+        expect(await server.readLine()).toBe('RCPT TO:<recipient3@example.com>')
+        await server.writeResponse('250 Recipient ok\r\n')
+        expect(await server.readLine()).toBe('DATA')
+        await server.writeResponse('354 Start mail input\r\n')
+        await server.readData()
+        await server.writeResponse('250 Message accepted\r\n')
+        if ((await server.readLine()) === 'QUIT') {
+          await server.writeResponse('221 Bye\r\n')
+        }
+      } catch {
+        // Expected on close
+      }
+    })
+
+    const smtp = new SmtpTransport({
+      connector: mock.connector,
+      hostname: 'smtp.example.com',
+      port: 25,
+      pool: { maxConnections: 1 },
+      secure: false,
+    })
+
+    const sendPromise1 = smtp.send(createEmailMessage('First', 'recipient1@example.com'))
+    await new Promise((resolve) => setTimeout(resolve, 20))
+
+    const controller = new AbortController()
+    const sendPromise2 = smtp.send(createEmailMessage('Second', 'recipient2@example.com'), {
+      signal: controller.signal,
+    })
+    await new Promise((resolve) => setTimeout(resolve, 20))
+
+    // The first send fails and its slot is discarded, so a new slot is opened for the waiter.
+    releaseFirst.resolve()
+    expect(await sendPromise1).toMatchObject({ successful: false })
+    await secondConnectionStarted.promise
+
+    controller.abort(new DOMException('Queued send aborted', 'AbortError'))
+    expect(await sendPromise2).toMatchObject({ successful: false, category: 'timeout' })
+
+    releaseSecondGreeting.resolve()
+    const receipt3 = await Promise.race([
+      smtp.send(createEmailMessage('Third', 'recipient3@example.com')),
+      new Promise<'stalled'>((resolve) => setTimeout(() => resolve('stalled'), 1000)),
+    ])
+
+    expect(receipt3).toMatchObject({ successful: true, accepted: ['recipient3@example.com'] })
+    expect(mock.connectCount()).toBe(2)
+    await smtp.close()
+  })
+
+  test('returns a validation receipt instead of throwing for invalid recipients', async () => {
+    const mock = createMockConnector(async () => {})
+    const smtp = new SmtpTransport({
+      connector: mock.connector,
+      hostname: 'smtp.example.com',
+      port: 25,
+      secure: false,
+    })
+
+    const receipt = await smtp.send(createEmailMessage('Invalid', 'not an address'))
+
+    expect(receipt).toMatchObject({
+      successful: false,
+      category: 'validation',
+      permanent: true,
+      errorMessages: ['Invalid email address: not an address'],
+    })
+    expect(mock.connectCount()).toBe(0)
+    await smtp.close()
+  })
+
   test('closes idle SMTP session after idleTimeout expires', async () => {
     let quitReceived = false
     const mock = createMockConnector(async (server) => {

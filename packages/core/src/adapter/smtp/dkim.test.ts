@@ -95,6 +95,32 @@ describe('applyDkimSignature', () => {
     expect(result).toContain('b=')
   })
 
+  test('Ed25519 signature verifies over the SHA-256 hash of the signed headers (RFC 8463)', async () => {
+    const keyPair = await crypto.subtle.generateKey({ name: 'Ed25519' }, true, ['sign', 'verify'])
+    const pkcs8 = await crypto.subtle.exportKey('pkcs8', keyPair.privateKey)
+    const result = await applyDkimSignature(createSampleMessage(), {
+      domainName: 'example.com',
+      keySelector: 'ed25519-key',
+      privateKey: toPem('PRIVATE KEY', new Uint8Array(pkcs8)),
+    })
+
+    const dkimLine = result.slice(0, result.indexOf(CRLF))
+    const signatureIndex = dkimLine.lastIndexOf('b=') + 2
+    const signature = Uint8Array.from(atob(dkimLine.slice(signatureIndex)), (char) =>
+      char.charCodeAt(0),
+    )
+    const signedHeaders = 'from:sender@example.com\r\nto:recipient@example.com\r\nsubject:Test\r\n'
+    const unsignedDkim = `dkim-signature:${dkimLine.slice('DKIM-Signature: '.length, signatureIndex)}`
+    const digest = await crypto.subtle.digest(
+      'SHA-256',
+      new TextEncoder().encode(`${signedHeaders}${unsignedDkim}`),
+    )
+
+    expect(
+      await crypto.subtle.verify({ name: 'Ed25519' }, keyPair.publicKey, signature, digest),
+    ).toBe(true)
+  })
+
   test('signs with explicit algorithm: ed25519-sha256', async () => {
     const privateKey = await createEd25519Pkcs8Key()
     const result = await applyDkimSignature(createSampleMessage(), {

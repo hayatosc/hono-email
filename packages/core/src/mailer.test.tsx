@@ -212,6 +212,30 @@ describe('createMailer', () => {
     expect(adapter.lastSendOptions?.retry).toEqual({ maxAttempts: 3 })
   })
 
+  test('merges headers case-insensitively so later layers replace earlier ones', async () => {
+    const adapter = new MockAdapter()
+    const mailer = createMailer({
+      adapter,
+      from: 'default@example.com',
+      headers: { 'X-App-Env': 'production' },
+    })
+
+    await mailer.send({
+      to: 'user@example.com',
+      subject: 'Header casing',
+      headers: { 'x-app-env': 'staging' },
+      jsx: (
+        <Html>
+          <Body>
+            <Text>Hello</Text>
+          </Body>
+        </Html>
+      ),
+    })
+
+    expect(adapter.sentMessages[0]?.headers).toEqual({ 'x-app-env': 'staging' })
+  })
+
   test('forwards AbortSignal to adapter send', async () => {
     const adapter = new MockAdapter()
     const mailer = createMailer({

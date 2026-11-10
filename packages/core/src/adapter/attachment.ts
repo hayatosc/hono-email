@@ -362,6 +362,14 @@ export const resolveEmailAttachmentsSync = (
   )
 }
 
+const DATA_URL_MEDIA_TYPE_PATTERN = /^[\w.+-]+\/[\w.+-]+$/u
+
+// Keep only a bare `type/subtype` so the value cannot break out of the HTML attribute.
+const toDataUrlMediaType = (contentType: string): string => {
+  const mediaType = contentType.split(';')[0]?.trim() ?? ''
+  return DATA_URL_MEDIA_TYPE_PATTERN.test(mediaType) ? mediaType : 'application/octet-stream'
+}
+
 /**
  * Resolves attachments and replaces `cid:...` references in HTML with `data:<contentType>;base64,...` data URLs.
  * Useful for browser previews where the browser cannot resolve the `cid:` URI scheme.
@@ -385,7 +393,7 @@ export const inlineCidImagesAsDataUrls = async (
   let output = html
   for (const attachment of cidAttachments) {
     const base64 = encodeAttachmentContentBase64(attachment.content)
-    const dataUrl = `data:${attachment.contentType};base64,${base64}`
+    const dataUrl = `data:${toDataUrlMediaType(attachment.contentType)};base64,${base64}`
     output = output
       .replaceAll(`src="cid:${attachment.cid}"`, `src="${dataUrl}"`)
       .replaceAll(`src='cid:${attachment.cid}'`, `src='${dataUrl}'`)

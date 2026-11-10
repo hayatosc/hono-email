@@ -232,4 +232,58 @@ describe('withDeliveryRules', () => {
       expect(mock.sentMessages[2]?.subject).toBe('Call 3')
     })
   })
+
+  describe('envelope recipients', () => {
+    const base: EmailMessage = {
+      from: 'sender@example.com',
+      to: 'list@example.com',
+      subject: 'Digest',
+      html: '<p>Body</p>',
+      text: 'Body',
+    }
+
+    it('filters suppressed addresses from envelope recipients', async () => {
+      const mock = new TestRulesAdapter()
+      const adapter = withDeliveryRules(mock, { suppress: ['bounced@example.com'] })
+
+      await adapter.send({
+        ...base,
+        envelope: {
+          from: 'bounces@example.com',
+          to: ['alice@example.com', 'bounced@example.com'],
+          bcc: 'bounced@example.com',
+        },
+      })
+
+      expect(mock.sentMessages[0]?.envelope).toEqual({
+        from: 'bounces@example.com',
+        to: ['alice@example.com'],
+        bcc: [],
+      })
+    })
+
+    it('skips sending when every envelope recipient is suppressed', async () => {
+      const mock = new TestRulesAdapter()
+      const adapter = withDeliveryRules(mock, { suppress: ['bounced@example.com'] })
+
+      const receipt = await adapter.send({ ...base, envelope: { to: 'bounced@example.com' } })
+
+      expect(receipt).toMatchObject({ successful: true, messageId: 'skipped', accepted: [] })
+      expect(mock.sentMessages).toHaveLength(0)
+    })
+
+    it('intercepts when an envelope recipient is outside the allowList', async () => {
+      const mock = new TestRulesAdapter()
+      const adapter = withDeliveryRules(mock, {
+        intercept: { to: 'qa@example.com', allowList: ['@example.com'] },
+      })
+
+      await adapter.send({ ...base, envelope: { to: 'customer@external.test' } })
+
+      expect(mock.sentMessages[0]).toMatchObject({
+        to: 'qa@example.com',
+        envelope: { to: 'qa@example.com' },
+      })
+    })
+  })
 })
