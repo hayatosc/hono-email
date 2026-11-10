@@ -2,6 +2,7 @@ import { describe, expect, it } from 'bun:test'
 
 import type { EmailAdapter, EmailMessage, SendEmailReceipt, SuccessfulSendReceipt } from './index'
 import { withDeliveryRules } from './rules'
+import { InMemoryAdapter } from './testing'
 
 class TestRulesAdapter implements EmailAdapter {
   sentMessages: EmailMessage[] = []
@@ -270,6 +271,16 @@ describe('withDeliveryRules', () => {
 
       expect(receipt).toMatchObject({ successful: true, messageId: 'skipped', accepted: [] })
       expect(mock.sentMessages).toHaveLength(0)
+    })
+
+    it('delivers to retained envelope recipients when every visible To is suppressed', async () => {
+      const mem = new InMemoryAdapter()
+      const adapter = withDeliveryRules(mem, { suppress: ['list@example.com'] })
+
+      const receipt = await adapter.send({ ...base, envelope: { to: 'alice@example.com' } })
+
+      expect(receipt).toMatchObject({ successful: true, accepted: ['alice@example.com'] })
+      expect(mem.mails[0]?.raw).toContain('\r\nTo: undisclosed-recipients:;\r\n')
     })
 
     it('intercepts when an envelope recipient is outside the allowList', async () => {

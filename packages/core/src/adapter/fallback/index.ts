@@ -71,8 +71,9 @@ export function FallbackAdapter(options: FallbackAdapterOptions | EmailAdapter[]
   const notifyFallback = async (event: FallbackEvent): Promise<void> => {
     try {
       await onFallback?.(event)
-    } catch {
+    } catch (error) {
       // A failing callback must not change which adapter delivers the message.
+      console.debug('FallbackAdapter onFallback callback failed:', error)
     }
   }
 

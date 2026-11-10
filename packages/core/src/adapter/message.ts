@@ -624,7 +624,16 @@ const buildRawEmailMessageWithAttachments = (
   const headers: string[] = []
 
   appendHeader(headers, 'From', formatEmailAddress(message.from))
-  appendHeader(headers, 'To', formatAddressList(message.to, 'to'))
+  // RFC 5322 empty group: keeps the message valid when only Cc, Bcc, or envelope recipients remain
+  // (for example after suppression filtering). Messages with no recipients at all still fail.
+  const hasVisibleTo = toAddressList(message.to).length > 0
+  appendHeader(
+    headers,
+    'To',
+    hasVisibleTo || resolveEmailEnvelope(message).recipients.length === 0
+      ? formatAddressList(message.to, 'to')
+      : 'undisclosed-recipients:;',
+  )
 
   const cc = toAddressList(message.cc)
   if (cc.length > 0) {
