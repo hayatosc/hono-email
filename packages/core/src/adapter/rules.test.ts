@@ -294,6 +294,7 @@ describe('withDeliveryRules', () => {
       expect(mock.sentMessages[0]).toMatchObject({
         to: 'qa@example.com',
         envelope: { to: 'qa@example.com' },
+        headers: { 'X-Original-To': 'list@example.com, customer@external.test' },
       })
     })
   })

@@ -201,11 +201,6 @@ export function withDeliveryRules(
 
       if (rules.intercept !== undefined) {
         const allowList = rules.intercept.allowList ?? []
-        const originalRecipients = [
-          ...toList.map((a) => formatEmailAddress(a)),
-          ...ccList.map((a) => formatEmailAddress(a)),
-          ...bccList.map((a) => formatEmailAddress(a)),
-        ]
         const candidates = [
           ...toList,
           ...ccList,
@@ -214,6 +209,7 @@ export function withDeliveryRules(
           ...toAddressList(envelope?.cc),
           ...toAddressList(envelope?.bcc),
         ]
+        const originalRecipients = [...new Set(candidates.map((a) => formatEmailAddress(a)))]
 
         const areAllAllowed =
           allowList.length > 0 &&
