@@ -79,6 +79,8 @@ export function FallbackAdapter(options: FallbackAdapterOptions | EmailAdapter[]
 
   return {
     async send(message: EmailMessage, sendOptions?: EmailSendOptions): Promise<SendEmailReceipt> {
+      // A function call keeps TypeScript from narrowing `aborted` across awaits.
+      const isAborted = (): boolean => sendOptions?.signal?.aborted === true
       let lastReceipt: SendEmailReceipt | undefined
       let lastError: unknown
 
@@ -101,7 +103,7 @@ export function FallbackAdapter(options: FallbackAdapterOptions | EmailAdapter[]
           lastReceipt = receipt
 
           // If the failure is marked as permanent or the send was aborted, do not fall back.
-          if (receipt.permanent === true || sendOptions?.signal?.aborted === true) {
+          if (receipt.permanent === true || isAborted()) {
             return receipt
           }
 
@@ -111,6 +113,10 @@ export function FallbackAdapter(options: FallbackAdapterOptions | EmailAdapter[]
               toAdapter: nextAdapter,
               receipt,
             })
+            // The callback itself may abort the send.
+            if (isAborted()) {
+              return receipt
+            }
             continue
           }
 
@@ -125,7 +131,7 @@ export function FallbackAdapter(options: FallbackAdapterOptions | EmailAdapter[]
             'permanent' in error &&
             error.permanent === true
 
-          if (isPermanent || sendOptions?.signal?.aborted === true) {
+          if (isPermanent || isAborted()) {
             throw error
           }
 
@@ -135,6 +141,9 @@ export function FallbackAdapter(options: FallbackAdapterOptions | EmailAdapter[]
               toAdapter: nextAdapter,
               error,
             })
+            if (isAborted()) {
+              throw error
+            }
             continue
           }
 

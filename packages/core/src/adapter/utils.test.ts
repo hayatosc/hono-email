@@ -312,6 +312,9 @@ describe('isValidationError', () => {
       isValidationError(new Error('Email address string must hold a single address: a@x.com,b')),
     ).toBe(true)
     expect(
+      isValidationError(new Error('Provider says recipient must contain a single address')),
+    ).toBe(false)
+    expect(
       isValidationError(
         new Error('Header "Bcc" is managed by hono-email and cannot be set directly.'),
       ),

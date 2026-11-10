@@ -217,4 +217,40 @@ describe('FallbackAdapter', () => {
     expect(receipt.successful).toBe(false)
     expect(secondary.sendCount).toBe(0)
   })
+
+  it('stops falling back when onFallback aborts the signal', async () => {
+    const controller = new AbortController()
+    const primary = createFailedAdapter(false, 'Primary timeout')
+    const secondary = createSuccessAdapter('secondary-456')
+    const fallback = FallbackAdapter({
+      adapters: [primary, secondary],
+      async onFallback() {
+        controller.abort()
+      },
+    })
+
+    const receipt = await fallback.send(mockMessage, { signal: controller.signal })
+
+    expect(receipt).toMatchObject({ successful: false, errorMessages: ['Primary timeout'] })
+    expect(secondary.sendCount).toBe(0)
+  })
+
+  it('rethrows the original error when onFallback aborts the signal', async () => {
+    const controller = new AbortController()
+    const primary = new MockSendAdapter(async () => {
+      throw new Error('Primary connection reset')
+    })
+    const secondary = createSuccessAdapter('secondary-456')
+    const fallback = FallbackAdapter({
+      adapters: [primary, secondary],
+      onFallback() {
+        controller.abort()
+      },
+    })
+
+    await expect(fallback.send(mockMessage, { signal: controller.signal })).rejects.toThrow(
+      'Primary connection reset',
+    )
+    expect(secondary.sendCount).toBe(0)
+  })
 })
