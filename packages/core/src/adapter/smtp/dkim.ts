@@ -195,7 +195,7 @@ const importDkimKey = async (
     if (error instanceof Error) {
       throw error
     }
-    throw new Error('Invalid DKIM private key.')
+    throw new Error('Invalid DKIM private key.', { cause: error })
   }
 }
 

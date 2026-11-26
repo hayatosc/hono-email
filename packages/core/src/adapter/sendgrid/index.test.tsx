@@ -296,9 +296,12 @@ describe('SendGrid adapter', () => {
   test('classifies attachment URL fetch network error as transient connection failure', async () => {
     const originalFetch = globalThis.fetch
     try {
-      globalThis.fetch = (async () => {
-        throw new TypeError('fetch failed')
-      }) as unknown as typeof fetch
+      globalThis.fetch = Object.assign(
+        async () => {
+          throw new TypeError('fetch failed')
+        },
+        { preconnect: originalFetch.preconnect },
+      )
 
       const receipt = await SendGridAdapter({ apiKey: 'SG.test' }).send({
         from: 'sender@example.com',
@@ -352,7 +355,7 @@ describe('SendGrid adapter', () => {
     const receipt = await SendGridAdapter({
       apiKey: 'SG.test',
       fetch: async (_input, init) => {
-        requestBody = JSON.parse(String(init.body))
+        requestBody = JSON.parse(init.body)
         return new Response('', { status: 202 })
       },
     }).send({
@@ -379,7 +382,7 @@ describe('SendGrid adapter', () => {
     const receipt = await SendGridAdapter({
       apiKey: 'SG.test',
       fetch: async (_input, init) => {
-        requestBody = JSON.parse(String(init.body))
+        requestBody = JSON.parse(init.body)
         return new Response('', { status: 202 })
       },
     }).send({

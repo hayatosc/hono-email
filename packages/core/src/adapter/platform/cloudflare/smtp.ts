@@ -49,7 +49,7 @@ const loadConnect = async (): Promise<CloudflareConnect> => {
   }
 
   return (address, options) => {
-    const socket: unknown = connect(address, options)
+    const socket: unknown = Reflect.apply(connect, undefined, [address, options])
     if (!isCloudflareSocket(socket)) {
       throw new Error('cloudflare:sockets connect() returned an invalid socket.')
     }

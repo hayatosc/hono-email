@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 import dc from 'node:diagnostics_channel'
 
+import { throwingRejection } from '../../../test-utils/promise'
 import type {
   EmailAdapter,
   EmailMessage,
@@ -302,26 +303,28 @@ describe('telemetry hooks with sendEmail', () => {
   test('invokes onFailed and rethrows when adapter throws an error', async () => {
     const failedEvents: MailFailedEvent[] = []
 
-    await expect(
-      sendEmail({
-        adapter: new MockThrowAdapter(),
-        from: 'sender@example.com',
-        to: 'recipient@example.com',
-        subject: 'Timeout Email',
-        jsx: (
-          <Html>
-            <Body>
-              <Text>Hello</Text>
-            </Body>
-          </Html>
-        ),
-        hooks: {
-          onFailed: (event) => {
-            failedEvents.push(event)
+    expect(
+      await throwingRejection(
+        sendEmail({
+          adapter: new MockThrowAdapter(),
+          from: 'sender@example.com',
+          to: 'recipient@example.com',
+          subject: 'Timeout Email',
+          jsx: (
+            <Html>
+              <Body>
+                <Text>Hello</Text>
+              </Body>
+            </Html>
+          ),
+          hooks: {
+            onFailed: (event) => {
+              failedEvents.push(event)
+            },
           },
-        },
-      }),
-    ).rejects.toThrow('Network timeout during transmission')
+        }),
+      ),
+    ).toThrow('Network timeout during transmission')
 
     expect(failedEvents).toHaveLength(1)
     const failed = failedEvents[0]
@@ -362,9 +365,9 @@ describe('telemetry hooks with sendEmail', () => {
 
 describe('node:diagnostics_channel integration', () => {
   test('publishes concurrent sends without dropping diagnostics events', async () => {
-    const receivedEvents: MailSentEvent[] = []
+    const receivedEvents: unknown[] = []
     const subscriber = (message: unknown) => {
-      receivedEvents.push(message as MailSentEvent)
+      receivedEvents.push(message)
     }
 
     dc.subscribe('hono-email:sent', subscriber)
@@ -399,7 +402,13 @@ describe('node:diagnostics_channel integration', () => {
       ])
 
       expect(receivedEvents).toHaveLength(2)
-      expect(receivedEvents.map((e) => e.subject).sort()).toEqual(['Concurrent 1', 'Concurrent 2'])
+      const subjects = receivedEvents.map((event) =>
+        typeof event === 'object' && event !== null && 'subject' in event
+          ? event.subject
+          : undefined,
+      )
+      expect(subjects).toContain('Concurrent 1')
+      expect(subjects).toContain('Concurrent 2')
     } finally {
       dc.unsubscribe('hono-email:sent', subscriber)
     }
@@ -427,12 +436,16 @@ describe('node:diagnostics_channel integration', () => {
         ),
       })
 
-      expect(receivedChannelEvent).toBeDefined()
-      const event = receivedChannelEvent as MailSentEvent
-      expect(event.type).toBe('sent')
-      expect(event.subject).toBe('Channel Sent')
-      expect(event.recipients).toEqual(['recipient@example.com'])
-      expect(event.messageId).toBe('msg-12345')
+      expect(receivedChannelEvent).toMatchObject({
+        type: 'sent',
+        subject: 'Channel Sent',
+        recipients: ['recipient@example.com'],
+        messageId: 'msg-12345',
+      })
+      const event: unknown = receivedChannelEvent
+      if (typeof event !== 'object' || event === null || !('durationMs' in event)) {
+        throw new Error('Expected a duration in the sent event.')
+      }
       expect(typeof event.durationMs).toBe('number')
     } finally {
       dc.unsubscribe('hono-email:sent', subscriber)
@@ -461,12 +474,20 @@ describe('node:diagnostics_channel integration', () => {
         ),
       })
 
-      expect(receivedFailedEvent).toBeDefined()
-      const event = receivedFailedEvent as MailFailedEvent
-      expect(event.type).toBe('failed')
-      expect(event.subject).toBe('Channel Failed')
-      expect(event.permanent).toBe(true)
-      expect(event.receipt.errorMessages).toContain('SMTP 550 User unknown')
+      expect(receivedFailedEvent).toMatchObject({
+        type: 'failed',
+        subject: 'Channel Failed',
+        permanent: true,
+      })
+      const event: unknown = receivedFailedEvent
+      if (typeof event !== 'object' || event === null || !('receipt' in event)) {
+        throw new Error('Expected a receipt in the failed event.')
+      }
+      const receipt = event.receipt
+      if (typeof receipt !== 'object' || receipt === null || !('errorMessages' in receipt)) {
+        throw new Error('Expected error messages in the failed receipt.')
+      }
+      expect(receipt.errorMessages).toContain('SMTP 550 User unknown')
     } finally {
       dc.unsubscribe('hono-email:failed', subscriber)
     }

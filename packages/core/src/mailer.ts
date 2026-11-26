@@ -398,7 +398,6 @@ export function createMailer(defaults: MailerOptions, customRenderer?: EmailRend
       throw new Error('send(draft) requires a valid draft object.')
     }
 
-    // Plain draft
     const draftInput = mailOrDraft
     const from = draftInput.from ?? defaults.from
     if (from === undefined) {
@@ -484,7 +483,6 @@ export function createMailer(defaults: MailerOptions, customRenderer?: EmailRend
       throw new Error('render(draft) requires a valid draft object.')
     }
 
-    // Plain draft
     const draftInput = mailOrDraft
     const from = draftInput.from ?? defaults.from
     if (from === undefined) {

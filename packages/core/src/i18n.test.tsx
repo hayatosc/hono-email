@@ -92,7 +92,6 @@ describe('i18n (LocaleContext, useLocale, createTranslator)', () => {
       'ja-JP': { title: 'ようこそ日本' },
     })
 
-    // 'pt-BR' has no exact match, falls back to 'pt'
     expect(t('pt-BR')).toEqual({ title: 'Bem-vindo' })
   })
 

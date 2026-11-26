@@ -16,7 +16,6 @@ import type { EmailTailwindPluginOptions } from './types'
  * export default { plugins: [EmailTailwind()] }
  * ```
  */
-const rspack: UnpluginInstance<EmailTailwindPluginOptions | undefined, boolean>['rspack'] =
-  unplugin.rspack
+const rspack: UnpluginInstance<EmailTailwindPluginOptions | undefined>['rspack'] = unplugin.rspack
 
 export default rspack

@@ -17,7 +17,6 @@ import type { EmailTailwindPluginOptions } from './types'
  * export default defineConfig({ plugins: [EmailTailwind()] })
  * ```
  */
-const vite: UnpluginInstance<EmailTailwindPluginOptions | undefined, boolean>['vite'] =
-  unplugin.vite
+const vite: UnpluginInstance<EmailTailwindPluginOptions | undefined>['vite'] = unplugin.vite
 
 export default vite

@@ -1,8 +1,16 @@
 import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test'
 
+import { throwingRejection } from '../../../../../../test-utils/promise'
 import type { CloudflareEmailBinding } from '../../cloudflare/types'
 
-const env = {} as Record<string, CloudflareEmailBinding>
+const env: Record<string, CloudflareEmailBinding> = {}
+const restPayload = {
+  from: 'sender@example.com',
+  to: 'recipient@example.com',
+  subject: 'Test',
+  html: '<p>Test</p>',
+  text: 'Test',
+}
 void mock.module('cloudflare:workers', () => ({ env }))
 
 const createSpyBinding = () => {
@@ -28,12 +36,15 @@ describe('createWorkersConnector payload guard', () => {
     env.EMAIL = binding
     const { createWorkersConnector } = await import('./index')
 
-    await expect(
+    const promise = Promise.resolve(
       createWorkersConnector({ bindingName: 'EMAIL' }).send({
         recipients: [],
-        workersPayload: undefined as never,
+        restPayload,
       }),
-    ).rejects.toThrow('Cloudflare Email workers connector requires a workers payload.')
+    )
+    expect(await throwingRejection(promise)).toThrow(
+      'Cloudflare Email workers connector requires a workers payload.',
+    )
 
     expect(send).not.toHaveBeenCalled()
   })
@@ -61,9 +72,10 @@ describe('WorkersConnector payload guard', () => {
     env.EMAIL = binding
     const { WorkersConnector } = await import('./index')
 
-    await expect(
-      WorkersConnector.send({ recipients: [], workersPayload: undefined as never }),
-    ).rejects.toThrow('Cloudflare Email workers connector requires a workers payload.')
+    const promise = Promise.resolve(WorkersConnector.send({ recipients: [], restPayload }))
+    expect(await throwingRejection(promise)).toThrow(
+      'Cloudflare Email workers connector requires a workers payload.',
+    )
   })
 })
 

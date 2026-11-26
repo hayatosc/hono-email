@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 
+import { throwingRejection } from '../../../../test-utils/promise'
 import { render } from '../index'
 import { relocateHeadStyles } from './head-styles'
 
@@ -20,16 +21,18 @@ describe('style placement', () => {
   })
 
   test('rejects style tags outside head in strict mode', async () => {
-    await expect(
-      render(
-        <html>
-          <body>
-            <style>{'p { color: red; }'}</style>
-            <p>Hello</p>
-          </body>
-        </html>,
+    expect(
+      await throwingRejection(
+        render(
+          <html>
+            <body>
+              <style>{'p { color: red; }'}</style>
+              <p>Hello</p>
+            </body>
+          </html>,
+        ),
       ),
-    ).rejects.toThrow(
+    ).toThrow(
       'The <style> tag must be placed inside <Head> in HTML email strict mode. Move shared CSS into <Head>, or use inline style props for element-level styling.',
     )
   })

@@ -22,7 +22,12 @@ import {
   getProviderRecipientError,
   requireProviderRecipientError,
 } from '../provider'
-import { classifyFetchError, isPermanentHttpStatus, isValidationError } from '../utils'
+import {
+  classifyFetchError,
+  getAbortReasonMessage,
+  isPermanentHttpStatus,
+  isValidationError,
+} from '../utils'
 import {
   asCloudflareEmailRecipientField,
   CloudflareEmailConnectorError,
@@ -234,7 +239,7 @@ export const CloudflareEmailAdapter = (options: CloudflareEmailAdapterOptions): 
     }
 
     if (sendOptions?.signal?.aborted) {
-      return failedReceipt([sendOptions.signal.reason?.message ?? 'The operation was aborted.'], {
+      return failedReceipt([getAbortReasonMessage(sendOptions.signal)], {
         category: 'timeout',
         permanent: false,
         rejected: recipients,

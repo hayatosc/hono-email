@@ -2,6 +2,7 @@ import { describe, expect, test } from 'bun:test'
 
 import type { Child } from 'hono/jsx'
 
+import { throwingRejection } from '../../../../test-utils/promise'
 import {
   Conditional,
   Tailwind,
@@ -61,15 +62,17 @@ describe.each([
       },
     }
 
-    await expect(
-      send({
-        adapter,
-        from: 'sender@example.com',
-        to: 'recipient@example.com',
-        subject: 'Draft',
-        jsx: createDraft(),
-      }),
-    ).rejects.toThrow(message)
+    expect(
+      await throwingRejection(
+        send({
+          adapter,
+          from: 'sender@example.com',
+          to: 'recipient@example.com',
+          subject: 'Draft',
+          jsx: createDraft(),
+        }),
+      ),
+    ).toThrow(message)
     expect(sent).toEqual([])
   })
 

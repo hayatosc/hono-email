@@ -59,9 +59,10 @@ export const ensureSixHex = (html: string): string =>
   html
     .replace(
       STYLE_BLOCK_PATTERN,
-      (_match, open, css, close) => `${open}${expandShortHexInDeclarations(css)}${close}`,
+      (_match, open: string, css: string, close: string) =>
+        `${open}${expandShortHexInDeclarations(css)}${close}`,
     )
-    .replace(STYLE_ATTRIBUTE_PATTERN, (_match, key, quoted) => {
+    .replace(STYLE_ATTRIBUTE_PATTERN, (_match, key: string, quoted: string) => {
       const quote = quoted[0]
       const value = quoted.slice(1, -1)
       return `${key}${quote}${expandShortHex(value)}${quote}`

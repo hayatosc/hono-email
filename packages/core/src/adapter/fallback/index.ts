@@ -102,7 +102,6 @@ export function FallbackAdapter(options: FallbackAdapterOptions | EmailAdapter[]
 
           lastReceipt = receipt
 
-          // If the failure is marked as permanent or the send was aborted, do not fall back.
           if (receipt.permanent === true || isAborted()) {
             return receipt
           }
@@ -124,7 +123,6 @@ export function FallbackAdapter(options: FallbackAdapterOptions | EmailAdapter[]
         } catch (error) {
           lastError = error
 
-          // If the thrown error is explicitly permanent, rethrow immediately.
           const isPermanent =
             typeof error === 'object' &&
             error !== null &&

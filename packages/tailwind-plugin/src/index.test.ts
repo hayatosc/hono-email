@@ -3,6 +3,7 @@ import path from 'node:path'
 
 import type { UnpluginOptions } from 'unplugin'
 
+import { throwingRejection } from '../../../test-utils/promise'
 import {
   buildPerFileArtifactModule,
   buildPerFileCssModule,
@@ -163,9 +164,9 @@ export const Email = () => <EmailTailwind />
       encodeURIComponent(path.resolve(import.meta.dir, 'index.test.ts')),
       { css: '.custom { color: #123456; }', safelist: ['h-[4px]'] },
     )
-    const artifact = JSON.parse(moduleCode.slice('export default '.length))
-    expect(artifact.inlineStylesByClass.custom).toEqual({ color: '#123456' })
-    expect(artifact.inlineStylesByClass['h-[4px]']).toEqual({ height: '4px' })
+    expect(JSON.parse(moduleCode.slice('export default '.length))).toMatchObject({
+      inlineStylesByClass: { custom: { color: '#123456' }, 'h-[4px]': { height: '4px' } },
+    })
     expect(moduleCode).not.toContain('import ')
     expect(moduleCode).not.toContain('?inline')
   })
@@ -175,12 +176,15 @@ export const Email = () => <EmailTailwind />
       encodeURIComponent(path.resolve(import.meta.dir, 'index.test.ts')),
       { safelist: ['px-4', 'rounded-lg', 'text-sm', 'text-red-500'] },
     )
-    const { inlineStylesByClass: styles } = JSON.parse(moduleCode.slice('export default '.length))
-
-    expect(styles['px-4']).toEqual({ 'padding-left': '16px', 'padding-right': '16px' })
-    expect(styles['rounded-lg']).toEqual({ 'border-radius': '8px' })
-    expect(styles['text-sm']).toEqual({ 'font-size': '14px', 'line-height': '1.4285714285714286' })
-    expect(styles['text-red-500']).toEqual({ color: '#fb2c36' })
+    const artifact: unknown = JSON.parse(moduleCode.slice('export default '.length))
+    expect(artifact).toMatchObject({
+      inlineStylesByClass: {
+        'px-4': { 'padding-left': '16px', 'padding-right': '16px' },
+        'rounded-lg': { 'border-radius': '8px' },
+        'text-sm': { 'font-size': '14px', 'line-height': '1.4285714285714286' },
+        'text-red-500': { color: '#fb2c36' },
+      },
+    })
   })
 
   test('different email files get different virtual module IDs', () => {
@@ -298,9 +302,13 @@ describe('unpluginFactory', () => {
     })
 
     test('rejects malformed encoded paths', async () => {
-      await expect(
-        load.call(createMockContext(), '\0virtual-hono-email-tw-artifact/%broken'),
-      ).rejects.toThrow('Invalid encoded path')
+      expect(
+        await throwingRejection(
+          Promise.resolve().then(() =>
+            load.call(createMockContext(), '\0virtual-hono-email-tw-artifact/%broken'),
+          ),
+        ),
+      ).toThrow('Invalid encoded path')
     })
 
     test('returns null for unrelated ids', async () => {

@@ -93,7 +93,7 @@
   },
   "scripts": {
     "build": "tsdown",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsrs --noEmit",
     "test": "bun test ./src",
     "update-caniemail": "bun run ./scripts/update-caniemail-data.ts"
   },

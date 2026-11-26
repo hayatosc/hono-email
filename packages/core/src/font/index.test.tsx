@@ -77,18 +77,15 @@ describe('Font', () => {
     expect(html).toContain('\\3C /style\\3E \\3C script\\3E alert(1)\\3C /script\\3E')
   })
 
-  // Skipped because the Font component now renders with `<style data-hono-email-head="true">`,
-  // which automatically relocates the style tag to the `<Head>` block at render time.
-  // As a result, it will not trigger the strict-mode rejection warning.
-  test.skip('is rejected outside head in strict mode (skipped due to automatic relocation)', async () => {
-    await expect(
-      render(
-        <Html>
-          <Body>
-            <Font fontFamily="Inter" fallbackFontFamily="sans-serif" />
-          </Body>
-        </Html>,
-      ),
-    ).rejects.toThrow('The <style> tag must be placed inside <Head> in HTML email strict mode.')
+  test('moves Font styles from the body to the head in strict mode', async () => {
+    const { html } = await render(
+      <Html>
+        <Body>
+          <Font fontFamily="Inter" fallbackFontFamily="sans-serif" />
+        </Body>
+      </Html>,
+    )
+    expect(html).toMatch(/<head>.*<style[^>]*>.*Inter.*<\/style>.*<\/head>/s)
+    expect(html).not.toMatch(/<body[^>]*>.*<style/s)
   })
 })

@@ -70,7 +70,6 @@ app.all('*', async (c) => {
         appendVaryAccept(newResponse.headers)
         return newResponse
       }
-      // If Markdown file is not found, fallback to default response (Astro HTML) by letting execution fall through
     }
   }
 

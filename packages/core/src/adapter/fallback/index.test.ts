@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'bun:test'
 
+import { throwingRejection } from '../../../../../test-utils/promise'
 import type {
   EmailAdapter,
   EmailMessage,
@@ -56,9 +57,9 @@ describe('FallbackAdapter', () => {
     expect(() => FallbackAdapter({ adapters: [] })).toThrow(
       'FallbackAdapter requires at least one adapter.',
     )
-    expect(() => FallbackAdapter([{} as unknown as EmailAdapter])).toThrow(
-      'every adapter must provide a send() method',
-    )
+    expect(() => {
+      Reflect.apply(FallbackAdapter, undefined, [[{}]])
+    }).toThrow('every adapter must provide a send() method')
   })
 
   it('returns success from primary adapter without calling fallback', async () => {
@@ -69,7 +70,7 @@ describe('FallbackAdapter', () => {
     const receipt = await fallback.send(mockMessage)
 
     expect(receipt.successful).toBe(true)
-    expect((receipt as SuccessfulSendReceipt).messageId).toBe('primary-123')
+    expect(receipt).toMatchObject({ messageId: 'primary-123' })
     expect(primary.sendCount).toBe(1)
     expect(secondary.sendCount).toBe(0)
   })
@@ -90,7 +91,7 @@ describe('FallbackAdapter', () => {
     const receipt = await fallback.send(mockMessage)
 
     expect(receipt.successful).toBe(true)
-    expect((receipt as SuccessfulSendReceipt).messageId).toBe('secondary-456')
+    expect(receipt).toMatchObject({ messageId: 'secondary-456' })
     expect(primary.sendCount).toBe(1)
     expect(secondary.sendCount).toBe(1)
     expect(fallbackEvents).toHaveLength(1)
@@ -115,7 +116,7 @@ describe('FallbackAdapter', () => {
     const receipt = await fallback.send(mockMessage)
 
     expect(receipt.successful).toBe(false)
-    expect((receipt as FailedSendReceipt).permanent).toBe(true)
+    expect(receipt).toMatchObject({ permanent: true })
     expect(primary.sendCount).toBe(1)
     expect(secondary.sendCount).toBe(0)
     expect(fallbackEvents).toHaveLength(0)
@@ -139,7 +140,7 @@ describe('FallbackAdapter', () => {
     const receipt = await fallback.send(mockMessage)
 
     expect(receipt.successful).toBe(true)
-    expect((receipt as SuccessfulSendReceipt).messageId).toBe('secondary-789')
+    expect(receipt).toMatchObject({ messageId: 'secondary-789' })
     expect(primary.sendCount).toBe(1)
     expect(secondary.sendCount).toBe(1)
     expect(fallbackEvents).toHaveLength(1)
@@ -157,7 +158,7 @@ describe('FallbackAdapter', () => {
 
     const fallback = FallbackAdapter([primary, secondary])
 
-    await expect(fallback.send(mockMessage)).rejects.toThrow('Validation error')
+    expect(await throwingRejection(fallback.send(mockMessage))).toThrow('Validation error')
     expect(primary.sendCount).toBe(1)
     expect(secondary.sendCount).toBe(0)
   })
@@ -170,7 +171,7 @@ describe('FallbackAdapter', () => {
     const receipt = await fallback.send(mockMessage)
 
     expect(receipt.successful).toBe(false)
-    expect((receipt as FailedSendReceipt).errorMessages).toEqual(['Secondary timeout'])
+    expect(receipt).toMatchObject({ errorMessages: ['Secondary timeout'] })
     expect(primary.sendCount).toBe(1)
     expect(secondary.sendCount).toBe(1)
   })
@@ -248,9 +249,9 @@ describe('FallbackAdapter', () => {
       },
     })
 
-    await expect(fallback.send(mockMessage, { signal: controller.signal })).rejects.toThrow(
-      'Primary connection reset',
-    )
+    expect(
+      await throwingRejection(fallback.send(mockMessage, { signal: controller.signal })),
+    ).toThrow('Primary connection reset')
     expect(secondary.sendCount).toBe(0)
   })
 })

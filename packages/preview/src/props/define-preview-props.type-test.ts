@@ -17,10 +17,8 @@ const config = define({
   items: { type: 'array', item: { label: { type: 'string' }, quantity: { type: 'number' } } },
 })
 
-const legacy: PreviewPropsConfig = config
-const selectType: 'select' = config.theme.type
-void legacy
-void selectType
+config satisfies PreviewPropsConfig
+config.theme.type satisfies 'select'
 
 define({ count: { default: 0 }, enabled: { default: false } })
 define({ items: { default: [], item: { quantity: { default: 0 } } } })

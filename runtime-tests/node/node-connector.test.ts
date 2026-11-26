@@ -83,8 +83,7 @@ void test('nodeSmtpConnector sends a message through an SMTP session over a Node
 
   try {
     const address = server.address()
-    assert.equal(typeof address, 'object')
-    assert.notEqual(address, null)
+    assert(address !== null && typeof address === 'object')
 
     const socket = await NodeConnector.connect(
       { hostname: '127.0.0.1', port: address.port },
@@ -144,8 +143,7 @@ void test('nodeSmtpConnector opens and closes an SMTP session over a Node TCP so
 
   try {
     const address = server.address()
-    assert.equal(typeof address, 'object')
-    assert.notEqual(address, null)
+    assert(address !== null && typeof address === 'object')
 
     const socket = await NodeConnector.connect(
       { hostname: '127.0.0.1', port: address.port },
@@ -230,8 +228,7 @@ void test('nodeSmtpConnector surfaces partial recipient rejection from a real SM
 
   try {
     const address = server.address()
-    assert.equal(typeof address, 'object')
-    assert.notEqual(address, null)
+    assert(address !== null && typeof address === 'object')
 
     const socket = await NodeConnector.connect(
       { hostname: '127.0.0.1', port: address.port },

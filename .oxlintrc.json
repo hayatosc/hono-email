@@ -1,8 +1,11 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["typescript", "unicorn", "oxc"],
+  "plugins": ["typescript", "unicorn", "oxc", "jest", "import", "node"],
+  "jsPlugins": ["./tools/lint/plugin.mjs"],
   "options": {
-    "typeAware": true
+    "typeAware": true,
+    "respectEslintDisableDirectives": false,
+    "reportUnusedDisableDirectives": "error"
   },
   "categories": {
     "correctness": "error"
@@ -14,27 +17,64 @@
     "typescript/no-unnecessary-type-assertion": "error",
     "typescript/consistent-type-imports": "error",
     "typescript/no-unused-vars": "error",
+    "typescript/await-thenable": "error",
+    "typescript/no-misused-promises": "error",
+    "typescript/no-import-type-side-effects": "error",
+    "typescript/no-unsafe-argument": "error",
+    "typescript/no-unsafe-assignment": "error",
+    "typescript/no-unsafe-call": "error",
+    "typescript/no-unsafe-member-access": "error",
+    "typescript/no-unsafe-return": "error",
     "typescript/no-floating-promises": "error",
-    "typescript/switch-exhaustiveness-check": "warn",
-    "typescript/consistent-type-assertions": "warn",
-    "typescript/no-non-null-assertion": "warn"
+    "typescript/switch-exhaustiveness-check": "error",
+    "typescript/consistent-type-assertions": "error",
+    "typescript/no-non-null-assertion": "error",
+    "typescript/no-unsafe-function-type": "error",
+    "typescript/no-unsafe-enum-assignment": "error",
+    "typescript/no-unsafe-enum-comparison": "error",
+    "typescript/no-unnecessary-type-arguments": "error",
+    "typescript/no-unnecessary-type-constraint": "error",
+    "typescript/no-unnecessary-type-conversion": "error",
+    "typescript/no-unnecessary-template-expression": "error",
+    "eslint/no-empty": ["error", { "allowEmptyCatch": true }],
+    "eslint/preserve-caught-error": "error",
+    "eslint/no-warning-comments": "error",
+    "eslint/no-promise-executor-return": "error",
+    "eslint/block-scoped-var": "error",
+    "eslint/no-extend-native": "error",
+    "eslint/no-extra-bind": "error",
+    "eslint/no-implied-eval": "error",
+    "eslint/no-proto": "error",
+    "eslint/no-unexpected-multiline": "error",
+    "eslint/no-unmodified-loop-condition": "error",
+    "eslint/no-useless-assignment": "error",
+    "eslint/no-useless-call": "error",
+    "eslint/no-useless-concat": "error",
+    "eslint/no-useless-constructor": "error",
+    "import/no-empty-named-blocks": "error",
+    "import/no-self-import": "error",
+    "node/no-exports-assign": "error",
+    "oxc/approx-constant": "error",
+    "oxc/misrefactored-assign-op": "error",
+    "oxc/no-accumulating-spread": "error",
+    "oxc/no-this-in-exported-function": "error",
+    "typescript/no-confusing-non-null-assertion": "error",
+    "typescript/no-non-null-asserted-nullish-coalescing": "error",
+    "typescript/no-unnecessary-boolean-literal-compare": "error",
+    "unicorn/no-useless-collection-argument": "error",
+    "unicorn/no-useless-iterator-to-array": "error",
+    "unicorn/no-useless-promise-resolve-reject": "error",
+    "unicorn/no-useless-switch-case": "error",
+    "unicorn/prefer-array-find": "error",
+    "unicorn/prefer-array-flat-map": "error",
+    "unicorn/prefer-set-has": "error",
+    "jest/no-focused-tests": "error",
+    "jest/no-disabled-tests": "error",
+    "jest/no-commented-out-tests": "error",
+    "hono-email/no-redundant-comments": "error",
+    "hono-email/no-inline-suppressions": "error",
+    "hono-email/no-double-assertions": "error"
   },
-  "overrides": [
-    {
-      "files": [
-        "packages/*/src/**/*.test.ts",
-        "packages/*/src/**/*.test.tsx",
-        "docs/src/**/*.test.ts",
-        "docs/src/**/*.test.tsx",
-        "runtime-tests/**/*.test.ts",
-        "runtime-tests/**/*.test.tsx"
-      ],
-      "rules": {
-        "typescript/await-thenable": "off",
-        "typescript/no-unsafe-type-assertion": "off"
-      }
-    }
-  ],
   "env": {
     "builtin": true
   }

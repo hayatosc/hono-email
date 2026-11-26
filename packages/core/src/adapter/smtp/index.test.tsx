@@ -10,6 +10,7 @@ import {
   type SmtpSendOptions,
   type SmtpSocket,
 } from '.'
+import { throwingRejection } from '../../../../../test-utils/promise'
 import { Body, Html, Text, sendEmail } from '../../index'
 import { resolveEmailEnvelope } from '../message'
 
@@ -323,86 +324,94 @@ describe('SMTP message building', () => {
       expect(raw).toContain('Content-Type: text/plain; name="report.txt"')
       expect(raw).toContain('UmVtb3Rl')
 
-      await expect(
-        buildRawEmailMessageAsync(
-          {
-            attachments: [
-              {
-                href: 'https://example.test/report.txt',
-              },
-            ],
-            from: 'sender@example.com',
-            html: '<p>Hello</p>',
-            subject: 'Remote attachment too large',
-            text: 'Hello',
-            to: 'recipient@example.com',
-          },
-          { maxAttachmentSize: 3 },
+      expect(
+        await throwingRejection(
+          buildRawEmailMessageAsync(
+            {
+              attachments: [
+                {
+                  href: 'https://example.test/report.txt',
+                },
+              ],
+              from: 'sender@example.com',
+              html: '<p>Hello</p>',
+              subject: 'Remote attachment too large',
+              text: 'Hello',
+              to: 'recipient@example.com',
+            },
+            { maxAttachmentSize: 3 },
+          ),
         ),
-      ).rejects.toThrow('Email attachment report.txt exceeds maxAttachmentSize.')
+      ).toThrow('Email attachment report.txt exceeds maxAttachmentSize.')
 
-      await expect(
-        buildRawEmailMessageAsync(
-          {
-            attachments: [
-              {
-                content: 'Too large',
-                filename: 'large.txt',
-              },
-            ],
-            from: 'sender@example.com',
-            html: '<p>Hello</p>',
-            subject: 'Large attachment',
-            text: 'Hello',
-            to: 'recipient@example.com',
-          },
-          { maxAttachmentSize: 1 },
+      expect(
+        await throwingRejection(
+          buildRawEmailMessageAsync(
+            {
+              attachments: [
+                {
+                  content: 'Too large',
+                  filename: 'large.txt',
+                },
+              ],
+              from: 'sender@example.com',
+              html: '<p>Hello</p>',
+              subject: 'Large attachment',
+              text: 'Hello',
+              to: 'recipient@example.com',
+            },
+            { maxAttachmentSize: 1 },
+          ),
         ),
-      ).rejects.toThrow('Email attachment large.txt exceeds maxAttachmentSize.')
+      ).toThrow('Email attachment large.txt exceeds maxAttachmentSize.')
 
-      await expect(
-        buildRawEmailMessageAsync(
-          {
-            attachments: [
-              {
-                content: new ReadableStream<Uint8Array>({
-                  start(controller) {
-                    controller.enqueue(new TextEncoder().encode('Too large'))
-                    controller.close()
-                  },
-                }),
-                filename: 'stream.txt',
-              },
-            ],
-            from: 'sender@example.com',
-            html: '<p>Hello</p>',
-            subject: 'Stream attachment',
-            text: 'Hello',
-            to: 'recipient@example.com',
-          },
-          { maxAttachmentSize: 3 },
+      expect(
+        await throwingRejection(
+          buildRawEmailMessageAsync(
+            {
+              attachments: [
+                {
+                  content: new ReadableStream<Uint8Array>({
+                    start(controller) {
+                      controller.enqueue(new TextEncoder().encode('Too large'))
+                      controller.close()
+                    },
+                  }),
+                  filename: 'stream.txt',
+                },
+              ],
+              from: 'sender@example.com',
+              html: '<p>Hello</p>',
+              subject: 'Stream attachment',
+              text: 'Hello',
+              to: 'recipient@example.com',
+            },
+            { maxAttachmentSize: 3 },
+          ),
         ),
-      ).rejects.toThrow('Email attachment stream.txt exceeds maxAttachmentSize.')
+      ).toThrow('Email attachment stream.txt exceeds maxAttachmentSize.')
     } finally {
       globalThis.fetch = originalFetch
     }
   })
 
   test('does not read local attachment paths', async () => {
-    await expect(
-      buildRawEmailMessageAsync({
-        attachments: [
-          {
-            path: './invoice.txt',
-          },
-        ],
-        from: 'sender@example.com',
-        html: '<p>Hello</p>',
-        subject: 'Local attachment',
-        text: 'Hello',
-        to: 'recipient@example.com',
-      }),
-    ).rejects.toThrow(
+    expect(
+      await throwingRejection(
+        buildRawEmailMessageAsync({
+          attachments: [
+            {
+              path: './invoice.txt',
+            },
+          ],
+          from: 'sender@example.com',
+          html: '<p>Hello</p>',
+          subject: 'Local attachment',
+          text: 'Hello',
+          to: 'recipient@example.com',
+        }),
+      ),
+    ).toThrow(
       'Local attachment paths are not read by hono-email. Read the file in user code and pass it as attachment content instead.',
     )
   })
@@ -649,7 +658,7 @@ describe('sendEmail over SMTP', () => {
 
     await smtp.close()
 
-    await expect(smtp.send(createEmailMessage('Closed'))).rejects.toThrow(
+    expect(await throwingRejection(smtp.send(createEmailMessage('Closed')))).toThrow(
       'SMTP transport is closed.',
     )
   })
@@ -876,7 +885,6 @@ describe('sendEmail over SMTP', () => {
   })
 
   test('allows per-send override of recipientRejectionPolicy', async () => {
-    // 1. Transport is deliver-accepted (default), overridden by per-send reject-all
     const mock1 = createMockConnector(async (server) => {
       await server.writeResponse('220 smtp.example.com ready\r\n')
       expect(await server.readLine()).toBe('EHLO localhost')
@@ -923,7 +931,6 @@ describe('sendEmail over SMTP', () => {
       permanent: true,
     })
 
-    // 2. Transport is reject-all, overridden by per-send deliver-accepted
     const mock2 = createMockConnector(async (server) => {
       await server.writeResponse('220 smtp.example.com ready\r\n')
       expect(await server.readLine()).toBe('EHLO localhost')
@@ -1245,7 +1252,7 @@ describe('sendEmail over SMTP', () => {
   })
 
   test('rejects malformed DKIM keys with repeated PEM markers before connecting', async () => {
-    const repeatedPemMarkers = `${'-----BEGIN PRIVATE KEY-----a'.repeat(1_000)}`
+    const repeatedPemMarkers = '-----BEGIN PRIVATE KEY-----a'.repeat(1_000)
     const mock = createMockConnector(async () => {
       throw new Error('SMTP connection should not be opened for invalid DKIM keys.')
     })
@@ -1374,7 +1381,7 @@ describe('sendEmail over SMTP', () => {
       secure: 'starttls',
     })
 
-    await expect(smtp.verify()).resolves.toBeUndefined()
+    expect(await smtp.verify()).toBeUndefined()
     await mock.wait()
   })
 
@@ -1395,7 +1402,7 @@ describe('sendEmail over SMTP', () => {
       secure: true,
     })
 
-    await expect(smtp.verify()).rejects.toThrow(
+    expect(await throwingRejection(smtp.verify())).toThrow(
       'Unexpected SMTP response to AUTH [REDACTED]: 535 Authentication failed',
     )
   })
@@ -1414,12 +1421,14 @@ describe('sendEmail over SMTP', () => {
       secure: 'starttls',
     })
 
-    await expect(smtp.verify()).rejects.toThrow('SMTP server does not advertise STARTTLS.')
+    expect(await throwingRejection(smtp.verify())).toThrow(
+      'SMTP server does not advertise STARTTLS.',
+    )
   })
 
   test('verify fails when the greeting times out', async () => {
     const mock = createMockConnector(async () => {
-      await new Promise((resolve) => setTimeout(resolve, 20))
+      await Bun.sleep(20)
     })
 
     const smtp = new SmtpTransport({
@@ -1430,7 +1439,7 @@ describe('sendEmail over SMTP', () => {
       secure: true,
     })
 
-    await expect(smtp.verify()).rejects.toThrow('SMTP response timed out after 1ms.')
+    expect(await throwingRejection(smtp.verify())).toThrow('SMTP response timed out after 1ms.')
   })
 
   test('aborts in-flight send when signal is aborted during session send', async () => {
@@ -1445,11 +1454,9 @@ describe('sendEmail over SMTP', () => {
         await server.writeResponse('250 Recipient ok\r\n')
         expect(await server.readLine()).toBe('DATA')
         // Hold the response to DATA so client can abort while waiting
-        await new Promise((resolve) => setTimeout(resolve, 150))
+        await Bun.sleep(150)
         await server.writeResponse('354 Start mail input\r\n')
-      } catch {
-        // Expected when client aborts and closes socket
-      }
+      } catch {}
     })
 
     const smtp = new SmtpTransport({
@@ -1506,9 +1513,7 @@ describe('sendEmail over SMTP', () => {
             await server.writeResponse('221 Bye\r\n')
           }
         }
-      } catch {
-        // Expected on close
-      }
+      } catch {}
     })
 
     const smtp = new SmtpTransport({
@@ -1519,7 +1524,6 @@ describe('sendEmail over SMTP', () => {
       secure: false,
     })
 
-    // First send occupies the only slot
     const sendPromise1 = smtp.send({
       from: 'sender@example.com',
       to: 'recipient1@example.com',
@@ -1528,10 +1532,8 @@ describe('sendEmail over SMTP', () => {
       text: 'First',
     })
 
-    // Wait until connection 1 is initiated
-    await new Promise((resolve) => setTimeout(resolve, 30))
+    await Bun.sleep(30)
 
-    // Second send waits in pool queue
     const controller = new AbortController()
     const sendPromise2 = smtp.send(
       {
@@ -1544,7 +1546,6 @@ describe('sendEmail over SMTP', () => {
       { signal: controller.signal },
     )
 
-    // Abort the second send while queued
     setTimeout(() => {
       controller.abort(new DOMException('Queued send aborted', 'AbortError'))
     }, 30)
@@ -1594,9 +1595,7 @@ describe('sendEmail over SMTP', () => {
         if ((await server.readLine()) === 'QUIT') {
           await server.writeResponse('221 Bye\r\n')
         }
-      } catch {
-        // Expected on close
-      }
+      } catch {}
     })
 
     const smtp = new SmtpTransport({
@@ -1608,13 +1607,13 @@ describe('sendEmail over SMTP', () => {
     })
 
     const sendPromise1 = smtp.send(createEmailMessage('First', 'recipient1@example.com'))
-    await new Promise((resolve) => setTimeout(resolve, 20))
+    await Bun.sleep(20)
 
     const controller = new AbortController()
     const sendPromise2 = smtp.send(createEmailMessage('Second', 'recipient2@example.com'), {
       signal: controller.signal,
     })
-    await new Promise((resolve) => setTimeout(resolve, 20))
+    await Bun.sleep(20)
 
     // The first send fails and its slot is discarded, so a new slot is opened for the waiter.
     releaseFirst.resolve()
@@ -1627,7 +1626,7 @@ describe('sendEmail over SMTP', () => {
     releaseSecondGreeting.resolve()
     const receipt3 = await Promise.race([
       smtp.send(createEmailMessage('Third', 'recipient3@example.com')),
-      new Promise<'stalled'>((resolve) => setTimeout(() => resolve('stalled'), 1000)),
+      Bun.sleep(1000).then(() => 'stalled' as const),
     ])
 
     expect(receipt3).toMatchObject({ successful: true, accepted: ['recipient3@example.com'] })
@@ -1687,8 +1686,7 @@ describe('sendEmail over SMTP', () => {
     expect(receipt.successful).toBe(true)
     expect(quitReceived).toBe(false)
 
-    // Wait past idleTimeout
-    await new Promise((resolve) => setTimeout(resolve, 80))
+    await Bun.sleep(80)
     expect(quitReceived).toBe(true)
     await smtp.close()
     await mock.wait()

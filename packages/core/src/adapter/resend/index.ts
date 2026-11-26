@@ -7,6 +7,7 @@ import {
 } from '../provider'
 import {
   classifyFetchError,
+  getAbortReasonMessage,
   fetchWithTimeoutAndRetry,
   isPermanentHttpStatus,
   parseRetryAfterMs,
@@ -179,7 +180,7 @@ export const ResendAdapter = (options: ResendAdapterOptions): EmailAdapter => ({
     }
 
     if (sendOptions?.signal?.aborted) {
-      return failedReceipt([sendOptions.signal.reason?.message ?? 'The operation was aborted.'], {
+      return failedReceipt([getAbortReasonMessage(sendOptions.signal)], {
         category: 'timeout',
         permanent: false,
         rejected: recipients,

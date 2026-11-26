@@ -16,7 +16,6 @@ import type { EmailTailwindPluginOptions } from './types'
  * export default { plugins: [EmailTailwind()] }
  * ```
  */
-const farm: UnpluginInstance<EmailTailwindPluginOptions | undefined, boolean>['farm'] =
-  unplugin.farm
+const farm: UnpluginInstance<EmailTailwindPluginOptions | undefined>['farm'] = unplugin.farm
 
 export default farm

@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "build": "vite build",
-    "typegen": "wrangler types --config wrangler.jsonc",
+    "typegen": "wrangler types --config wrangler.jsonc && node strip-typegen-directives.mjs",
     "deploy": "wrangler deploy --config wrangler.jsonc",
     "dev": "vite",
     "preview": "vite preview",

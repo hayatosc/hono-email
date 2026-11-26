@@ -11,8 +11,10 @@ const execFileAsync = promisify(execFile)
 
 void test('packaged Lambda renders and sends through the SDK, returning only failed SQS IDs', async () => {
   const directory = await mkdtemp(join(tmpdir(), 'hono-email-lambda-'))
+  /** @type {string[]} */
   const bodies = []
-  const server = createServer(async (request, response) => {
+  /** @type {(...args: Parameters<import('node:http').RequestListener>) => Promise<void>} */
+  const respond = async (request, response) => {
     let body = ''
     for await (const chunk of request) body += String(chunk)
     bodies.push(body)
@@ -23,9 +25,16 @@ void test('packaged Lambda renders and sends through the SDK, returning only fai
     } else {
       response.end(JSON.stringify({ MessageId: `ses-${bodies.length}` }))
     }
+  }
+  const server = createServer((request, response) => {
+    void respond(request, response).catch((error) => {
+      response.destroy(error instanceof Error ? error : new Error(String(error)))
+    })
   })
   try {
-    await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve))
+    await new Promise((resolve) => {
+      server.listen(0, '127.0.0.1', resolve)
+    })
     const address = server.address()
     assert.ok(address && typeof address !== 'string')
     await cp(new URL('../../examples/aws-ses-sqs/dist/', import.meta.url), directory, {
@@ -66,7 +75,12 @@ void test('packaged Lambda renders and sends through the SDK, returning only fai
     assert.match(bodies[0] ?? '', /FromEmailAddress/)
   } finally {
     server.closeAllConnections()
-    await new Promise((resolve) => server.close(resolve))
+    await new Promise((resolve, reject) => {
+      server.close((error) => {
+        if (error) reject(error)
+        else resolve(undefined)
+      })
+    })
     await rm(directory, { recursive: true, force: true })
   }
 })

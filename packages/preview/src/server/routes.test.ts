@@ -8,6 +8,19 @@ import { jsx } from 'hono/jsx'
 
 import { createApiRoutes } from './routes'
 
+async function readHtml(response: Response): Promise<string> {
+  const body: unknown = await response.json()
+  if (
+    typeof body !== 'object' ||
+    body === null ||
+    !('html' in body) ||
+    typeof body.html !== 'string'
+  ) {
+    throw new Error('Expected an HTML response.')
+  }
+  return body.html
+}
+
 describe('createApiRoutes', () => {
   let tempDir: string
   let loadModule: (_filePath: string) => Promise<Record<string, unknown>>
@@ -39,10 +52,7 @@ describe('createApiRoutes', () => {
     const res = await app.request('/api/templates')
     expect(res.status).toBe(200)
 
-    const body = await res.json()
-    expect(body).toHaveLength(1)
-    expect(body[0].name).toBe('Welcome')
-    expect(body[0].filePath).toBeUndefined()
+    expect(await res.json()).toEqual([{ name: 'Welcome' }])
   })
 
   test('GET /api/templates/NonExistent/props returns 404', async () => {
@@ -53,8 +63,7 @@ describe('createApiRoutes', () => {
   test('GET /api/templates/Welcome/props returns schema from previewProps', async () => {
     const res = await app.request('/api/templates/Welcome/props')
     expect(res.status).toBe(200)
-    const body = await res.json()
-    expect(body).toEqual({
+    expect(await res.json()).toEqual({
       name: { type: 'string', required: false, defaultValue: 'Guest' },
     })
   })
@@ -133,8 +142,7 @@ describe('createApiRoutes error paths', () => {
     const app = createApiRoutes(loadModule, tempDir)
     const res = await app.request('/api/templates/Test/props')
     expect(res.status).toBe(400)
-    const body = await res.json()
-    expect(body.error).toBe('No exported component function found')
+    expect(await res.json()).toEqual({ error: 'No exported component function found' })
   })
 
   test('GET /api/templates/:name/props returns 500 when loadModule throws', async () => {
@@ -144,8 +152,7 @@ describe('createApiRoutes error paths', () => {
     const app = createApiRoutes(loadModule, tempDir)
     const res = await app.request('/api/templates/Test/props')
     expect(res.status).toBe(500)
-    const body = await res.json()
-    expect(body.error).toBe('Module load failed')
+    expect(await res.json()).toEqual({ error: 'Module load failed' })
   })
 
   test('POST /api/templates/:name/render returns 400 when no component exported', async () => {
@@ -159,8 +166,7 @@ describe('createApiRoutes error paths', () => {
       body: JSON.stringify({ props: {} }),
     })
     expect(res.status).toBe(400)
-    const body = await res.json()
-    expect(body.error).toBe('No exported component function found')
+    expect(await res.json()).toEqual({ error: 'No exported component function found' })
   })
 
   test('POST /api/templates/:name/render returns 500 when loadModule throws', async () => {
@@ -174,8 +180,7 @@ describe('createApiRoutes error paths', () => {
       body: JSON.stringify({ props: {} }),
     })
     expect(res.status).toBe(500)
-    const body = await res.json()
-    expect(body.error).toBe('Module load failed')
+    expect(await res.json()).toEqual({ error: 'Module load failed' })
   })
 
   test('POST /api/templates/:name/render passes locale and resolves CID attachments', async () => {
@@ -204,9 +209,9 @@ describe('createApiRoutes error paths', () => {
     })
 
     expect(res.status).toBe(200)
-    const body = await res.json()
-    expect(body.html).toContain('Context locale: ja')
-    expect(body.html).toContain('data:image/png;base64,')
+    const html = await readHtml(res)
+    expect(html).toContain('Context locale: ja')
+    expect(html).toContain('data:image/png;base64,')
   })
 
   test('POST /api/templates/:name/render falls back to previewProps locale', async () => {
@@ -228,8 +233,7 @@ describe('createApiRoutes error paths', () => {
     })
 
     expect(res.status).toBe(200)
-    const body = await res.json()
-    expect(body.html).toContain('Context locale: de')
+    expect(await readHtml(res)).toContain('Context locale: de')
   })
 
   test('POST /api/templates/:name/render sanitizes invalid attachments and blocks remote URLs', async () => {
@@ -253,9 +257,7 @@ describe('createApiRoutes error paths', () => {
     })
 
     expect(res.status).toBe(200)
-    const body = await res.json()
-    // Should NOT inline the SSRF attachment and should not throw 500
-    expect(body.html).toContain('src="cid:remote"')
+    expect(await readHtml(res)).toContain('src="cid:remote"')
   })
 
   test('POST /api/templates/:name/render rejects non-string remote attachment sources', async () => {
@@ -290,7 +292,7 @@ describe('createApiRoutes error paths', () => {
 
       expect(res.status).toBe(200)
       expect(fetched).toEqual([])
-      expect((await res.json()).html).toContain('src="cid:remote"')
+      expect(await readHtml(res)).toContain('src="cid:remote"')
     } finally {
       globalThis.fetch = originalFetch
     }

@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 
+import { throwingRejection, rejection } from '../../../test-utils/promise'
 import { Conditional, Tailwind, buildTailwindArtifactFromCss, render } from './index'
 
 describe('render', () => {
@@ -70,7 +71,7 @@ describe('render', () => {
       throw error
     }
 
-    await expect(render(isAsync ? <AsyncBroken /> : <Broken />)).rejects.toBe(error)
+    expect(await rejection(render(isAsync ? <AsyncBroken /> : <Broken />))).toBe(error)
   })
 
   test.each([false, true])('rejects failures inside Conditional (async: %p)', async (isAsync) => {
@@ -83,21 +84,23 @@ describe('render', () => {
       throw error
     }
 
-    await expect(
-      render(<Conditional>{isAsync ? <AsyncBroken /> : <Broken />}</Conditional>),
-    ).rejects.toBe(error)
+    expect(
+      await rejection(render(<Conditional>{isAsync ? <AsyncBroken /> : <Broken />}</Conditional>)),
+    ).toBe(error)
   })
 
   test('rejects Tailwind classes missing from the build artifact', async () => {
     const artifact = buildTailwindArtifactFromCss({ css: '.known { color: #123456; }' })
 
-    await expect(
-      render(
-        <Tailwind artifact={artifact}>
-          <p className="missing">Draft</p>
-        </Tailwind>,
+    expect(
+      await throwingRejection(
+        render(
+          <Tailwind artifact={artifact}>
+            <p className="missing">Draft</p>
+          </Tailwind>,
+        ),
       ),
-    ).rejects.toThrow("Tailwind class 'missing' is missing from the build artifact.")
+    ).toThrow("Tailwind class 'missing' is missing from the build artifact.")
   })
 
   describe('warnings', () => {
@@ -117,7 +120,7 @@ describe('render', () => {
     })
 
     test('throws when onWarning is "error"', async () => {
-      await expect(render(<WithWarning />, { onWarning: 'error' })).rejects.toThrow(
+      expect(await throwingRejection(render(<WithWarning />, { onWarning: 'error' }))).toThrow(
         'email warning(s)',
       )
     })

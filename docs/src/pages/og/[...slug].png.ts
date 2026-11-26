@@ -19,8 +19,8 @@ export const getStaticPaths = (async () => {
   const entries = await getCollection('docs')
   const paths = entries.map((entry) => {
     const slug = entry.id.replace(/\.mdx?$/, '')
-    const title = String(entry.data.title ?? 'hono-email')
-    const description = String(entry.data.description ?? '')
+    const title = entry.data.title ?? 'hono-email'
+    const description = entry.data.description ?? ''
 
     return {
       params: { slug },

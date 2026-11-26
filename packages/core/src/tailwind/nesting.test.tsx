@@ -3,6 +3,7 @@ import { describe, expect, test } from 'bun:test'
 import { Style, css } from 'hono/css'
 import { raw } from 'hono/html'
 
+import { throwingRejection } from '../../../../test-utils/promise'
 import {
   Body,
   Conditional,
@@ -188,18 +189,20 @@ describe('nested Tailwind', () => {
       const outer = buildTailwindArtifactFromCss({ css: '.outer { color: #112233; }' })
       const inner = buildTailwindArtifactFromCss({ css: '.inner { color: #aabbcc; }' })
 
-      await expect(
-        render(
-          <Tailwind artifact={outer}>
-            {position === 'before' && <p className="missing">Missing</p>}
-            <Tailwind artifact={inner}>
-              <p className="inner">Inner</p>
-            </Tailwind>
-            {position === 'after' && <p className="missing">Missing</p>}
-          </Tailwind>,
-          renderOptions,
+      expect(
+        await throwingRejection(
+          render(
+            <Tailwind artifact={outer}>
+              {position === 'before' && <p className="missing">Missing</p>}
+              <Tailwind artifact={inner}>
+                <p className="inner">Inner</p>
+              </Tailwind>
+              {position === 'after' && <p className="missing">Missing</p>}
+            </Tailwind>,
+            renderOptions,
+          ),
         ),
-      ).rejects.toThrow("Tailwind class 'missing' is missing from the build artifact.")
+      ).toThrow("Tailwind class 'missing' is missing from the build artifact.")
     },
   )
 
@@ -207,16 +210,18 @@ describe('nested Tailwind', () => {
     const outer = buildTailwindArtifactFromCss({ css: '.outer { color: #112233; }' })
     const inner = buildTailwindArtifactFromCss({ css: '.inner { color: #aabbcc; }' })
 
-    await expect(
-      render(
-        <Tailwind artifact={outer}>
-          <Tailwind artifact={inner}>
-            <p className="outer">Missing from inner</p>
-          </Tailwind>
-        </Tailwind>,
-        renderOptions,
+    expect(
+      await throwingRejection(
+        render(
+          <Tailwind artifact={outer}>
+            <Tailwind artifact={inner}>
+              <p className="outer">Missing from inner</p>
+            </Tailwind>
+          </Tailwind>,
+          renderOptions,
+        ),
       ),
-    ).rejects.toThrow("Tailwind class 'outer' is missing from the build artifact.")
+    ).toThrow("Tailwind class 'outer' is missing from the build artifact.")
   })
 
   test('preserves source inside a nested table fragment and still applies hono/css', async () => {

@@ -71,7 +71,7 @@ export const preview: CommandDef<CliArgs> = defineCommand({
       })
 
       let shuttingDown = false
-      const shutdown = async () => {
+      const shutdown = () => {
         if (shuttingDown) {
           process.exit(0)
         }
@@ -83,14 +83,11 @@ export const preview: CommandDef<CliArgs> = defineCommand({
         }, 1000)
         forceExitTimeout.unref()
 
-        try {
-          await server.close()
-        } catch {
-          // ignore
-        } finally {
+        const exit = () => {
           clearTimeout(forceExitTimeout)
           process.exit(0)
         }
+        void server.close().then(exit, exit)
       }
 
       process.on('SIGINT', shutdown)

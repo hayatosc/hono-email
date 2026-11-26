@@ -6,5 +6,5 @@
   "quoteProps": "as-needed",
   "printWidth": 100,
   "sortImports": true,
-  "ignorePatterns": ["dist/**", "examples/**/node_modules/**"]
+  "ignorePatterns": ["dist/**", "examples/**/node_modules/**", ".mise/locks/**/aube-lock.yaml"]
 }

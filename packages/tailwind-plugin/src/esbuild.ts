@@ -16,7 +16,7 @@ import type { EmailTailwindPluginOptions } from './types'
  * await esbuild.build({ plugins: [EmailTailwind()] })
  * ```
  */
-const esbuild: UnpluginInstance<EmailTailwindPluginOptions | undefined, boolean>['esbuild'] =
+const esbuild: UnpluginInstance<EmailTailwindPluginOptions | undefined>['esbuild'] =
   unplugin.esbuild
 
 export default esbuild

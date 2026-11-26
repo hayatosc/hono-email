@@ -59,9 +59,11 @@ Use `mise run ci` to run the full CI check locally (format, lint, typecheck, tes
 Individual commands for quick checks:
 
 - `bun run test` (runs unit tests across all packages — use `bun run test`, never `bun test` directly, to avoid picking up stale `_build/actrun/` workspaces)
-- `bun run typecheck` (typechecks all packages with `tsc`)
+- `bun run typecheck` (typechecks all packages with `tsrs`)
 - `bun run build` (builds all packages in the monorepo)
-- `bun run lint`
+- `bun run lint` (checks source policy and runs type-aware Oxlint using `tsrs`)
 - `bun run format`
+
+Keep comments for non-obvious constraints or invariants, not for restating code or narrating changes. Fix lint and type errors rather than suppressing them. Documented `@ts-expect-error` directives in `.type-test.ts` files are for negative type tests only.
 
 When changing runtime behavior, update/add colocated tests next to the source file and keep README examples aligned with exported entry points.

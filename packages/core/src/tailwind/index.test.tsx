@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 
+import { throwingRejection } from '../../../../test-utils/promise'
 import {
   Body,
   Head,
@@ -66,7 +67,7 @@ describe('Tailwind', () => {
     const artifact = buildTailwindArtifactFromCss({ css: '.known { color: red; }' })
     const html = '<p class="known custom">Hello</p>'
 
-    await expect(transformTailwindHtml(html, artifact)).rejects.toThrow(
+    expect(await throwingRejection(transformTailwindHtml(html, artifact))).toThrow(
       "Tailwind class 'custom' is missing from the build artifact. Rebuild the artifact before rendering with <Tailwind>.",
     )
     const expected = {
@@ -177,18 +178,20 @@ describe('Tailwind', () => {
   })
 
   test('throws when artifact is missing', async () => {
-    await expect(
-      render(
-        <Html>
-          <Head />
-          <Tailwind>
-            <Body>
-              <Text className="text-blue-500">Hello</Text>
-            </Body>
-          </Tailwind>
-        </Html>,
+    expect(
+      await throwingRejection(
+        render(
+          <Html>
+            <Head />
+            <Tailwind>
+              <Body>
+                <Text className="text-blue-500">Hello</Text>
+              </Body>
+            </Tailwind>
+          </Html>,
+        ),
       ),
-    ).rejects.toThrow('<Tailwind> requires a build artifact.')
+    ).toThrow('<Tailwind> requires a build artifact.')
   })
 
   test('supports Vite-like precompiled Tailwind CSS artifacts', async () => {

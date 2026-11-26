@@ -1,8 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 
-// Import from built dist to verify the per-bundler default exports and named factory.
-// Using .cjs to exercise the CommonJS code path.
 const { default: vitePlug } = await import('../../packages/tailwind-plugin/dist/vite.cjs')
 const { default: rollupPlug } = await import('../../packages/tailwind-plugin/dist/rollup.cjs')
 const { default: webpackPlug } = await import('../../packages/tailwind-plugin/dist/webpack.cjs')

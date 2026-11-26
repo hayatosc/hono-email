@@ -81,6 +81,22 @@ export function isObject(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object' && !Array.isArray(value)
 }
 
+type PreviewTailwindPlugin = Pick<
+  typeof TailwindPluginModule,
+  'transformTailwindComponentSource'
+> & {
+  unplugin: Pick<typeof TailwindPluginModule.unplugin, 'vite'>
+}
+
+function isTailwindPlugin(value: unknown): value is PreviewTailwindPlugin {
+  return (
+    isObject(value) &&
+    isObject(value.unplugin) &&
+    typeof value.unplugin.vite === 'function' &&
+    typeof value.transformTailwindComponentSource === 'function'
+  )
+}
+
 export function detectTailwindInPackageJson(rootDir: string): boolean {
   try {
     const pkgPath = resolve(rootDir, 'package.json')
@@ -241,9 +257,12 @@ export async function startPreviewServer(options: PreviewServerOptions): Promise
   if (hasTailwind) {
     const pluginPath = resolveProjectPeer(rootDir, '@hono-email/tailwind-plugin')
     try {
-      const tailwindPlugin: typeof TailwindPluginModule = await import(
+      const tailwindPlugin: unknown = await import(
         /* @vite-ignore */ pathToFileURL(pluginPath).href
       )
+      if (!isTailwindPlugin(tailwindPlugin)) {
+        throw new Error('Invalid Tailwind plugin module.')
+      }
       plugins.push(
         tailwindPlugin.unplugin.vite({
           ...(tailwindConfigPath ? { configPath: tailwindConfigPath } : {}),

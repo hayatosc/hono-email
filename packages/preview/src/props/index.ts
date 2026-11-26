@@ -210,7 +210,7 @@ export function mergePropsWithDefaults(
   schema: PropsSchema,
   userProps: Record<string, unknown>,
 ): Record<string, unknown> {
-  const merged: Record<string, unknown> = Object.create(null)
+  const merged: Record<string, unknown> = { __proto__: null }
   for (const [key, spec] of Object.entries(schema)) {
     if (Object.hasOwn(userProps, key)) {
       merged[key] = userProps[key]

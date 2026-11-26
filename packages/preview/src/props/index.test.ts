@@ -239,8 +239,7 @@ describe('resolveComponent', () => {
   })
 
   test('falls back to named function export when no default', () => {
-    const MyEmail = () => null
-    ;(MyEmail as { previewProps?: Record<string, unknown> }).previewProps = {}
+    const MyEmail = Object.assign(() => null, { previewProps: {} })
     const mod = { MyEmail }
     expect(resolveComponent(mod)).toBe(MyEmail)
   })

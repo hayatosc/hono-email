@@ -1,5 +1,14 @@
 import type { EmailErrorCategory } from '../email'
 
+export const getAbortReasonMessage = (signal: AbortSignal): string => {
+  const reason: unknown = signal.reason
+  if (typeof reason === 'object' && reason !== null && 'message' in reason) {
+    const message = reason.message
+    if (typeof message === 'string') return message
+  }
+  return 'The operation was aborted.'
+}
+
 export const BASE64_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
 
 export const CRLF = '\r\n'

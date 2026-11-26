@@ -1,3 +1,5 @@
+import assert from 'node:assert/strict'
+
 import { connect } from 'cloudflare:sockets'
 import { withEnv } from 'cloudflare:workers'
 import { describe, expect, test } from 'vitest'
@@ -10,6 +12,15 @@ import {
 } from '../../packages/core/src/adapter/platform/cloudflare/index'
 import CloudflareConnector from '../../packages/core/src/adapter/platform/cloudflare/smtp'
 import { SmtpTransport } from '../../packages/core/src/adapter/smtp'
+
+function runWithEnv<T>(env: object, run: () => Promise<T>): Promise<T> {
+  let result: Promise<T> | undefined
+  withEnv(env, () => {
+    result = run()
+  })
+  assert(result)
+  return result
+}
 
 describe('cloudflareSmtpConnector runtime smoke', () => {
   test('resolves cloudflare:sockets in the Workers test runtime', () => {
@@ -32,10 +43,8 @@ describe('cloudflareSmtpConnector runtime smoke', () => {
       to: 'recipient@example.com',
     })
 
-    expect(receipt.successful).toBe(false)
-    if (!receipt.successful) {
-      expect(receipt.errorMessages.join('\n')).toContain('port 25')
-    }
+    assert(!receipt.successful)
+    expect(receipt.errorMessages.join('\n')).toContain('port 25')
   })
 })
 
@@ -47,7 +56,7 @@ describe('Cloudflare email adapters in Workers runtime', () => {
       },
     }
 
-    const receipt = await withEnv({ EMAIL: binding }, () =>
+    const receipt = await runWithEnv({ EMAIL: binding }, () =>
       CloudflareEmailAdapter({ connector: WorkersConnector }).send({
         from: 'sender@example.com',
         html: '<p>Hello Workers</p>',
@@ -57,22 +66,15 @@ describe('Cloudflare email adapters in Workers runtime', () => {
       }),
     )
 
-    expect(receipt.successful).toBe(true)
-    if (receipt.successful) {
-      expect(receipt.messageId).toBe('workers-env-id')
-      expect(receipt.accepted).toEqual(['recipient@example.com'])
-    }
+    assert(receipt.successful)
+    expect(receipt.messageId).toBe('workers-env-id')
+    expect(receipt.accepted).toEqual(['recipient@example.com'])
   })
 
   test('WorkersConnector tolerates preview bindings that omit EmailSendResult', async () => {
-    const binding: CloudflareEmailBinding = {
-      async send() {
-        // @ts-expect-error - testing fallback for preview bindings that return undefined
-        return undefined
-      },
-    }
+    const binding = { send: async () => undefined }
 
-    const receipt = await withEnv({ EMAIL: binding }, () =>
+    const receipt = await runWithEnv({ EMAIL: binding }, () =>
       CloudflareEmailAdapter({ connector: WorkersConnector }).send({
         from: 'sender@example.com',
         html: '<p>Hello Workers</p>',
@@ -82,22 +84,21 @@ describe('Cloudflare email adapters in Workers runtime', () => {
       }),
     )
 
-    expect(receipt.successful).toBe(true)
-    if (receipt.successful) {
-      expect(receipt.accepted).toEqual(['recipient@example.com'])
-      expect(receipt.messageId.length).toBeGreaterThan(0)
-    }
+    assert(receipt.successful)
+    expect(receipt.accepted).toEqual(['recipient@example.com'])
+    expect(receipt.messageId.length).toBeGreaterThan(0)
   })
 
   test('createWorkersConnector reads a custom binding name', async () => {
     const binding: CloudflareEmailBinding = {
       async send(payload) {
+        assert('subject' in payload)
         expect(payload.subject).toBe('Workers custom binding')
         return { messageId: 'custom-binding-id' }
       },
     }
 
-    const receipt = await withEnv({ CUSTOM_EMAIL: binding }, () =>
+    const receipt = await runWithEnv({ CUSTOM_EMAIL: binding }, () =>
       CloudflareEmailAdapter({
         connector: createWorkersConnector({
           bindingName: 'CUSTOM_EMAIL',
@@ -111,10 +112,8 @@ describe('Cloudflare email adapters in Workers runtime', () => {
       }),
     )
 
-    expect(receipt.successful).toBe(true)
-    if (receipt.successful) {
-      expect(receipt.messageId).toBe('custom-binding-id')
-      expect(receipt.response).toBe('Cloudflare Email Service accepted 1 recipient(s).')
-    }
+    assert(receipt.successful)
+    expect(receipt.messageId).toBe('custom-binding-id')
+    expect(receipt.response).toBe('Cloudflare Email Service accepted 1 recipient(s).')
   })
 })

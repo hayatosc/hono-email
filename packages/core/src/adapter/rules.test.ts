@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test'
 
-import type { EmailAdapter, EmailMessage, SendEmailReceipt, SuccessfulSendReceipt } from './index'
+import type { EmailAdapter, EmailMessage, SendEmailReceipt } from './index'
 import { withDeliveryRules } from './rules'
 import { InMemoryAdapter } from './testing'
 
@@ -23,9 +23,9 @@ class TestRulesAdapter implements EmailAdapter {
 
 describe('withDeliveryRules', () => {
   it('throws when adapter is invalid', () => {
-    expect(() => withDeliveryRules({} as unknown as EmailAdapter, {})).toThrow(
-      'withDeliveryRules requires an adapter with a send() method.',
-    )
+    expect(() => {
+      Reflect.apply(withDeliveryRules, undefined, [{}, {}])
+    }).toThrow('withDeliveryRules requires an adapter with a send() method.')
   })
 
   it('passes message unchanged when no rules are configured', async () => {
@@ -117,7 +117,7 @@ describe('withDeliveryRules', () => {
       const receipt = await adapter.send(message)
 
       expect(receipt.successful).toBe(true)
-      expect((receipt as SuccessfulSendReceipt).messageId).toBe('skipped')
+      expect(receipt).toMatchObject({ messageId: 'skipped' })
       expect(mock.sentMessages).toHaveLength(0)
     })
   })
@@ -224,7 +224,6 @@ describe('withDeliveryRules', () => {
       await adapter.send(message3)
 
       expect(mock.sentMessages).toHaveLength(3)
-      // All 3 should pass through without being intercepted
       expect(mock.sentMessages[0]?.to).toBe('qa@partner.com')
       expect(mock.sentMessages[0]?.subject).toBe('Call 1')
       expect(mock.sentMessages[1]?.to).toBe('qa@partner.com')

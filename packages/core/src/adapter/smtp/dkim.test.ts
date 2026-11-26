@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 
+import { throwingRejection } from '../../../../../test-utils/promise'
 import { applyDkimSignature } from './dkim'
 
 const CRLF = '\r\n'
@@ -135,40 +136,46 @@ describe('applyDkimSignature', () => {
 
   test('throws for unsupported algorithm', async () => {
     const privateKey = await createPkcs8Key()
-    await expect(
-      applyDkimSignature(createSampleMessage(), {
-        algorithm: 'unknown-alg' as 'rsa-sha256',
+    const result: unknown = Reflect.apply(applyDkimSignature, undefined, [
+      createSampleMessage(),
+      {
+        algorithm: 'unknown-alg',
         domainName: 'example.com',
         keySelector: 'test',
         privateKey,
-      }),
-    ).rejects.toThrow(
+      },
+    ])
+    expect(await throwingRejection(Promise.resolve(result))).toThrow(
       "Invalid DKIM algorithm: unknown-alg. Expected 'rsa-sha256' or 'ed25519-sha256'.",
     )
   })
 
   test('throws when ed25519-sha256 is configured with RSA private key', async () => {
     const privateKey = await createPkcs8Key()
-    await expect(
-      applyDkimSignature(createSampleMessage(), {
-        algorithm: 'ed25519-sha256',
-        domainName: 'example.com',
-        keySelector: 'test',
-        privateKey,
-      }),
-    ).rejects.toThrow("Configured DKIM algorithm 'ed25519-sha256' does not match RSA private key.")
+    expect(
+      await throwingRejection(
+        applyDkimSignature(createSampleMessage(), {
+          algorithm: 'ed25519-sha256',
+          domainName: 'example.com',
+          keySelector: 'test',
+          privateKey,
+        }),
+      ),
+    ).toThrow("Configured DKIM algorithm 'ed25519-sha256' does not match RSA private key.")
   })
 
   test('throws when rsa-sha256 is configured with Ed25519 private key', async () => {
     const privateKey = await createEd25519Pkcs8Key()
-    await expect(
-      applyDkimSignature(createSampleMessage(), {
-        algorithm: 'rsa-sha256',
-        domainName: 'example.com',
-        keySelector: 'test',
-        privateKey,
-      }),
-    ).rejects.toThrow("Configured DKIM algorithm 'rsa-sha256' does not match Ed25519 private key.")
+    expect(
+      await throwingRejection(
+        applyDkimSignature(createSampleMessage(), {
+          algorithm: 'rsa-sha256',
+          domainName: 'example.com',
+          keySelector: 'test',
+          privateKey,
+        }),
+      ),
+    ).toThrow("Configured DKIM algorithm 'rsa-sha256' does not match Ed25519 private key.")
   })
 
   test('uses custom headerFieldNames', async () => {
@@ -241,91 +248,107 @@ describe('applyDkimSignature', () => {
 
   test('throws for invalid domainName', async () => {
     const privateKey = await createPkcs8Key()
-    await expect(
-      applyDkimSignature(createSampleMessage(), {
-        domainName: 'invalid domain',
-        keySelector: 'test',
-        privateKey,
-      }),
-    ).rejects.toThrow('Invalid DKIM domainName')
+    expect(
+      await throwingRejection(
+        applyDkimSignature(createSampleMessage(), {
+          domainName: 'invalid domain',
+          keySelector: 'test',
+          privateKey,
+        }),
+      ),
+    ).toThrow('Invalid DKIM domainName')
   })
 
   test('throws for invalid keySelector', async () => {
     const privateKey = await createPkcs8Key()
-    await expect(
-      applyDkimSignature(createSampleMessage(), {
-        domainName: 'example.com',
-        keySelector: 'invalid selector',
-        privateKey,
-      }),
-    ).rejects.toThrow('Invalid DKIM keySelector')
+    expect(
+      await throwingRejection(
+        applyDkimSignature(createSampleMessage(), {
+          domainName: 'example.com',
+          keySelector: 'invalid selector',
+          privateKey,
+        }),
+      ),
+    ).toThrow('Invalid DKIM keySelector')
   })
 
   test('throws for invalid header field name', async () => {
     const privateKey = await createPkcs8Key()
-    await expect(
-      applyDkimSignature(createSampleMessage(), {
-        domainName: 'example.com',
-        keySelector: 'test',
-        headerFieldNames: ['Invalid Field'],
-        privateKey,
-      }),
-    ).rejects.toThrow('Invalid DKIM header field name: Invalid Field')
+    expect(
+      await throwingRejection(
+        applyDkimSignature(createSampleMessage(), {
+          domainName: 'example.com',
+          keySelector: 'test',
+          headerFieldNames: ['Invalid Field'],
+          privateKey,
+        }),
+      ),
+    ).toThrow('Invalid DKIM header field name: Invalid Field')
   })
 
   test('throws for invalid header field name in skipFields', async () => {
     const privateKey = await createPkcs8Key()
-    await expect(
-      applyDkimSignature(createSampleMessage(), {
-        domainName: 'example.com',
-        keySelector: 'test',
-        skipFields: ['Invalid Field'],
-        privateKey,
-      }),
-    ).rejects.toThrow('Invalid DKIM header field name: Invalid Field')
+    expect(
+      await throwingRejection(
+        applyDkimSignature(createSampleMessage(), {
+          domainName: 'example.com',
+          keySelector: 'test',
+          skipFields: ['Invalid Field'],
+          privateKey,
+        }),
+      ),
+    ).toThrow('Invalid DKIM header field name: Invalid Field')
   })
 
   test('throws when no headers match for signing', async () => {
     const privateKey = await createPkcs8Key()
-    await expect(
-      applyDkimSignature(createSampleMessage(), {
-        domainName: 'example.com',
-        keySelector: 'test',
-        headerFieldNames: ['X-Nonexistent'],
-        privateKey,
-      }),
-    ).rejects.toThrow('DKIM signing requires at least one signed header field.')
+    expect(
+      await throwingRejection(
+        applyDkimSignature(createSampleMessage(), {
+          domainName: 'example.com',
+          keySelector: 'test',
+          headerFieldNames: ['X-Nonexistent'],
+          privateKey,
+        }),
+      ),
+    ).toThrow('DKIM signing requires at least one signed header field.')
   })
 
   test('throws for message without header/body separator', async () => {
     const privateKey = await createPkcs8Key()
-    await expect(
-      applyDkimSignature('no separator here', {
-        domainName: 'example.com',
-        keySelector: 'test',
-        privateKey,
-      }),
-    ).rejects.toThrow('missing header/body separator')
+    expect(
+      await throwingRejection(
+        applyDkimSignature('no separator here', {
+          domainName: 'example.com',
+          keySelector: 'test',
+          privateKey,
+        }),
+      ),
+    ).toThrow('missing header/body separator')
   })
 
   test('throws for PEM without valid markers', async () => {
-    await expect(
-      applyDkimSignature(createSampleMessage(), {
-        domainName: 'example.com',
-        keySelector: 'test',
-        privateKey: 'not a pem',
-      }),
-    ).rejects.toThrow('expected PKCS#8 PRIVATE KEY or PKCS#1 RSA PRIVATE KEY PEM')
+    expect(
+      await throwingRejection(
+        applyDkimSignature(createSampleMessage(), {
+          domainName: 'example.com',
+          keySelector: 'test',
+          privateKey: 'not a pem',
+        }),
+      ),
+    ).toThrow('expected PKCS#8 PRIVATE KEY or PKCS#1 RSA PRIVATE KEY PEM')
   })
 
   test('throws for PEM with invalid base64 data', async () => {
-    await expect(
-      applyDkimSignature(createSampleMessage(), {
-        domainName: 'example.com',
-        keySelector: 'test',
-        privateKey: '-----BEGIN PRIVATE KEY-----\n!!!invalid!!!\n-----END PRIVATE KEY-----',
-      }),
-    ).rejects.toThrow('Invalid DKIM private key')
+    expect(
+      await throwingRejection(
+        applyDkimSignature(createSampleMessage(), {
+          domainName: 'example.com',
+          keySelector: 'test',
+          privateKey: '-----BEGIN PRIVATE KEY-----\n!!!invalid!!!\n-----END PRIVATE KEY-----',
+        }),
+      ),
+    ).toThrow('Invalid DKIM private key')
   })
 
   test('handles duplicate headers by signing them in reverse order', async () => {

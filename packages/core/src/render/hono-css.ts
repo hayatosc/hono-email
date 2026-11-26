@@ -31,7 +31,7 @@ const extractHeadBounds = (html: string): { headOpen: number; headClose: number 
 }
 
 const decodeHonoCssRuntimeString = (rawCss: string): string =>
-  rawCss.replace(/\\(\\|n|r|t|"|')/g, (_match, char) => {
+  rawCss.replace(/\\(\\|n|r|t|"|')/g, (_match, char: string) => {
     switch (char) {
       case 'n':
         return '\n'

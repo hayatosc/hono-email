@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 
 import * as smtp from '.'
+import { rejection } from '../../../../../test-utils/promise'
 import { SmtpCommandError } from './protocol'
 import { classifySmtpFailure, failedReceipt, SmtpTransportClosedError } from './receipt'
 
@@ -29,16 +30,18 @@ describe('SmtpTransportClosedError', () => {
     })
     await transport.close()
 
-    await expect(
-      transport.send({
-        from: 'sender@example.com',
-        to: 'recipient@example.com',
-        subject: 'Closed transport',
-        html: '<p>Hello</p>',
-        text: 'Hello',
-      }),
-    ).rejects.toBeInstanceOf(smtp.SmtpTransportClosedError)
-    await expect(transport.verify()).rejects.toBeInstanceOf(smtp.SmtpTransportClosedError)
+    expect(
+      await rejection(
+        transport.send({
+          from: 'sender@example.com',
+          to: 'recipient@example.com',
+          subject: 'Closed transport',
+          html: '<p>Hello</p>',
+          text: 'Hello',
+        }),
+      ),
+    ).toBeInstanceOf(smtp.SmtpTransportClosedError)
+    expect(await rejection(transport.verify())).toBeInstanceOf(smtp.SmtpTransportClosedError)
   })
 })
 

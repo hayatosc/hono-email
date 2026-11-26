@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 
+import { throwingRejection } from '../../../../../test-utils/promise'
 import {
   parseSmtpUrl,
   resolveIdleTimeout,
@@ -201,8 +202,8 @@ describe('withTimeout', () => {
   })
 
   test('throws when the task times out', async () => {
-    const slow = new Promise((resolve) => setTimeout(resolve, 500))
-    await expect(withTimeout(slow, 10, 'Test task')).rejects.toThrow(
+    const slow = Bun.sleep(500)
+    expect(await throwingRejection(withTimeout(slow, 10, 'Test task'))).toThrow(
       'Test task timed out after 10ms.',
     )
   })
@@ -232,6 +233,6 @@ describe('withTimeout', () => {
 
   test('propagates task errors', async () => {
     const failing = Promise.reject(new Error('task failed'))
-    await expect(withTimeout(failing, 1000, 'Test')).rejects.toThrow('task failed')
+    expect(await throwingRejection(withTimeout(failing, 1000, 'Test'))).toThrow('task failed')
   })
 })

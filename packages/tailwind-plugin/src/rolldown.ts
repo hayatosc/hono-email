@@ -16,7 +16,7 @@ import type { EmailTailwindPluginOptions } from './types'
  * export default { plugins: [EmailTailwind()] }
  * ```
  */
-const rolldown: UnpluginInstance<EmailTailwindPluginOptions | undefined, boolean>['rolldown'] =
+const rolldown: UnpluginInstance<EmailTailwindPluginOptions | undefined>['rolldown'] =
   unplugin.rolldown
 
 export default rolldown
