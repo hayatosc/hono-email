@@ -25,7 +25,12 @@ type HeadingProps = PropsWithChildren<
   } & HeadingMarginProps
 >
 
-type LinkProps = PropsWithChildren<Omit<ElementProps<'a'>, 'children' | 'href'> & { href: string }>
+type LinkProps = PropsWithChildren<
+  Omit<ElementProps<'a'>, 'children' | 'href' | 'target'> & {
+    href: string
+    target?: string | undefined
+  }
+>
 
 type ImageProps = Omit<ElementProps<'img'>, 'src' | 'alt'> & { src: string; alt: string }
 type CodeInlineProps = PropsWithChildren<ElementProps<'code'>>
@@ -114,7 +119,7 @@ const expandBoxValues = (
   for (const direction of BOX_DIRECTIONS) {
     const override = overrides[direction]
     if (override !== undefined) {
-      expanded[direction] = typeof override === 'number' ? `${override}px` : `${override}`.trim()
+      expanded[direction] = typeof override === 'number' ? `${override}px` : override.trim()
     }
   }
 

@@ -42,7 +42,7 @@
   "scripts": {
     "build": "tsdown && vite build --config vite.client.config.ts",
     "dev": "tsdown && node ./dist/cli.mjs preview --dir test-emails",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsrs --noEmit",
     "test": "bun test ./src"
   },
   "dependencies": {

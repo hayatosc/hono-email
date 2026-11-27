@@ -2,6 +2,7 @@ import { describe, expect, spyOn, test } from 'bun:test'
 
 import { raw } from 'hono/html'
 
+import { throwingRejection } from '../../../../test-utils/promise'
 import { render, type RenderResult } from '../index'
 import { validateHtml } from './html'
 
@@ -21,17 +22,19 @@ const withWarnSpy = async (
 
 describe('render strict mode', () => {
   test('rejects unsupported interactive tags by default', async () => {
-    await expect(
-      render(
-        <html>
-          <body>
-            <form action="https://example.com">
-              <input name="email" />
-            </form>
-          </body>
-        </html>,
+    expect(
+      await throwingRejection(
+        render(
+          <html>
+            <body>
+              <form action="https://example.com">
+                <input name="email" />
+              </form>
+            </body>
+          </html>,
+        ),
       ),
-    ).rejects.toThrow(
+    ).toThrow(
       "The <form> tag isn't allowed in HTML email strict mode. Active content and embedded resources must not be used in email HTML.",
     )
   })
@@ -69,17 +72,17 @@ describe('render strict mode', () => {
   })
 
   test('rejects grid-template-columns in strict mode', async () => {
-    await expect(
-      render(
-        <html>
-          <body>
-            <div style={{ gridTemplateColumns: '1fr 1fr' }}>Hello</div>
-          </body>
-        </html>,
+    expect(
+      await throwingRejection(
+        render(
+          <html>
+            <body>
+              <div style={{ gridTemplateColumns: '1fr 1fr' }}>Hello</div>
+            </body>
+          </html>,
+        ),
       ),
-    ).rejects.toThrow(
-      "The CSS property 'grid-template-columns' isn't supported in HTML email strict mode.",
-    )
+    ).toThrow("The CSS property 'grid-template-columns' isn't supported in HTML email strict mode.")
   })
 
   test('allows display:grid in strict mode', async () => {
@@ -95,53 +98,59 @@ describe('render strict mode', () => {
   })
 
   test('rejects logical CSS properties in strict mode', async () => {
-    await expect(
-      render(
-        <html>
-          <body>
-            <div style={{ paddingInline: '12px' }}>Hello</div>
-          </body>
-        </html>,
+    expect(
+      await throwingRejection(
+        render(
+          <html>
+            <body>
+              <div style={{ paddingInline: '12px' }}>Hello</div>
+            </body>
+          </html>,
+        ),
       ),
-    ).rejects.toThrow(
-      "The CSS property 'padding-inline' isn't supported in HTML email strict mode.",
-    )
+    ).toThrow("The CSS property 'padding-inline' isn't supported in HTML email strict mode.")
   })
 
   test('rejects CSS variables in strict mode', async () => {
-    await expect(
-      render(
-        <html>
-          <body>
-            <div style={'--color:red'}>Hello</div>
-          </body>
-        </html>,
+    expect(
+      await throwingRejection(
+        render(
+          <html>
+            <body>
+              <div style={'--color:red'}>Hello</div>
+            </body>
+          </html>,
+        ),
       ),
-    ).rejects.toThrow("CSS variables ('--color') aren't supported in HTML email strict mode.")
+    ).toThrow("CSS variables ('--color') aren't supported in HTML email strict mode.")
 
-    await expect(
-      render(
-        <html>
-          <body>
-            <div style={{ color: 'var(--color)' }}>Hello</div>
-          </body>
-        </html>,
+    expect(
+      await throwingRejection(
+        render(
+          <html>
+            <body>
+              <div style={{ color: 'var(--color)' }}>Hello</div>
+            </body>
+          </html>,
+        ),
       ),
-    ).rejects.toThrow(
+    ).toThrow(
       "The 'var()' function isn't supported in HTML email strict mode. Use static values instead.",
     )
   })
 
   test('rejects filter property in strict mode', async () => {
-    await expect(
-      render(
-        <html>
-          <body>
-            <div style={{ filter: 'blur(5px)' }}>Hello</div>
-          </body>
-        </html>,
+    expect(
+      await throwingRejection(
+        render(
+          <html>
+            <body>
+              <div style={{ filter: 'blur(5px)' }}>Hello</div>
+            </body>
+          </html>,
+        ),
       ),
-    ).rejects.toThrow("The CSS property 'filter' isn't supported in HTML email strict mode.")
+    ).toThrow("The CSS property 'filter' isn't supported in HTML email strict mode.")
   })
 
   test('warns about box-shadow and calc in strict mode', async () => {
@@ -170,37 +179,43 @@ describe('render strict mode', () => {
   })
 
   test('rejects transform and animation properties in strict mode', async () => {
-    await expect(
-      render(
-        <html>
-          <body>
-            <div style={{ transform: 'rotate(45deg)' }}>Hello</div>
-          </body>
-        </html>,
+    expect(
+      await throwingRejection(
+        render(
+          <html>
+            <body>
+              <div style={{ transform: 'rotate(45deg)' }}>Hello</div>
+            </body>
+          </html>,
+        ),
       ),
-    ).rejects.toThrow("The CSS property 'transform' isn't supported in HTML email strict mode.")
+    ).toThrow("The CSS property 'transform' isn't supported in HTML email strict mode.")
 
-    await expect(
-      render(
-        <html>
-          <body>
-            <div style={{ animation: 'fade 1s' }}>Hello</div>
-          </body>
-        </html>,
+    expect(
+      await throwingRejection(
+        render(
+          <html>
+            <body>
+              <div style={{ animation: 'fade 1s' }}>Hello</div>
+            </body>
+          </html>,
+        ),
       ),
-    ).rejects.toThrow("The CSS property 'animation' isn't supported in HTML email strict mode.")
+    ).toThrow("The CSS property 'animation' isn't supported in HTML email strict mode.")
   })
 
   test('rejects aspect-ratio in strict mode', async () => {
-    await expect(
-      render(
-        <html>
-          <body>
-            <div style={{ aspectRatio: '16/9' }}>Hello</div>
-          </body>
-        </html>,
+    expect(
+      await throwingRejection(
+        render(
+          <html>
+            <body>
+              <div style={{ aspectRatio: '16/9' }}>Hello</div>
+            </body>
+          </html>,
+        ),
       ),
-    ).rejects.toThrow("The CSS property 'aspect-ratio' isn't supported in HTML email strict mode.")
+    ).toThrow("The CSS property 'aspect-ratio' isn't supported in HTML email strict mode.")
   })
 
   test('allows position:fixed and position:sticky in strict mode', async () => {
@@ -261,64 +276,70 @@ describe('render strict mode', () => {
   })
 
   test('rejects @font-face in strict mode', async () => {
-    await expect(
-      render(
-        <html>
-          <head>
-            <style>
-              {
-                '@font-face { font-family: Test; src: url(https://example.com/test.woff2) format("woff2"); }'
-              }
-            </style>
-          </head>
-          <body>
-            <p>Hello</p>
-          </body>
-        </html>,
+    expect(
+      await throwingRejection(
+        render(
+          <html>
+            <head>
+              <style>
+                {
+                  '@font-face { font-family: Test; src: url(https://example.com/test.woff2) format("woff2"); }'
+                }
+              </style>
+            </head>
+            <body>
+              <p>Hello</p>
+            </body>
+          </html>,
+        ),
       ),
-    ).rejects.toThrow(
-      "The CSS at-rule '@font-face' isn't supported reliably in HTML email strict mode.",
-    )
+    ).toThrow("The CSS at-rule '@font-face' isn't supported reliably in HTML email strict mode.")
   })
 
   test('rejects anchor tags without href in strict mode', async () => {
-    await expect(
-      render(
-        <html>
-          <body>
-            <a>Open</a>
-          </body>
-        </html>,
+    expect(
+      await throwingRejection(
+        render(
+          <html>
+            <body>
+              <a>Open</a>
+            </body>
+          </html>,
+        ),
       ),
-    ).rejects.toThrow(
+    ).toThrow(
       'The <a> tag is missing an href attribute. Use <Link href="..."> or <Button href="..."> with a real destination URL.',
     )
   })
 
   test('rejects anchor tags with empty href values in strict mode', async () => {
-    await expect(
-      render(
-        <html>
-          <body>
-            <a href="   ">Open</a>
-          </body>
-        </html>,
+    expect(
+      await throwingRejection(
+        render(
+          <html>
+            <body>
+              <a href="   ">Open</a>
+            </body>
+          </html>,
+        ),
       ),
-    ).rejects.toThrow(
+    ).toThrow(
       'The <a> tag is missing an href attribute. Use <Link href="..."> or <Button href="..."> with a real destination URL.',
     )
   })
 
   test('rejects unsafe href URL schemes in strict mode', async () => {
-    await expect(
-      render(
-        <html>
-          <body>
-            <a href="java&#x73;cript:alert(1)">Open</a>
-          </body>
-        </html>,
+    expect(
+      await throwingRejection(
+        render(
+          <html>
+            <body>
+              <a href="java&#x73;cript:alert(1)">Open</a>
+            </body>
+          </html>,
+        ),
       ),
-    ).rejects.toThrow(
+    ).toThrow(
       "The a href uses the unsafe 'javascript:' URL scheme. Use http, https, mailto, tel, or a relative URL instead.",
     )
   })
@@ -344,37 +365,39 @@ describe('render strict mode', () => {
   })
 
   test('rejects stylesheet links even when they are in head', async () => {
-    await expect(
-      render(
-        <html>
-          <head>
-            <link rel="stylesheet" href="https://example.com/mail.css" />
-          </head>
-          <body>
-            <p>Hello</p>
-          </body>
-        </html>,
+    expect(
+      await throwingRejection(
+        render(
+          <html>
+            <head>
+              <link rel="stylesheet" href="https://example.com/mail.css" />
+            </head>
+            <body>
+              <p>Hello</p>
+            </body>
+          </html>,
+        ),
       ),
-    ).rejects.toThrow(
+    ).toThrow(
       'The <link rel="stylesheet"> tag isn\'t supported in HTML email strict mode. Move styles into <Head><style>...</style> instead.',
     )
   })
 
   test('rejects keyframes in strict mode', async () => {
-    await expect(
-      render(
-        <html>
-          <head>
-            <style>{'@keyframes fade { from { opacity: 0 } to { opacity: 1 } }'}</style>
-          </head>
-          <body>
-            <p>Hello</p>
-          </body>
-        </html>,
+    expect(
+      await throwingRejection(
+        render(
+          <html>
+            <head>
+              <style>{'@keyframes fade { from { opacity: 0 } to { opacity: 1 } }'}</style>
+            </head>
+            <body>
+              <p>Hello</p>
+            </body>
+          </html>,
+        ),
       ),
-    ).rejects.toThrow(
-      "The CSS at-rule '@keyframes' isn't supported reliably in HTML email strict mode.",
-    )
+    ).toThrow("The CSS at-rule '@keyframes' isn't supported reliably in HTML email strict mode.")
   })
 
   test('warns about caniemail-limited flex properties and supports queries', async () => {
@@ -419,29 +442,33 @@ describe('render strict mode', () => {
   })
 
   test('rejects picture tags in strict mode', async () => {
-    await expect(
-      render(
-        <html>
-          <body>
-            <picture>
-              <img alt="Hero" src="https://example.com/hero.png" />
-            </picture>
-          </body>
-        </html>,
+    expect(
+      await throwingRejection(
+        render(
+          <html>
+            <body>
+              <picture>
+                <img alt="Hero" src="https://example.com/hero.png" />
+              </picture>
+            </body>
+          </html>,
+        ),
       ),
-    ).rejects.toThrow("The <picture> tag isn't supported in HTML email strict mode.")
+    ).toThrow("The <picture> tag isn't supported in HTML email strict mode.")
   })
 
   test('rejects source tags in strict mode', async () => {
-    await expect(
-      render(
-        <html>
-          <body>
-            <source src="https://example.com/hero.avif" />
-          </body>
-        </html>,
+    expect(
+      await throwingRejection(
+        render(
+          <html>
+            <body>
+              <source src="https://example.com/hero.avif" />
+            </body>
+          </html>,
+        ),
       ),
-    ).rejects.toThrow("The <source> tag isn't supported in HTML email strict mode.")
+    ).toThrow("The <source> tag isn't supported in HTML email strict mode.")
   })
 
   test('handles single-quoted and unquoted attributes in raw validation paths', () => {
@@ -582,9 +609,9 @@ describe('render strict mode', () => {
     test.each(['<!-->', '<?x label="one >'])(
       'rejects unsafe HTML through render after the boundary %s',
       async (prefix) => {
-        await expect(
-          render(raw(`${prefix}<a href="javascript:alert(1)">Open</a>`)),
-        ).rejects.toThrow("unsafe 'javascript:' URL scheme")
+        expect(
+          await throwingRejection(render(raw(`${prefix}<a href="javascript:alert(1)">Open</a>`))),
+        ).toThrow("unsafe 'javascript:' URL scheme")
       },
     )
   })
@@ -630,15 +657,17 @@ describe('render strict mode', () => {
   })
 
   test('rejects data URL in anchor href', async () => {
-    await expect(
-      render(
-        <html>
-          <body>
-            <a href="data:text/html,<h1>Hi</h1>">Open</a>
-          </body>
-        </html>,
+    expect(
+      await throwingRejection(
+        render(
+          <html>
+            <body>
+              <a href="data:text/html,<h1>Hi</h1>">Open</a>
+            </body>
+          </html>,
+        ),
       ),
-    ).rejects.toThrow("unsafe 'data:' URL scheme")
+    ).toThrow("unsafe 'data:' URL scheme")
   })
 
   test('rejects javascript URL in CSS background-image', () => {

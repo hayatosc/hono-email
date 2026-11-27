@@ -16,6 +16,6 @@ import type { EmailTailwindPluginOptions } from './types'
  * await Bun.build({ plugins: [EmailTailwind()] })
  * ```
  */
-const bun: UnpluginInstance<EmailTailwindPluginOptions | undefined, boolean>['bun'] = unplugin.bun
+const bun: UnpluginInstance<EmailTailwindPluginOptions | undefined>['bun'] = unplugin.bun
 
 export default bun

@@ -3,6 +3,7 @@ import { describe, expect, test } from 'bun:test'
 import { raw } from 'hono/html'
 import { HtmlEscapedCallbackPhase } from 'hono/utils/html'
 
+import { rejection } from '../../../../test-utils/promise'
 import { renderFragmentToHtml } from './html'
 
 describe('renderFragmentToHtml', () => {
@@ -23,7 +24,7 @@ describe('renderFragmentToHtml', () => {
         throw error
       }
 
-      await expect(renderFragmentToHtml(<Broken />)).rejects.toBe(error)
+      expect(await rejection(renderFragmentToHtml(<Broken />))).toBe(error)
     },
   )
 
@@ -35,7 +36,7 @@ describe('renderFragmentToHtml', () => {
         throw error
       }
 
-      await expect(renderFragmentToHtml(<Broken />)).rejects.toBe(error)
+      expect(await rejection(renderFragmentToHtml(<Broken />))).toBe(error)
     },
   )
 
@@ -52,7 +53,7 @@ describe('renderFragmentToHtml', () => {
         },
       ])
 
-      await expect(renderFragmentToHtml(content)).rejects.toBe(error)
+      expect(await rejection(renderFragmentToHtml(content))).toBe(error)
     },
   )
 
@@ -72,7 +73,7 @@ describe('renderFragmentToHtml', () => {
       },
     ])
 
-    await expect(renderFragmentToHtml(content)).rejects.toBeUndefined()
+    expect(await rejection(renderFragmentToHtml(content))).toBeUndefined()
   })
 
   test('awaits callbacks before and during streaming', async () => {

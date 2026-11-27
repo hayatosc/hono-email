@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 
+import { throwingRejection } from '../../../../test-utils/promise'
 import {
   Body,
   Head,
@@ -135,18 +136,20 @@ Paragraph with \`code\`
   })
 
   test('throws when tailwind markdown mode is used without a Tailwind parent', async () => {
-    await expect(
-      render(
-        <Html>
-          <Head />
-          <Body>
-            <Markdown markdownStyleMode="tailwind">{`
+    expect(
+      await throwingRejection(
+        render(
+          <Html>
+            <Head />
+            <Body>
+              <Markdown markdownStyleMode="tailwind">{`
 # Tailwind mode
             `}</Markdown>
-          </Body>
-        </Html>,
+            </Body>
+          </Html>,
+        ),
       ),
-    ).rejects.toThrow('<Markdown markdownStyleMode="tailwind"> requires a <Tailwind> parent.')
+    ).toThrow('<Markdown markdownStyleMode="tailwind"> requires a <Tailwind> parent.')
   })
 
   test('sanitizes dangerous attributes, urls, and styles while keeping safe content', async () => {

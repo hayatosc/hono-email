@@ -198,14 +198,16 @@ describe('Postmark adapter', () => {
       to: 'recipient@example.com',
     })
 
-    const parsed = JSON.parse(String(requests[0]?.init.body)) as unknown
+    const parsed: unknown = JSON.parse(String(requests[0]?.init.body))
     expect(parsed).toMatchObject({
       Attachments: [{ ContentID: 'cid:img.png', ContentType: 'image/png', Name: 'img.png' }],
     })
-    // Postmark does not use a ContentDisposition field
-    expect(parsed).not.toMatchObject({
-      Attachments: [{ ContentDisposition: expect.anything() }],
-    })
+    if (typeof parsed !== 'object' || parsed === null || !('Attachments' in parsed)) {
+      throw new Error('Expected an attachment payload.')
+    }
+    const attachments = parsed.Attachments
+    if (!Array.isArray(attachments)) throw new Error('Expected attachments to be an array.')
+    expect(attachments[0]).not.toHaveProperty('ContentDisposition')
   })
 
   test('maps Postmark API errors to a failed receipt', async () => {

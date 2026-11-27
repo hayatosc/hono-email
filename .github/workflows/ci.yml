@@ -47,8 +47,7 @@ jobs:
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
-      # `lint` syncs Astro's generated types itself: without them `astro:*`
-      # imports are unresolved and the docs sources are linted on wrong types.
+      # `lint` builds workspace packages and generates Astro types before resolving imports.
       - name: Lint
         run: bun run lint
 

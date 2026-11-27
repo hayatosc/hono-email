@@ -5,7 +5,7 @@ import { resolveEmailAttachments } from '../attachment'
 import type { EmailErrorCategory, EmailMessage, SendEmailReceipt } from '../index'
 import { formatEmailAddress, toAddressList, validateEmailHeaders } from '../message'
 import { collectProviderRecipients, failedReceipt } from '../provider'
-import { isPermanentHttpStatus, isValidationError } from '../utils'
+import { getAbortReasonMessage, isPermanentHttpStatus, isValidationError } from '../utils'
 import type { SesAdapterOptions, SesEmailAdapter, SesSendOptions } from './types'
 
 export { renderEmailMessage, sendEmail } from '../index'
@@ -112,7 +112,7 @@ export const SesAdapter = (defaults: SesAdapterOptions): SesEmailAdapter => ({
 
     const signal = options.signal ?? options.abortSignal
     if (signal?.aborted) {
-      return failedReceipt([signal.reason?.message ?? 'The operation was aborted.'], {
+      return failedReceipt([getAbortReasonMessage(signal)], {
         category: 'timeout',
         permanent: false,
         rejected: recipients,

@@ -103,7 +103,11 @@ function App() {
     setWarnings(Array.isArray(data.warnings) ? data.warnings.map(String) : [])
   }, [selected, propValues, fetchApi])
 
-  renderRef.current = renderTemplate
+  renderRef.current = () => {
+    void renderTemplate().catch((error: unknown) => {
+      setError(error instanceof Error ? error.message : String(error))
+    })
+  }
 
   const scheduleRender = useCallback(() => {
     if (debounceRef.current) {
@@ -245,7 +249,7 @@ function App() {
   const handleJsonChange = useCallback((value: string) => {
     setJsonValue(value)
     try {
-      const parsed = JSON.parse(value)
+      const parsed: unknown = JSON.parse(value)
       if (!isObject(parsed) || Array.isArray(parsed)) {
         setJsonError('JSON must be an object')
         return

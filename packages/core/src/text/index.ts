@@ -129,7 +129,6 @@ export const renderPlainText = (html: string, options: PlainTextRenderOptions = 
 
       if (element?.link) {
         const { href, start, contentStart } = element.link
-        // Trim source edges while preserving whitespace inside inline children.
         const sourceLabel = html.slice(contentStart, token.start)
         const leadingWhitespace = sourceLabel.length - sourceLabel.trimStart().length
         const trailingWhitespace = sourceLabel.length - sourceLabel.trimEnd().length

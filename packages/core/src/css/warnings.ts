@@ -1,4 +1,3 @@
-/** Keeps the existing warning text shared by Tailwind and hono/css rendering. */
 export const formatDroppedClassWarning = (classToken: string): string =>
   `Tailwind class '${classToken}' uses an unsupported selector (combinator or pseudo-element) and was dropped.`
 

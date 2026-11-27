@@ -333,9 +333,9 @@ describe('parseSingleEmailAddress and address parsing', () => {
       'Email address string must hold a single address',
     )
     expect(() => parseSingleEmailAddress('"Ada <ada@example.com>')).toThrow('Invalid email address')
-    expect(() =>
-      parseSingleEmailAddress({} as unknown as Parameters<typeof parseSingleEmailAddress>[0]),
-    ).toThrow('Invalid email address')
+    expect(() => {
+      Reflect.apply(parseSingleEmailAddress, undefined, [{}])
+    }).toThrow('Invalid email address')
   })
 
   test('rejects unquoted comma in display name', () => {

@@ -16,7 +16,7 @@ import type { EmailTailwindPluginOptions } from './types'
  * module.exports = { plugins: [EmailTailwind()] }
  * ```
  */
-const webpack: UnpluginInstance<EmailTailwindPluginOptions | undefined, boolean>['webpack'] =
+const webpack: UnpluginInstance<EmailTailwindPluginOptions | undefined>['webpack'] =
   unplugin.webpack
 
 export default webpack

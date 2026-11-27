@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 
+import { throwingRejection } from '../../../test-utils/promise'
 import { Body, Html, Text } from './components'
 import type { EmailAdapter, EmailMessage, EmailSendOptions, SendEmailReceipt } from './email'
 import {
@@ -79,7 +80,7 @@ describe('defineMail & isMailable', () => {
 
   test('defineMail supports async builder and context', async () => {
     const AsyncMail = defineMail(async (data: { name: string }, context) => {
-      await new Promise((resolve) => setTimeout(resolve, 1))
+      await Bun.sleep(1)
       const greeting =
         context.locale === 'ja' ? `こんにちは、${data.name}さん` : `Hello ${data.name}`
       return {
@@ -107,12 +108,12 @@ describe('defineMail & isMailable', () => {
 
 describe('createMailer', () => {
   test('throws when created without a valid adapter', () => {
-    expect(() => createMailer(null as unknown as Parameters<typeof createMailer>[0])).toThrow(
-      'createMailer requires an adapter with a send() method.',
-    )
-    expect(() => createMailer({} as unknown as Parameters<typeof createMailer>[0])).toThrow(
-      'createMailer requires an adapter with a send() method.',
-    )
+    expect(() => {
+      Reflect.apply(createMailer, undefined, [null])
+    }).toThrow('createMailer requires an adapter with a send() method.')
+    expect(() => {
+      Reflect.apply(createMailer, undefined, [{}])
+    }).toThrow('createMailer requires an adapter with a send() method.')
   })
 
   test('sends Mailable with default options applied', async () => {
@@ -278,11 +279,13 @@ describe('createMailer', () => {
       ),
     }))
 
-    await expect(
-      mailer.send(NoFromMail, {
-        to: 'recipient@example.com',
-      }),
-    ).rejects.toThrow("Email message must include a 'from' address.")
+    expect(
+      await throwingRejection(
+        mailer.send(NoFromMail, {
+          to: 'recipient@example.com',
+        }),
+      ),
+    ).toThrow("Email message must include a 'from' address.")
   })
 
   test('sends plain JSX draft with default options applied', async () => {
@@ -344,7 +347,6 @@ describe('createMailer', () => {
       data: { item: 'Laptop', price: 999 },
     })
 
-    // Adapter was NOT invoked
     expect(adapter.sentMessages).toHaveLength(0)
 
     expect(rendered.from).toBe('store@example.com')
@@ -402,13 +404,11 @@ describe('createMailer', () => {
       ),
     }))
 
-    // Send without data
     const receipt = await mailer.send(NotificationMail, {
       to: 'user@example.com',
     })
     expect(receipt.successful).toBe(true)
 
-    // Render without arguments
     const rendered = await mailer.render(NotificationMail)
     expect(rendered.subject).toBe('Notification')
     expect(rendered.html).toContain('Important notification')
@@ -429,22 +429,24 @@ describe('createMailer', () => {
       ),
     }))
 
-    await expect(mailer.render(NoFromMail)).rejects.toThrow(
+    expect(await throwingRejection(mailer.render(NoFromMail))).toThrow(
       "Email message must include a 'from' address.",
     )
 
-    await expect(
-      mailer.render({
-        to: 'user@example.com',
-        subject: 'Draft no from',
-        jsx: (
-          <Html>
-            <Body>
-              <Text>No from</Text>
-            </Body>
-          </Html>
-        ),
-      }),
-    ).rejects.toThrow("Email message must include a 'from' address.")
+    expect(
+      await throwingRejection(
+        mailer.render({
+          to: 'user@example.com',
+          subject: 'Draft no from',
+          jsx: (
+            <Html>
+              <Body>
+                <Text>No from</Text>
+              </Body>
+            </Html>
+          ),
+        }),
+      ),
+    ).toThrow("Email message must include a 'from' address.")
   })
 })

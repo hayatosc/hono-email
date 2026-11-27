@@ -95,9 +95,12 @@ const inferContentType = (filename: string | undefined): string | undefined => {
 }
 
 const filenameFromPath = (path: string): string | undefined => {
-  const withoutQuery = path.split(/[?#]/u)[0]
-  const lastSegment = withoutQuery?.split(/[\\/]/u).filter(Boolean).at(-1)
-  return lastSegment === '' ? undefined : lastSegment
+  const segments = (path.split(/[?#]/u, 1)[0] ?? '').split(/[\\/]/u)
+  for (let index = segments.length - 1; index >= 0; index--) {
+    const segment = segments[index]
+    if (segment) return segment
+  }
+  return undefined
 }
 
 const attachmentLabel = (attachment: EmailAttachment): string => {
@@ -148,7 +151,7 @@ const parseDataUri = (value: string): AttachmentContentSource | undefined => {
 }
 
 const readReadableStream = async (
-  stream: ReadableStream<Uint8Array>,
+  stream: ReadableStream<unknown>,
   attachment: EmailAttachment,
   limit: number | undefined,
 ): Promise<Uint8Array> => {
@@ -163,6 +166,9 @@ const readReadableStream = async (
         break
       }
 
+      if (!(result.value instanceof Uint8Array)) {
+        throw new TypeError('Attachment stream must return Uint8Array chunks.')
+      }
       chunks.push(result.value)
       totalLength += result.value.byteLength
       assertAttachmentSizeBytes(totalLength, attachment, limit)

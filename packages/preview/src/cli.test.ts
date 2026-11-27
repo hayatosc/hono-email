@@ -5,6 +5,7 @@ import { join } from 'node:path'
 
 import { parseArgs, runCommand, type CommandContext } from 'citty'
 
+import { throwingRejection } from '../../../test-utils/promise'
 import { type CliArgs, main, preview } from './cli'
 
 type MockCommandContext = CommandContext<CliArgs>
@@ -119,38 +120,22 @@ describe('cli port validation', () => {
   }
 
   test('invalid port (non-integer) calls process.exit(1)', async () => {
-    try {
-      await runPreview('abc')
-    } catch {
-      // expected
-    }
+    expect(await throwingRejection(runPreview('abc'))).toThrow('process.exit(1)')
     expect(exitCode).toBe(1)
   })
 
   test('invalid port (< 1) calls process.exit(1)', async () => {
-    try {
-      await runPreview('0')
-    } catch {
-      // expected
-    }
+    expect(await throwingRejection(runPreview('0'))).toThrow('process.exit(1)')
     expect(exitCode).toBe(1)
   })
 
   test('invalid port (> 65535) calls process.exit(1)', async () => {
-    try {
-      await runPreview('70000')
-    } catch {
-      // expected
-    }
+    expect(await throwingRejection(runPreview('70000'))).toThrow('process.exit(1)')
     expect(exitCode).toBe(1)
   })
 
   test('invalid port (float) calls process.exit(1)', async () => {
-    try {
-      await runPreview('3000.5')
-    } catch {
-      // expected
-    }
+    expect(await throwingRejection(runPreview('3000.5'))).toThrow('process.exit(1)')
     expect(exitCode).toBe(1)
   })
 })
@@ -176,11 +161,13 @@ describe('cli Tailwind controls', () => {
       process.chdir(dir)
 
       try {
-        await expect(
-          runCommand(preview, {
-            rawArgs: ['--tailwind', selection, '--file', 'vite.config.ts'],
-          }),
-        ).rejects.toThrow('process.exit(1)')
+        expect(
+          await throwingRejection(
+            runCommand(preview, {
+              rawArgs: ['--tailwind', selection, '--file', 'vite.config.ts'],
+            }),
+          ),
+        ).toThrow('process.exit(1)')
         expect(messages.join('\n')).toContain(
           selection === 'off'
             ? 'Error: CLI off reached user config'

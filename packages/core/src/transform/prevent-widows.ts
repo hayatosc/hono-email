@@ -60,7 +60,6 @@ export const preventWidows = (html: string): string => {
 
     const combined = activeTextNodes.map((n) => n.text).join('')
 
-    // Find the last space before the last word
     let lastNonSpaceIndex = -1
     for (let i = combined.length - 1; i >= 0; i--) {
       if (/\S/.test(combined.charAt(i))) {
@@ -102,7 +101,6 @@ export const preventWidows = (html: string): string => {
     if (token.type === 'tag') {
       const tag = token.name
       if (token.closing) {
-        // Block tags or skip tags will flush active text nodes
         if (BLOCK_TAGS.has(tag) || SKIP_TAGS.has(tag)) {
           flush()
         }
@@ -132,7 +130,6 @@ export const preventWidows = (html: string): string => {
 
     if (token.type !== 'text') continue
 
-    // It's a text token
     const isSkipped = stack[stack.length - 1]?.skip ?? false
     if (isSkipped || INCOMPLETE_MARKUP_PATTERN.test(token.raw)) {
       flush()

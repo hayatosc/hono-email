@@ -286,17 +286,15 @@ export function markdownExport(): AstroIntegration {
       },
       'astro:server:setup': ({ server, logger }) => {
         server.watcher.add(docsRoot)
-        server.watcher.on('all', async (_event, changedPath) => {
+        server.watcher.on('all', (_event, changedPath) => {
           if (!/\.(md|mdx)$/i.test(changedPath)) return
 
-          try {
-            await generateIntermediate(docsRoot, outputRoot)
-          } catch (error) {
+          void generateIntermediate(docsRoot, outputRoot).catch((error: unknown) => {
             logger.warn(error instanceof Error ? error.message : String(error))
-          }
+          })
         })
 
-        server.middlewares.use(async (request, response, next) => {
+        server.middlewares.use((request, response, next) => {
           if (!request.url) {
             next()
             return
@@ -319,17 +317,27 @@ export function markdownExport(): AstroIntegration {
               ? join(outputRoot, PAGES_DIR, requestPath)
               : undefined
 
-          if (!filePath || !(await exists(filePath))) {
+          if (!filePath) {
             next()
             return
           }
 
-          response.statusCode = 200
-          response.setHeader(
-            'content-type',
-            isLlmsFullRequest ? 'text/plain; charset=utf-8' : 'text/markdown; charset=utf-8',
-          )
-          response.end(await readFile(filePath, 'utf-8'))
+          void readFile(filePath, 'utf-8')
+            .then((content) => {
+              response.statusCode = 200
+              response.setHeader(
+                'content-type',
+                isLlmsFullRequest ? 'text/plain; charset=utf-8' : 'text/markdown; charset=utf-8',
+              )
+              response.end(content)
+            })
+            .catch((error: unknown) => {
+              if (error instanceof Error && 'code' in error && error.code === 'ENOENT') {
+                next()
+              } else {
+                next(error)
+              }
+            })
         })
       },
       'astro:build:done': async ({ dir, logger }) => {

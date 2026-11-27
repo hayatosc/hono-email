@@ -144,7 +144,7 @@ describe('built-in adapter error contract', () => {
       },
     })
     try {
-      await expect(smtp.send(message)).resolves.toMatchObject({
+      expect(await smtp.send(message)).toMatchObject({
         successful: false,
         accepted: [],
         rejected: [],

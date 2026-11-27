@@ -94,7 +94,6 @@ export const ALWAYS_BLOCKED_TAGS: Set<string> = new Set([
   'form',
 ])
 
-// satisfies ensures all entries are valid EmailClient values without widening to string[]
 export const EMAIL_CLIENT_LIST: readonly EmailClient[] = [
   'outlook',
   'gmail',
@@ -158,7 +157,6 @@ export const computeSupportRatio = (stats: CaniemailStats): number => {
  * `css-border-inline-block` covers both `border-inline` and `border-block`).
  */
 export const CANIEMAIL_FEATURE_MAP: FeatureMapEntry[] = [
-  // CSS declarations (property:value pairs)
   { key: 'display:flex', kind: 'css-declaration', slug: 'css-display-flex' },
   { key: 'display:grid', kind: 'css-declaration', slug: 'css-display-grid' },
   { key: 'display:inline-flex', kind: 'css-declaration', slug: 'css-display-flex' },
@@ -166,7 +164,6 @@ export const CANIEMAIL_FEATURE_MAP: FeatureMapEntry[] = [
   { key: 'position:fixed', kind: 'css-declaration', slug: 'css-position' },
   { key: 'position:sticky', kind: 'css-declaration', slug: 'css-position' },
 
-  // CSS properties
   { key: 'grid', kind: 'css-property', slug: 'css-grid-template' },
   { key: 'grid-area', kind: 'css-property', slug: 'css-display-grid' },
   { key: 'grid-auto-columns', kind: 'css-property', slug: 'css-display-grid' },
@@ -246,14 +243,12 @@ export const CANIEMAIL_FEATURE_MAP: FeatureMapEntry[] = [
   { key: 'float', kind: 'css-property', slug: 'css-float' },
   { key: 'clear', kind: 'css-property', slug: 'css-clear' },
 
-  // CSS at-rules
   { key: '@media', kind: 'css-at-rule', slug: 'css-at-media' },
   { key: '@import', kind: 'css-at-rule', slug: 'css-at-import' },
   { key: '@font-face', kind: 'css-at-rule', slug: 'css-at-font-face' },
   { key: '@keyframes', kind: 'css-at-rule', slug: 'css-at-keyframes' },
   { key: '@supports', kind: 'css-at-rule', slug: 'css-at-supports' },
 
-  // HTML tags
   { key: 'form', kind: 'html-tag', slug: 'html-form' },
   { key: 'input', kind: 'html-tag', slug: 'html-input-text' },
   { key: 'button', kind: 'html-tag', slug: 'html-button-submit' },
@@ -279,7 +274,6 @@ export const CANIEMAIL_FEATURE_MAP: FeatureMapEntry[] = [
   { key: 'marquee', kind: 'html-tag', slug: 'html-marquee' },
   { key: 'bdi', kind: 'html-tag', slug: 'html-bdi' },
 
-  // HTML attributes
   { key: 'srcset', kind: 'html-attribute', slug: 'html-srcset' },
   { key: 'sizes', kind: 'html-attribute', slug: 'html-srcset' },
   { key: 'loading', kind: 'html-attribute', slug: 'html-loading-attribute' },
@@ -288,7 +282,6 @@ export const CANIEMAIL_FEATURE_MAP: FeatureMapEntry[] = [
   { key: 'hidden', kind: 'html-attribute', slug: 'html-hidden' },
   { key: 'required', kind: 'html-attribute', slug: 'html-required' },
 
-  // Image formats
   { key: 'webp', kind: 'image-format', slug: 'image-webp' },
   { key: 'avif', kind: 'image-format', slug: 'image-avif' },
   { key: 'svg', kind: 'image-format', slug: 'image-svg' },

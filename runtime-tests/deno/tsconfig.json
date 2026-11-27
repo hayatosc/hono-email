@@ -1,0 +1,10 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "declaration": false,
+    "isolatedDeclarations": false,
+    "types": ["deno"],
+    "allowImportingTsExtensions": true
+  },
+  "include": ["*.ts"]
+}

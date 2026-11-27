@@ -143,9 +143,8 @@ describe('discoverTemplates symlink cycles', () => {
       symlinkSync(outsideDir, join(tempDir, 'shared'), 'dir')
 
       expect(discoverTemplates(tempDir)).toEqual([])
-      expect(warnSpy.mock.calls.map((call) => String(call[0] ?? ''))).toEqual([
-        expect.stringContaining(join(tempDir, 'shared')),
-      ])
+      expect(warnSpy.mock.calls).toHaveLength(1)
+      expect(String(warnSpy.mock.calls[0]?.[0] ?? '')).toContain(join(tempDir, 'shared'))
     } finally {
       warnSpy.mockRestore()
       invalidateTemplateDiscovery(tempDir)

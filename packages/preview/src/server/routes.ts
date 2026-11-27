@@ -85,7 +85,7 @@ export function createApiRoutes(loadModule: LoadModule, templateDir: string): Ho
       return c.json(extractPropsSchema(c.var.mod))
     })
     .post('/templates/:name/render', async (c) => {
-      const body = await c.req.json().catch(() => ({}))
+      const body: unknown = await c.req.json().catch(() => ({}))
       const props = isObject(body) && isObject(body.props) ? body.props : {}
       const schema = extractPropsSchema(c.var.mod)
       const mergedProps = mergePropsWithDefaults(schema, props)

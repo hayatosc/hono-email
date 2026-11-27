@@ -14,6 +14,7 @@ import {
   resolveEmailEnvelope,
   resolveMessageId,
 } from '../message'
+import { getAbortReasonMessage } from '../utils'
 
 export type {
   EmailAddress,
@@ -231,7 +232,7 @@ export class InMemoryAdapter implements EmailAdapter {
         successful: false,
         accepted: [],
         rejected: recipients,
-        errorMessages: [options.signal.reason?.message ?? 'The operation was aborted.'],
+        errorMessages: [getAbortReasonMessage(options.signal)],
         category: 'timeout',
         permanent: false,
       }
@@ -385,7 +386,7 @@ export const FileAdapter = (options: FileAdapterOptions): EmailAdapter => ({
         successful: false,
         accepted: [],
         rejected: recipients,
-        errorMessages: [sendOptions.signal.reason?.message ?? 'The operation was aborted.'],
+        errorMessages: [getAbortReasonMessage(sendOptions.signal)],
         category: 'timeout',
         permanent: false,
       }
@@ -439,7 +440,7 @@ export const LogAdapter = (options: LogAdapterOptions = {}): EmailAdapter => ({
         successful: false,
         accepted: [],
         rejected: recipients,
-        errorMessages: [sendOptions.signal.reason?.message ?? 'The operation was aborted.'],
+        errorMessages: [getAbortReasonMessage(sendOptions.signal)],
         category: 'timeout',
         permanent: false,
       }

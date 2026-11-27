@@ -1,14 +1,28 @@
 import { describe, expect, test } from 'bun:test'
 
+import { throwingRejection } from '../../../../test-utils/promise'
 import {
   classifyFetchError,
   computeBackoffDelay,
   fetchWithTimeoutAndRetry,
+  getAbortReasonMessage,
   isPermanentHttpStatus,
   isValidationError,
   parseRetryAfterMs,
   sleepWithSignal,
 } from './utils'
+
+describe('getAbortReasonMessage', () => {
+  test('preserves a custom Error message', () => {
+    expect(getAbortReasonMessage(AbortSignal.abort(new Error('Cancelled')))).toBe('Cancelled')
+  })
+
+  test('uses the default when the reason has no string message', () => {
+    expect(getAbortReasonMessage(AbortSignal.abort({ message: 42 }))).toBe(
+      'The operation was aborted.',
+    )
+  })
+})
 
 describe('fetchWithTimeoutAndRetry', () => {
   test('returns successful response directly', async () => {
@@ -228,20 +242,22 @@ describe('fetchWithTimeoutAndRetry', () => {
     const controller = new AbortController()
     controller.abort()
 
-    await expect(
-      fetchWithTimeoutAndRetry(
-        fetchFn,
-        'http://example.com',
-        { signal: controller.signal },
-        {
-          timeout: 1000,
-          retry: {
-            maxAttempts: 3,
-            initialInterval: 1,
+    expect(
+      await throwingRejection(
+        fetchWithTimeoutAndRetry(
+          fetchFn,
+          'http://example.com',
+          { signal: controller.signal },
+          {
+            timeout: 1000,
+            retry: {
+              maxAttempts: 3,
+              initialInterval: 1,
+            },
           },
-        },
+        ),
       ),
-    ).rejects.toThrow()
+    ).toThrow()
 
     expect(attempts).toBe(1)
   })
@@ -459,7 +475,9 @@ describe('sleepWithSignal', () => {
     const controller = new AbortController()
     controller.abort(new DOMException('Custom abort reason', 'AbortError'))
 
-    await expect(sleepWithSignal(1000, controller.signal)).rejects.toThrow('Custom abort reason')
+    expect(await throwingRejection(sleepWithSignal(1000, controller.signal))).toThrow(
+      'Custom abort reason',
+    )
   })
 
   test('rejects immediately when signal aborts during sleep', async () => {
@@ -471,7 +489,7 @@ describe('sleepWithSignal', () => {
       controller.abort()
     }, 20)
 
-    await expect(sleepPromise).rejects.toThrow()
+    expect(await throwingRejection(sleepPromise)).toThrow()
     const elapsed = Date.now() - start
     expect(elapsed).toBeLessThan(500)
   })
@@ -504,7 +522,7 @@ describe('fetchWithTimeoutAndRetry signal and retry options', () => {
       controller.abort()
     }, 30)
 
-    await expect(promise).rejects.toThrow()
+    expect(await throwingRejection(promise)).toThrow()
     const elapsed = Date.now() - start
     expect(elapsed).toBeLessThan(500)
     expect(attempts).toBe(1)
@@ -558,7 +576,7 @@ describe('fetchWithTimeoutAndRetry signal and retry options', () => {
       controller.abort()
     }, 30)
 
-    await expect(promise).rejects.toThrow()
+    expect(await throwingRejection(promise)).toThrow()
     const elapsed = Date.now() - start
     expect(elapsed).toBeLessThan(500)
     expect(attempts).toBe(1)

@@ -142,7 +142,6 @@ describe('InMemoryAdapter', () => {
       }),
     )
 
-    // assertSent
     expect(adapter.assertSent({ to: 'alice@example.com' }).message.subject).toBe('Welcome to Acme!')
     expect(adapter.assertSent({ to: /bob/ }).message.subject).toBe('Newsletter #42')
     expect(adapter.assertSent({ from: 'marketing@example.com' }).recipients).toEqual([
@@ -156,7 +155,6 @@ describe('InMemoryAdapter', () => {
     expect(adapter.assertSent({ htmlIncludes: 'Reset Password' })).toBeDefined()
     expect(adapter.assertSent((m) => m.recipients.includes('bob@example.com'))).toBeDefined()
 
-    // assertNotSent
     adapter.assertNotSent({ to: 'carol@example.com' })
     adapter.assertNotSent({ subject: 'Spam' })
 
@@ -202,7 +200,6 @@ describe('InMemoryAdapter', () => {
   test('failNext() simulates send failures', async () => {
     const adapter = new InMemoryAdapter()
 
-    // Simulate Error
     adapter.failNext(new Error('SMTP connection timeout'))
     const failedReceipt1 = await adapter.send(createSampleMessage())
     expect(failedReceipt1.successful).toBe(false)
@@ -215,7 +212,6 @@ describe('InMemoryAdapter', () => {
     const successReceipt = await adapter.send(createSampleMessage())
     expect(successReceipt.successful).toBe(true)
 
-    // Simulate partial receipt
     adapter.failNext({
       errorMessages: ['Rate limit exceeded'],
       rejected: ['alice@example.com'],
@@ -226,7 +222,6 @@ describe('InMemoryAdapter', () => {
       expect(failedReceipt2.errorMessages).toEqual(['Rate limit exceeded'])
     }
 
-    // Next call succeeds again
     const successReceipt2 = await adapter.send(createSampleMessage())
     expect(successReceipt2.successful).toBe(true)
   })

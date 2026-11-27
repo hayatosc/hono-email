@@ -133,7 +133,7 @@
   },
   "scripts": {
     "build": "tsdown",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsrs --noEmit",
     "test": "bun test ./src"
   },
   "dependencies": {
@@ -143,6 +143,7 @@
     "unplugin": "^3.3.0"
   },
   "devDependencies": {
+    "@rspack/core": "2.3.4",
     "@tailwindcss/vite": "4.3.3",
     "esbuild": "^0.28.1",
     "hono-email": "workspace:*",

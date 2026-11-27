@@ -266,7 +266,6 @@ const compileArtifactModule = async (
   const candidates = scanner.scan()
   for (const file of scanner.files) files.add(file)
   const directories = new Set(scanner.globs.map((glob) => glob.base))
-  // Flatten Tailwind's nested selectors before the shared email CSS builder sees them.
   const css = optimize(compiler.build(candidates), { minify: false }).code
   const artifact = buildCssArtifact({ css })
   return { code: `export default ${JSON.stringify(artifact)}\n`, files, directories }
@@ -452,7 +451,7 @@ export const unpluginFactory: UnpluginFactory<EmailTailwindPluginOptions | undef
  * import { unplugin } from '@hono-email/tailwind-plugin'
  * ```
  */
-export const unplugin: UnpluginInstance<EmailTailwindPluginOptions | undefined, boolean> =
+export const unplugin: UnpluginInstance<EmailTailwindPluginOptions | undefined> =
   createUnplugin(unpluginFactory)
 
 export default unplugin

@@ -4,6 +4,7 @@ import { createRequire } from 'node:module'
 import { tmpdir } from 'node:os'
 import { basename, dirname, join } from 'node:path'
 
+import { throwingRejection } from '../../../../test-utils/promise'
 import {
   detectTailwindConfig,
   detectPostCssConfig,
@@ -330,9 +331,9 @@ describe('startPreviewServer', () => {
     process.chdir(dir)
 
     try {
-      await expect(
-        startPreviewServer({ dir: '.', port: 0, file: 'vite.config.ts' }),
-      ).rejects.toThrow(
+      expect(
+        await throwingRejection(startPreviewServer({ dir: '.', port: 0, file: 'vite.config.ts' })),
+      ).toThrow(
         'Tailwind integration requires "@hono-email/tailwind-plugin" to be installed in the project',
       )
     } finally {
@@ -362,7 +363,9 @@ describe('startPreviewServer', () => {
 
     try {
       const options = { dir: 'emails', port: 0, file: 'vite.config.ts', tailwind: false }
-      await expect(startPreviewServer(options)).rejects.toThrow('Tailwind off reached user config')
+      expect(await throwingRejection(startPreviewServer(options))).toThrow(
+        'Tailwind off reached user config',
+      )
     } finally {
       process.chdir(originalCwd)
     }
@@ -377,7 +380,7 @@ describe('startPreviewServer', () => {
 
     try {
       const options = { dir: 'emails', port: 0, file: 'vite.config.ts', tailwind: true }
-      await expect(startPreviewServer(options)).rejects.toThrow(
+      expect(await throwingRejection(startPreviewServer(options))).toThrow(
         'Tailwind integration requires "@hono-email/tailwind-plugin" to be installed in the project',
       )
     } finally {
@@ -407,9 +410,11 @@ describe('startPreviewServer', () => {
     process.chdir(dir)
 
     try {
-      await expect(
-        startPreviewServer({ dir: 'emails', port: 0, file: 'vite.config.ts', tailwind: true }),
-      ).rejects.toThrow('Standalone email plugin enabled')
+      expect(
+        await throwingRejection(
+          startPreviewServer({ dir: 'emails', port: 0, file: 'vite.config.ts', tailwind: true }),
+        ),
+      ).toThrow('Standalone email plugin enabled')
     } finally {
       process.chdir(originalCwd)
     }
@@ -432,9 +437,11 @@ describe('startPreviewServer', () => {
     process.chdir(dir)
 
     try {
-      await expect(
-        startPreviewServer({ dir: 'emails', port: 0, file: 'vite.config.ts' }),
-      ).rejects.toThrow('Generic PostCSS reached user config')
+      expect(
+        await throwingRejection(
+          startPreviewServer({ dir: 'emails', port: 0, file: 'vite.config.ts' }),
+        ),
+      ).toThrow('Generic PostCSS reached user config')
     } finally {
       process.chdir(originalCwd)
     }
@@ -451,9 +458,11 @@ describe('startPreviewServer', () => {
     process.chdir(dir)
 
     try {
-      await expect(
-        startPreviewServer({ dir: 'emails', port: 0, file: 'custom.vite.config.ts' }),
-      ).rejects.toThrow(
+      expect(
+        await throwingRejection(
+          startPreviewServer({ dir: 'emails', port: 0, file: 'custom.vite.config.ts' }),
+        ),
+      ).toThrow(
         'Tailwind integration requires "@hono-email/tailwind-plugin" to be installed in the project',
       )
     } finally {
@@ -512,9 +521,11 @@ describe('startPreviewServer', () => {
     process.chdir(dir)
 
     try {
-      await expect(
-        startPreviewServer({ dir: 'emails', port: 0, file: 'vite.config.ts' }),
-      ).rejects.toThrow('explicit vite.config.ts was loaded')
+      expect(
+        await throwingRejection(
+          startPreviewServer({ dir: 'emails', port: 0, file: 'vite.config.ts' }),
+        ),
+      ).toThrow('explicit vite.config.ts was loaded')
     } finally {
       process.chdir(originalCwd)
     }
@@ -528,9 +539,11 @@ describe('startPreviewServer', () => {
     process.chdir(dir)
 
     try {
-      await expect(
-        startPreviewServer({ dir: 'emails', port: 0, file: 'vite.config.ts' }),
-      ).rejects.toThrow(/Vite config file ".*vite\.config\.ts" does not exist\./)
+      expect(
+        await throwingRejection(
+          startPreviewServer({ dir: 'emails', port: 0, file: 'vite.config.ts' }),
+        ),
+      ).toThrow(/Vite config file ".*vite\.config\.ts" does not exist\./)
     } finally {
       process.chdir(originalCwd)
     }
@@ -546,9 +559,9 @@ describe('startPreviewServer', () => {
     try {
       // `.` resolves to an existing directory, not a file — this should be
       // rejected with a specific error message, not passed through to Vite.
-      await expect(startPreviewServer({ dir: 'emails', port: 0, file: '.' })).rejects.toThrow(
-        /Vite config file ".*" is not a file\./,
-      )
+      expect(
+        await throwingRejection(startPreviewServer({ dir: 'emails', port: 0, file: '.' })),
+      ).toThrow(/Vite config file ".*" is not a file\./)
     } finally {
       process.chdir(originalCwd)
     }

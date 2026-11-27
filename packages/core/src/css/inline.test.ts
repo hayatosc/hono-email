@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 
+import { throwingRejection } from '../../../../test-utils/promise'
 import { buildCssArtifact } from './artifact'
 import { collectCssClassesFromHtml, inlineCssArtifact, wrapGeneratedHeadCss } from './inline'
 
@@ -79,13 +80,15 @@ describe('inlineCssArtifact', () => {
   })
 
   test('lets callers reject missing classes with their own error', async () => {
-    await expect(
-      inlineCssArtifact('<p class="missing">Hello</p>', buildCssArtifact({ css: '' }), {
-        onMissingClass(className) {
-          throw new Error(`Unknown CSS class: ${className}`)
-        },
-      }),
-    ).rejects.toThrow('Unknown CSS class: missing')
+    expect(
+      await throwingRejection(
+        inlineCssArtifact('<p class="missing">Hello</p>', buildCssArtifact({ css: '' }), {
+          onMissingClass(className) {
+            throw new Error(`Unknown CSS class: ${className}`)
+          },
+        }),
+      ),
+    ).toThrow('Unknown CSS class: missing')
   })
 })
 

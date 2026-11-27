@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 
+import { throwingRejection, rejection } from '../../../../../test-utils/promise'
 import { openSmtpSession, runSmtpSession, SmtpResponseBufferLimitError } from './protocol'
 import type { SmtpSessionOptions, SmtpSendOptions } from './protocol'
 import type { SmtpSocket } from './types'
@@ -106,7 +107,9 @@ describe('openSmtpSession', () => {
       await server.writeResponse('554 service not available\r\n')
     })
 
-    await expect(openSmtpSession(socket, baseOptions)).rejects.toThrow('Unexpected SMTP greeting')
+    expect(await throwingRejection(openSmtpSession(socket, baseOptions))).toThrow(
+      'Unexpected SMTP greeting',
+    )
     await wait()
   })
 
@@ -115,7 +118,9 @@ describe('openSmtpSession', () => {
       await server.writeResponse('not a valid response\r\n')
     })
 
-    await expect(openSmtpSession(socket, baseOptions)).rejects.toThrow('Invalid SMTP response')
+    expect(await throwingRejection(openSmtpSession(socket, baseOptions))).toThrow(
+      'Invalid SMTP response',
+    )
     await wait()
   })
 
@@ -125,7 +130,7 @@ describe('openSmtpSession', () => {
       await server.close()
     })
 
-    await expect(openSmtpSession(socket, baseOptions)).rejects.toThrow(
+    expect(await throwingRejection(openSmtpSession(socket, baseOptions))).toThrow(
       'SMTP connection closed before a complete response was received',
     )
     await wait()
@@ -144,7 +149,7 @@ describe('openSmtpSession', () => {
       },
     }
 
-    await expect(openSmtpSession(socket, baseOptions)).rejects.toBeInstanceOf(
+    expect(await rejection(openSmtpSession(socket, baseOptions))).toBeInstanceOf(
       SmtpResponseBufferLimitError,
     )
     expect(closed).toBe(true)
@@ -176,9 +181,9 @@ describe('openSmtpSession', () => {
       await server.writeResponse('220 ready\r\n')
     })
 
-    await expect(
-      openSmtpSession(socket, { ...baseOptions, clientName: 'bad name' }),
-    ).rejects.toThrow('Invalid SMTP client name')
+    expect(
+      await throwingRejection(openSmtpSession(socket, { ...baseOptions, clientName: 'bad name' })),
+    ).toThrow('Invalid SMTP client name')
     await wait()
   })
 
@@ -189,9 +194,11 @@ describe('openSmtpSession', () => {
       await server.writeResponse('250 ok\r\n')
     })
 
-    await expect(
-      openSmtpSession(socket, { ...baseOptions, secureTransport: 'starttls' }),
-    ).rejects.toThrow('SMTP server does not advertise STARTTLS')
+    expect(
+      await throwingRejection(
+        openSmtpSession(socket, { ...baseOptions, secureTransport: 'starttls' }),
+      ),
+    ).toThrow('SMTP server does not advertise STARTTLS')
     await wait()
   })
 
@@ -202,12 +209,14 @@ describe('openSmtpSession', () => {
       await server.writeResponse('250 ok\r\n')
     })
 
-    await expect(
-      openSmtpSession(socket, {
-        ...baseOptions,
-        auth: { password: 'pass', type: 'login', username: 'user' },
-      }),
-    ).rejects.toThrow('SMTP server does not advertise AUTH LOGIN')
+    expect(
+      await throwingRejection(
+        openSmtpSession(socket, {
+          ...baseOptions,
+          auth: { password: 'pass', type: 'login', username: 'user' },
+        }),
+      ),
+    ).toThrow('SMTP server does not advertise AUTH LOGIN')
     await wait()
   })
 
@@ -218,12 +227,14 @@ describe('openSmtpSession', () => {
       await server.writeResponse('250 ok\r\n')
     })
 
-    await expect(
-      openSmtpSession(socket, {
-        ...baseOptions,
-        auth: { password: 'pass', username: 'user' },
-      }),
-    ).rejects.toThrow('SMTP server does not advertise AUTH PLAIN')
+    expect(
+      await throwingRejection(
+        openSmtpSession(socket, {
+          ...baseOptions,
+          auth: { password: 'pass', username: 'user' },
+        }),
+      ),
+    ).toThrow('SMTP server does not advertise AUTH PLAIN')
     await wait()
   })
 
@@ -234,12 +245,14 @@ describe('openSmtpSession', () => {
       await server.writeResponse('250 ok\r\n')
     })
 
-    await expect(
-      openSmtpSession(socket, {
-        ...baseOptions,
-        auth: { accessToken: 'token', type: 'xoauth2', username: 'user@example.com' },
-      }),
-    ).rejects.toThrow('SMTP server does not advertise AUTH XOAUTH2')
+    expect(
+      await throwingRejection(
+        openSmtpSession(socket, {
+          ...baseOptions,
+          auth: { accessToken: 'token', type: 'xoauth2', username: 'user@example.com' },
+        }),
+      ),
+    ).toThrow('SMTP server does not advertise AUTH XOAUTH2')
     await wait()
   })
 
@@ -253,9 +266,9 @@ describe('openSmtpSession', () => {
     })
 
     const session = await openSmtpSession(socket, baseOptions)
-    await expect(session.send({ ...sendOptions, mailFrom: 'bad\r@example.com' })).rejects.toThrow(
-      'Invalid SMTP envelope sender',
-    )
+    expect(
+      await throwingRejection(session.send({ ...sendOptions, mailFrom: 'bad\r@example.com' })),
+    ).toThrow('Invalid SMTP envelope sender')
     await session.destroy()
     await wait()
   })
@@ -272,9 +285,11 @@ describe('openSmtpSession', () => {
     })
 
     const session = await openSmtpSession(socket, baseOptions)
-    await expect(
-      session.send({ ...sendOptions, recipients: ['bad>recipient@example.com'] }),
-    ).rejects.toThrow('Invalid SMTP recipient')
+    expect(
+      await throwingRejection(
+        session.send({ ...sendOptions, recipients: ['bad>recipient@example.com'] }),
+      ),
+    ).toThrow('Invalid SMTP recipient')
     await session.destroy()
     await wait()
   })
@@ -290,7 +305,7 @@ describe('openSmtpSession', () => {
 
     const session = await openSmtpSession(socket, baseOptions)
     await session.close()
-    await expect(session.send(sendOptions)).rejects.toThrow('SMTP session is closed.')
+    expect(await throwingRejection(session.send(sendOptions))).toThrow('SMTP session is closed.')
     await wait()
   })
 
@@ -423,12 +438,14 @@ describe('openSmtpSession', () => {
       await server.writeResponse('535 5.7.8 Authentication credentials invalid\r\n')
     })
 
-    await expect(
-      openSmtpSession(socket, {
-        ...baseOptions,
-        auth: { accessToken: 'token', type: 'xoauth2', username: 'user@example.com' },
-      }),
-    ).rejects.toThrow(
+    expect(
+      await throwingRejection(
+        openSmtpSession(socket, {
+          ...baseOptions,
+          auth: { accessToken: 'token', type: 'xoauth2', username: 'user@example.com' },
+        }),
+      ),
+    ).toThrow(
       'Unexpected SMTP response to AUTH XOAUTH2: 535 5.7.8 Authentication credentials invalid',
     )
     await wait()
@@ -573,14 +590,14 @@ describe('openSmtpSession', () => {
     })
 
     const session = await openSmtpSession(socket, baseOptions)
-    await expect(
-      session.send({
-        ...sendOptions,
-        mailFrom: '送信者@example.com',
-      }),
-    ).rejects.toThrow(
-      'SMTP server does not advertise SMTPUTF8 for internationalized email addresses.',
-    )
+    expect(
+      await throwingRejection(
+        session.send({
+          ...sendOptions,
+          mailFrom: '送信者@example.com',
+        }),
+      ),
+    ).toThrow('SMTP server does not advertise SMTPUTF8 for internationalized email addresses.')
     await session.close()
     await wait()
   })
@@ -625,9 +642,11 @@ describe('openSmtpSession', () => {
       await server.writeResponse('220 ready\r\n')
     })
 
-    await expect(
-      openSmtpSession(socket, { ...baseOptions, secureTransport: 'starttls' }),
-    ).rejects.toThrow('SMTP connector does not support STARTTLS')
+    expect(
+      await throwingRejection(
+        openSmtpSession(socket, { ...baseOptions, secureTransport: 'starttls' }),
+      ),
+    ).toThrow('SMTP connector does not support STARTTLS')
     await wait()
   })
 
@@ -642,12 +661,14 @@ describe('openSmtpSession', () => {
       await server.writeResponse('535 auth failed\r\n')
     })
 
-    await expect(
-      openSmtpSession(socket, {
-        ...baseOptions,
-        auth: { password: 'pass', type: 'login', username: 'user' },
-      }),
-    ).rejects.toThrow('[REDACTED AUTH DATA]')
+    expect(
+      await throwingRejection(
+        openSmtpSession(socket, {
+          ...baseOptions,
+          auth: { password: 'pass', type: 'login', username: 'user' },
+        }),
+      ),
+    ).toThrow('[REDACTED AUTH DATA]')
     await wait()
   })
 })
@@ -692,9 +713,9 @@ describe('runSmtpSession', () => {
       await server.writeResponse('451 temporary failure\r\n')
     })
 
-    await expect(runSmtpSession(socket, { ...baseOptions, ...sendOptions })).rejects.toThrow(
-      'Unexpected SMTP response to DATA: 451 temporary failure',
-    )
+    expect(
+      await throwingRejection(runSmtpSession(socket, { ...baseOptions, ...sendOptions })),
+    ).toThrow('Unexpected SMTP response to DATA: 451 temporary failure')
     await wait()
   })
 
@@ -703,9 +724,9 @@ describe('runSmtpSession', () => {
       await server.writeResponse('554 not available\r\n')
     })
 
-    await expect(runSmtpSession(socket, { ...baseOptions, ...sendOptions })).rejects.toThrow(
-      'Unexpected SMTP greeting',
-    )
+    expect(
+      await throwingRejection(runSmtpSession(socket, { ...baseOptions, ...sendOptions })),
+    ).toThrow('Unexpected SMTP greeting')
     await wait()
   })
 })

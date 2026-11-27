@@ -47,9 +47,7 @@ describe('negotiateContentType', () => {
   })
 
   test('should honor q-values when selecting content type', () => {
-    // HTML has higher q-value
     expect(negotiateContentType('text/html;q=0.9, text/markdown;q=0.8')).toBe('text/html')
-    // Markdown has higher q-value
     expect(negotiateContentType('text/markdown;q=0.9, text/html;q=0.8')).toBe('text/markdown')
   })
 
@@ -87,7 +85,7 @@ describe('worker markdown responses', () => {
       ASSETS: {
         fetch: async () => new Response(body, { status }),
       },
-    }) as never
+    }) satisfies Env
 
   test('serves .md files with cache-control header', async () => {
     const app = await createApp()

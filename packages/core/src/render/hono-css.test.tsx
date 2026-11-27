@@ -2,6 +2,7 @@ import { describe, expect, test } from 'bun:test'
 
 import { Style, css, cx } from 'hono/css'
 
+import { throwingRejection } from '../../../../test-utils/promise'
 import {
   Body,
   Head,
@@ -94,7 +95,7 @@ describe('hono/css integration', () => {
   })
 
   test('throws a clear error when hono/css is used without <Head><Style /></Head>', async () => {
-    await expect(render(<StyledEmail includeStyle={false} />)).rejects.toThrow(
+    expect(await throwingRejection(render(<StyledEmail includeStyle={false} />))).toThrow(
       'hono/css styles require <Head><Style /></Head> in hono-email.',
     )
   })
@@ -127,16 +128,18 @@ describe('hono/css integration', () => {
       color: #0f172a;
     `
 
-    await expect(
-      render(
-        <Html>
-          <Body>
-            <Style />
-            <Text className={className}>Hello</Text>
-          </Body>
-        </Html>,
+    expect(
+      await throwingRejection(
+        render(
+          <Html>
+            <Body>
+              <Style />
+              <Text className={className}>Hello</Text>
+            </Body>
+          </Html>,
+        ),
       ),
-    ).rejects.toThrow('must be inside <Head>')
+    ).toThrow('must be inside <Head>')
   })
 
   test('coexists with Tailwind when hono/css classes are used inside <Tailwind>', async () => {
@@ -179,20 +182,22 @@ describe('hono/css integration', () => {
       color: #0f172a;
     `
 
-    await expect(
-      render(
-        <Html>
-          <Head>
-            <Style />
-          </Head>
-          <Body>
-            <Text className={className}>Styled</Text>
-            <Markdown markdownStyleMode="tailwind">{`
+    expect(
+      await throwingRejection(
+        render(
+          <Html>
+            <Head>
+              <Style />
+            </Head>
+            <Body>
+              <Text className={className}>Styled</Text>
+              <Markdown markdownStyleMode="tailwind">{`
 # Tailwind mode
             `}</Markdown>
-          </Body>
-        </Html>,
+            </Body>
+          </Html>,
+        ),
       ),
-    ).rejects.toThrow('<Markdown markdownStyleMode="tailwind"> requires a <Tailwind> parent.')
+    ).toThrow('<Markdown markdownStyleMode="tailwind"> requires a <Tailwind> parent.')
   })
 })

@@ -46,7 +46,7 @@ export const transpile = (source: string): string =>
  * @param code - Output of `transpile()`.
  * @returns The module's `exports` object.
  */
-export const evaluate = (code: string): Record<string, unknown> => {
+export const evaluate = async (code: string): Promise<Record<string, unknown>> => {
   const module: { exports: Record<string, unknown> } = { exports: {} }
   const require = (id: string): unknown => {
     if (!Object.hasOwn(PLAYGROUND_MODULES, id)) {
@@ -54,10 +54,25 @@ export const evaluate = (code: string): Record<string, unknown> => {
     }
     return PLAYGROUND_MODULES[id]
   }
-  // Running the editor's code is the playground's purpose; it only ever runs in the visitor's browser.
-  // oxlint-disable-next-line typescript/no-implied-eval
-  new Function('require', 'module', 'exports', code)(require, module, module.exports)
-  return module.exports
+  const url = URL.createObjectURL(
+    new Blob([`export default function (require, module, exports) {\n${code}\n}`], {
+      type: 'text/javascript',
+    }),
+  )
+  try {
+    const loaded: unknown = await import(/* @vite-ignore */ url)
+    if (
+      typeof loaded !== 'object' ||
+      loaded === null ||
+      !('default' in loaded) ||
+      typeof loaded.default !== 'function'
+    )
+      throw new Error('Invalid playground module.')
+    Reflect.apply(loaded.default, undefined, [require, module, module.exports])
+    return module.exports
+  } finally {
+    URL.revokeObjectURL(url)
+  }
 }
 
 const errorMessage = (error: unknown): string =>
@@ -79,7 +94,7 @@ export const renderPlayground = async (
   options: PlaygroundOptions,
 ): Promise<PlaygroundResult> => {
   try {
-    const { default: template } = evaluate(transpile(source))
+    const { default: template } = await evaluate(transpile(source))
     if (template === undefined || template === null) {
       throw new Error(
         'Add a default export, for example `export default function Email() { return <Html>...</Html> }`.',

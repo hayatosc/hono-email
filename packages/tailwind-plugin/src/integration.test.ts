@@ -7,12 +7,12 @@ import { fileURLToPath } from 'node:url'
 import tailwindcss from '@tailwindcss/vite'
 import { build as esbuild, context as esbuildContext, transform } from 'esbuild'
 import { render } from 'hono-email'
+import { isValidElement } from 'hono/jsx'
 import { rolldown } from 'rolldown'
 import { rollup } from 'rollup'
 import { build as viteBuild, createServer } from 'vite'
 import webpack from 'webpack'
 
-import type { CssBuildArtifact } from '../../core/src/css/artifact'
 import EmailBun from './bun'
 import EmailEsbuild from './esbuild'
 import EmailRolldown from './rolldown'
@@ -172,18 +172,18 @@ const bundleFixture = async (
       })
       if (!compiler) throw new Error('Webpack compiler was not created')
       try {
-        await new Promise<void>((resolve, reject) =>
+        await new Promise<void>((resolve, reject) => {
           compiler.run((error, stats) => {
             if (error) reject(error)
             else if (!stats || stats.hasErrors())
               reject(new Error(stats?.toString({ all: false, errors: true })))
             else resolve()
-          }),
-        )
+          })
+        })
       } finally {
-        await new Promise<void>((resolve, reject) =>
-          compiler.close((error) => (error ? reject(error) : resolve())),
-        )
+        await new Promise<void>((resolve, reject) => {
+          compiler.close((error) => (error ? reject(error) : resolve()))
+        })
       }
       break
     }
@@ -207,9 +207,35 @@ const bundleFixture = async (
 }
 
 const readRenderedHtml = async (output: string): Promise<string> => {
-  const { Email } = (await import(output)) as { Email: () => Parameters<typeof render>[0] }
-  const { html } = await render(Email(), { strict: false, onWarning: 'silent' })
+  const module: unknown = await import(output)
+  if (
+    !module ||
+    typeof module !== 'object' ||
+    !('Email' in module) ||
+    typeof module.Email !== 'function'
+  ) {
+    throw new Error('Bundle did not export an Email component')
+  }
+  const element: unknown = Reflect.apply(module.Email, module, [])
+  if (!isValidElement(element)) throw new Error('Email did not return a JSX element')
+  const { html } = await render(element, { strict: false, onWarning: 'silent' })
   return html
+}
+
+function readInlineStyles(module: unknown) {
+  if (!module || typeof module !== 'object' || !('default' in module)) {
+    throw new Error('Virtual module did not export an artifact')
+  }
+  const artifact = module.default
+  if (!artifact || typeof artifact !== 'object' || !('inlineStylesByClass' in artifact)) {
+    throw new Error('Artifact did not contain inline styles')
+  }
+  const styles = artifact.inlineStylesByClass
+  if (!styles || typeof styles !== 'object') throw new Error('Invalid inline styles')
+  return {
+    block: 'block' in styles ? styles.block : undefined,
+    inline: 'inline' in styles ? styles.inline : undefined,
+  }
 }
 
 const expectRenderedStyles = async (output: string) => {
@@ -329,22 +355,20 @@ describe('actual bundler integration', () => {
     })
     try {
       const id = 'virtual-hono-email-tw-artifact/' + encodeURIComponent(entry)
-      const initial = (await server.ssrLoadModule(id)) as { default: CssBuildArtifact }
-      expect(initial.default.inlineStylesByClass.block).toEqual({ display: 'block' })
+      let styles = readInlineStyles(await server.ssrLoadModule(id))
+      expect(styles.block).toEqual({ display: 'block' })
       await writeFile(
         path.join(root, 'shared/button.tsx'),
         `export const Button = () => <div className="inline">Shared</div>`,
       )
-      let artifact = initial.default
       const deadline = Date.now() + 5000
       while (Date.now() < deadline) {
-        await new Promise((resolve) => setTimeout(resolve, 50))
-        const next = (await server.ssrLoadModule(id)) as { default: CssBuildArtifact }
-        artifact = next.default
-        if (artifact.inlineStylesByClass.inline) break
+        await Bun.sleep(50)
+        styles = readInlineStyles(await server.ssrLoadModule(id))
+        if (styles.inline) break
       }
-      expect(artifact.inlineStylesByClass.inline).toEqual({ display: 'inline' })
-      expect(artifact.inlineStylesByClass.block).toBeUndefined()
+      expect(styles.inline).toEqual({ display: 'inline' })
+      expect(styles.block).toBeUndefined()
     } finally {
       await server.close()
     }

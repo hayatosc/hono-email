@@ -56,9 +56,11 @@ bun run lint
 bun run format
 ```
 
+Linting builds workspace packages so type-aware Oxlint can resolve their public exports, then checks source files and lint directives. Oxlint uses `tsrs-lint` from the installed `tsrs` package. Inline Oxlint and ESLint directives are reported as Oxlint errors. A final check covers examples and combinations of directives that could suppress Oxlint's own diagnostics. Rules in [`tools/lint/plugin.mjs`](tools/lint/plugin.mjs) also reject redundant comment patterns and chained type assertions. Keep comments that explain constraints or invariants. For negative type tests, use a documented `@ts-expect-error` in a `.type-test.ts` file.
+
 ### Typechecking
 
-To typecheck all TypeScript packages, run:
+To typecheck all library packages with `tsrs`, run:
 
 ```sh
 bun run typecheck

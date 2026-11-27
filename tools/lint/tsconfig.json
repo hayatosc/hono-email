@@ -1,0 +1,11 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "allowJs": true,
+    "checkJs": true,
+    "declaration": false,
+    "isolatedDeclarations": false,
+    "types": ["bun"]
+  },
+  "include": ["*.mjs", "*.ts"]
+}

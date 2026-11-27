@@ -1,15 +1,15 @@
 import { describe, expect, test, mock } from 'bun:test'
+import assert from 'node:assert/strict'
 
-import type { APIContext } from 'astro'
+import { createContext } from 'astro/middleware'
 
-// Mock astro:middleware before importing middleware.ts
+const context = createContext({ request: new Request('https://example.com'), defaultLocale: 'en' })
 void mock.module('astro:middleware', () => {
   return {
     defineMiddleware: (cb: (...args: unknown[]) => unknown) => cb,
   }
 })
 
-// Ensure import.meta.env exists for the test execution safely
 if (!import.meta.env) {
   Object.defineProperty(import.meta, 'env', { value: {} })
 }
@@ -34,7 +34,7 @@ describe('middleware onRequest', () => {
       })
       const next = () => Promise.resolve(mockResponse)
 
-      const res = (await onRequest({} as unknown as APIContext, next)) as Response
+      const res = await onRequest(context, next)
       expect(res).toBe(mockResponse)
     } finally {
       setDev(originalDev)
@@ -51,7 +51,7 @@ describe('middleware onRequest', () => {
       })
       const next = () => Promise.resolve(mockResponse)
 
-      const res = (await onRequest({} as unknown as APIContext, next)) as Response
+      const res = await onRequest(context, next)
       expect(res).toBe(mockResponse)
     } finally {
       setDev(originalDev)
@@ -71,7 +71,8 @@ describe('middleware onRequest', () => {
       })
       const next = () => Promise.resolve(mockResponse)
 
-      const res = (await onRequest({} as unknown as APIContext, next)) as Response
+      const res = await onRequest(context, next)
+      assert(res instanceof Response)
       expect(res.headers.has('content-length')).toBe(false)
       const text = await res.text()
       expect(text).toBe('<div component-url="/@fs/absolute/path/file.svelte"></div>')

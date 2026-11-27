@@ -316,9 +316,7 @@ describe('Resend adapter', () => {
 
     expect(receipt.successful).toBe(true)
     expect(requests).toHaveLength(1)
-    expect((requests[0]?.init.headers as Record<string, string>)?.['Idempotency-Key']).toBe(
-      'resend-idemp-123',
-    )
+    expect(requests[0]?.init.headers?.['Idempotency-Key']).toBe('resend-idemp-123')
   })
 
   test('does not attach Idempotency-Key header when idempotencyKey is empty string', async () => {
@@ -338,9 +336,7 @@ describe('Resend adapter', () => {
 
     expect(receipt.successful).toBe(true)
     expect(requests).toHaveLength(1)
-    expect(
-      (requests[0]?.init.headers as Record<string, string>)?.['Idempotency-Key'],
-    ).toBeUndefined()
+    expect(requests[0]?.init.headers?.['Idempotency-Key']).toBeUndefined()
   })
 
   test('rejects idempotencyKey containing line breaks without calling fetch', async () => {
