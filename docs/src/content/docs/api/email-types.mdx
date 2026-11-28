@@ -149,7 +149,7 @@ An `AbortSignal` used to cancel the send operation.
 - **HTTP-based adapters** (Resend, SendGrid, Postmark, Mailgun, Cloudflare REST): Cancels in-flight HTTP requests and retry backoff sleeps immediately.
 - **SES adapter**: Forwards the signal to the AWS SDK `SesClient.send()` method.
 - **SMTP adapter (`SmtpTransport`)**: Cancels pre-send, queued connection waiters, connection opening, and in-flight session exchanges, closing the underlying socket and returning a non-permanent timeout failure receipt.
-- **Cloudflare Workers binding**: Supports pre-send cancellation checks prior to invoking the binding.
+- **Cloudflare Workers binding and Void Framework**: Check for cancellation before invoking the binding or SDK.
 
 #### `retry` <Badge text="Optional" variant="note" size="small" />
 
@@ -157,7 +157,7 @@ Per-send retry configuration. Set to `false` to disable retries (e.g. when calle
 
 - **Supported adapters**: HTTP-based adapters (Resend, SendGrid, Postmark, Mailgun, and Cloudflare REST connector).
 - **SES adapter**: Ignores per-send `retry`; configure retry behavior on the AWS SDK `SesClient` instance passed to `SesAdapter({ client })`.
-- **Cloudflare Workers binding**: Ignores per-send `retry`.
+- **Cloudflare Workers binding and Void Framework**: Ignore per-send `retry`.
 - **SMTP adapter**: Does not retry failed sends.
 
 ---

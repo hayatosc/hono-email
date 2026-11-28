@@ -122,6 +122,7 @@ export default defineConfig({
             { label: 'Postmark', slug: 'adapters/postmark' },
             { label: 'Mailgun', slug: 'adapters/mailgun' },
             { label: 'Cloudflare Email', slug: 'adapters/cloudflare' },
+            { label: 'Void Framework', slug: 'adapters/void' },
             { label: 'Testing & Development', slug: 'adapters/testing' },
             { label: 'Custom Adapters', slug: 'api/custom-adapters' },
           ],

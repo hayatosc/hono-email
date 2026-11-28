@@ -1,6 +1,7 @@
 {
   "extends": "../../tsconfig.json",
   "compilerOptions": {
+    "isolatedDeclarations": false,
     "types": ["bun", "vite/client"],
     "paths": {
       "hono-email": ["../../packages/core/dist/index.d.ts"],

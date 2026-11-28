@@ -22,9 +22,9 @@ Register the plugin in your bundler configuration file.
 ### Vite
 
 ```ts
+import EmailTailwind from '@hono-email/tailwind-plugin/vite'
 // vite.config.ts
 import { defineConfig } from 'vite'
-import EmailTailwind from '@hono-email/tailwind-plugin/vite'
 
 export default defineConfig({
   plugins: [EmailTailwind()],
@@ -34,8 +34,8 @@ export default defineConfig({
 ### Esbuild
 
 ```ts
-import { build } from 'esbuild'
 import EmailTailwind from '@hono-email/tailwind-plugin/esbuild'
+import { build } from 'esbuild'
 
 await build({
   entryPoints: ['emails/welcome.tsx'],

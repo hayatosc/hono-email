@@ -46,16 +46,16 @@
     "test": "bun test ./src"
   },
   "dependencies": {
-    "@hono/node-server": "^2.0.12",
+    "@hono/node-server": "^2.1.11",
     "citty": "^0.2.2",
-    "hono": "^4.12.32",
-    "vite": "^8.2.0"
+    "hono": "^4.13.23",
+    "vite": "^8.4.0"
   },
   "devDependencies": {
     "@hono-email/tailwind-plugin": "workspace:*",
-    "@types/bun": "^1.3.14",
+    "@types/bun": "^1.4.5",
     "hono-email": "workspace:*",
-    "tailwindcss": "^4.3.3"
+    "tailwindcss": "^4.3.5"
   },
   "peerDependencies": {
     "@hono-email/tailwind-plugin": ">=0.9.0 <1.0.0",

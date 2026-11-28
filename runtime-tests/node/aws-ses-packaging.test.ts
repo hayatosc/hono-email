@@ -10,7 +10,7 @@ import { fileURLToPath } from 'node:url'
 const require = createRequire(import.meta.url)
 const root = fileURLToPath(new URL('../../', import.meta.url))
 
-void test('non-SES consumers can import and typecheck the built package without the AWS SDK', async () => {
+void test('SDK-independent consumers can import and typecheck the built package without AWS or Void SDKs', async () => {
   const directory = await mkdtemp(join(tmpdir(), 'hono-email-no-aws-'))
   try {
     const modules = join(directory, 'node_modules')
@@ -27,16 +27,23 @@ void test('non-SES consumers can import and typecheck the built package without 
     }
     await writeFile(join(directory, 'package.json'), JSON.stringify({ type: 'module' }))
     const consumerRequire = createRequire(join(directory, 'package.json'))
-    assert.throws(() => consumerRequire.resolve('@aws-sdk/client-sesv2'), {
-      code: 'MODULE_NOT_FOUND',
-    })
+    for (const sdk of ['@aws-sdk/client-sesv2', 'void/email']) {
+      assert.throws(() => consumerRequire.resolve(sdk), { code: 'MODULE_NOT_FOUND' })
+    }
 
     const source = `
       import { render } from 'hono-email'
       import { sendEmail } from 'hono-email/adapter'
       import { ResendAdapter } from 'hono-email/resend'
       import { SmtpTransport } from 'hono-email/smtp'
+      import { VoidEmailAdapter } from 'hono-email/void'
       if (typeof sendEmail !== 'function' || typeof ResendAdapter !== 'function' || typeof SmtpTransport !== 'function') throw new Error('Missing export')
+      const adapter = VoidEmailAdapter({ sendEmail: async ({ to }) => ({
+        ok: true,
+        ids: to.map(({ email }) => ({ recipient: email, messageId: 'void-1' })),
+      }) })
+      const receipt = await sendEmail({ adapter, from: 'sender@example.com', to: 'recipient@example.com', subject: 'Hello', jsx: 'Hello' })
+      if (!receipt.successful || receipt.messageId !== 'void-1') throw new Error('Void adapter failed')
       await render('Hello')
     `
     await writeFile(join(directory, 'consumer.ts'), source)

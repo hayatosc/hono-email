@@ -75,3 +75,7 @@ mise run ci
 ```
 
 This runs the same GitHub Actions CI workflow locally using [actrun](https://github.com/mizchi/actrun) based on the configuration in `actrun.toml`.
+
+### Documentation Dependencies
+
+Keep Starlight on `0.41.x` while the documentation site targets Cloudflare Workers. [Starlight 0.42 and later use Satteri at render time](https://github.com/withastro/starlight/issues/4194), which is not supported by the Workers runtime. Astro can still use newer Satteri versions at build time.
