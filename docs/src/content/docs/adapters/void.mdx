@@ -1,11 +1,11 @@
 ---
-title: Void Email
-description: Send email from a Void app with hono-email and the Void SDK.
+title: Void Framework
+description: Send email from a Void Framework app with hono-email.
 ---
 
-`hono-email/void` provides `VoidEmailAdapter`. Pass `sendEmail` from `void/email` so Void handles delivery in your app. `hono-email` does not install the Void SDK or configure email bindings.
+`hono-email/void` provides `VoidEmailAdapter`. Pass `sendEmail` from `void/email` so Void Framework handles delivery in your app. `hono-email` does not install the Void Framework SDK or configure email bindings.
 
-Set up your sender and deployment by following the [Void email sending guide](https://void.cloud/guide/email/sending). Use an address your deployment is authorized to send from.
+Set up your sender and deployment by following the [Void Framework guide to sending email](https://void.cloud/guide/email/sending). Use an address your deployment is authorized to send from.
 
 ```tsx
 import { Body, Html, Text } from 'hono-email'

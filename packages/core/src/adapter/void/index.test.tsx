@@ -34,7 +34,7 @@ const createFallback = () =>
     response: 'Accepted by fallback.',
   }))
 
-describe('Void Email adapter', () => {
+describe('Void Framework adapter', () => {
   test('sends rendered JSX, named addresses, headers, and resolved attachments', async () => {
     const sender = createSender({
       ok: true,
