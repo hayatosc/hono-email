@@ -13,7 +13,7 @@ Full documentation is available at [hono-email.hayatosc.dev](https://hono-email.
 - **HTML & Plain Text**: Renders both responsive HTML email and plain text simultaneously.
 - **Strict Validation**: Checked against risky CSS properties and unsupported tags by default.
 - **Styling**: Write inline styles, use `hono/css` (CSS-in-JS), or integrate with Tailwind CSS.
-- **Transports**: Send emails via built-in adapters (SMTP, Resend, SendGrid, Postmark, Mailgun, Cloudflare Email).
+- **Transports**: Send emails via built-in adapters (SMTP, AWS SES, Resend, SendGrid, Postmark, Mailgun, Cloudflare Email, and [Void Email](https://hono-email.hayatosc.dev/adapters/void/)).
 
 ## Setup
 

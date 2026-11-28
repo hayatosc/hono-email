@@ -30,26 +30,22 @@ class MockSendAdapter implements EmailAdapter {
 }
 
 const createSuccessAdapter = (messageId: string): MockSendAdapter =>
-  new MockSendAdapter(
-    async (): Promise<SuccessfulSendReceipt> => ({
-      successful: true,
-      messageId,
-      accepted: ['recipient@example.com'],
-      rejected: [],
-      response: '250 OK',
-    }),
-  )
+  new MockSendAdapter(async (): Promise<SuccessfulSendReceipt> => ({
+    successful: true,
+    messageId,
+    accepted: ['recipient@example.com'],
+    rejected: [],
+    response: '250 OK',
+  }))
 
 const createFailedAdapter = (permanent: boolean, errorMsg: string): MockSendAdapter =>
-  new MockSendAdapter(
-    async (): Promise<FailedSendReceipt> => ({
-      successful: false,
-      accepted: [],
-      rejected: ['recipient@example.com'],
-      errorMessages: [errorMsg],
-      permanent,
-    }),
-  )
+  new MockSendAdapter(async (): Promise<FailedSendReceipt> => ({
+    successful: false,
+    accepted: [],
+    rejected: ['recipient@example.com'],
+    errorMessages: [errorMsg],
+    permanent,
+  }))
 
 describe('FallbackAdapter', () => {
   it('throws when adapters array is empty or invalid', () => {

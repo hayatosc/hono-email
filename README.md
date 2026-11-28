@@ -24,7 +24,7 @@ This monorepo consists of the following packages:
 - **HTML + Plain Text**: Render beautiful HTML emails and matching plain text from a single JSX tree via `render()`.
 - **Strict Validation**: Guard against risky CSS properties and unsupported tags with strict validation rules.
 - **Styling Options**: Supports inline styles, `hono/css` (CSS-in-JS), and Tailwind CSS (build-time integration).
-- **Transport Adapters**: Built-in integrations for SMTP, AWS SES, Resend, SendGrid, Postmark, Mailgun, and Cloudflare Email. The [SES adapter](https://hono-email.hayatosc.dev/adapters/aws-ses/) uses an optional AWS SDK v3 dependency and includes an [SQS Lambda worker example](examples/aws-ses-sqs).
+- **Transport Adapters**: Built-in integrations for SMTP, AWS SES, Resend, SendGrid, Postmark, Mailgun, Cloudflare Email, and [Void Email](https://hono-email.hayatosc.dev/adapters/void/). The [SES adapter](https://hono-email.hayatosc.dev/adapters/aws-ses/) uses an optional AWS SDK v3 dependency and includes an [SQS Lambda worker example](examples/aws-ses-sqs).
 
 ## Quick Start
 

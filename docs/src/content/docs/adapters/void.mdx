@@ -1,0 +1,47 @@
+---
+title: Void Email
+description: Send email from a Void app with hono-email and the Void SDK.
+---
+
+`hono-email/void` provides `VoidEmailAdapter`. Pass `sendEmail` from `void/email` so Void handles delivery in your app. `hono-email` does not install the Void SDK or configure email bindings.
+
+Set up your sender and deployment by following the [Void email sending guide](https://void.cloud/guide/email/sending). Use an address your deployment is authorized to send from.
+
+```tsx
+import { Body, Html, Text } from 'hono-email'
+import { sendEmail, VoidEmailAdapter } from 'hono-email/void'
+import { sendEmail as sendWithVoid } from 'void/email'
+
+const adapter = VoidEmailAdapter({ sendEmail: sendWithVoid })
+
+const receipt = await sendEmail({
+  adapter,
+  from: { address: 'welcome@example.com', name: 'Example' },
+  to: 'recipient@example.com',
+  subject: 'Welcome',
+  jsx: (
+    <Html>
+      <Body>
+        <Text>Thanks for signing up.</Text>
+      </Body>
+    </Html>
+  ),
+})
+```
+
+## Message options
+
+- `from` is required by the `hono-email` message API. To use Void's default sender, call `render()` and pass the resulting `html` and `text` directly to `void/email` without `from`.
+- Void requires at least one `to` recipient and accepts at most 50 addresses across `to`, `cc`, and `bcc`. `replyTo` supports at most one address.
+- The adapter forwards custom message `headers` and attachments with filenames, including inline attachments with `cid`. Void owns reserved headers and the generated MIME message.
+- `limits.maxAttachmentSize` optionally caps each attachment in bytes during preparation. Void's overall message size limit still applies.
+- `idempotencyKey` is forwarded to Void. It requires a Void platform deployment, not a native Cloudflare email binding.
+- The adapter checks `signal` before submission, but the Void SDK call cannot be cancelled once started. Per-send `retry` settings are ignored.
+
+## Delivery receipts
+
+On success, `accepted` lists the recipients Void accepted for delivery, and `messageId` is the first message ID returned by the SDK. Acceptance does not confirm inbox delivery.
+
+A partial or uncertain send returns a failed receipt. `accepted` lists known acceptances, `rejected` lists known rejections, and recipients with unknown outcomes can be absent from both. The original Void result, including per-recipient details and any operation ID, is kept in `cause`. The adapter marks partial or uncertain sends as `permanent: true` to stop `FallbackAdapter` from resending the whole message. Check the outcome in Void before retrying an uncertain send.
+
+For local testing, Void captures messages in the `void dev` inbox or through `createEmailTestHarness()` from `void/email/testing`.
