@@ -1,0 +1,9 @@
+{
+  "extends": ["../../tsconfig.json", "./.void/tsconfig.json"],
+  "compilerOptions": {
+    "isolatedDeclarations": false,
+    "jsxImportSource": "react",
+    "types": ["node", "vite/client"]
+  },
+  "include": [".void/**/*.d.ts", "pages", "src", "test", "vite.config.ts", "void.config.ts"]
+}

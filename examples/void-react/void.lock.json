@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "source": {
+    "compatibility_flags": ["nodejs_compat"]
+  },
+  "resolved": {
+    "compatibility_date": "2026-02-24",
+    "compatibility_flags": ["nodejs_compat"]
+  },
+  "text": "{\n  \"compatibility_date\": \"2026-02-24\",\n  \"compatibility_flags\": [\n    \"nodejs_compat\"\n  ]\n}\n"
+}

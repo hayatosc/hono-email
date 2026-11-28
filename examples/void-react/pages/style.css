@@ -1,0 +1,61 @@
+html {
+  color-scheme: light dark;
+  background: light-dark(#f1f5f4, #121c1d);
+  color: light-dark(#1a3030, #e2eeec);
+  font-family: system-ui, sans-serif;
+  line-height: 1.55;
+}
+
+main {
+  box-sizing: border-box;
+  width: min(100% - 2rem, 34rem);
+  margin: clamp(1rem, 10vh, 7rem) auto;
+  border-block-start: 0.35rem solid light-dark(#176451, #79d0b0);
+  background: light-dark(#fff, #182526);
+  padding: clamp(1.25rem, 5vw, 2.5rem);
+}
+
+h1 {
+  margin: 0;
+  font-size: clamp(1.75rem, 5vw, 2.5rem);
+  line-height: 1.15;
+}
+
+form {
+  display: grid;
+  gap: 1rem;
+  justify-items: start;
+  border-block-start: 1px solid light-dark(#bbc9c6, #43605b);
+  padding-block-start: 1.25rem;
+}
+
+.field {
+  display: grid;
+  gap: 0.35rem;
+  width: 100%;
+}
+
+input,
+button {
+  box-sizing: border-box;
+  border: 1px solid light-dark(#526f69, #7c9c94);
+  border-radius: 0.3rem;
+  padding: 0.55rem 0.75rem;
+  font: inherit;
+}
+
+button {
+  border-color: transparent;
+  background: light-dark(#176451, #79d0b0);
+  color: light-dark(#fff, #102723);
+  font-weight: 650;
+}
+
+:where(input, button):focus-visible {
+  outline: 2px solid light-dark(#176451, #79d0b0);
+  outline-offset: 3px;
+}
+
+[role='status']:empty {
+  margin: 0;
+}
