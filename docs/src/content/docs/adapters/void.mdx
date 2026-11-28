@@ -42,6 +42,6 @@ const receipt = await sendEmail({
 
 On success, `accepted` lists the recipients Void accepted for delivery, and `messageId` is the first message ID returned by the SDK. Acceptance does not confirm inbox delivery.
 
-A partial or uncertain send returns a failed receipt. `accepted` lists known acceptances, `rejected` lists known rejections, and recipients with unknown outcomes can be absent from both. The original Void result, including per-recipient details and any operation ID, is kept in `cause`. The adapter marks partial or uncertain sends as `permanent: true` to stop `FallbackAdapter` from resending the whole message. Check the outcome in Void before retrying an uncertain send.
+A partial or uncertain send returns a failed receipt. `accepted` lists known acceptances, `rejected` lists known rejections, and recipients without a definite outcome can be absent from both. If the SDK's recipient list does not match the submitted envelope, the adapter returns `OUTCOME_UNKNOWN` rather than trusting the list. The original Void result, including per-recipient details and any operation ID, is kept in `cause`. The adapter marks partial or uncertain sends as `permanent: true` to stop `FallbackAdapter` from resending the whole message. Check the outcome in Void before retrying an uncertain send.
 
 For local testing, Void captures messages in the `void dev` inbox or through `createEmailTestHarness()` from `void/email/testing`.

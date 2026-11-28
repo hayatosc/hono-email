@@ -129,6 +129,71 @@ describe('Void Framework adapter', () => {
     },
   )
 
+  test('reconciles recipients case-insensitively and accepts SDK deduplication', async () => {
+    const receipt = await VoidEmailAdapter({ sendEmail: createSender() }).send({
+      ...message,
+      to: 'Recipient <Recipient@EXAMPLE.COM>',
+      cc: 'recipient@example.com',
+    })
+
+    expect(receipt).toMatchObject({ successful: true, accepted: ['recipient@example.com'] })
+  })
+
+  test.each([
+    acceptedResult,
+    {
+      ok: true,
+      ids: [
+        { recipient: 'recipient@example.com', messageId: 'message-1' },
+        { recipient: 'Recipient@example.com', messageId: 'message-2' },
+      ],
+    },
+    {
+      ok: true,
+      ids: [
+        { recipient: 'recipient@example.com', messageId: 'message-1' },
+        { recipient: 'unexpected@example.com', messageId: 'message-2' },
+      ],
+    },
+    {
+      ok: true,
+      ids: [
+        { recipient: 'recipient@example.com', messageId: 'message-1' },
+        { recipient: 'cc@example.com', messageId: '' },
+      ],
+    },
+    {
+      ok: false,
+      deliveries: [
+        {
+          ok: false,
+          recipient: 'recipient@example.com',
+          error: { code: 'UPSTREAM_ERROR', message: 'Cancelled before submission' },
+          state: 'cancelled',
+        },
+      ],
+    },
+  ] satisfies VoidEmailSendResult[])(
+    'treats an incomplete or inconsistent recipient list as uncertain: %#',
+    async (result) => {
+      const fallback = createFallback()
+      const receipt = await FallbackAdapter([
+        VoidEmailAdapter({ sendEmail: createSender(result) }),
+        { send: fallback },
+      ]).send({ ...message, cc: 'cc@example.com' })
+
+      expect(receipt).toMatchObject({
+        successful: false,
+        accepted: [],
+        rejected: [],
+        permanent: true,
+        code: 'OUTCOME_UNKNOWN',
+        cause: result,
+      })
+      expect(fallback).not.toHaveBeenCalled()
+    },
+  )
+
   test('reports a request-level validation failure with its original context', async () => {
     const result = {
       ok: false,
@@ -158,6 +223,7 @@ describe('Void Framework adapter', () => {
           ok: false,
           recipient: 'cc@example.com',
           error: { code: 'QUOTA_EXCEEDED', message: 'Quota exceeded' },
+          state: 'failed',
         },
       ],
     } satisfies VoidEmailSendResult
@@ -190,6 +256,27 @@ describe('Void Framework adapter', () => {
           recipient: 'recipient@example.com',
           error: { code: 'UPSTREAM_ERROR', message: 'Unresolved recipient' },
           state: 'attempt_started',
+        },
+      ],
+    },
+    {
+      ok: false,
+      deliveries: [
+        {
+          ok: false,
+          recipient: 'recipient@example.com',
+          error: { code: 'UPSTREAM_ERROR', message: 'Unresolved recipient' },
+          state: 'awaiting_provider_confirmation',
+        },
+      ],
+    },
+    {
+      ok: false,
+      deliveries: [
+        {
+          ok: false,
+          recipient: 'recipient@example.com',
+          error: { code: 'UPSTREAM_ERROR', message: 'No delivery state' },
         },
       ],
     },

@@ -114,11 +114,24 @@ const unknownOutcome = (message: string, cause: unknown): FailedSendReceipt =>
     cause,
   })
 
+const coversRecipients = (recipients: string[], results: { recipient: string }[]): boolean => {
+  // The SDK deduplicates envelope recipients case-insensitively.
+  const pending = new Set(recipients.map((recipient) => recipient.toLowerCase()))
+  for (const { recipient } of results) {
+    if (!pending.delete(recipient.toLowerCase())) return false
+  }
+  return pending.size === 0
+}
+
 const toReceipt = (result: VoidEmailSendResult, recipients: string[]): SendEmailReceipt => {
   if (result.ok) {
     const messageId = result.ids[0]?.messageId
-    if (!messageId) {
-      return unknownOutcome('Void reported success without a message ID.', result)
+    if (
+      messageId === undefined ||
+      !coversRecipients(recipients, result.ids) ||
+      result.ids.some((id) => id.messageId.trim().length === 0)
+    ) {
+      return unknownOutcome('Void reported success with inconsistent recipient IDs.', result)
     }
     const operation = result.operationId === undefined ? '' : ` (operation ${result.operationId})`
     return {
@@ -143,6 +156,13 @@ const toReceipt = (result: VoidEmailSendResult, recipients: string[]): SendEmail
     })
   }
 
+  if (!coversRecipients(recipients, result.deliveries)) {
+    return unknownOutcome(
+      'Void reported outcomes that do not match the submitted envelope.',
+      result,
+    )
+  }
+
   const accepted: string[] = []
   const rejected: string[] = []
   const errorMessages: string[] = []
@@ -159,10 +179,7 @@ const toReceipt = (result: VoidEmailSendResult, recipients: string[]): SendEmail
     codes.add(error.code)
     if (
       error.code === 'OUTCOME_UNKNOWN' ||
-      state === 'outcome_unknown' ||
-      state === 'attempt_started' ||
-      state === 'reserved' ||
-      state === 'provider_accepted'
+      (state !== 'rejected' && state !== 'failed' && state !== 'cancelled')
     ) {
       uncertain = true
     } else {
