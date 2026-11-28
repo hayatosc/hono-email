@@ -1,0 +1,24 @@
+lockfileVersion: '9.0'
+
+settings:
+  autoInstallPeers: true
+  excludeLinksFromLockfile: false
+
+importers:
+
+  .:
+    dependencies:
+      '@mizchi/actrun':
+        specifier: 0.32.0
+        version: 0.32.0
+
+packages:
+
+  '@mizchi/actrun@0.32.0':
+    resolution: {integrity: sha512-RrFy81H/XpXgHeIAeFVlxI5NryFk2V3QLpKTIlaV6SNcS/un8k/Vt/BE4k8QZafo8GrQe7kd1Wo/qqURomswBw==}
+    engines: {node: '>=18'}
+    hasBin: true
+
+snapshots:
+
+  '@mizchi/actrun@0.32.0': {}
